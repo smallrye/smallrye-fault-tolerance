@@ -16,10 +16,13 @@
 package io.smallrye.faulttolerance;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Resource;
 import javax.enterprise.context.Dependent;
 
 import com.netflix.hystrix.HystrixThreadPoolKey;
@@ -43,8 +46,10 @@ class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrategy {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
 
+    /*@Resource(lookup = "java:comp/DefaultManagedThreadFactory")
+    ManagedThreadFactory threadFactory;*/
 
-    ThreadFactory threadFactory = (r)->new Thread(r); //TODO: Was a ManagedThreadFectory in WF Swarm. We should check that this nasic impl is ok
+    ThreadFactory threadFactory = Executors.privilegedThreadFactory(); //TODO: Was a ManagedThreadFectory in WF Swarm. We should check that this nasic impl is ok
 
     @Override
     public ThreadPoolExecutor getThreadPool(HystrixThreadPoolKey threadPoolKey, HystrixProperty<Integer> corePoolSize, HystrixProperty<Integer> maximumPoolSize,
