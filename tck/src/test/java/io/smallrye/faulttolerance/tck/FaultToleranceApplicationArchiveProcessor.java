@@ -34,11 +34,11 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
     @Override
     public void process(Archive<?> applicationArchive, TestClass testClass) {
         if (!(applicationArchive instanceof ResourceContainer)) {
-            LOGGER.warning("Unable to add Hystrix-related project-defaults.yaml - not a resource container: " + applicationArchive);
+            LOGGER.warning("Unable to add Hystrix-related config.properties - not a resource container: " + applicationArchive);
             return;
         }
         ResourceContainer<?> resourceContainer = (ResourceContainer<?>) applicationArchive;
         resourceContainer.addAsResource(new File("src/test/resources/config.properties"));
-        LOGGER.info("Added project-defaults.yaml to " + applicationArchive.toString(true));
+        LOGGER.info("Added config.properties to " + applicationArchive.toString(true));
     }
 }
