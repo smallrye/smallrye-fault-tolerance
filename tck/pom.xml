@@ -23,8 +23,14 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <suiteXmlFiles>
-            <suiteXmlFile>tck-suite.xml</suiteXmlFile>
+            <suiteXmlFile>src/test/tck-suite.xml</suiteXmlFile>
           </suiteXmlFiles>
+          <!-- This workaround allows to run a single test using "test"
+             system property -->
+          <!-- https://issues.apache.org/jira/browse/SUREFIRE-569 -->
+          <dependenciesToScan>
+            <dependency>org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-tck</dependency>
+          </dependenciesToScan>
         </configuration>
       </plugin>
     </plugins>
@@ -67,6 +73,13 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+    </dependency>
+
+
   </dependencies>
 
 </project>

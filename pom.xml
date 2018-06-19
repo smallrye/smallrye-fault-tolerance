@@ -40,7 +40,7 @@
     <version.org.jboss.arquillian>1.1.13.Final</version.org.jboss.arquillian>
     <version.org.jboss.arquillian.container.weld-embedded>2.0.0.Beta5</version.org.jboss.arquillian.container.weld-embedded>
     <version.org.jboss.logging>3.3.2.Final</version.org.jboss.logging>
-    <version.org.jboss.weld.core.impl>2.3.5.Final</version.org.jboss.weld.core.impl>
+    <version.org.jboss.weld.core.impl>2.4.7.Final</version.org.jboss.weld.core.impl>
     <version.hystrix>1.5.12</version.hystrix>
     <version.hdrHistogram>2.1.9</version.hdrHistogram>
     <version.mp-fault-tolerance>1.0</version.mp-fault-tolerance>
@@ -48,6 +48,7 @@
     <version.microprofile-config-api>1.2.1</version.microprofile-config-api>
     <version.testng>6.9.9</version.testng>
     <version.awaitility>3.1.0</version.awaitility>
+    <version.slf4j-simple>1.7.25</version.slf4j-simple>
   </properties>
 
   <scm>
@@ -154,6 +155,13 @@
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-config</artifactId>
         <version>${version.smallrye-config}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
+        <version>${version.slf4j-simple}</version>
         <scope>test</scope>
       </dependency>
 
