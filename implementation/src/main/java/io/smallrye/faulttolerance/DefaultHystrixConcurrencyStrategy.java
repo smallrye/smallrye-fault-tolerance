@@ -22,7 +22,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.enterprise.context.Dependent;
 
 import com.netflix.hystrix.HystrixThreadPoolKey;
@@ -40,16 +42,28 @@ import org.jboss.logging.Logger;
  * </p>
  *
  * @author Martin Kouba
+ * @author Antoine Sabot-Durand
  */
 @Dependent
 class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrategy {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
 
-    /*@Resource(lookup = "java:comp/DefaultManagedThreadFactory")
-    ManagedThreadFactory threadFactory;*/
+    @Resource(lookup = "java:comp/DefaultManagedThreadFactory")
+    ManagedThreadFactory managedThreadFactory;
 
-    ThreadFactory threadFactory = Executors.privilegedThreadFactory(); //TODO: Was a ManagedThreadFectory in WF Swarm. We should check that this nasic impl is ok
+    ThreadFactory threadFactory;
+
+    @PostConstruct
+    public void initTreadManagerFactory() {
+        if (managedThreadFactory != null) {
+            threadFactory = managedThreadFactory;
+            LOGGER.info("### Managed Thread Factory used ###");
+        } else {
+            threadFactory = Executors.privilegedThreadFactory();
+            LOGGER.info("### Privilleged Thread Factory used ###");
+        }
+    }
 
     @Override
     public ThreadPoolExecutor getThreadPool(HystrixThreadPoolKey threadPoolKey, HystrixProperty<Integer> corePoolSize, HystrixProperty<Integer> maximumPoolSize,

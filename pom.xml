@@ -49,6 +49,7 @@
     <version.testng>6.9.9</version.testng>
     <version.awaitility>3.1.0</version.awaitility>
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
+    <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
   </properties>
 
   <scm>
@@ -70,11 +71,18 @@
         <groupId>javax.enterprise</groupId>
         <artifactId>cdi-api</artifactId>
         <version>${version.javax.enterprise.cdi-api}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.enterprise.concurrent</groupId>
+        <artifactId>javax.enterprise.concurrent-api</artifactId>
+        <version>${version.javax.enterprise.concurrent-api}</version>
       </dependency>
       <dependency>
         <groupId>javax.annotation</groupId>
         <artifactId>javax.annotation-api</artifactId>
         <version>${version.javax.annotation-api}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.eclipse.microprofile.config</groupId>

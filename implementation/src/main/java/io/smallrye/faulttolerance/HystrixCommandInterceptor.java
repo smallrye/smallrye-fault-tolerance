@@ -111,8 +111,7 @@ public class HystrixCommandInterceptor {
             Config config, BeanManager beanManager, @Unbound RequestContext requestContext) {
         this.nonFallBackEnable = nonFallBackEnable;
         Optional<Boolean> mpSyncCircuitBreaker = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class);
-        //this.syncCircuitBreakerEnabled = mpSyncCircuitBreaker.orElse(fraction.isUnsatisfied() ? true : fraction.get().isSynchronousCircuitBreakerEnabled());
-        this.syncCircuitBreakerEnabled = true; //TODO: In WF Swarm this value was retrieved from the fraction, we should introduce a new way to set that
+        this.syncCircuitBreakerEnabled = mpSyncCircuitBreaker.orElse(true);
         this.beanManager = beanManager;
         this.extension = beanManager.getExtension(HystrixExtension.class);
         this.commandMetadataMap = new ConcurrentHashMap<>();
