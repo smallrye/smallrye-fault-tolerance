@@ -50,6 +50,7 @@
     <version.awaitility>3.1.0</version.awaitility>
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
     <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
+    <version.javax.interceptor-api>1.2</version.javax.interceptor-api>
   </properties>
 
   <scm>
@@ -61,8 +62,8 @@
 
   <modules>
     <module>implementation</module>
-    <module>tck</module>
     <module>docs</module>
+    <module>testsuite</module>
   </modules>
 
   <dependencyManagement>
@@ -71,6 +72,12 @@
         <groupId>javax.enterprise</groupId>
         <artifactId>cdi-api</artifactId>
         <version>${version.javax.enterprise.cdi-api}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.interceptor</groupId>
+        <artifactId>javax.interceptor-api</artifactId>
+        <version>${version.javax.interceptor-api}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -112,14 +119,10 @@
         <version>${version.hystrix}</version>
       </dependency>
       <dependency>
-        <groupId>com.netflix.hystrix</groupId>
-        <artifactId>hystrix-metrics-event-stream</artifactId>
-        <version>${version.hystrix}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hdrhistogram</groupId>
-        <artifactId>HdrHistogram</artifactId>
-        <version>${version.hdrHistogram}</version>
+        <groupId>org.jboss.weld</groupId>
+        <artifactId>weld-spi</artifactId>
+        <version>2.4.SP1</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.jboss.logging</groupId>
