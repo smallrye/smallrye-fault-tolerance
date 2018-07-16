@@ -39,7 +39,7 @@
     <version.junit>4.11</version.junit>
     <version.org.jboss.arquillian>1.1.13.Final</version.org.jboss.arquillian>
     <version.org.jboss.arquillian.container.weld-embedded>2.0.0.Beta5</version.org.jboss.arquillian.container.weld-embedded>
-    <version.org.jboss.logging>3.3.2.Final</version.org.jboss.logging>
+    <version.org.jboss.logging>2.0.1.Final</version.org.jboss.logging>
     <version.org.jboss.weld.core.impl>2.4.7.Final</version.org.jboss.weld.core.impl>
     <version.hystrix>1.5.12</version.hystrix>
     <version.hdrHistogram>2.1.9</version.hdrHistogram>
@@ -49,6 +49,7 @@
     <version.testng>6.9.9</version.testng>
     <version.awaitility>3.1.0</version.awaitility>
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
+    <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
   </properties>
 
   <scm>
@@ -70,11 +71,18 @@
         <groupId>javax.enterprise</groupId>
         <artifactId>cdi-api</artifactId>
         <version>${version.javax.enterprise.cdi-api}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.enterprise.concurrent</groupId>
+        <artifactId>javax.enterprise.concurrent-api</artifactId>
+        <version>${version.javax.enterprise.concurrent-api}</version>
       </dependency>
       <dependency>
         <groupId>javax.annotation</groupId>
         <artifactId>javax.annotation-api</artifactId>
         <version>${version.javax.annotation-api}</version>
+        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.eclipse.microprofile.config</groupId>
@@ -115,7 +123,12 @@
       </dependency>
       <dependency>
         <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging</artifactId>
+        <artifactId>jboss-logging-annotations</artifactId>
+        <version>${version.org.jboss.logging}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.logging</groupId>
+        <artifactId>jboss-logging-processor</artifactId>
         <version>${version.org.jboss.logging}</version>
       </dependency>
       <dependency>
