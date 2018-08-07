@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -103,7 +102,7 @@ public class HystrixCommandInterceptor {
      * In general, application developers are encouraged to disable this feature on high-volume circuits and in production environments.
      * </p>
      */
-    public static final String SYNC_CIRCUIT_BREAKER_KEY = "org_wildfly_swarm_microprofile_faulttolerance_syncCircuitBreaker";
+    public static final String SYNC_CIRCUIT_BREAKER_KEY = "io_smallrye_faulttolerance_syncCircuitBreaker";
 
     private static final Logger LOGGER = Logger.getLogger(HystrixCommandInterceptor.class);
 
@@ -112,8 +111,7 @@ public class HystrixCommandInterceptor {
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, BeanManager beanManager, @Unbound RequestContext requestContext) {
         this.nonFallBackEnable = nonFallBackEnable;
-        Optional<Boolean> mpSyncCircuitBreaker = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class);
-        this.syncCircuitBreakerEnabled = mpSyncCircuitBreaker.orElse(true);
+        this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.beanManager = beanManager;
         this.extension = beanManager.getExtension(HystrixExtension.class);
         this.commandMetadataMap = new ConcurrentHashMap<>();
