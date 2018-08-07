@@ -41,21 +41,6 @@ import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
-import com.netflix.hystrix.HystrixCircuitBreaker;
-import com.netflix.hystrix.HystrixCommand;
-import com.netflix.hystrix.HystrixCommand.Setter;
-import com.netflix.hystrix.HystrixCommandGroupKey;
-import com.netflix.hystrix.HystrixCommandKey;
-import com.netflix.hystrix.HystrixCommandProperties;
-import com.netflix.hystrix.HystrixThreadPoolKey;
-import com.netflix.hystrix.HystrixThreadPoolProperties;
-import com.netflix.hystrix.exception.HystrixRuntimeException;
-import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
-import io.smallrye.faulttolerance.config.BulkheadConfig;
-import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
-import io.smallrye.faulttolerance.config.FallbackConfig;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.config.TimeoutConfig;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -70,6 +55,23 @@ import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.Logger;
 import org.jboss.weld.context.RequestContext;
 import org.jboss.weld.context.unbound.Unbound;
+
+import com.netflix.hystrix.HystrixCircuitBreaker;
+import com.netflix.hystrix.HystrixCommand;
+import com.netflix.hystrix.HystrixCommand.Setter;
+import com.netflix.hystrix.HystrixCommandGroupKey;
+import com.netflix.hystrix.HystrixCommandKey;
+import com.netflix.hystrix.HystrixCommandProperties;
+import com.netflix.hystrix.HystrixThreadPoolKey;
+import com.netflix.hystrix.HystrixThreadPoolProperties;
+import com.netflix.hystrix.exception.HystrixRuntimeException;
+import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
+
+import io.smallrye.faulttolerance.config.BulkheadConfig;
+import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
+import io.smallrye.faulttolerance.config.FallbackConfig;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.config.TimeoutConfig;
 
 /**
  * <h2>Implementation notes:</h2>
@@ -180,7 +182,8 @@ public class HystrixCommandInterceptor {
         }
     }
 
-    private static Exception processHystrixRuntimeException(HystrixRuntimeException e, RetryContext retryContext, Method method, SynchronousCircuitBreaker syncCircuitBreaker) {
+    private static Exception processHystrixRuntimeException(HystrixRuntimeException e, RetryContext retryContext, Method method,
+            SynchronousCircuitBreaker syncCircuitBreaker) {
 
         FailureType failureType = e.getFailureType();
         LOGGER.tracef("Hystrix runtime failure [%s] with cause %s when invoking %s", failureType, e.getCause(), method);
@@ -206,7 +209,11 @@ public class HystrixCommandInterceptor {
                 }
                 return timeoutException;
             case SHORTCIRCUIT:
-                return new CircuitBreakerOpenException(method.getName());
+                CircuitBreakerOpenException circuitBreakerOpenException = new CircuitBreakerOpenException(method.getName());
+                if (retryContext != null && retryContext.shouldRetry()) {
+                    return retryContext.nextRetry(circuitBreakerOpenException);
+                }
+                return circuitBreakerOpenException;
             case REJECTED_THREAD_EXECUTION:
             case REJECTED_SEMAPHORE_EXECUTION:
             case REJECTED_SEMAPHORE_FALLBACK:
