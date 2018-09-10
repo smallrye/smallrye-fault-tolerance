@@ -25,10 +25,11 @@ import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
+import org.jboss.logging.Logger;
+
 import com.netflix.hystrix.Hystrix;
 import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
-import org.jboss.logging.Logger;
 
 /**
  * This component configures Hystrix to use a specific {@link HystrixConcurrencyStrategy}.
@@ -36,7 +37,7 @@ import org.jboss.logging.Logger;
  * @author Martin Kouba
  */
 @ApplicationScoped
-class HystrixInitializer {
+public class HystrixInitializer {
 
     private static final Logger LOGGER = Logger.getLogger(HystrixInitializer.class);
 

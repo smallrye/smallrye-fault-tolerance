@@ -16,9 +16,7 @@
 
 package io.smallrye.faulttolerance;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -33,8 +31,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Priority;
-import javax.enterprise.inject.spi.BeanManager;
-import javax.enterprise.inject.spi.Unmanaged;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
@@ -52,8 +49,6 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.Logger;
-import org.jboss.weld.context.RequestContext;
-import org.jboss.weld.context.unbound.Unbound;
 
 import com.netflix.hystrix.HystrixCircuitBreaker;
 import com.netflix.hystrix.HystrixCommand;
@@ -79,8 +74,8 @@ import io.smallrye.faulttolerance.config.TimeoutConfig;
  * always counted as a failure, even if the command execution completes normally.
  * </p>
  * <p>
- * We never use {@link HystrixCommand#queue()} for async execution. Mostly to workaround various problems of {@link Asynchronous} {@link Retry} combination. Instead, we
- * create a composite command and inside its run() method we execute commands synchronously.
+ * We never use {@link HystrixCommand#queue()} for async execution. Mostly to workaround various problems of {@link Asynchronous} {@link Retry} combination.
+ * Instead, we create a composite command and inside its run() method we execute commands synchronously.
  * </p>
  *
  * @author Antoine Sabot-Durand
@@ -109,13 +104,14 @@ public class HystrixCommandInterceptor {
     @SuppressWarnings("unchecked")
     @Inject
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
-            Config config, BeanManager beanManager, @Unbound RequestContext requestContext) {
+            Config config, FallbackHandlerProvider fallbackHandlerProvider, FaultToleranceOperationProvider faultToleranceOperationProvider,
+            Instance<CommandListener> listeners) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
-        this.beanManager = beanManager;
-        this.extension = beanManager.getExtension(HystrixExtension.class);
+        this.fallbackHandlerProvider = fallbackHandlerProvider;
+        this.faultToleranceOperationProvider = faultToleranceOperationProvider;
         this.commandMetadataMap = new ConcurrentHashMap<>();
-        this.requestContext = requestContext;
+        this.listeners = listeners;
         // WORKAROUND: Hystrix does not allow to use custom HystrixCircuitBreaker impl
         // See also https://github.com/Netflix/Hystrix/issues/9
         try {
@@ -123,7 +119,7 @@ public class HystrixCommandInterceptor {
             SecurityActions.setAccessible(field);
             this.circuitBreakers = (ConcurrentHashMap<String, HystrixCircuitBreaker>) field.get(null);
         } catch (Exception e) {
-            throw new IllegalStateException("Could not obtain reference to com.netflix.hystrix.HystrixCircuitBreaker.Factory.circuitBreakersByCommand");
+            throw new IllegalStateException("Could not obtain reference to com.netflix.hystrix.HystrixCircuitBreaker.Factory.circuitBreakersByCommand", e);
         }
     }
 
@@ -138,7 +134,7 @@ public class HystrixCommandInterceptor {
         RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
         Function<Supplier<Object>, SimpleCommand> commandFactory = (fallback) -> new SimpleCommand(metadata.setter, ctx, fallback, metadata.operation,
-                metadata.operation.isAsync() ? requestContext : null);
+                metadata.operation.isAsync() ? listeners : null);
 
         if (metadata.operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", metadata.operation);
@@ -257,13 +253,6 @@ public class HystrixCommandInterceptor {
         return new IllegalStateException("Error during processing hystrix runtime exception", e);
     }
 
-    private Unmanaged<FallbackHandler<?>> initUnmanaged(FaultToleranceOperation operation) {
-        if (operation.hasFallback()) {
-            return new Unmanaged<>(beanManager, operation.getFallback().get(FallbackConfig.VALUE));
-        }
-        return null;
-    }
-
     private Setter initSetter(HystrixCommandKey commandKey, Method method, FaultToleranceOperation operation) {
         HystrixCommandProperties.Setter propertiesSetter = HystrixCommandProperties.Setter();
 
@@ -331,29 +320,19 @@ public class HystrixCommandInterceptor {
 
     private final Boolean syncCircuitBreakerEnabled;
 
-    private final BeanManager beanManager;
+    private final FallbackHandlerProvider fallbackHandlerProvider;
 
-    private final HystrixExtension extension;
+    private final FaultToleranceOperationProvider faultToleranceOperationProvider;
 
-    private final RequestContext requestContext;
+    private final Instance<CommandListener> listeners;
 
+    /**
+     * Represents cached command metadata.
+     */
     private class CommandMetadata {
 
         public CommandMetadata(Method method) {
-
-            String methodKey = method.toGenericString();
-
-            FaultToleranceOperation operation = null;
-            if (extension != null) {
-                operation = extension.getFaultToleranceOperation(methodKey);
-            }
-            if (operation == null) {
-                // This is not a bean method - create metadata on the fly
-                operation = FaultToleranceOperation.of(method);
-                operation.validate();
-            }
-            this.operation = operation;
-
+            operation = faultToleranceOperationProvider.apply(method);
             // Initialize Hystrix command setter
             commandKey = HystrixCommandKey.Factory.asKey(SimpleCommand.getCommandKey(method));
             setter = initSetter(commandKey, method, operation);
@@ -361,10 +340,8 @@ public class HystrixCommandInterceptor {
             if (operation.hasFallback()) {
                 FallbackConfig fallbackConfig = operation.getFallback();
                 if (!fallbackConfig.get(FallbackConfig.VALUE).equals(Fallback.DEFAULT.class)) {
-                    unmanaged = initUnmanaged(operation);
                     fallbackMethod = null;
                 } else {
-                    unmanaged = null;
                     String fallbackMethodName = fallbackConfig.get(FallbackConfig.FALLBACK_METHOD);
                     if (!"".equals(fallbackMethodName)) {
                         try {
@@ -378,13 +355,8 @@ public class HystrixCommandInterceptor {
                     }
                 }
             } else {
-                unmanaged = null;
                 fallbackMethod = null;
             }
-        }
-
-        boolean hasFallback() {
-            return unmanaged != null || fallbackMethod != null;
         }
 
         boolean hasCircuitBreaker() {
@@ -392,53 +364,54 @@ public class HystrixCommandInterceptor {
         }
 
         Supplier<Object> getFallback(ExecutionContextWithInvocationContext ctx) {
-            if (!hasFallback()) {
-                return null;
-            } else if (unmanaged != null) {
-                return () -> {
-                    Unmanaged.UnmanagedInstance<FallbackHandler<?>> unmanagedInstance = unmanaged.newInstance();
-                    FallbackHandler<?> handler = unmanagedInstance.produce().inject().postConstruct().get();
-                    try {
-                        return handler.handle(ctx);
-                    } finally {
-                        // The instance exists to service a single invocation only
-                        unmanagedInstance.preDestroy().dispose();
+            Supplier<Object> fallback = null;
+            if (fallbackMethod != null) {
+                fallback = new Supplier<Object>() {
+                    @Override
+                    public Object get() {
+                        try {
+                            if (fallbackMethod.isDefault()) {
+                                // Workaround for default methods (used e.g. in MP Rest Client)
+                                Class<?> declaringClazz = fallbackMethod.getDeclaringClass();
+                                try {
+                                    // First try java 8 hack
+                                    Constructor<Lookup> constructor = Lookup.class.getDeclaredConstructor(Class.class);
+                                    constructor.setAccessible(true);
+                                    return constructor.newInstance(declaringClazz).in(declaringClazz).unreflectSpecial(fallbackMethod, declaringClazz)
+                                            .bindTo(ctx.getTarget()).invokeWithArguments(ctx.getParameters());
+                                } catch (Exception e) {
+                                    // Now let's try java 9 hack
+                                    return null;
+//                                    return MethodHandles.lookup()
+//                                            .findSpecial(declaringClazz, fallbackMethod.getName(),
+//                                                    MethodType.methodType(fallbackMethod.getReturnType(), fallbackMethod.getParameterTypes()), declaringClazz)
+//                                            .bindTo(ctx.getTarget()).invokeWithArguments(ctx.getParameters());
+                                }
+                            } else {
+                                return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
+                            }
+                        } catch (Throwable e) {
+                            throw new FaultToleranceException("Error during fallback method invocation", e);
+                        }
                     }
                 };
             } else {
-                return () -> {
-                    try {
-                        if (fallbackMethod.isDefault()) {
-                            // Workaround for default methods (used e.g. in MP Rest Client)
-                            Class<?> declaringClazz = fallbackMethod.getDeclaringClass();
-                            try {
-                                // First try java 8 hack
-                                Constructor<Lookup> constructor = Lookup.class.getDeclaredConstructor(Class.class);
-                                constructor.setAccessible(true);
-                                return constructor.newInstance(declaringClazz).in(declaringClazz).unreflectSpecial(fallbackMethod, declaringClazz).bindTo(ctx.getTarget())
-                                        .invokeWithArguments(ctx.getParameters());
-                            } catch (Exception e) {
-                                // Now let's try java 9 hack
-                                return MethodHandles.lookup()
-                                        .findSpecial(declaringClazz, fallbackMethod.getName(),
-                                                MethodType.methodType(fallbackMethod.getReturnType(), fallbackMethod.getParameterTypes()), declaringClazz)
-                                        .bindTo(ctx.getTarget()).invokeWithArguments(ctx.getParameters());
-                            }
-                        } else {
-                            return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
+                FallbackHandler<?> fallbackHandler = fallbackHandlerProvider.get(operation);
+                if (fallbackHandler != null) {
+                    fallback = new Supplier<Object>() {
+                        @Override
+                        public Object get() {
+                            return fallbackHandler.handle(ctx);
                         }
-                    } catch (Throwable e) {
-                        throw new FaultToleranceException("Error during fallback method invocation", e);
-                    }
-                };
+                    };
+                }
             }
+            return fallback;
         }
 
         private final Setter setter;
 
         private final HystrixCommandKey commandKey;
-
-        private final Unmanaged<FallbackHandler<?>> unmanaged;
 
         private final Method fallbackMethod;
 

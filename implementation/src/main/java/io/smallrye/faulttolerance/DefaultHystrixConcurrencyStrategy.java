@@ -17,7 +17,6 @@ package io.smallrye.faulttolerance;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -27,11 +26,12 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.enterprise.context.Dependent;
 
+import org.jboss.logging.Logger;
+
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
 import com.netflix.hystrix.strategy.properties.HystrixProperty;
-import org.jboss.logging.Logger;
 
 /**
  * The default concurrency strategy using the managed version of {@link ThreadFactory}.
@@ -45,7 +45,7 @@ import org.jboss.logging.Logger;
  * @author Antoine Sabot-Durand
  */
 @Dependent
-class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrategy {
+public class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrategy {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
 
