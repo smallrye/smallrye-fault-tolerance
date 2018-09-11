@@ -28,7 +28,7 @@ public interface CommandListener {
     /**
      * Should not throw an exception.
      * 
-     * @param operation
+     * @param operation A fault tolerance operation metadata
      */
     default void beforeExecution(FaultToleranceOperation operation) {
     }
@@ -36,7 +36,7 @@ public interface CommandListener {
     /**
      * Should not throw an exception.
      * 
-     * @param operation
+     * @param operation A fault tolerance operation metadata
      */
     default void afterExecution(FaultToleranceOperation operation) {
     }

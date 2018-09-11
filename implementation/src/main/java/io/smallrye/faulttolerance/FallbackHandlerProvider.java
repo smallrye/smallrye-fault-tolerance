@@ -22,14 +22,12 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 /**
  * 
  * @author Martin Kouba
- *
- * @param <T>
  */
 public interface FallbackHandlerProvider {
 
     /**
      * 
-     * @param operation
+     * @param operation Fault tolerance operation
      * @return a new fallback handler or {@code null}
      */
     <T> FallbackHandler<T> get(FaultToleranceOperation operation);

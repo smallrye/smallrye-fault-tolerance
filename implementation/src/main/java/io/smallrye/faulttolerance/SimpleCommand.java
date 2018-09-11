@@ -51,11 +51,11 @@ public class SimpleCommand extends HystrixCommand<Object> {
 
     /**
      *
-     * @param setter
-     * @param ctx
-     * @param fallback
-     * @param operation
-     * @param listeners
+     * @param setter Hystrix command setter
+     * @param ctx Execution context
+     * @param fallback Fallback
+     * @param operation Fault tolerance operation
+     * @param listeners Command listeners
      */
     protected SimpleCommand(Setter setter, ExecutionContextWithInvocationContext ctx, Supplier<Object> fallback, FaultToleranceOperation operation,
             Iterable<CommandListener> listeners) {
