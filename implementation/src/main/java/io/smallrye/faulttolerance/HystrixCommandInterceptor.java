@@ -125,10 +125,15 @@ public class HystrixCommandInterceptor {
     public Object interceptCommand(InvocationContext ic) throws Exception {
 
         Method method = ic.getMethod();
+        CommandMetadata metadata = commandMetadataMap.computeIfAbsent(method, CommandMetadata::new);
+        if (!metadata.operation.isLegitimate()) {
+            // HystrixCommandBinding is present but no FT annotation is used
+            return ic.proceed();
+        }
+        
         ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(ic);
         LOGGER.tracef("FT operation intercepted: %s", method);
-
-        CommandMetadata metadata = commandMetadataMap.computeIfAbsent(method, CommandMetadata::new);
+        
         RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
         Function<Supplier<Object>, SimpleCommand> commandFactory = (fallback) -> new SimpleCommand(metadata.setter, ctx, fallback, metadata.operation,
