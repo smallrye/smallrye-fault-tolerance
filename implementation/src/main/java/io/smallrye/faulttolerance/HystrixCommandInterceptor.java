@@ -16,8 +16,6 @@
 
 package io.smallrye.faulttolerance;
 
-import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
@@ -372,21 +370,7 @@ public class HystrixCommandInterceptor {
                         try {
                             if (fallbackMethod.isDefault()) {
                                 // Workaround for default methods (used e.g. in MP Rest Client)
-                                Class<?> declaringClazz = fallbackMethod.getDeclaringClass();
-                                try {
-                                    // First try java 8 hack
-                                    Constructor<Lookup> constructor = Lookup.class.getDeclaredConstructor(Class.class);
-                                    constructor.setAccessible(true);
-                                    return constructor.newInstance(declaringClazz).in(declaringClazz).unreflectSpecial(fallbackMethod, declaringClazz)
-                                            .bindTo(ctx.getTarget()).invokeWithArguments(ctx.getParameters());
-                                } catch (Exception e) {
-                                    // Now let's try java 9 hack
-                                    return null;
-//                                    return MethodHandles.lookup()
-//                                            .findSpecial(declaringClazz, fallbackMethod.getName(),
-//                                                    MethodType.methodType(fallbackMethod.getReturnType(), fallbackMethod.getParameterTypes()), declaringClazz)
-//                                            .bindTo(ctx.getTarget()).invokeWithArguments(ctx.getParameters());
-                                }
+                                return DefaultMethodFallbackProvider.getFallback(fallbackMethod, ctx);
                             } else {
                                 return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
                             }

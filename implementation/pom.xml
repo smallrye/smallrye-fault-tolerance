@@ -16,7 +16,9 @@
  ~  limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -28,6 +30,74 @@
   <artifactId>smallrye-fault-tolerance</artifactId>
 
   <name>SmallRye: MicroProfile Fault Tolerance Implementation</name>
+
+  <properties>
+    <java9.sourceDirectory>${project.basedir}/src/main/java9</java9.sourceDirectory>
+    <java9.build.outputDirectory>${project.build.directory}/classes-java9</java9.build.outputDirectory>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-java9</id>
+            <phase>compile</phase>
+            <configuration>
+              <tasks>
+                <property name="compile_classpath"
+                  refid="maven.compile.classpath" />
+                <mkdir dir="${java9.build.outputDirectory}" />
+                <javac fork="true"
+                  executable="${env.JAVA_HOME}/bin/javac"
+                  srcdir="${java9.sourceDirectory}"
+                  destdir="${java9.build.outputDirectory}"
+                  classpath="${compile_classpath}"
+                  includeantruntime="false" />
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-resources</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/META-INF/versions/9</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${java9.build.outputDirectory}</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Multi-Release>true</Multi-Release>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
   <dependencies>
     <dependency>
