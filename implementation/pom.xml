@@ -16,15 +16,13 @@
  ~  limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>io.smallrye</groupId>
     <artifactId>smallrye-fault-tolerance-parent</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.2</version>
   </parent>
 
   <artifactId>smallrye-fault-tolerance</artifactId>
@@ -47,15 +45,9 @@
             <phase>compile</phase>
             <configuration>
               <tasks>
-                <property name="compile_classpath"
-                  refid="maven.compile.classpath" />
+                <property name="compile_classpath" refid="maven.compile.classpath" />
                 <mkdir dir="${java9.build.outputDirectory}" />
-                <javac fork="true"
-                  executable="${env.JAVA_HOME}/bin/javac"
-                  srcdir="${java9.sourceDirectory}"
-                  destdir="${java9.build.outputDirectory}"
-                  classpath="${compile_classpath}"
-                  includeantruntime="false" />
+                <javac fork="true" executable="${env.JAVA_HOME}/bin/javac" srcdir="${java9.sourceDirectory}" destdir="${java9.build.outputDirectory}" classpath="${compile_classpath}" includeantruntime="false" />
               </tasks>
             </configuration>
             <goals>
