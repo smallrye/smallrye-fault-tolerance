@@ -38,23 +38,16 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 public class FaultToleranceOperation {
 
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
-        return new FaultToleranceOperation(annotatedMethod.getJavaMember(),
-                isAnnotated(Asynchronous.class, annotatedMethod),
-                getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
-                getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
-                getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
-                getConfig(Retry.class, annotatedMethod, RetryConfig::new),
+        return new FaultToleranceOperation(annotatedMethod.getJavaMember(), isAnnotated(Asynchronous.class, annotatedMethod),
+                getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new), getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
+                getConfig(Fallback.class, annotatedMethod, FallbackConfig::new), getConfig(Retry.class, annotatedMethod, RetryConfig::new),
                 getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
     }
 
     public static FaultToleranceOperation of(Method method) {
-        return new FaultToleranceOperation(method,
-                isAnnotated(Asynchronous.class, method),
-                getConfig(Bulkhead.class, method, BulkheadConfig::new),
-                getConfig(CircuitBreaker.class, method, CircuitBreakerConfig::new),
-                getConfig(Fallback.class, method, FallbackConfig::new),
-                getConfig(Retry.class, method, RetryConfig::new),
-                getConfig(Timeout.class, method, TimeoutConfig::new));
+        return new FaultToleranceOperation(method, isAnnotated(Asynchronous.class, method), getConfig(Bulkhead.class, method, BulkheadConfig::new),
+                getConfig(CircuitBreaker.class, method, CircuitBreakerConfig::new), getConfig(Fallback.class, method, FallbackConfig::new),
+                getConfig(Retry.class, method, RetryConfig::new), getConfig(Timeout.class, method, TimeoutConfig::new));
     }
 
     private final Method method;
@@ -71,8 +64,8 @@ public class FaultToleranceOperation {
 
     private final TimeoutConfig timeout;
 
-    private FaultToleranceOperation(Method method, boolean async, BulkheadConfig bulkhead, CircuitBreakerConfig circuitBreaker, FallbackConfig fallback, RetryConfig retry,
-            TimeoutConfig timeout) {
+    private FaultToleranceOperation(Method method, boolean async, BulkheadConfig bulkhead, CircuitBreakerConfig circuitBreaker, FallbackConfig fallback,
+            RetryConfig retry, TimeoutConfig timeout) {
         this.method = method;
         this.async = async;
         this.bulkhead = bulkhead;
@@ -136,6 +129,8 @@ public class FaultToleranceOperation {
 
     /**
      * Throws {@link FaultToleranceDefinitionException} if validation fails.
+     * 
+     * @return {@code true} if valid, {@code false} otherwise
      */
     public boolean validate() {
         if (async && !Future.class.equals(method.getReturnType())) {
@@ -176,8 +171,7 @@ public class FaultToleranceOperation {
         return annotatedMethod.isAnnotationPresent(annotationType) || annotatedMethod.getDeclaringType().isAnnotationPresent(annotationType);
     }
 
-    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Method method,
-            Function<Method, C> function) {
+    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Method method, Function<Method, C> function) {
         if (isAnnotated(annotationType, method)) {
             return function.apply(method);
         }

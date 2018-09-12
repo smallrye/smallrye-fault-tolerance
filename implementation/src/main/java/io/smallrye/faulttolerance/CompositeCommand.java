@@ -19,14 +19,16 @@ package io.smallrye.faulttolerance;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
+import org.eclipse.microprofile.faulttolerance.Asynchronous;
+
 import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
+
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import org.eclipse.microprofile.faulttolerance.Asynchronous;
 
 /**
  * This command is used to wrap any {@link Asynchronous} operation.
@@ -43,8 +45,8 @@ public class CompositeCommand extends HystrixCommand<Object> {
 
     /**
      *
-     * @param callable
-     * @param operation
+     * @param callable Asynchronous operation
+     * @param operation Fault tolerance operation
      */
     protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation) {
         super(initSetter(operation));

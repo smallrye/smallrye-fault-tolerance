@@ -16,16 +16,15 @@
 
 package io.smallrye.faulttolerance;
 
+import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.function.Supplier;
 
 import com.netflix.hystrix.HystrixCommand;
+
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import org.jboss.weld.context.RequestContext;
-
-import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
-
 
 /**
  * @author Antoine Sabot-Durand
@@ -52,32 +51,35 @@ public class SimpleCommand extends HystrixCommand<Object> {
 
     /**
      *
-     * @param setter
-     * @param ctx
-     * @param fallback
-     * @param operation
-     * @param requestContext
+     * @param setter Hystrix command setter
+     * @param ctx Execution context
+     * @param fallback Fallback
+     * @param operation Fault tolerance operation
+     * @param listeners Command listeners
      */
     protected SimpleCommand(Setter setter, ExecutionContextWithInvocationContext ctx, Supplier<Object> fallback, FaultToleranceOperation operation,
-            RequestContext requestContext) {
+            Iterable<CommandListener> listeners) {
         super(setter);
         this.ctx = ctx;
         this.fallback = fallback;
         this.operation = operation;
-        this.requestContext = requestContext;
+        this.listeners = listeners;
     }
 
     @Override
     protected Object run() throws Exception {
-        if (requestContext == null) {
+        if (listeners == null) {
             return ctx.proceed();
         }
         try {
-            requestContext.activate();
+            for (CommandListener listener : listeners) {
+                listener.beforeExecution(operation);
+            }
             return ctx.proceed();
         } finally {
-            requestContext.invalidate();
-            requestContext.deactivate();
+            for (CommandListener listener : listeners) {
+                listener.afterExecution(operation);
+            }
         }
     }
 
@@ -95,7 +97,7 @@ public class SimpleCommand extends HystrixCommand<Object> {
     }
 
     private boolean isFailureAssignableFromAnyFailureException(Throwable failure) {
-        Class<?>[] exceptions = operation.getCircuitBreaker().<Class<?>[]>get(FAIL_ON);
+        Class<?>[] exceptions = operation.getCircuitBreaker().<Class<?>[]> get(FAIL_ON);
         for (Class<?> exception : exceptions) {
             if (exception.isAssignableFrom(failure.getClass())) {
                 return true;
@@ -110,6 +112,6 @@ public class SimpleCommand extends HystrixCommand<Object> {
 
     private final ExecutionContextWithInvocationContext ctx;
 
-    private final RequestContext requestContext;
+    private final Iterable<CommandListener> listeners;
 
 }

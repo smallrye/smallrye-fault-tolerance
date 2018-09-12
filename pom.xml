@@ -50,7 +50,6 @@
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
     <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
     <version.javax.interceptor-api>1.2</version.javax.interceptor-api>
-    <version.weld-spi>2.4.SP1</version.weld-spi>
   </properties>
 
   <scm>
@@ -117,12 +116,6 @@
         <groupId>com.netflix.hystrix</groupId>
         <artifactId>hystrix-core</artifactId>
         <version>${version.hystrix}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.weld</groupId>
-        <artifactId>weld-spi</artifactId>
-        <version>${version.weld-spi}</version>
-        <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.jboss.logging</groupId>
