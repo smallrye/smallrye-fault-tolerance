@@ -130,14 +130,14 @@ public class HystrixCommandInterceptor {
             // HystrixCommandBinding is present but no FT annotation is used
             return ic.proceed();
         }
-        
+
         ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(ic);
         LOGGER.tracef("FT operation intercepted: %s", method);
-        
+
         RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
         Function<Supplier<Object>, SimpleCommand> commandFactory = (fallback) -> new SimpleCommand(metadata.setter, ctx, fallback, metadata.operation,
-                metadata.operation.isAsync() ? listeners : null);
+                listeners.isUnsatisfied() ? null : listeners);
 
         if (metadata.operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", metadata.operation);
