@@ -15,9 +15,13 @@
  */
 package io.smallrye.faulttolerance.sync;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 
 public class ShakyServiceClient {
+
+    static final AtomicInteger COUNTER = new AtomicInteger();
 
     static final int REQUEST_THRESHOLD = 2;
 
@@ -25,8 +29,11 @@ public class ShakyServiceClient {
 
     // successThreshold is ignored
     @CircuitBreaker(requestVolumeThreshold = REQUEST_THRESHOLD, delay = DELAY, successThreshold = 2)
-    void ping() {
-        throw new IllegalStateException("Service call failed!");
+    void ping(boolean success) {
+        COUNTER.incrementAndGet();
+        if (!success) {
+            throw new IllegalStateException("Service call failed!");
+        }
     }
 
 }

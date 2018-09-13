@@ -15,8 +15,6 @@
  */
 package io.smallrye.faulttolerance.sync;
 
-
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -27,9 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import io.smallrye.faulttolerance.HystrixCommandInterceptor;
-import io.smallrye.faulttolerance.SimpleCommand;
-import io.smallrye.faulttolerance.TestArchive;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -43,6 +38,10 @@ import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.HystrixCircuitBreaker;
 import com.netflix.hystrix.HystrixCommandKey;
 
+import io.smallrye.faulttolerance.HystrixCommandInterceptor;
+import io.smallrye.faulttolerance.SimpleCommand;
+import io.smallrye.faulttolerance.TestArchive;
+
 /**
  *
  * @author Martin Kouba
@@ -52,8 +51,7 @@ public class SyncCircuitBreakerDisabledTest {
 
     @Deployment
     public static JavaArchive createTestArchive() throws NoSuchMethodException, SecurityException {
-        return TestArchive.createBase(SyncCircuitBreakerDisabledTest.class)
-                .addPackage(SyncCircuitBreakerDisabledTest.class.getPackage())
+        return TestArchive.createBase(SyncCircuitBreakerDisabledTest.class).addPackage(SyncCircuitBreakerDisabledTest.class.getPackage())
                 .addAsManifestResource(new StringAsset(HystrixCommandInterceptor.SYNC_CIRCUIT_BREAKER_KEY + "=false"), "microprofile-config.properties");
     }
 
@@ -66,36 +64,52 @@ public class SyncCircuitBreakerDisabledTest {
         DynamicLongProperty intervalInMilliseconds = DynamicPropertyFactory.getInstance()
                 .getLongProperty("hystrix.command.default.metrics.healthSnapshot.intervalInMilliseconds", 500);
         assertEquals(intervalInMilliseconds.get(), 10);
+        ShakyServiceClient.COUNTER.set(0);
 
         // CLOSED
         for (int i = 0; i < ShakyServiceClient.REQUEST_THRESHOLD; i++) {
             assertInvocation(false);
         }
+        assertEquals(ShakyServiceClient.REQUEST_THRESHOLD, ShakyServiceClient.COUNTER.get());
         // Should be OPEN now
         HystrixCircuitBreaker breaker = HystrixCircuitBreaker.Factory.getInstance(HystrixCommandKey.Factory.asKey(getCommandKey()));
         assertNotNull(breaker);
         assertFalse(breaker.getClass().getName().contains("org.wildfly.swarm.microprofile.faulttolerance"));
         assertTrue(breaker.isOpen());
         assertInvocation(true);
+        assertEquals(ShakyServiceClient.REQUEST_THRESHOLD, ShakyServiceClient.COUNTER.get());
+
+        // Wait a little so that hystrix allows us to close
         TimeUnit.MILLISECONDS.sleep(ShakyServiceClient.DELAY);
+
         // Should be HALF-OPEN
+        assertInvocation(false, true);
+        assertEquals(ShakyServiceClient.REQUEST_THRESHOLD + 1, ShakyServiceClient.COUNTER.get());
+
+        // Should be CLOSED
         assertInvocation(false);
-        // OPEN again
-        assertInvocation(true);
+        assertInvocation(false);
+        assertEquals(ShakyServiceClient.REQUEST_THRESHOLD + 3, ShakyServiceClient.COUNTER.get());
     }
 
     private String getCommandKey() {
         try {
-            return SimpleCommand.getCommandKey(ShakyServiceClient.class.getDeclaredMethod("ping"));
+            return SimpleCommand.getCommandKey(ShakyServiceClient.class.getDeclaredMethod("ping", Boolean.TYPE));
         } catch (NoSuchMethodException | SecurityException e) {
             throw new IllegalStateException();
         }
     }
 
     private void assertInvocation(boolean open) throws InterruptedException {
+        assertInvocation(open, false);
+    }
+
+    private void assertInvocation(boolean open, boolean success) throws InterruptedException {
         try {
-            client.ping();
-            fail("Invocation should always fail!");
+            client.ping(success);
+            if (!success) {
+                fail("Invocation should have failed!");
+            }
         } catch (Exception e) {
             if (open) {
                 assertTrue("Circuit breaker must be open: " + e, e instanceof CircuitBreakerOpenException);
