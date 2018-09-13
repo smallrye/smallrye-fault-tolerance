@@ -27,7 +27,7 @@
 
   <artifactId>smallrye-fault-tolerance-docs</artifactId>
 
-  <name>SmallRye: MicroProfile Tolerance Documentation</name>
+  <name>SmallRye: MicroProfile Fault Tolerance - Documentation</name>
 
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
