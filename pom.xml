@@ -29,7 +29,7 @@
   <version>1.0.3-SNAPSHOT</version>
 
   <packaging>pom</packaging>
-  <name>SmallRye: MicroProfile Fault Tolerance Parent</name>
+  <name>SmallRye: MicroProfile Fault Tolerance - Parent</name>
 
   <properties>
     <version.asciidoctor.plugin>1.5.6</version.asciidoctor.plugin>

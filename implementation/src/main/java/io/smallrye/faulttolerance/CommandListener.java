@@ -19,7 +19,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
  * This listener can be used to perfom actions before and after a Hystrix command that wraps a FT operation is executed.
- * 
+ *
  * @author Martin Kouba
  * @see SimpleCommand#execute()
  */
@@ -27,16 +27,16 @@ public interface CommandListener {
 
     /**
      * Should not throw an exception.
-     * 
-     * @param operation A fault tolerance operation metadata
+     *
+     * @param operation The fault tolerance operation metadata
      */
     default void beforeExecution(FaultToleranceOperation operation) {
     }
 
     /**
      * Should not throw an exception.
-     * 
-     * @param operation A fault tolerance operation metadata
+     *
+     * @param operation The fault tolerance operation metadata
      */
     default void afterExecution(FaultToleranceOperation operation) {
     }

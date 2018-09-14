@@ -27,7 +27,7 @@
 
   <artifactId>smallrye-fault-tolerance</artifactId>
 
-  <name>SmallRye: MicroProfile Fault Tolerance Implementation</name>
+  <name>SmallRye: MicroProfile Fault Tolerance - Implementation</name>
 
   <properties>
     <java9.sourceDirectory>${project.basedir}/src/main/java9</java9.sourceDirectory>
