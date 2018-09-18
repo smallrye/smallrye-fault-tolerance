@@ -42,6 +42,11 @@ class ExecutionContextWithInvocationContext implements ExecutionContext {
         return ic.getParameters();
     }
 
+    @Override
+    public Throwable getFailure() {
+        return null; //TODO: to implement
+    }
+
     public Object getTarget() {
         return ic.getTarget();
     }
