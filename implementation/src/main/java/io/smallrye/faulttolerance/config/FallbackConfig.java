@@ -38,8 +38,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
 
     public static final String FALLBACK_METHOD = "fallbackMethod";
 
-    public FallbackConfig(Method method) {
-        super(Fallback.class, method);
+    public FallbackConfig(Class<?> beanClass, Method method) {
+        super(Fallback.class, beanClass, method);
     }
 
     public FallbackConfig(AnnotatedMethod<?> annotatedMethod) {

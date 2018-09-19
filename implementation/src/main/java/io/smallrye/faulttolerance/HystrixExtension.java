@@ -17,6 +17,7 @@
 package io.smallrye.faulttolerance;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,7 +34,6 @@ import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessManagedBean;
 
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
@@ -41,6 +41,8 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.jboss.logging.Logger;
+
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
  * @author Antoine Sabot-Durand
@@ -88,13 +90,17 @@ public class HystrixExtension implements Extension {
             FaultToleranceOperation operation = FaultToleranceOperation.of(annotatedMethod);
             if (operation.isLegitimate() && operation.validate()) {
                 LOGGER.debugf("Found %s", operation);
-                faultToleranceOperations.put(annotatedMethod.getJavaMember().toGenericString(), operation);
+                faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()), operation);
             }
         }
     }
 
-    FaultToleranceOperation getFaultToleranceOperation(String methodKey) {
-        return faultToleranceOperations.get(methodKey);
+    private static String getCacheKey(Class<?> beanClass, Method method) {
+        return beanClass.getName() + "::" + method.toGenericString();
+    }
+
+    FaultToleranceOperation getFaultToleranceOperation(Class<?> beanClass, Method method) {
+        return faultToleranceOperations.get(getCacheKey(beanClass, method));
     }
 
     public static class HystrixInterceptorBindingAnnotatedType<T extends Annotation> implements AnnotatedType<T> {

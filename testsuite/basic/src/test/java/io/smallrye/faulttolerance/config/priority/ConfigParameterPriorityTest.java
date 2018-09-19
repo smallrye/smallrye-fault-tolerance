@@ -24,16 +24,17 @@ import java.time.temporal.ChronoUnit;
 
 import javax.inject.Inject;
 
-import io.smallrye.faulttolerance.FaultToleranceOperations;
-import io.smallrye.faulttolerance.TestArchive;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.config.RetryConfig;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.FaultToleranceOperations;
+import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.config.RetryConfig;
 
 /**
  *
@@ -55,7 +56,7 @@ public class ConfigParameterPriorityTest {
 
     @Test
     public void testConfig() throws NoSuchMethodException, SecurityException {
-        FaultToleranceOperation foo = ops.get(FaultyService.class.getMethod("foo").toGenericString());
+        FaultToleranceOperation foo = ops.get(FaultyService.class, FaultyService.class.getMethod("foo"));
         assertNotNull(foo);
         assertTrue(foo.hasRetry());
         RetryConfig fooRetry = foo.getRetry();
@@ -66,7 +67,7 @@ public class ConfigParameterPriorityTest {
         // Default value
         assertEquals(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class), ChronoUnit.MILLIS);
 
-        FaultToleranceOperation bar = ops.get(FaultyService.class.getMethod("bar").toGenericString());
+        FaultToleranceOperation bar = ops.get(FaultyService.class, FaultyService.class.getMethod("bar"));
         assertNotNull(bar);
         assertTrue(bar.hasRetry());
         RetryConfig barRetry = bar.getRetry();

@@ -15,6 +15,8 @@
  */
 package io.smallrye.faulttolerance;
 
+import java.lang.reflect.Method;
+
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 
@@ -27,8 +29,8 @@ public class FaultToleranceOperations {
     @Inject
     HystrixExtension extension;
 
-    public FaultToleranceOperation get(String methodKey) {
-        return extension.getFaultToleranceOperation(methodKey);
+    public FaultToleranceOperation get(Class<?> beanClass, Method method) {
+        return extension.getFaultToleranceOperation(beanClass, method);
     }
 
 }

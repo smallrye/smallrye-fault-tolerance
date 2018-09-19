@@ -18,6 +18,7 @@ package io.smallrye.faulttolerance.config;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.concurrent.Future;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.enterprise.inject.spi.AnnotatedMethod;
@@ -38,17 +39,26 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 public class FaultToleranceOperation {
 
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
-        return new FaultToleranceOperation(annotatedMethod.getJavaMember(), isAnnotated(Asynchronous.class, annotatedMethod),
-                getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new), getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
-                getConfig(Fallback.class, annotatedMethod, FallbackConfig::new), getConfig(Retry.class, annotatedMethod, RetryConfig::new),
+        return new FaultToleranceOperation(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(),
+                isAnnotated(Asynchronous.class, annotatedMethod),
+                getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
+                getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
+                getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
+                getConfig(Retry.class, annotatedMethod, RetryConfig::new),
                 getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
     }
 
-    public static FaultToleranceOperation of(Method method) {
-        return new FaultToleranceOperation(method, isAnnotated(Asynchronous.class, method), getConfig(Bulkhead.class, method, BulkheadConfig::new),
-                getConfig(CircuitBreaker.class, method, CircuitBreakerConfig::new), getConfig(Fallback.class, method, FallbackConfig::new),
-                getConfig(Retry.class, method, RetryConfig::new), getConfig(Timeout.class, method, TimeoutConfig::new));
+    public static FaultToleranceOperation of(Class<?> beanClass, Method method) {
+        return new FaultToleranceOperation(beanClass, method,
+                isAnnotated(Asynchronous.class, method, beanClass),
+                getConfig(Bulkhead.class, beanClass, method, BulkheadConfig::new),
+                getConfig(CircuitBreaker.class, beanClass, method, CircuitBreakerConfig::new),
+                getConfig(Fallback.class, beanClass, method, FallbackConfig::new),
+                getConfig(Retry.class, beanClass, method, RetryConfig::new),
+                getConfig(Timeout.class, beanClass, method, TimeoutConfig::new));
     }
+
+    private final Class<?> beanClass;
 
     private final Method method;
 
@@ -64,8 +74,9 @@ public class FaultToleranceOperation {
 
     private final TimeoutConfig timeout;
 
-    private FaultToleranceOperation(Method method, boolean async, BulkheadConfig bulkhead, CircuitBreakerConfig circuitBreaker, FallbackConfig fallback,
-            RetryConfig retry, TimeoutConfig timeout) {
+    private FaultToleranceOperation(Class<?> beanClass, Method method, boolean async, BulkheadConfig bulkhead, CircuitBreakerConfig circuitBreaker,
+            FallbackConfig fallback, RetryConfig retry, TimeoutConfig timeout) {
+        this.beanClass = beanClass;
         this.method = method;
         this.async = async;
         this.bulkhead = bulkhead;
@@ -123,13 +134,17 @@ public class FaultToleranceOperation {
         return method;
     }
 
+    public Class<?> getBeanClass() {
+        return beanClass;
+    }
+
     public boolean isLegitimate() {
         return async || bulkhead != null || circuitBreaker != null || fallback != null || retry != null || timeout != null;
     }
 
     /**
      * Throws {@link FaultToleranceDefinitionException} if validation fails.
-     * 
+     *
      * @return {@code true} if valid, {@code false} otherwise
      */
     public boolean validate() {
@@ -156,7 +171,7 @@ public class FaultToleranceOperation {
 
     @Override
     public String toString() {
-        return "FaultToleranceOperation [method=" + method.toGenericString() + "]";
+        return "FaultToleranceOperation [beanClass=" + beanClass + ", method=" + method.toGenericString() + "]";
     }
 
     private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod,
@@ -171,15 +186,28 @@ public class FaultToleranceOperation {
         return annotatedMethod.isAnnotationPresent(annotationType) || annotatedMethod.getDeclaringType().isAnnotationPresent(annotationType);
     }
 
-    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Method method, Function<Method, C> function) {
-        if (isAnnotated(annotationType, method)) {
-            return function.apply(method);
+    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Class<?> beanClass, Method method,
+            BiFunction<Class<?>, Method, C> function) {
+        if (isAnnotated(annotationType, method, beanClass)) {
+            return function.apply(beanClass, method);
         }
         return null;
     }
 
-    private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, Method method) {
-        return method.isAnnotationPresent(annotationType) || method.getDeclaringClass().isAnnotationPresent(annotationType);
+    private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, Method method, Class<?> beanClass) {
+        if (method.isAnnotationPresent(annotationType)) {
+            return true;
+        }
+        if (beanClass.isAnnotationPresent(annotationType)) {
+            return true;
+        }
+        while (beanClass != Object.class) {
+            if (beanClass.isAnnotationPresent(annotationType)) {
+                return true;
+            }
+            beanClass = beanClass.getSuperclass();
+        }
+        return false;
     }
 
 }

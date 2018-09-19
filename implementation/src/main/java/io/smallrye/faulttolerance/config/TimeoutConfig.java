@@ -35,8 +35,8 @@ public class TimeoutConfig extends GenericConfig<Timeout> {
 
     public static final String UNIT = "unit";
 
-    public TimeoutConfig(Method method) {
-        super(Timeout.class, method);
+    public TimeoutConfig(Class<?> beanClass, Method method) {
+        super(Timeout.class, beanClass, method);
     }
 
     public TimeoutConfig(AnnotatedMethod<?> annotatedMethod) {
