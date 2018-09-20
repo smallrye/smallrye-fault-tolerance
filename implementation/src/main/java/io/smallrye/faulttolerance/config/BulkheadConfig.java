@@ -34,8 +34,8 @@ public class BulkheadConfig extends GenericConfig<Bulkhead> {
 
     public static final String WAITING_TASK_QUEUE = "waitingTaskQueue";
 
-    public BulkheadConfig(Method method) {
-        super(Bulkhead.class, method);
+    public BulkheadConfig(Class<?> beanClass, Method method) {
+        super(Bulkhead.class, beanClass, method);
     }
 
     public BulkheadConfig(AnnotatedMethod<?> annotatedMethod) {

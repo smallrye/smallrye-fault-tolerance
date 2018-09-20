@@ -20,8 +20,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +30,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Priority;
 import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Intercepted;
+import javax.enterprise.inject.spi.Bean;
 import javax.inject.Inject;
 import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
@@ -99,17 +101,34 @@ public class HystrixCommandInterceptor {
 
     private static final Logger LOGGER = Logger.getLogger(HystrixCommandInterceptor.class);
 
+    private final ConcurrentMap<String, HystrixCircuitBreaker> circuitBreakers;
+
+    private final ConcurrentMap<Method, CommandMetadata> commandMetadataCache;
+
+    private final Boolean nonFallBackEnable;
+
+    private final Boolean syncCircuitBreakerEnabled;
+
+    private final FallbackHandlerProvider fallbackHandlerProvider;
+
+    private final FaultToleranceOperationProvider faultToleranceOperationProvider;
+
+    private final Instance<CommandListener> listeners;
+
+    private final Bean<?> interceptedBean;
+
     @SuppressWarnings("unchecked")
     @Inject
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, FallbackHandlerProvider fallbackHandlerProvider, FaultToleranceOperationProvider faultToleranceOperationProvider,
-            Instance<CommandListener> listeners) {
+            Instance<CommandListener> listeners, @Intercepted Bean<?> interceptedBean) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.faultToleranceOperationProvider = faultToleranceOperationProvider;
-        this.commandMetadataMap = new ConcurrentHashMap<>();
+        this.commandMetadataCache = new ConcurrentHashMap<>();
         this.listeners = listeners;
+        this.interceptedBean = interceptedBean;
         // WORKAROUND: Hystrix does not allow to use custom HystrixCircuitBreaker impl
         // See also https://github.com/Netflix/Hystrix/issues/9
         try {
@@ -122,16 +141,18 @@ public class HystrixCommandInterceptor {
     }
 
     @AroundInvoke
-    public Object interceptCommand(InvocationContext ic) throws Exception {
+    public Object interceptCommand(InvocationContext invocationContext) throws Exception {
 
-        Method method = ic.getMethod();
-        CommandMetadata metadata = commandMetadataMap.computeIfAbsent(method, CommandMetadata::new);
+        Method method = invocationContext.getMethod();
+        Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : invocationContext.getTarget().getClass();
+
+        CommandMetadata metadata = commandMetadataCache.computeIfAbsent(method, k -> new CommandMetadata(beanClass, method));
         if (!metadata.operation.isLegitimate()) {
             // HystrixCommandBinding is present but no FT annotation is used
-            return ic.proceed();
+            return invocationContext.proceed();
         }
 
-        ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(ic);
+        ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(invocationContext);
         LOGGER.tracef("FT operation intercepted: %s", method);
 
         RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
@@ -315,27 +336,18 @@ public class HystrixCommandInterceptor {
         return setter;
     }
 
-    private final ConcurrentHashMap<String, HystrixCircuitBreaker> circuitBreakers;
-
-    private final Map<Method, CommandMetadata> commandMetadataMap;
-
-    private final Boolean nonFallBackEnable;
-
-    private final Boolean syncCircuitBreakerEnabled;
-
-    private final FallbackHandlerProvider fallbackHandlerProvider;
-
-    private final FaultToleranceOperationProvider faultToleranceOperationProvider;
-
-    private final Instance<CommandListener> listeners;
-
-    /**
-     * Represents cached command metadata.
-     */
     private class CommandMetadata {
 
-        public CommandMetadata(Method method) {
-            operation = faultToleranceOperationProvider.apply(method);
+        private final Setter setter;
+
+        private final HystrixCommandKey commandKey;
+
+        private final Method fallbackMethod;
+
+        private final FaultToleranceOperation operation;
+
+        CommandMetadata(Class<?> beanClass, Method method) {
+            operation = faultToleranceOperationProvider.get(beanClass, method);
             // Initialize Hystrix command setter
             commandKey = HystrixCommandKey.Factory.asKey(SimpleCommand.getCommandKey(method));
             setter = initSetter(commandKey, method, operation);
@@ -398,17 +410,9 @@ public class HystrixCommandInterceptor {
             return fallback;
         }
 
-        private final Setter setter;
-
-        private final HystrixCommandKey commandKey;
-
-        private final Method fallbackMethod;
-
-        private final FaultToleranceOperation operation;
-
     }
 
-    class AsyncFuture implements Future<Object> {
+    static class AsyncFuture implements Future<Object> {
 
         private final Future<Object> delegate;
 

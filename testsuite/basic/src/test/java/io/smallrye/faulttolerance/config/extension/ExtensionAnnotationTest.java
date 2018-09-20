@@ -25,15 +25,17 @@ import java.time.temporal.ChronoUnit;
 import javax.enterprise.inject.spi.Extension;
 import javax.inject.Inject;
 
-import io.smallrye.faulttolerance.FaultToleranceOperations;
-import io.smallrye.faulttolerance.TestArchive;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.config.RetryConfig;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.FaultToleranceOperations;
+import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.config.RetryConfig;
+
 /**
  *
  * @author Martin Kouba
@@ -43,10 +45,8 @@ public class ExtensionAnnotationTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(ExtensionAnnotationTest.class)
-                .addPackage(ExtensionAnnotationTest.class.getPackage())
-                .addClass(FaultToleranceOperations.class)
-                .addAsServiceProvider(Extension.class, CustomExtension.class);
+        return TestArchive.createBase(ExtensionAnnotationTest.class).addPackage(ExtensionAnnotationTest.class.getPackage())
+                .addClass(FaultToleranceOperations.class).addAsServiceProvider(Extension.class, CustomExtension.class);
     }
 
     @Inject
@@ -57,7 +57,7 @@ public class ExtensionAnnotationTest {
 
     @Test
     public void testAnnotationAddedByExtension() throws NoSuchMethodException, SecurityException {
-        FaultToleranceOperation ping = ops.get(UnconfiguredService.class.getMethod("ping").toGenericString());
+        FaultToleranceOperation ping = ops.get(UnconfiguredService.class, UnconfiguredService.class.getMethod("ping"));
         assertNotNull(ping);
         assertTrue(ping.hasRetry());
         RetryConfig fooRetry = ping.getRetry();

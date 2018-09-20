@@ -49,8 +49,8 @@ public class RetryConfig extends GenericConfig<Retry> {
 
     public static final String ABORT_ON = "abortOn";
 
-    public RetryConfig(Method method) {
-        super(Retry.class, method);
+    public RetryConfig(Class<?> beanClass, Method method) {
+        super(Retry.class, beanClass, method);
     }
 
     public RetryConfig(AnnotatedMethod<?> annotatedMethod) {

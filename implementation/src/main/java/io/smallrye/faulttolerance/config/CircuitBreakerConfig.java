@@ -23,10 +23,11 @@ import java.util.Map;
 
 import javax.enterprise.inject.spi.AnnotatedMethod;
 
-import io.smallrye.faulttolerance.HystrixCommandInterceptor;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 import org.jboss.logging.Logger;
+
+import io.smallrye.faulttolerance.HystrixCommandInterceptor;
 
 
 /**
@@ -50,8 +51,8 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
 
     private static final Logger LOGGER =  Logger.getLogger(CircuitBreakerConfig.class);
 
-    public CircuitBreakerConfig(Method method) {
-        super(CircuitBreaker.class, method);
+    public CircuitBreakerConfig(Class<?> beanClass, Method method) {
+        super(CircuitBreaker.class, beanClass, method);
     }
 
     public CircuitBreakerConfig(AnnotatedMethod<?> annotatedMethod) {

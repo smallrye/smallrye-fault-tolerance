@@ -16,15 +16,21 @@
 package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
-import java.util.function.Function;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * Represents a function that accepts a method and produces a fault tolerance operation.
- * 
+ *
  * @author Martin Kouba
  */
-public interface FaultToleranceOperationProvider extends Function<Method, FaultToleranceOperation> {
+public interface FaultToleranceOperationProvider {
+
+    /**
+     *
+     * @param beanClass
+     * @param method
+     * @return a fault tolerance operation fot the given parameters
+     */
+    FaultToleranceOperation get(Class<?> beanClass, Method method);
 
 }

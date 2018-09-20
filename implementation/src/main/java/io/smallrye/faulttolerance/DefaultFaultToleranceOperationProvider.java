@@ -24,12 +24,11 @@ import javax.inject.Inject;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * 
  * <p>
  * An integrator is allowed to provide a custom implementation of {@link FaultToleranceOperationProvider}. The bean should be {@link Dependent}, must be marked
  * as alternative and selected globally for an application.
  * </p>
- * 
+ *
  * @author Martin Kouba
  */
 @Dependent
@@ -43,15 +42,14 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
     }
 
     @Override
-    public FaultToleranceOperation apply(Method method) {
-        String methodKey = method.toGenericString();
+    public FaultToleranceOperation get(Class<?> beanClass, Method method) {
         FaultToleranceOperation operation = null;
         if (extension != null) {
-            operation = extension.getFaultToleranceOperation(methodKey);
+            operation = extension.getFaultToleranceOperation(beanClass, method);
         }
         if (operation == null) {
             // This is not a bean method - create metadata on the fly
-            operation = FaultToleranceOperation.of(method);
+            operation = FaultToleranceOperation.of(beanClass, method);
             operation.validate();
         }
         return operation;

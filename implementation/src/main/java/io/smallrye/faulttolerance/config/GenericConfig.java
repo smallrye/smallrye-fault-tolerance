@@ -40,9 +40,9 @@ public abstract class GenericConfig<X extends Annotation> {
      */
     public static final String CONFIG_PARAMS_CACHE_KEY = "org_wildfly_swarm_microprofile_faulttolerance_configParamsCache";
 
-    public GenericConfig(Class<X> annotationType, Method method) {
+    public GenericConfig(Class<X> annotationType, Class<?> beanClass, Method method) {
         this(method, null,
-                method.isAnnotationPresent(annotationType) ? method.getAnnotation(annotationType) : method.getDeclaringClass().getAnnotation(annotationType),
+                method.isAnnotationPresent(annotationType) ? method.getAnnotation(annotationType) : getAnnotationFromClass(annotationType, beanClass),
                 method.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
@@ -133,6 +133,17 @@ public abstract class GenericConfig<X extends Annotation> {
 
     protected static Config getConfig() {
         return ConfigProvider.getConfig();
+    }
+
+    private static <A extends Annotation> A getAnnotationFromClass(Class<A> annotationType, Class<?> beanClass) {
+        while (beanClass != Object.class) {
+            A annotation = beanClass.getAnnotation(annotationType);
+            if (annotation != null) {
+                return annotation;
+            }
+            beanClass = beanClass.getSuperclass();
+        }
+       throw new IllegalStateException(annotationType + " not found on " + beanClass);
     }
 
     protected abstract Class<X> getConfigType();
