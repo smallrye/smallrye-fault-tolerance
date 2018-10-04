@@ -27,36 +27,59 @@
             <package name="org.eclipse.microprofile.fault.tolerance.tck.*" />
         </packages>
 
-      <!--<classes>
-        <class name="org.eclipse.microprofile.fault.tolerance.tck.disableEnv.DisableAnnotationGloballyTest">
-          <methods>
-            <include name="testBulkhead" />
-          </methods>
-        </class>
-      </classes>-->
-        <classes>
+       <!-- <classes>
+            <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.RetryMetricTest"/>
+            <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.TimeoutMetricTest"/>
+        </classes>-->
+
+      <classes>
             <!-- Issues in the TCK -->
-            <class
-                name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchRetryTest">
-                <methods>
-                    <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/227 -->
-                    <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
-                    <exclude name="testBulkheadRetryClassSynchronous55" />
-                    <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
-                </methods>
-            </class>
+        <!--<class
+            name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchRetryTest">
+            <methods>
+                &lt;!&ndash; https://github.com/eclipse/microprofile-fault-tolerance/issues/227 &ndash;&gt;
+                <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
+                <exclude name="testBulkheadRetryClassSynchronous55" />
+                <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
+            </methods>
+        </class>-->
             <class
                 name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadAsynchRetryTest">
                 <methods>
                     <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/232 -->
-                    <exclude name="testBulkheadMethodAsynchronousRetry55Trip" />
+                  <!--<exclude name="testBulkheadMethodAsynchronousRetry55Trip" />-->
                     <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/250 -->
                     <exclude name="testBulkheadClassAsynchronous55RetryOverload"/>
                     <exclude name="testBulkheadMethodAsynchronous55RetryOverload"/>
                     <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/227 -->
-                    <exclude name="testBulkheadMethodAsynchronousQueueing10"/>
+                  <!--<exclude name="testBulkheadMethodAsynchronousQueueing10"/>-->
                 </methods>
             </class>
+        <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.BulkheadMetricTest">
+          <methods>
+            <exclude name="bulkheadMetricTest"/>
+            <exclude name="bulkheadMetricRejectionTest"/>
+            <exclude name="bulkheadMetricHistogramTest"/>
+            <exclude name="bulkheadMetricAsyncTest" />
+          </methods>
+        </class>
+        <class name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchConfigTest">
+          <methods>
+            <exclude name="testBulkheadClassSemaphore3"/>
+                </methods>
+            </class>
+        <class name="org.eclipse.microprofile.fault.tolerance.tck.AsynchronousCSTest">
+          <methods>
+            <exclude name="testAsyncIsNotFinished"/>
+            <exclude name="testAsyncIsFinished"/>
+            <exclude name="testClassLevelAsyncIsNotFinished"/>
+            <exclude name="testClassLevelAsyncIsFinished"/>
+            <exclude name="testAsyncIsNotFinished"/>
+            <exclude name="testAsyncCallbacksChained"/>
+            <exclude name="testAsyncCompletesExceptionallyWhenExceptionThrown"/>
+            <exclude name="testAsyncCompletesExceptionallyWhenCompletedExceptionally"/>
+          </methods>
+        </class>
         </classes>
 
     </test>

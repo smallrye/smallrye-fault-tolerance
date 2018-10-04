@@ -47,6 +47,10 @@ import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+import org.eclipse.microprofile.metrics.Counter;
+import org.eclipse.microprofile.metrics.Metadata;
+import org.eclipse.microprofile.metrics.MetricRegistry;
+import org.eclipse.microprofile.metrics.MetricType;
 import org.jboss.logging.Logger;
 
 import com.netflix.hystrix.HystrixCircuitBreaker;
@@ -116,6 +120,9 @@ public class HystrixCommandInterceptor {
 
     private final Bean<?> interceptedBean;
 
+    @Inject
+    private MetricRegistry registry;
+
     @SuppressWarnings("unchecked")
     @Inject
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
@@ -169,11 +176,23 @@ public class HystrixCommandInterceptor {
         }
     }
 
+
     private Object executeCommand(Function<Supplier<Object>, SimpleCommand> commandFactory, RetryContext retryContext, CommandMetadata metadata,
             ExecutionContextWithInvocationContext ctx, SynchronousCircuitBreaker syncCircuitBreaker) throws Exception {
+        String prefix = "ft." + getMethodFQN(ctx.getMethod());
+
+        //Metrics integration
+        counterInc(prefix + ".invocations.total");
         while (true) {
             if (retryContext != null) {
                 LOGGER.debugf("Executing %s with %s", metadata.operation, retryContext);
+
+                //Metrics integration
+                if (retryContext.hasBeenRetried()) {
+                    counterInc(prefix + ".retry.retries.total");
+                }
+
+
             }
             Supplier<Object> fallback = null;
             if (retryContext == null || retryContext.isLastAttempt()) {
@@ -189,8 +208,32 @@ public class HystrixCommandInterceptor {
                         syncCircuitBreaker.executionSucceeded();
                     }
                 }
+                //Metrics integration
+                if (retryContext != null) {
+                    if (retryContext.hasBeenRetried()) {
+                        counterInc(prefix + ".retry.callsSucceededRetried.total");
+                    } else {
+                        counterInc(prefix + ".retry.callsSucceededNotRetried.total");
+                    }
+                }
+
+
                 return res;
             } catch (HystrixRuntimeException e) {
+
+
+                //Metrics integration
+                if (retryContext != null ) {
+                    if (retryContext.isLastAttempt()) {
+                        counterInc(prefix + ".retry.callsFailed.total");
+                        counterInc(prefix + ".invocations.failed.total");
+                    }
+                } else {
+                    counterInc(prefix + ".invocations.failed.total");
+                }
+
+
+
                 Exception res = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(), syncCircuitBreaker);
                 if (res != null) {
                     throw res;
@@ -199,8 +242,33 @@ public class HystrixCommandInterceptor {
         }
     }
 
+    private void counterInc(String name) {
+        //TODO:disable metrics by config
+        counterOf(name).inc();
+    }
+
+    private Metadata metadataOf(String name) {
+        Metadata res = new Metadata(name, MetricType.COUNTER);
+        res.setReusable(true);
+        return res;
+    }
+
+    private Counter counterOf(String name) {
+        Counter res = registry.getCounters().get(name);
+        if (res == null) {
+            res = registry.counter(metadataOf(name));
+        }
+        return res;
+    }
+
+    private static String getMethodFQN(Method method) {
+        return method.getDeclaringClass().getCanonicalName() + "." + method.getName();
+    }
+
     private static Exception processHystrixRuntimeException(HystrixRuntimeException e, RetryContext retryContext, Method method,
             SynchronousCircuitBreaker syncCircuitBreaker) {
+        String prefix = "ft." + getMethodFQN(method);
+
 
         FailureType failureType = e.getFailureType();
         LOGGER.tracef("Hystrix runtime failure [%s] with cause %s when invoking %s", failureType, e.getCause(), method);

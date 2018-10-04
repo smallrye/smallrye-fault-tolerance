@@ -125,4 +125,7 @@ class RetryContext {
         return "RetryContext [remainingAttempts=" + remainingAttempts + ", start=" + start + "]";
     }
 
+    boolean hasBeenRetried() {
+        return remainingAttempts.get() < (config.<Integer>get(RetryConfig.MAX_RETRIES) + 1);
+    }
 }
