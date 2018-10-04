@@ -59,7 +59,7 @@ public class FallbackConfig extends GenericConfig<Fallback> {
                 throw new FaultToleranceDefinitionException(
                         "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found", e);
             }
-            if (!isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
+            if (!method.getReturnType().equals(void.class) && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
                 throw new FaultToleranceDefinitionException(
                         "Fallback method " + get(FALLBACK_METHOD) + " must have a return type assignable to " + method.getName());
             }
