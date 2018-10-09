@@ -15,19 +15,21 @@
  */
 package io.smallrye.faulttolerance;
 
+import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.CLOSED;
+import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.HALF_OPEN;
+import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.OPEN;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.netflix.hystrix.HystrixCircuitBreaker;
-import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 import org.jboss.logging.Logger;
 
-import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.CLOSED;
-import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.HALF_OPEN;
-import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.OPEN;
+import com.netflix.hystrix.HystrixCircuitBreaker;
+
+import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 
 /**
  * This is an implementation of the HystrixCircuitBreaker that is expected to be used synchronously by the HystrixCommand implementation to track the state of
@@ -117,26 +119,38 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
 
     synchronized void executionSucceeded() {
         successCount.incrementAndGet();
-        // Transition to CLOSED if HALF_OPEN and successThreshold reached
-        if (HALF_OPEN == status.get() && isSuccessThresholdReached()) {
-            LOGGER.debugf("HALF_OPEN >> CLOSED [id:%s]", id);
-            status.set(CLOSED);
-            circuitOpenedAt.set(-1);
-            resetCounts();
+        Status current = status.get();
+        if (HALF_OPEN == current && isSuccessThresholdReached()) {
+            // Transition to CLOSED if HALF_OPEN and successThreshold reached
+            toClosed();
+        } else if (CLOSED == current && isFailureThresholdReached()) {
+            // Transition to OPEN if CLOSED and failure threshold reached
+            toOpen(current);
         }
     }
 
     synchronized void executionFailed() {
         failureCount.incrementAndGet();
-        // Transition to OPEN if HALF_OPEN
-        // Transition to OPEN if CLOSED and failure threshold reached
         Status current = status.get();
         if (HALF_OPEN == current || (CLOSED == current && isFailureThresholdReached())) {
-            LOGGER.debugf("%s >> OPEN [id:%s]", current, id);
-            status.set(OPEN);
-            circuitOpenedAt.set(System.currentTimeMillis());
-            resetCounts();
+            // Transition to OPEN if HALF_OPEN
+            // Transition to OPEN if CLOSED and failure threshold reached
+            toOpen(current);
         }
+    }
+
+    private void toClosed() {
+        LOGGER.debugf("HALF_OPEN >> CLOSED [id:%s]", id);
+        status.set(CLOSED);
+        circuitOpenedAt.set(-1);
+        resetCounts();
+    }
+
+    private void toOpen(Status current) {
+        LOGGER.debugf("%s >> OPEN [id:%s]", current, id);
+        status.set(OPEN);
+        circuitOpenedAt.set(System.currentTimeMillis());
+        resetCounts();
     }
 
     private boolean isAfterDelay() {
