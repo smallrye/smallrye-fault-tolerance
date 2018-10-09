@@ -106,6 +106,10 @@ public class SimpleCommand extends HystrixCommand<Object> {
         return false;
     }
 
+     void setFailure(Throwable f) {
+        ctx.setFailure(f);
+    }
+
     private final FaultToleranceOperation operation;
 
     private final Supplier<Object> fallback;
@@ -114,4 +118,7 @@ public class SimpleCommand extends HystrixCommand<Object> {
 
     private final Iterable<CommandListener> listeners;
 
+    FaultToleranceOperation getOperation() {
+        return operation;
+    }
 }

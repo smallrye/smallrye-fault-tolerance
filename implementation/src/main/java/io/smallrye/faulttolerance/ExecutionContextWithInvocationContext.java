@@ -44,7 +44,11 @@ class ExecutionContextWithInvocationContext implements ExecutionContext {
 
     @Override
     public Throwable getFailure() {
-        return null; //TODO: to implement
+        return failure;
+    }
+
+    void setFailure(Throwable f) {
+        failure = f;
     }
 
     public Object getTarget() {
@@ -56,4 +60,6 @@ class ExecutionContextWithInvocationContext implements ExecutionContext {
     }
 
     private InvocationContext ic;
+
+    private Throwable failure;
 }

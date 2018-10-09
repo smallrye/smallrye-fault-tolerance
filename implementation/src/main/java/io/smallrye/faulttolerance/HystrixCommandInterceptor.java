@@ -47,10 +47,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.eclipse.microprofile.metrics.Counter;
-import org.eclipse.microprofile.metrics.Metadata;
-import org.eclipse.microprofile.metrics.MetricRegistry;
-import org.eclipse.microprofile.metrics.MetricType;
+import org.eclipse.microprofile.metrics.*;
 import org.jboss.logging.Logger;
 
 import com.netflix.hystrix.HystrixCircuitBreaker;
@@ -199,7 +196,13 @@ public class HystrixCommandInterceptor {
                 fallback = metadata.getFallback(ctx);
             }
             SimpleCommand command = commandFactory.apply(fallback);
+            long start = 0;
+            if (metadata.operation.hasTimeout()) {
+                start = System.nanoTime();
+            }
+            Exception exception = null;
             try {
+
                 Object res = command.execute();
                 if (syncCircuitBreaker != null) {
                     if (command.isFailedExecution()) {
@@ -216,12 +219,29 @@ public class HystrixCommandInterceptor {
                         counterInc(prefix + ".retry.callsSucceededNotRetried.total");
                     }
                 }
+                if (metadata.operation.hasTimeout()) {
+                    counterInc(prefix + ".timeout.callsNotTimedOut.total");
+                }
+                if (metadata.operation.hasCircuitBreaker()) {
+                    counterInc(prefix + ".circuitbreaker.callsSucceeded.total");
+
+                }
 
 
                 return res;
             } catch (HystrixRuntimeException e) {
 
+                if (metadata.operation.hasCircuitBreaker()) {
+                    counterInc(prefix + ".circuitbreaker.callsFailed.total");
+                    if(command.isCircuitBreakerOpen()) {
+                        counterInc(prefix + ".circuitbreaker.callsPrevented.total");
+                    }
+                }
 
+                //Metrics integration
+                if(e.getFallbackException() != null &&(retryContext == null || retryContext.isLastAttempt())) {
+                    counterInc(prefix + ".fallback.calls.total");
+                }
                 //Metrics integration
                 if (retryContext != null ) {
                     if (retryContext.isLastAttempt()) {
@@ -233,11 +253,21 @@ public class HystrixCommandInterceptor {
                 }
 
 
-
-                Exception res = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(), syncCircuitBreaker);
-                if (res != null) {
-                    throw res;
+                exception = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(), syncCircuitBreaker);
+                if (exception != null) {
+                    if(exception.getClass() == TimeoutException.class) {
+                        counterInc(prefix + ".timeout.callsTimedOut.total");
+                    }
+                    throw exception;
                 }
+            } finally {
+                if(start != 0) {
+                    histogramUpdate(prefix + ".timeout.executionDuration", System.nanoTime() - start);
+                }
+                if(command.isResponseFromFallback()) {
+                    counterInc(prefix + ".fallback.calls.total");
+                }
+
             }
         }
     }
@@ -247,8 +277,13 @@ public class HystrixCommandInterceptor {
         counterOf(name).inc();
     }
 
-    private Metadata metadataOf(String name) {
-        Metadata res = new Metadata(name, MetricType.COUNTER);
+    private void histogramUpdate(String name, long value) {
+        //TODO:disable metrics by config
+        histogramOf(name).update(value);
+    }
+
+    private Metadata metadataOf(String name, MetricType metricType) {
+        Metadata res = new Metadata(name, metricType);
         res.setReusable(true);
         return res;
     }
@@ -256,7 +291,15 @@ public class HystrixCommandInterceptor {
     private Counter counterOf(String name) {
         Counter res = registry.getCounters().get(name);
         if (res == null) {
-            res = registry.counter(metadataOf(name));
+            res = registry.counter(metadataOf(name, MetricType.COUNTER));
+        }
+        return res;
+    }
+
+    private Histogram histogramOf(String name) {
+        Histogram res = registry.getHistograms().get(name);
+        if(res == null) {
+            res=registry.histogram(metadataOf(name,MetricType.HISTOGRAM));
         }
         return res;
     }
