@@ -92,11 +92,9 @@ public class HystrixExtension implements Extension {
     }
 
 
-    void addHystrixPlugin (@Observes AfterDeploymentValidation adv) {
+    void addHystrixPlugin (@Observes AfterDeploymentValidation adv, BeanManager bm) {
         HystrixPlugins plugins = HystrixPlugins.getInstance();
-        plugins.registerMetricsPublisher(new FaultToleranceMetricsPublisher());
         plugins.registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
-
     }
 
     private static String getCacheKey(Class<?> beanClass, Method method) {

@@ -120,6 +120,10 @@ public class HystrixCommandInterceptor {
     @Inject
     private MetricRegistry registry;
 
+    @Inject
+    @ConfigProperty(name="MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
+    Boolean metricsEnabled;
+
     @SuppressWarnings("unchecked")
     @Inject
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
@@ -197,14 +201,18 @@ public class HystrixCommandInterceptor {
             }
             SimpleCommand command = commandFactory.apply(fallback);
             long start = 0;
+            long cbOpenStart = 0;
+            long cbCloseStart = 0;
             if (metadata.operation.hasTimeout()) {
                 start = System.nanoTime();
             }
             Exception exception = null;
+            HystrixCircuitBreaker cb = syncCircuitBreaker != null ? syncCircuitBreaker : command.getCircuitBreaker();
             try {
 
                 Object res = command.execute();
                 if (syncCircuitBreaker != null) {
+                    cbCloseStart = System.currentTimeMillis();
                     if (command.isFailedExecution()) {
                         syncCircuitBreaker.executionFailed();
                     } else {
@@ -231,10 +239,15 @@ public class HystrixCommandInterceptor {
                 return res;
             } catch (HystrixRuntimeException e) {
 
-                if (metadata.operation.hasCircuitBreaker()) {
-                    counterInc(prefix + ".circuitbreaker.callsFailed.total");
-                    if(command.isCircuitBreakerOpen()) {
+                boolean isCircuitBreakerOpenBeforeExceptionProcessing = false;
+
+
+                if (cb != null) {
+                    if (cb.isOpen()) {
                         counterInc(prefix + ".circuitbreaker.callsPrevented.total");
+                        isCircuitBreakerOpenBeforeExceptionProcessing = true;
+                    } else {
+                        counterInc(prefix + ".circuitbreaker.callsFailed.total");
                     }
                 }
 
@@ -254,15 +267,29 @@ public class HystrixCommandInterceptor {
 
 
                 exception = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(), syncCircuitBreaker);
+
+                if (cb != null && cb.isOpen() && !isCircuitBreakerOpenBeforeExceptionProcessing) {
+                        counterInc(prefix + ".circuitbreaker.opened.total");
+                        cbOpenStart = System.currentTimeMillis();
+                }
+
                 if (exception != null) {
                     if(exception.getClass() == TimeoutException.class) {
                         counterInc(prefix + ".timeout.callsTimedOut.total");
                     }
+
+
                     throw exception;
                 }
             } finally {
                 if(start != 0) {
                     histogramUpdate(prefix + ".timeout.executionDuration", System.nanoTime() - start);
+                }
+                if(cbOpenStart > 0 && !cb.isOpen()) {
+                    gaugeInc(prefix + ".circuitbreaker.open.total",System.nanoTime() - cbOpenStart);
+                }
+                if(cbCloseStart > 0) {
+                    gaugeInc(prefix + ".circuitbreaker.closed.total",System.nanoTime() - cbOpenStart);
                 }
                 if(command.isResponseFromFallback()) {
                     counterInc(prefix + ".fallback.calls.total");
@@ -273,18 +300,38 @@ public class HystrixCommandInterceptor {
     }
 
     private void counterInc(String name) {
-        //TODO:disable metrics by config
-        counterOf(name).inc();
+        if(metricsEnabled) {
+            counterOf(name).inc();
+        }
+    }
+
+    private void gaugeInc(String name, Long value) {
+        if(metricsEnabled) {
+            gaugeOfInc(name,value);
+        }
     }
 
     private void histogramUpdate(String name, long value) {
-        //TODO:disable metrics by config
-        histogramOf(name).update(value);
+        if(metricsEnabled) {
+            histogramOf(name).update(value);
+        }
     }
 
     private Metadata metadataOf(String name, MetricType metricType) {
         Metadata res = new Metadata(name, metricType);
         res.setReusable(true);
+        return res;
+    }
+
+    private Gauge<Long> gaugeOfInc(String name, Long value) {
+        Gauge<Long> res = registry.getGauges().get(name);
+        if (res == null) {
+            res = registry.register(metadataOf(name, MetricType.GAUGE), () -> value);
+        } else {
+            Long oldVal = res.getValue();
+            registry.remove(name);
+            res = registry.register(metadataOf(name, MetricType.GAUGE), () -> value + oldVal);
+        }
         return res;
     }
 

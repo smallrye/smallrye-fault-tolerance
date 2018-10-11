@@ -20,68 +20,70 @@
   ~ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
   ~ 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
-<suite name="MicroProfile 1.2 TCKs" verbose="1" preserve-order="true" configfailurepolicy="continue" >
+<suite name="MicroProfile 1.2 TCKs" verbose="1" preserve-order="true" configfailurepolicy="continue">
 
-    <test name="microprofile-fault-tolerance 1.0 TCK">
-        <packages>
-            <package name="org.eclipse.microprofile.fault.tolerance.tck.*" />
-        </packages>
+  <test name="microprofile-fault-tolerance 1.0 TCK">
+    <packages>
+        <package name="org.eclipse.microprofile.fault.tolerance.tck.*" />
+    </packages>
 
-       <!-- <classes>
-            <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.RetryMetricTest"/>
-            <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.TimeoutMetricTest"/>
-        </classes>-->
 
-      <classes>
-            <!-- Issues in the TCK -->
-        <!--<class
-            name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchRetryTest">
-            <methods>
-                &lt;!&ndash; https://github.com/eclipse/microprofile-fault-tolerance/issues/227 &ndash;&gt;
-                <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
-                <exclude name="testBulkheadRetryClassSynchronous55" />
-                <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
-            </methods>
-        </class>-->
-            <class
-                name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadAsynchRetryTest">
-                <methods>
-                    <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/232 -->
-                  <!--<exclude name="testBulkheadMethodAsynchronousRetry55Trip" />-->
-                    <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/250 -->
-                    <exclude name="testBulkheadClassAsynchronous55RetryOverload"/>
-                    <exclude name="testBulkheadMethodAsynchronous55RetryOverload"/>
-                    <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/227 -->
-                  <!--<exclude name="testBulkheadMethodAsynchronousQueueing10"/>-->
-                </methods>
-            </class>
-        <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.BulkheadMetricTest">
+
+
+    <classes>
+      <!-- Issues in the TCK -->
+      <class
+          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchRetryTest">
           <methods>
-            <exclude name="bulkheadMetricTest"/>
-            <exclude name="bulkheadMetricRejectionTest"/>
-            <exclude name="bulkheadMetricHistogramTest"/>
-            <exclude name="bulkheadMetricAsyncTest" />
+              <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/227 -->
+              <!--<exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />
+              <exclude name="testBulkheadRetryClassSynchronous55" />
+              <exclude name="testBulkheadQueReplacesDueToClassRetryFailures" />-->
+            <exclude name="testBulkheadClassSynchronousPassiveRetry55" />
           </methods>
-        </class>
-        <class name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchConfigTest">
-          <methods>
-            <exclude name="testBulkheadClassSemaphore3"/>
-                </methods>
-            </class>
-        <class name="org.eclipse.microprofile.fault.tolerance.tck.AsynchronousCSTest">
-          <methods>
-            <exclude name="testAsyncIsNotFinished"/>
-            <exclude name="testAsyncIsFinished"/>
-            <exclude name="testClassLevelAsyncIsNotFinished"/>
-            <exclude name="testClassLevelAsyncIsFinished"/>
-            <exclude name="testAsyncIsNotFinished"/>
-            <exclude name="testAsyncCallbacksChained"/>
-            <exclude name="testAsyncCompletesExceptionallyWhenExceptionThrown"/>
-            <exclude name="testAsyncCompletesExceptionallyWhenCompletedExceptionally"/>
-          </methods>
-        </class>
-        </classes>
+      </class>
+      <class
+          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadAsynchRetryTest">
+        <methods>
+          <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/232 -->
+          <!--<exclude name="testBulkheadMethodAsynchronousRetry55Trip" />-->
+          <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/250 -->
+          <exclude name="testBulkheadClassAsynchronous55RetryOverload"/>
+          <exclude name="testBulkheadMethodAsynchronous55RetryOverload"/>
+          <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/227 -->
+          <!--<exclude name="testBulkheadMethodAsynchronousQueueing10"/>-->
+        </methods>
+      </class>
+      <class name="org.eclipse.microprofile.fault.tolerance.tck.CircuitBreakerTest">
+        <methods>
+          <exclude name="testCircuitInitialSuccessDefaultSuccessThreshold" />
+          <exclude name="testCircuitLateSuccessDefaultSuccessThreshold" />
+        </methods>
+      </class>
+      
+      <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.BulkheadMetricTest">
+        <methods>
+          <exclude name="bulkheadMetricTest"/>
+          <exclude name="bulkheadMetricRejectionTest"/>
+          <exclude name="bulkheadMetricHistogramTest"/>
+          <exclude name="bulkheadMetricAsyncTest"/>
+        </methods>
+      </class>
+      <class
+          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadAsynchTest">
+        <methods>
+          <exclude name="testBulkheadMethodAsynchronous3" />
+          <exclude name="testBulkheadClassAsynchronousQueueing10" />
+        </methods>
+      </class>
+      <class
+          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchTest">
+        <methods>
+          <exclude name="testBulkheadClassSemaphore3" />
+        </methods>
+      </class>
+    </classes>
 
-    </test>
+  </test>
 
 </suite>
