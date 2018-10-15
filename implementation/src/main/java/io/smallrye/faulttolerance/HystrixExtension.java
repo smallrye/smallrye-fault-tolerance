@@ -88,7 +88,8 @@ public class HystrixExtension implements Extension {
         AnnotatedType<?> annotatedType = event.getAnnotatedBeanClass();
         for (AnnotatedMethod<?> annotatedMethod : annotatedType.getMethods()) {
             FaultToleranceOperation operation = FaultToleranceOperation.of(annotatedMethod);
-            if (operation.isLegitimate() && operation.validate()) {
+            if (operation.isLegitimate()) {
+                operation.validate();
                 LOGGER.debugf("Found %s", operation);
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()), operation);
             }
