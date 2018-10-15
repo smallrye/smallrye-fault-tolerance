@@ -40,21 +40,16 @@ public class FaultToleranceOperation {
 
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
         return new FaultToleranceOperation(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(),
-                isAnnotated(Asynchronous.class, annotatedMethod),
-                getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
-                getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
-                getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
-                getConfig(Retry.class, annotatedMethod, RetryConfig::new),
-                getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
+                isAnnotated(Asynchronous.class, annotatedMethod), getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
+                getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new), getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
+                getConfig(Retry.class, annotatedMethod, RetryConfig::new), getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
     }
 
     public static FaultToleranceOperation of(Class<?> beanClass, Method method) {
-        return new FaultToleranceOperation(beanClass, method,
-                isAnnotated(Asynchronous.class, method, beanClass),
+        return new FaultToleranceOperation(beanClass, method, isAnnotated(Asynchronous.class, method, beanClass),
                 getConfig(Bulkhead.class, beanClass, method, BulkheadConfig::new),
                 getConfig(CircuitBreaker.class, beanClass, method, CircuitBreakerConfig::new),
-                getConfig(Fallback.class, beanClass, method, FallbackConfig::new),
-                getConfig(Retry.class, beanClass, method, RetryConfig::new),
+                getConfig(Fallback.class, beanClass, method, FallbackConfig::new), getConfig(Retry.class, beanClass, method, RetryConfig::new),
                 getConfig(Timeout.class, beanClass, method, TimeoutConfig::new));
     }
 
@@ -142,12 +137,19 @@ public class FaultToleranceOperation {
         return async || bulkhead != null || circuitBreaker != null || fallback != null || retry != null || timeout != null;
     }
 
+    public boolean isValid() {
+        try {
+            validate();
+            return true;
+        } catch (FaultToleranceDefinitionException e) {
+            return false;
+        }
+    }
+
     /**
      * Throws {@link FaultToleranceDefinitionException} if validation fails.
-     *
-     * @return {@code true} if valid, {@code false} otherwise
      */
-    public boolean validate() {
+    public void validate() {
         if (async && !Future.class.equals(method.getReturnType())) {
             throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method + " : the return type must be java.util.concurrent.Future");
         }
@@ -166,7 +168,6 @@ public class FaultToleranceOperation {
         if (timeout != null) {
             timeout.validate();
         }
-        return true;
     }
 
     @Override
@@ -201,7 +202,7 @@ public class FaultToleranceOperation {
         if (beanClass.isAnnotationPresent(annotationType)) {
             return true;
         }
-        while (beanClass != Object.class) {
+        while (beanClass != null) {
             if (beanClass.isAnnotationPresent(annotationType)) {
                 return true;
             }

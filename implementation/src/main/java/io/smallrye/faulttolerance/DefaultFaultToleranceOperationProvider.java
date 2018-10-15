@@ -16,6 +16,7 @@
 package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
+import java.security.PrivilegedActionException;
 
 import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.spi.BeanManager;
@@ -44,6 +45,7 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
     @Override
     public FaultToleranceOperation get(Class<?> beanClass, Method method) {
         FaultToleranceOperation operation = null;
+        beanClass = adaptBeanClass(beanClass, method);
         if (extension != null) {
             operation = extension.getFaultToleranceOperation(beanClass, method);
         }
@@ -53,6 +55,31 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
             operation.validate();
         }
         return operation;
+    }
+
+    protected Class<?> adaptBeanClass(Class<?> beanClass, Method method) {
+        if (!beanClass.equals(method.getDeclaringClass()) && !isMethodDeclaredInHierarchy(beanClass, method)) {
+            // The class hierarchy does not declare the method - the bean class is probably a proxy-like construct, e.g. MP Rest Client proxy
+            return method.getDeclaringClass();
+        } else {
+            return beanClass;
+        }
+    }
+
+    protected boolean isMethodDeclaredInHierarchy(Class<?> beanClass, Method method) {
+        while (beanClass != null) {
+            try {
+                for (Method declaredMethod : SecurityActions.getDeclaredMethods(beanClass)) {
+                    if (declaredMethod.equals(method)) {
+                        return true;
+                    }
+                }
+            } catch (PrivilegedActionException e) {
+                throw new IllegalStateException("Unable to get declared methods of " + beanClass);
+            }
+            beanClass = beanClass.getSuperclass();
+        }
+        return false;
     }
 
 }

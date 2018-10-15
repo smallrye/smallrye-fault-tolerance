@@ -66,4 +66,16 @@ final class SecurityActions {
         });
     }
 
+    static Method[] getDeclaredMethods(Class<?> clazz) throws PrivilegedActionException {
+        if (System.getSecurityManager() == null) {
+            return clazz.getDeclaredMethods();
+        }
+        return AccessController.doPrivileged(new PrivilegedExceptionAction<Method[]>() {
+            @Override
+            public Method[] run() {
+                return clazz.getDeclaredMethods();
+            }
+        });
+    }
+
 }
