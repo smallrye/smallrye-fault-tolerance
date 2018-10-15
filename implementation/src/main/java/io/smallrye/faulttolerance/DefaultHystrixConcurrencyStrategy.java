@@ -37,7 +37,7 @@ import com.netflix.hystrix.strategy.properties.HystrixProperty;
  * The default concurrency strategy using the managed version of {@link ThreadFactory}.
  *
  * <p>
- * A user is allowed to provide a custom implementation of {@link HystrixConcurrencyStrategy}. The bean should be {@link Dependent}, must be marked as
+ * An integrator or an application is allowed to provide a custom implementation of {@link HystrixConcurrencyStrategy}. The bean should be {@link Dependent}, must be marked as
  * alternative and selected globally for an application.
  * </p>
  *

@@ -72,6 +72,7 @@ public class HystrixExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultHystrixConcurrencyStrategy.class), DefaultHystrixConcurrencyStrategy.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class), DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class), DefaultFallbackHandlerProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultCommandListenersProvider.class), DefaultCommandListenersProvider.class.getName());
     }
 
     /**

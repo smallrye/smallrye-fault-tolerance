@@ -15,15 +15,21 @@
  */
 package io.smallrye.faulttolerance;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
+
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * This listener can be used to perfom actions before and after a Hystrix command that wraps a FT operation is executed.
+ * Any bean which implements this listener can be used to perfom actions before and after a Hystrix command that wraps a FT operation is executed. The bean
+ * should be {@link Dependent} or {@link ApplicationScoped}. Note that a contextual instance of this bean is obtained for each command execution.
+ *
  *
  * @author Martin Kouba
- * @see SimpleCommand#execute()
+ * @see SimpleCommand#run()
+ * @see CommandListenersProvider
  */
-public interface CommandListener {
+public interface CommandListener extends Comparable<CommandListener> {
 
     /**
      * Should not throw an exception.
@@ -39,6 +45,21 @@ public interface CommandListener {
      * @param operation The fault tolerance operation metadata
      */
     default void afterExecution(FaultToleranceOperation operation) {
+    }
+
+    /**
+     * {@link #beforeExecution(FaultToleranceOperation)} of listeners with smaller priority values are called first.
+     * {@link #afterExecution(FaultToleranceOperation)} is invoked in reverse order.
+     *
+     * @return the priority
+     */
+    default int getPriority() {
+        return 1000;
+    }
+
+    @Override
+    default int compareTo(CommandListener o) {
+        return Integer.compare(getPriority(), o.getPriority());
     }
 
 }

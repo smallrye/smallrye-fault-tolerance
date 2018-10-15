@@ -29,7 +29,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Priority;
-import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Intercepted;
 import javax.enterprise.inject.spi.Bean;
 import javax.inject.Inject;
@@ -113,7 +112,7 @@ public class HystrixCommandInterceptor {
 
     private final FaultToleranceOperationProvider faultToleranceOperationProvider;
 
-    private final Instance<CommandListener> listeners;
+    private final CommandListenersProvider listenersProvider;
 
     private final Bean<?> interceptedBean;
 
@@ -121,15 +120,15 @@ public class HystrixCommandInterceptor {
     @Inject
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, FallbackHandlerProvider fallbackHandlerProvider, FaultToleranceOperationProvider faultToleranceOperationProvider,
-            Instance<CommandListener> listeners, @Intercepted Bean<?> interceptedBean) {
+            CommandListenersProvider listenersProvider, @Intercepted Bean<?> interceptedBean) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.faultToleranceOperationProvider = faultToleranceOperationProvider;
         this.commandMetadataCache = new ConcurrentHashMap<>();
-        this.listeners = listeners;
+        this.listenersProvider = listenersProvider;
         this.interceptedBean = interceptedBean;
-        // WORKAROUND: Hystrix does not allow to use custom HystrixCircuitBreaker impl
+        // WORKAROUND: Hystrix does not allow integrators to use a custom HystrixCircuitBreaker impl
         // See also https://github.com/Netflix/Hystrix/issues/9
         try {
             Field field = SecurityActions.getDeclaredField(HystrixCircuitBreaker.Factory.class, "circuitBreakersByCommand");
@@ -158,7 +157,7 @@ public class HystrixCommandInterceptor {
         RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
         Function<Supplier<Object>, SimpleCommand> commandFactory = (fallback) -> new SimpleCommand(metadata.setter, ctx, fallback, metadata.operation,
-                listeners.isUnsatisfied() ? null : listeners);
+                listenersProvider.getCommandListeners());
 
         if (metadata.operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", metadata.operation);
