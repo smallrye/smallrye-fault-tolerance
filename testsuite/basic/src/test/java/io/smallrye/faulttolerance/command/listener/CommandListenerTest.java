@@ -19,8 +19,11 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
 
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -39,6 +42,8 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 @RunWith(Arquillian.class)
 public class CommandListenerTest {
 
+    static final List<String> ACTIONS = new CopyOnWriteArrayList<>();
+
     @Deployment
     public static JavaArchive createTestArchive() {
         return TestArchive.createBase(CommandListenerTest.class).addPackage(CommandListenerTest.class.getPackage());
@@ -46,29 +51,63 @@ public class CommandListenerTest {
 
     @Test
     public void testListenerInvoked(HelloService helloService) {
-        CustomCommandListener.ACTIONS.clear();
+        ACTIONS.clear();
+        BravoListener.DESTROYED.set(0);
+
         assertEquals("2", helloService.hello());
-        // Note that first command fails
-        assertEquals(4, CustomCommandListener.ACTIONS.size());
-        assertEquals("before", CustomCommandListener.ACTIONS.get(0));
-        assertEquals("after", CustomCommandListener.ACTIONS.get(1));
-        assertEquals("before", CustomCommandListener.ACTIONS.get(2));
-        assertEquals("after", CustomCommandListener.ACTIONS.get(3));
+        // Note that the first commands fails
+        assertEquals(8, ACTIONS.size());
+        assertEquals("bravo:before", ACTIONS.get(0));
+        assertEquals("alpha:before", ACTIONS.get(1));
+        assertEquals("bravo:after", ACTIONS.get(2));
+        assertEquals("alpha:after", ACTIONS.get(3));
+        assertEquals("bravo:before", ACTIONS.get(4));
+        assertEquals("alpha:before", ACTIONS.get(5));
+        assertEquals("bravo:after", ACTIONS.get(6));
+        assertEquals("alpha:after", ACTIONS.get(7));
+
+        // Verify the dependent listeners are destroyed correctly
+        assertEquals(2, BravoListener.DESTROYED.get());
     }
 
     @ApplicationScoped
-    static class CustomCommandListener implements CommandListener {
-
-        static final List<String> ACTIONS = new CopyOnWriteArrayList<>();
+    static class AlphaListener implements CommandListener {
 
         @Override
         public void afterExecution(FaultToleranceOperation operation) {
-            ACTIONS.add("after");
+            ACTIONS.add("alpha:after");
         }
 
         @Override
         public void beforeExecution(FaultToleranceOperation operation) {
-            ACTIONS.add("before");
+            ACTIONS.add("alpha:before");
+        }
+
+    }
+
+    @Dependent
+    static class BravoListener implements CommandListener {
+
+        static final AtomicInteger DESTROYED = new AtomicInteger(0);
+
+        @Override
+        public void afterExecution(FaultToleranceOperation operation) {
+            ACTIONS.add("bravo:after");
+        }
+
+        @Override
+        public void beforeExecution(FaultToleranceOperation operation) {
+            ACTIONS.add("bravo:before");
+        }
+
+        @PreDestroy
+        void destroyed() {
+            DESTROYED.incrementAndGet();
+        }
+
+        @Override
+        public int getPriority() {
+            return 1;
         }
 
     }

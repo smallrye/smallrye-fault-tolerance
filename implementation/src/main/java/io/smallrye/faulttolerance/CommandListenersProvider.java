@@ -15,25 +15,24 @@
  */
 package io.smallrye.faulttolerance;
 
+import java.util.List;
+
 import javax.enterprise.context.Dependent;
 
-import org.eclipse.microprofile.faulttolerance.FallbackHandler;
-
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-
 /**
- * An integrator is allowed to provide a custom implementation of {@link FallbackHandlerProvider}. The bean should be {@link Dependent}, must be marked as
- * alternative and selected globally for an application.
+ * Makes it possible to wrap/enhance the command listener instances.
  *
- * @author Martin Kouba
+ * <p>
+ * An integrator is allowed to provide a custom implementation of {@link CommandListenersProvider}. The bean should be {@link Dependent}, must be marked as
+ * alternative and selected globally for an application.
+ * </p>
  */
-public interface FallbackHandlerProvider {
+public interface CommandListenersProvider {
 
     /**
      *
-     * @param operation Fault tolerance operation
-     * @return a new fallback handler or {@code null}
+     * @return a sorted list of command listeners or {@code null} if no listeners are available
      */
-    <T> FallbackHandler<T> get(FaultToleranceOperation operation);
+    List<CommandListener> getCommandListeners();
 
 }

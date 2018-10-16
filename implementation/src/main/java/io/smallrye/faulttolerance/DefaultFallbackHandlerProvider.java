@@ -12,13 +12,8 @@ import io.smallrye.faulttolerance.config.FallbackConfig;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * 
- * <p>
- * An integrator is allowed to provide a custom implementation of {@link FallbackHandlerProvider}. The bean should be {@link Dependent}, must be marked as
- * alternative and selected globally for an application.
- * </p>
- * 
- * 
+ * Default implementation of {@link FallbackHandlerProvider}.
+ *
  * @author Martin Kouba
  */
 @Dependent
