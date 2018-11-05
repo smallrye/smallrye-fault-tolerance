@@ -92,7 +92,7 @@ public class HystrixExtension implements Extension {
     }
 
 
-    void addHystrixPlugin (@Observes AfterDeploymentValidation adv, BeanManager bm) {
+    void addHystrixPlugin(@Observes AfterDeploymentValidation adv, BeanManager bm) {
         HystrixPlugins plugins = HystrixPlugins.getInstance();
         plugins.registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
     }

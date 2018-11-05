@@ -36,6 +36,7 @@ import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
+import com.netflix.hystrix.*;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -50,14 +51,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.eclipse.microprofile.metrics.*;
 import org.jboss.logging.Logger;
 
-import com.netflix.hystrix.HystrixCircuitBreaker;
-import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommand.Setter;
-import com.netflix.hystrix.HystrixCommandGroupKey;
-import com.netflix.hystrix.HystrixCommandKey;
-import com.netflix.hystrix.HystrixCommandProperties;
-import com.netflix.hystrix.HystrixThreadPoolKey;
-import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
 
@@ -170,7 +164,7 @@ public class HystrixCommandInterceptor {
         if (metadata.operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", metadata.operation);
             return new AsyncFuture(
-                    CompositeCommand.createAndQueue(() -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker), metadata.operation));
+                    CompositeCommand.createAndQueue(() -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker), metadata.operation,ctx));
         } else {
             LOGGER.debugf("Sync execution: %s]", metadata.operation);
             return executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker);
@@ -181,6 +175,8 @@ public class HystrixCommandInterceptor {
     private Object executeCommand(Function<Supplier<Object>, SimpleCommand> commandFactory, RetryContext retryContext, CommandMetadata metadata,
             ExecutionContextWithInvocationContext ctx, SynchronousCircuitBreaker syncCircuitBreaker) throws Exception {
         String prefix = "ft." + getMethodFQN(ctx.getMethod());
+
+
 
         //Metrics integration
         counterInc(prefix + ".invocations.total");
@@ -200,6 +196,10 @@ public class HystrixCommandInterceptor {
                 fallback = metadata.getFallback(ctx);
             }
             SimpleCommand command = commandFactory.apply(fallback);
+            HystrixCommandMetrics hcm = command.getMetrics();
+
+
+
             long start = 0;
             long cbOpenStart = 0;
             long cbCloseStart = 0;
@@ -210,7 +210,20 @@ public class HystrixCommandInterceptor {
             HystrixCircuitBreaker cb = syncCircuitBreaker != null ? syncCircuitBreaker : command.getCircuitBreaker();
             try {
 
+
+                if(metricsEnabled && metadata.operation.hasBulkhead()) {
+                    HystrixThreadPoolMetrics tpm = HystrixThreadPoolMetrics.getInstance(metadata.poolKey);
+                    gaugeRegister(prefix +".bulkhead.concurrentExecutions", () -> tpm.getCurrentActiveCount().longValue());
+                    counterProxyRegister(prefix + ".bulkhead.callsAccepted.total", () -> tpm.getCurrentCompletedTaskCount().longValue());
+                    if(metadata.operation.isAsync()) {
+                        counterProxyRegister(prefix + ".bulkhead.waitingQueue.population", () -> tpm.getCurrentQueueSize().longValue());
+                    }
+                }
+
                 Object res = command.execute();
+
+
+
                 if (syncCircuitBreaker != null) {
                     cbCloseStart = System.currentTimeMillis();
                     if (command.isFailedExecution()) {
@@ -238,6 +251,10 @@ public class HystrixCommandInterceptor {
 
                 return res;
             } catch (HystrixRuntimeException e) {
+
+                if(e.getFailureType() == FailureType.REJECTED_THREAD_EXECUTION && metadata.operation.hasBulkhead()) {
+                    counterInc(prefix + ".bulkhead.callsRejected.total");
+                }
 
                 boolean isCircuitBreakerOpenBeforeExceptionProcessing = false;
 
@@ -294,6 +311,13 @@ public class HystrixCommandInterceptor {
                 if(command.isResponseFromFallback()) {
                     counterInc(prefix + ".fallback.calls.total");
                 }
+                if(metadata.operation.hasBulkhead()) {
+                    long execution = hcm.getExecutionTimePercentile(50) * 1000000;
+                    histogramUpdate(prefix + ".bulkhead.executionDuration",execution);
+                    if(metadata.operation.isAsync()) {
+                        histogramUpdate(prefix + ".bulkhead.waiting.duration", hcm.getTotalTimePercentile(50) * 1000000 - execution);
+                    }
+                }
 
             }
         }
@@ -308,6 +332,19 @@ public class HystrixCommandInterceptor {
     private void gaugeInc(String name, Long value) {
         if(metricsEnabled) {
             gaugeOfInc(name,value);
+        }
+    }
+
+    // TODO: SmallRye Metrics is not threadsafe
+    private synchronized void gaugeRegister(String name, Supplier<Long> supplier) {
+        if(!registry.getGauges().containsKey(name)) {
+            registry.register(name, (Gauge<Long>) () -> supplier.get());
+        }
+    }
+
+    private synchronized void counterProxyRegister(String name, Supplier<Long> supplier) {
+        if(!registry.getCounters().containsKey(name)) {
+            registry.register(metadataOf(name, MetricType.COUNTER), new CounterProxy(supplier));
         }
     }
 
@@ -434,7 +471,7 @@ public class HystrixCommandInterceptor {
         return new IllegalStateException("Error during processing hystrix runtime exception", e);
     }
 
-    private Setter initSetter(HystrixCommandKey commandKey, Method method, FaultToleranceOperation operation) {
+    private Setter initSetter(HystrixCommandKey commandKey, HystrixThreadPoolKey poolKey, Method method, FaultToleranceOperation operation) {
         HystrixCommandProperties.Setter propertiesSetter = HystrixCommandProperties.Setter();
 
         // Async and timeout operations use THREAD isolation strategy
@@ -469,19 +506,18 @@ public class HystrixCommandInterceptor {
 
         Setter setter = Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey("DefaultCommandGroup"))
                 // Each method must have a unique command key
-                .andCommandKey(commandKey).andCommandPropertiesDefaults(propertiesSetter);
+                .andCommandKey(commandKey).andCommandPropertiesDefaults(propertiesSetter)
+                .andThreadPoolKey(poolKey);
 
         if (nonFallBackEnable && operation.hasBulkhead()) {
             BulkheadConfig bulkhead = operation.getBulkhead();
             if (operation.isAsync()) {
-                // Each bulkhead policy needs a dedicated thread pool
-                setter.andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(commandKey.name()));
                 HystrixThreadPoolProperties.Setter threadPoolSetter = HystrixThreadPoolProperties.Setter();
-                threadPoolSetter.withAllowMaximumSizeToDivergeFromCoreSize(true);
-                threadPoolSetter.withCoreSize(bulkhead.get(BulkheadConfig.VALUE));
-                threadPoolSetter.withMaximumSize(bulkhead.get(BulkheadConfig.VALUE));
-                threadPoolSetter.withMaxQueueSize(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE));
-                threadPoolSetter.withQueueSizeRejectionThreshold(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE));
+                threadPoolSetter.withAllowMaximumSizeToDivergeFromCoreSize(false)
+                        .withCoreSize(bulkhead.get(BulkheadConfig.VALUE))
+                        .withMaximumSize(bulkhead.get(BulkheadConfig.VALUE))
+                        .withMaxQueueSize(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE))
+                        .withQueueSizeRejectionThreshold(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE));
                 setter.andThreadPoolPropertiesDefaults(threadPoolSetter);
             } else {
                 // If used without @Asynchronous, the semaphore isolation approach must be used
@@ -499,6 +535,8 @@ public class HystrixCommandInterceptor {
 
         private final HystrixCommandKey commandKey;
 
+        private final HystrixThreadPoolKey poolKey;
+
         private final Method fallbackMethod;
 
         private final FaultToleranceOperation operation;
@@ -507,7 +545,15 @@ public class HystrixCommandInterceptor {
             operation = faultToleranceOperationProvider.get(beanClass, method);
             // Initialize Hystrix command setter
             commandKey = HystrixCommandKey.Factory.asKey(SimpleCommand.getCommandKey(method));
-            setter = initSetter(commandKey, method, operation);
+
+            if (nonFallBackEnable && operation.hasBulkhead() && operation.isAsync()) {
+                // Each bulkhead policy needs a dedicated thread pool
+                poolKey = HystrixThreadPoolKey.Factory.asKey(commandKey.name());
+            } else {
+                poolKey = HystrixThreadPoolKey.Factory.asKey("DefaultCommandGroup");
+            }
+
+            setter = initSetter(commandKey, poolKey, method, operation);
 
             if (operation.hasFallback()) {
                 FallbackConfig fallbackConfig = operation.getFallback();
@@ -660,6 +706,41 @@ public class HystrixCommandInterceptor {
             return unwrapped;
         }
 
+    }
+
+    private static class CounterProxy implements Counter {
+
+        private final Supplier<Long> countingSupplier;
+        private static final String MUST_NOT_BE_CALLED = "Must not be called";
+
+        public CounterProxy(Supplier<Long> countingSupplier) {
+            this.countingSupplier = countingSupplier;
+        }
+
+        @Override
+        public void inc() {
+            throw new IllegalStateException(MUST_NOT_BE_CALLED);
+        }
+
+        @Override
+        public void inc(long n) {
+            throw new IllegalStateException(MUST_NOT_BE_CALLED);
+        }
+
+        @Override
+        public void dec() {
+            throw new IllegalStateException(MUST_NOT_BE_CALLED);
+        }
+
+        @Override
+        public void dec(long n) {
+            throw new IllegalStateException(MUST_NOT_BE_CALLED);
+        }
+
+        @Override
+        public long getCount() {
+            return countingSupplier.get();
+        }
     }
 
 }

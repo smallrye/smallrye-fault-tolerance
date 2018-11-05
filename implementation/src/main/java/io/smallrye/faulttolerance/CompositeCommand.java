@@ -21,7 +21,6 @@ import java.util.concurrent.Future;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 
-import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
@@ -35,22 +34,38 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
  *
  * @author Martin Kouba
  */
-public class CompositeCommand extends HystrixCommand<Object> {
+public class CompositeCommand extends BasicCommand {
 
-    public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation) {
-        return new CompositeCommand(callable, operation).queue();
+    public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx) {
+        return new CompositeCommand(callable, operation, ctx).queue();
+    }
+
+    @Override
+    void setFailure(Throwable f) {
+        ctx.setFailure(f);
+    }
+
+    @Override
+    FaultToleranceOperation getOperation() {
+        return operation;
     }
 
     private final Callable<Object> callable;
+
+    private final ExecutionContextWithInvocationContext ctx;
+
+    private final FaultToleranceOperation operation;
 
     /**
      *
      * @param callable Asynchronous operation
      * @param operation Fault tolerance operation
      */
-    protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation) {
+    protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx) {
         super(initSetter(operation));
+        this.operation = operation;
         this.callable = callable;
+        this.ctx = ctx;
     }
 
     @Override

@@ -8,9 +8,11 @@ public class FaultToleranceCommandExecutionHook extends HystrixCommandExecutionH
 
     @Override
     public <T> Exception onExecutionError(HystrixInvokable<T> commandInstance, Exception e) {
-        SimpleCommand command = ((SimpleCommand) commandInstance);
-        command.setFailure(e);
-        return super.onExecutionError(commandInstance, e);
+        if (commandInstance instanceof BasicCommand) {
+            BasicCommand command = ((BasicCommand) commandInstance);
+            command.setFailure(e);
+        }
+        return e;
     }
 
 
