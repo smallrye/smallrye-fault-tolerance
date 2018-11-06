@@ -29,18 +29,7 @@
 
     <classes>
       <!-- Issues in the TCK -->
-      <class
-          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchTest">
-        <methods>
-          <exclude name="testBulkheadClassSemaphore3"/>
-        </methods>
-      </class>
-      <class
-          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadSynchRetryTest">
-        <methods>
-          <exclude name="testBulkheadClassSynchronousPassiveRetry55"/>
-        </methods>
-      </class>
+      <!-- https://github.com/eclipse/microprofile-fault-tolerance/pull/333 -->
       <class
           name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadAsynchRetryTest">
         <methods>
@@ -48,16 +37,16 @@
           <exclude name="testBulkheadMethodAsynchronous55RetryOverload"/>
         </methods>
       </class>
+      <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/323 -->
       <class name="org.eclipse.microprofile.fault.tolerance.tck.CircuitBreakerTest">
         <methods>
           <exclude name="testCircuitInitialSuccessDefaultSuccessThreshold"/>
           <exclude name="testCircuitLateSuccessDefaultSuccessThreshold"/>
         </methods>
       </class>
+      <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/336 -->
       <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.BulkheadMetricTest">
         <methods>
-          <exclude name="bulkheadMetricRejectionTest"/>
-          <exclude name="bulkheadMetricHistogramTest"/>
           <exclude name="bulkheadMetricAsyncTest"/>
         </methods>
       </class>

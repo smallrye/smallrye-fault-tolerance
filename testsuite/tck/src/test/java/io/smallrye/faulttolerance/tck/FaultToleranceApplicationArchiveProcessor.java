@@ -21,7 +21,11 @@ import java.util.logging.Logger;
 import org.jboss.arquillian.container.test.spi.client.deployment.ApplicationArchiveProcessor;
 import org.jboss.arquillian.test.spi.TestClass;
 import org.jboss.shrinkwrap.api.Archive;
-import org.jboss.shrinkwrap.api.container.ResourceContainer;
+import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.asset.EmptyAsset;
+import org.jboss.shrinkwrap.api.container.ClassContainer;
+import org.jboss.shrinkwrap.api.container.LibraryContainer;
+import org.jboss.shrinkwrap.api.spec.JavaArchive;
 
 /**
  *
@@ -33,12 +37,24 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
 
     @Override
     public void process(Archive<?> applicationArchive, TestClass testClass) {
-        if (!(applicationArchive instanceof ResourceContainer)) {
-            LOGGER.warning("Unable to add Hystrix-related config.properties - not a resource container: " + applicationArchive);
+        if (!(applicationArchive instanceof ClassContainer)) {
+            LOGGER.warning(
+                    "Unable to add Hystrix-related config.properties and additional classes - not a class/resource container: "
+                            + applicationArchive);
             return;
         }
-        ResourceContainer<?> resourceContainer = (ResourceContainer<?>) applicationArchive;
-        resourceContainer.addAsResource(new File("src/test/resources/config.properties"));
-        LOGGER.info("Added config.properties to " + applicationArchive.toString(true));
+        ClassContainer<?> classContainer = (ClassContainer<?>) applicationArchive;
+        classContainer.addAsResource(new File("src/test/resources/config.properties"));
+
+        if (applicationArchive instanceof LibraryContainer) {
+            JavaArchive additionalBeanArchive = ShrinkWrap.create(JavaArchive.class);
+            additionalBeanArchive.addClass(HystrixCommandSemaphoreCleanup.class);
+            additionalBeanArchive.addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml");
+            ((LibraryContainer<?>) applicationArchive).addAsLibrary(additionalBeanArchive);
+        } else {
+            classContainer.addClass(HystrixCommandSemaphoreCleanup.class);
+            classContainer.addAsResource(EmptyAsset.INSTANCE, "META-INF/beans.xml");
+        }
+        LOGGER.info("Added additional resources to " + applicationArchive.toString(true));
     }
 }

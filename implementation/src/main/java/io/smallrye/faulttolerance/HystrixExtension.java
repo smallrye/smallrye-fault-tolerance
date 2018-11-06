@@ -25,9 +25,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.enterprise.event.Observes;
-import javax.enterprise.inject.spi.*;
+import javax.enterprise.inject.spi.AnnotatedConstructor;
+import javax.enterprise.inject.spi.AnnotatedField;
+import javax.enterprise.inject.spi.AnnotatedMethod;
+import javax.enterprise.inject.spi.AnnotatedType;
+import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.BeforeBeanDiscovery;
+import javax.enterprise.inject.spi.Extension;
+import javax.enterprise.inject.spi.ProcessManagedBean;
 
-import com.netflix.hystrix.strategy.HystrixPlugins;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
@@ -67,6 +73,7 @@ public class HystrixExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class), DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class), DefaultFallbackHandlerProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultCommandListenersProvider.class), DefaultCommandListenersProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
     }
 
     /**
@@ -89,12 +96,6 @@ public class HystrixExtension implements Extension {
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()), operation);
             }
         }
-    }
-
-
-    void addHystrixPlugin(@Observes AfterDeploymentValidation adv, BeanManager bm) {
-        HystrixPlugins plugins = HystrixPlugins.getInstance();
-        plugins.registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
     }
 
     private static String getCacheKey(Class<?> beanClass, Method method) {
