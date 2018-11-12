@@ -50,7 +50,7 @@
     <version.testng>6.9.9</version.testng>
     <version.awaitility>3.1.0</version.awaitility>
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
-    <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
+    <version.javax.enterprise.concurrent-api>1.1</version.javax.enterprise.concurrent-api>
     <version.javax.interceptor-api>1.2</version.javax.interceptor-api>
   </properties>
 
