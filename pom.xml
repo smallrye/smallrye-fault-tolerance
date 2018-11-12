@@ -51,7 +51,7 @@
     <version.awaitility>3.1.0</version.awaitility>
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
     <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
-    <version.javax.interceptor-api>1.2</version.javax.interceptor-api>
+    <version.javax.interceptor-api>1.2.2</version.javax.interceptor-api>
   </properties>
 
   <scm>
