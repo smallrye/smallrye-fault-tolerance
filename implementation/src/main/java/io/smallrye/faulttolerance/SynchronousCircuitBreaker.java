@@ -21,6 +21,7 @@ import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.OPEN;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,13 +51,13 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         this.status = new AtomicReference<>(CLOSED);
         this.circuitOpenedAt = new AtomicLong(-1);
         this.successCount = new AtomicInteger(0);
-        this.failureCount = new AtomicInteger(0);
         this.halfOpenAttempts = new AtomicInteger(0);
         this.id = config.getMethodInfo();
         this.openTotal = new AtomicLong();
         this.halfOpenTotal = new AtomicLong();
         this.closedTotal = new AtomicLong();
         this.lastStatusChangeAt = new AtomicLong(System.nanoTime());
+        this.rollingWindow = new LinkedList<>();
     }
 
     @Override
@@ -109,12 +110,7 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
                 return false;
             case OPEN:
                 if (isAfterDelay()) {
-                    LOGGER.debugf("OPEN >> HALF_OPEN [id:%s]", id);
-                    status.set(HALF_OPEN);
-                    halfOpenAttempts.set(1);
-                    long currentTime = System.nanoTime();
-                    openTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
-                    resetCounts();
+                    toHalfOpen();
                     return true;
                 }
                 return false;
@@ -124,6 +120,7 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
     }
 
     synchronized void executionSucceeded() {
+        record(true);
         successCount.incrementAndGet();
         Status current = status.get();
         if (HALF_OPEN == current && isSuccessThresholdReached()) {
@@ -136,7 +133,7 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
     }
 
     synchronized void executionFailed() {
-        failureCount.incrementAndGet();
+        record(false);
         Status current = status.get();
         if (HALF_OPEN == current || (CLOSED == current && isFailureThresholdReached())) {
             // Transition to OPEN if HALF_OPEN
@@ -167,7 +164,7 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         circuitOpenedAt.set(-1);
         long currentTime = System.nanoTime();
         halfOpenTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
-        resetCounts();
+        reset();
     }
 
     private void toOpen(Status current) {
@@ -185,7 +182,16 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
             default:
                 break;
         }
-        resetCounts();
+        reset();
+    }
+
+    private void toHalfOpen() {
+        LOGGER.debugf("OPEN >> HALF_OPEN [id:%s]", id);
+        status.set(HALF_OPEN);
+        halfOpenAttempts.set(1);
+        long currentTime = System.nanoTime();
+        openTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
+        reset();
     }
 
     private boolean isAfterDelay() {
@@ -207,14 +213,17 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
     }
 
     private boolean isFailureThresholdReached() {
-        int requestCount = getRequestCount();
-        int requestVolumeThreshold = config.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD);
-        if (requestCount < requestVolumeThreshold) {
+        int requestCount = rollingWindow.size();
+        if (!isRequestVolumeThresholdReached(requestCount)) {
             return false;
         }
-        double failureCheck = failureCount.get() / (double) requestCount;
+        double failureCheck = getFailureCount() / (double) requestCount;
         double failureRatio = config.get(CircuitBreakerConfig.FAILURE_RATIO);
         return (failureCheck >= failureRatio) || (failureRatio <= 0 && failureCheck == 1);
+    }
+
+    private boolean isRequestVolumeThresholdReached(int requestCount) {
+        return requestCount >= config.<Integer> get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD);
     }
 
     private boolean isSuccessThresholdReached() {
@@ -225,13 +234,27 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         return halfOpenAttempts.get() < config.get(CircuitBreakerConfig.SUCCESS_THRESHOLD, Integer.class);
     }
 
-    private int getRequestCount() {
-        return successCount.get() + failureCount.get();
+    private void reset() {
+        successCount.set(0);
+        halfOpenAttempts.set(0);
+        rollingWindow.clear();
     }
 
-    private void resetCounts() {
-        successCount.set(0);
-        failureCount.set(0);
+    private int getFailureCount() {
+        int count = 0;
+        for (Boolean result : rollingWindow) {
+            if (result) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void record(boolean requestResult) {
+        rollingWindow.addFirst(!requestResult);
+        if (rollingWindow.size() > config.<Integer> get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD)) {
+            rollingWindow.removeLast();
+        }
     }
 
     private final AtomicReference<Status> status;
@@ -242,9 +265,10 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
 
     private final AtomicInteger successCount;
 
-    private final AtomicInteger failureCount;
-
     private final AtomicInteger halfOpenAttempts;
+
+    // failure = true, success = false
+    private final LinkedList<Boolean> rollingWindow;
 
     private final String id;
 
