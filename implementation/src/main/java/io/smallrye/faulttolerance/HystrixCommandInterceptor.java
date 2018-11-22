@@ -116,11 +116,13 @@ public class HystrixCommandInterceptor {
 
     private final Bean<?> interceptedBean;
 
+    private final MetricsCollectorFactory metricsCollectorFactory;
+
     @SuppressWarnings("unchecked")
     @Inject
     public HystrixCommandInterceptor(@ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, FallbackHandlerProvider fallbackHandlerProvider, FaultToleranceOperationProvider faultToleranceOperationProvider,
-            CommandListenersProvider listenersProvider, @Intercepted Bean<?> interceptedBean) {
+            CommandListenersProvider listenersProvider, @Intercepted Bean<?> interceptedBean, MetricsCollectorFactory metricsCollectorFactory) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
@@ -128,6 +130,7 @@ public class HystrixCommandInterceptor {
         this.commandMetadataCache = new ConcurrentHashMap<>();
         this.listenersProvider = listenersProvider;
         this.interceptedBean = interceptedBean;
+        this.metricsCollectorFactory = metricsCollectorFactory;
         // WORKAROUND: Hystrix does not allow integrators to use a custom HystrixCircuitBreaker impl
         // See also https://github.com/Netflix/Hystrix/issues/9
         try {
@@ -156,13 +159,14 @@ public class HystrixCommandInterceptor {
 
         RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
+
         Function<Supplier<Object>, SimpleCommand> commandFactory = (fallback) -> new SimpleCommand(metadata.setter, ctx, fallback, metadata.operation,
                 listenersProvider.getCommandListeners());
 
         if (metadata.operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", metadata.operation);
-            return new AsyncFuture(
-                    CompositeCommand.createAndQueue(() -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker), metadata.operation));
+            return new AsyncFuture(CompositeCommand.createAndQueue(() -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker),
+                    metadata.operation, ctx, metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null));
         } else {
             LOGGER.debugf("Sync execution: %s]", metadata.operation);
             return executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker);
@@ -171,15 +175,23 @@ public class HystrixCommandInterceptor {
 
     private Object executeCommand(Function<Supplier<Object>, SimpleCommand> commandFactory, RetryContext retryContext, CommandMetadata metadata,
             ExecutionContextWithInvocationContext ctx, SynchronousCircuitBreaker syncCircuitBreaker) throws Exception {
+
+        MetricsCollector metricsCollector = metricsCollectorFactory.createCollector(metadata.operation, retryContext, metadata.poolKey);
+        metricsCollector.init(syncCircuitBreaker);
+
         while (true) {
             if (retryContext != null) {
                 LOGGER.debugf("Executing %s with %s", metadata.operation, retryContext);
             }
+
             Supplier<Object> fallback = null;
             if (retryContext == null || retryContext.isLastAttempt()) {
                 fallback = metadata.getFallback(ctx);
             }
             SimpleCommand command = commandFactory.apply(fallback);
+
+            metricsCollector.beforeExecute(command);
+
             try {
                 Object res = command.execute();
                 if (syncCircuitBreaker != null) {
@@ -189,12 +201,17 @@ public class HystrixCommandInterceptor {
                         syncCircuitBreaker.executionSucceeded();
                     }
                 }
+                metricsCollector.afterSuccess(command);
                 return res;
             } catch (HystrixRuntimeException e) {
+                metricsCollector.onError(command, e);
                 Exception res = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(), syncCircuitBreaker);
+                metricsCollector.onProcessedError(command, res);
                 if (res != null) {
                     throw res;
                 }
+            } finally {
+                metricsCollector.afterExecute(command);
             }
         }
     }
@@ -276,7 +293,7 @@ public class HystrixCommandInterceptor {
         return new IllegalStateException("Error during processing hystrix runtime exception", e);
     }
 
-    private Setter initSetter(HystrixCommandKey commandKey, Method method, FaultToleranceOperation operation) {
+    private Setter initCommandSetter(HystrixCommandKey commandKey, HystrixThreadPoolKey poolKey, Method method, FaultToleranceOperation operation) {
         HystrixCommandProperties.Setter propertiesSetter = HystrixCommandProperties.Setter();
 
         // Async and timeout operations use THREAD isolation strategy
@@ -311,19 +328,15 @@ public class HystrixCommandInterceptor {
 
         Setter setter = Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey("DefaultCommandGroup"))
                 // Each method must have a unique command key
-                .andCommandKey(commandKey).andCommandPropertiesDefaults(propertiesSetter);
+                .andCommandKey(commandKey).andCommandPropertiesDefaults(propertiesSetter).andThreadPoolKey(poolKey);
 
         if (nonFallBackEnable && operation.hasBulkhead()) {
             BulkheadConfig bulkhead = operation.getBulkhead();
             if (operation.isAsync()) {
-                // Each bulkhead policy needs a dedicated thread pool
-                setter.andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(commandKey.name()));
                 HystrixThreadPoolProperties.Setter threadPoolSetter = HystrixThreadPoolProperties.Setter();
-                threadPoolSetter.withAllowMaximumSizeToDivergeFromCoreSize(true);
-                threadPoolSetter.withCoreSize(bulkhead.get(BulkheadConfig.VALUE));
-                threadPoolSetter.withMaximumSize(bulkhead.get(BulkheadConfig.VALUE));
-                threadPoolSetter.withMaxQueueSize(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE));
-                threadPoolSetter.withQueueSizeRejectionThreshold(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE));
+                threadPoolSetter.withAllowMaximumSizeToDivergeFromCoreSize(false).withCoreSize(bulkhead.get(BulkheadConfig.VALUE))
+                        .withMaximumSize(bulkhead.get(BulkheadConfig.VALUE)).withMaxQueueSize(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE))
+                        .withQueueSizeRejectionThreshold(bulkhead.get(BulkheadConfig.WAITING_TASK_QUEUE));
                 setter.andThreadPoolPropertiesDefaults(threadPoolSetter);
             } else {
                 // If used without @Asynchronous, the semaphore isolation approach must be used
@@ -341,6 +354,8 @@ public class HystrixCommandInterceptor {
 
         private final HystrixCommandKey commandKey;
 
+        private final HystrixThreadPoolKey poolKey;
+
         private final Method fallbackMethod;
 
         private final FaultToleranceOperation operation;
@@ -349,7 +364,15 @@ public class HystrixCommandInterceptor {
             operation = faultToleranceOperationProvider.get(beanClass, method);
             // Initialize Hystrix command setter
             commandKey = HystrixCommandKey.Factory.asKey(SimpleCommand.getCommandKey(method));
-            setter = initSetter(commandKey, method, operation);
+
+            if (nonFallBackEnable && operation.hasBulkhead() && operation.isAsync()) {
+                // Each bulkhead policy needs a dedicated thread pool
+                poolKey = HystrixThreadPoolKey.Factory.asKey(commandKey.name());
+            } else {
+                poolKey = HystrixThreadPoolKey.Factory.asKey("DefaultCommandGroup");
+            }
+
+            setter = initCommandSetter(commandKey, poolKey, method, operation);
 
             if (operation.hasFallback()) {
                 FallbackConfig fallbackConfig = operation.getFallback();

@@ -53,6 +53,10 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         this.failureCount = new AtomicInteger(0);
         this.halfOpenAttempts = new AtomicInteger(0);
         this.id = config.getMethodInfo();
+        this.openTotal = new AtomicLong();
+        this.halfOpenTotal = new AtomicLong();
+        this.closedTotal = new AtomicLong();
+        this.lastStatusChangeAt = new AtomicLong(System.nanoTime());
     }
 
     @Override
@@ -108,6 +112,8 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
                     LOGGER.debugf("OPEN >> HALF_OPEN [id:%s]", id);
                     status.set(HALF_OPEN);
                     halfOpenAttempts.set(1);
+                    long currentTime = System.nanoTime();
+                    openTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
                     resetCounts();
                     return true;
                 }
@@ -139,10 +145,28 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         }
     }
 
+    long getClosedTotal() {
+        return getTotalVal(CLOSED, closedTotal.get());
+    }
+
+    long getOpenTotal() {
+        return getTotalVal(OPEN, openTotal.get());
+    }
+
+    long getHalfOpenTotal() {
+        return getTotalVal(HALF_OPEN, halfOpenTotal.get());
+    }
+
+    private long getTotalVal(Status status, long sum) {
+        return status.equals(this.status.get()) ? sum + (System.nanoTime() - lastStatusChangeAt.get()) : sum;
+    }
+
     private void toClosed() {
         LOGGER.debugf("HALF_OPEN >> CLOSED [id:%s]", id);
         status.set(CLOSED);
         circuitOpenedAt.set(-1);
+        long currentTime = System.nanoTime();
+        halfOpenTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
         resetCounts();
     }
 
@@ -150,6 +174,17 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         LOGGER.debugf("%s >> OPEN [id:%s]", current, id);
         status.set(OPEN);
         circuitOpenedAt.set(System.currentTimeMillis());
+        long currentTime = System.nanoTime();
+        switch (current) {
+            case CLOSED:
+                closedTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
+                break;
+            case HALF_OPEN:
+                halfOpenTotal.addAndGet(currentTime - lastStatusChangeAt.getAndSet(currentTime));
+                break;
+            default:
+                break;
+        }
         resetCounts();
     }
 
@@ -212,5 +247,10 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
     private final AtomicInteger halfOpenAttempts;
 
     private final String id;
+
+    private final AtomicLong lastStatusChangeAt;
+    private final AtomicLong openTotal;
+    private final AtomicLong halfOpenTotal;
+    private final AtomicLong closedTotal;
 
 }
