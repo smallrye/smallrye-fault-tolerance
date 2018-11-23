@@ -32,7 +32,7 @@
   <name>SmallRye: MicroProfile Fault Tolerance - Parent</name>
 
   <properties>
-    <version.asciidoctor.plugin>1.5.6</version.asciidoctor.plugin>
+    <version.asciidoctor.plugin>1.5.7.1</version.asciidoctor.plugin>
     <version.javax.enterprise.cdi-api>1.2</version.javax.enterprise.cdi-api>
     <version.javax.annotation-api>1.2</version.javax.annotation-api>
     <version.junit>4.11</version.junit>
