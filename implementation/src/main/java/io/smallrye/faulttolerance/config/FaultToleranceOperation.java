@@ -23,6 +23,8 @@ import java.util.function.Function;
 
 import javax.enterprise.inject.spi.AnnotatedMethod;
 
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
@@ -40,17 +42,22 @@ public class FaultToleranceOperation {
 
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
         return new FaultToleranceOperation(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(),
-                isAnnotated(Asynchronous.class, annotatedMethod), getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
-                getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new), getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
-                getConfig(Retry.class, annotatedMethod, RetryConfig::new), getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
+                                           isAsync(annotatedMethod),
+                                           getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
+                                           getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
+                                           getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
+                                           getConfig(Retry.class, annotatedMethod, RetryConfig::new),
+                                           getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
     }
 
     public static FaultToleranceOperation of(Class<?> beanClass, Method method) {
-        return new FaultToleranceOperation(beanClass, method, isAnnotated(Asynchronous.class, method, beanClass),
-                getConfig(Bulkhead.class, beanClass, method, BulkheadConfig::new),
-                getConfig(CircuitBreaker.class, beanClass, method, CircuitBreakerConfig::new),
-                getConfig(Fallback.class, beanClass, method, FallbackConfig::new), getConfig(Retry.class, beanClass, method, RetryConfig::new),
-                getConfig(Timeout.class, beanClass, method, TimeoutConfig::new));
+        return new FaultToleranceOperation(beanClass,method,
+                                           isAsync(method, beanClass),
+                                           getConfig(Bulkhead.class, beanClass,method, BulkheadConfig::new),
+                                           getConfig(CircuitBreaker.class, beanClass,method, CircuitBreakerConfig::new),
+                                           getConfig(Fallback.class, beanClass,method, FallbackConfig::new),
+                                           getConfig(Retry.class, beanClass,method, RetryConfig::new),
+                                           getConfig(Timeout.class, beanClass, method, TimeoutConfig::new));
     }
 
     private final Class<?> beanClass;
@@ -175,12 +182,23 @@ public class FaultToleranceOperation {
         return "FaultToleranceOperation [beanClass=" + beanClass + ", method=" + method.toGenericString() + "]";
     }
 
+
     private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod,
-            Function<AnnotatedMethod<?>, C> function) {
-        if (isAnnotated(annotationType, annotatedMethod)) {
+                                                                                  Function<AnnotatedMethod<?>, C> function) {
+        if (getConfigStatus(annotationType, annotatedMethod.getJavaMember()) && isAnnotated(annotationType, annotatedMethod)) {
             return function.apply(annotatedMethod);
         }
         return null;
+    }
+
+    private static boolean isAsync(Method method, Class<?> beanClass) {
+
+        return getConfigStatus(Asynchronous.class, method) && isAnnotated(Asynchronous.class, method, beanClass);
+    }
+
+    private static boolean isAsync(AnnotatedMethod<?> method) {
+
+        return getConfigStatus(Asynchronous.class, method.getJavaMember()) && isAnnotated(Asynchronous.class, method);
     }
 
     private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod) {
@@ -189,10 +207,31 @@ public class FaultToleranceOperation {
 
     private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Class<?> beanClass, Method method,
             BiFunction<Class<?>, Method, C> function) {
-        if (isAnnotated(annotationType, method, beanClass)) {
+
+        if (getConfigStatus(annotationType, method) && isAnnotated(annotationType, method, beanClass)) {
             return function.apply(beanClass, method);
         }
         return null;
+    }
+
+    private static <A extends Annotation> Boolean getConfigStatus(Class<A> annotationType, Method method) {
+        Config config = ConfigProvider.getConfig();
+        final String undifined = "undifined";
+        String onMethod = config.getOptionalValue(method.getDeclaringClass().getName() +
+                          "/" + method.getName() + "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
+        String onClass = config.getOptionalValue(method.getDeclaringClass().getName() +
+                          "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
+        String onGlobal = config.getOptionalValue(annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
+        Boolean returnConfig = true;
+
+        if (!undifined.equals(onMethod)) {
+            returnConfig = new Boolean(onMethod);
+        } else if (!undifined.equals(onClass)) {
+            returnConfig = new Boolean(onClass);
+        } else if (!undifined.equals(onGlobal)) {
+            returnConfig = new Boolean(onGlobal);
+        }
+        return returnConfig;
     }
 
     private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, Method method, Class<?> beanClass) {

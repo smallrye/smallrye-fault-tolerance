@@ -22,7 +22,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.function.Supplier;
 
-import com.netflix.hystrix.HystrixCommand;
+import com.netflix.hystrix.HystrixCircuitBreaker;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
@@ -30,7 +30,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
  * @author Antoine Sabot-Durand
  * @author Martin Kouba
  */
-public class SimpleCommand extends HystrixCommand<Object> {
+public class SimpleCommand extends BasicCommand {
 
     public static String getCommandKey(Method method) {
         StringBuilder builder = new StringBuilder();
@@ -106,6 +106,11 @@ public class SimpleCommand extends HystrixCommand<Object> {
         return false;
     }
 
+    @Override
+     void setFailure(Throwable f) {
+        ctx.setFailure(f);
+    }
+
     private final FaultToleranceOperation operation;
 
     private final Supplier<Object> fallback;
@@ -114,4 +119,12 @@ public class SimpleCommand extends HystrixCommand<Object> {
 
     private final Iterable<CommandListener> listeners;
 
+    @Override
+    FaultToleranceOperation getOperation() {
+        return operation;
+    }
+
+    HystrixCircuitBreaker getCircuitBreaker() {
+        return circuitBreaker;
+    }
 }

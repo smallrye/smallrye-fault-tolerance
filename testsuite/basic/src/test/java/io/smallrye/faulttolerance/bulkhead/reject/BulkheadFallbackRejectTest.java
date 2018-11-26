@@ -27,12 +27,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import io.smallrye.faulttolerance.TestArchive;
+import javax.inject.Inject;
+
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.TestArchive;
+
 /**
  *
  * @author Martin Kouba
@@ -46,10 +50,13 @@ public class BulkheadFallbackRejectTest {
         return TestArchive.createBase(BulkheadFallbackRejectTest.class).addPackage(BulkheadFallbackRejectTest.class.getPackage());
     }
 
+    @Inject
+    PingService pingService;
+
     static final int QUEUE_SIZE = 20;
 
     @Test
-    public void testFallbackNotRejected(PingService pingService) throws InterruptedException, ExecutionException {
+    public void testFallbackNotRejected() throws InterruptedException, ExecutionException {
 
         ExecutorService executorService = Executors.newFixedThreadPool(QUEUE_SIZE);
         try {

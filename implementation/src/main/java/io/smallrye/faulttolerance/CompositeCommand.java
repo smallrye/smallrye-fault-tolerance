@@ -20,8 +20,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
+import org.eclipse.microprofile.metrics.Histogram;
+import org.eclipse.microprofile.metrics.MetricRegistry;
+import org.eclipse.microprofile.metrics.MetricType;
 
-import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
@@ -35,26 +37,54 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
  *
  * @author Martin Kouba
  */
-public class CompositeCommand extends HystrixCommand<Object> {
+public class CompositeCommand extends BasicCommand {
 
-    public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation) {
-        return new CompositeCommand(callable, operation).queue();
+    public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx,
+            MetricRegistry registry) {
+        return new CompositeCommand(callable, operation, ctx, registry).queue();
+    }
+
+    @Override
+    void setFailure(Throwable f) {
+        ctx.setFailure(f);
+    }
+
+    @Override
+    FaultToleranceOperation getOperation() {
+        return operation;
     }
 
     private final Callable<Object> callable;
+
+    private final ExecutionContextWithInvocationContext ctx;
+
+    private final FaultToleranceOperation operation;
+
+    private final MetricRegistry registry;
+
+    private final long queuedAt;
 
     /**
      *
      * @param callable Asynchronous operation
      * @param operation Fault tolerance operation
      */
-    protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation) {
+    protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx,
+            MetricRegistry registry) {
         super(initSetter(operation));
+        this.operation = operation;
         this.callable = callable;
+        this.ctx = ctx;
+        this.registry = registry;
+        this.queuedAt = System.nanoTime();
     }
 
     @Override
     protected Object run() throws Exception {
+        if (registry != null && operation.hasBulkhead()) {
+            // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
+            histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
+        }
         return callable.call();
     }
 
@@ -77,6 +107,19 @@ public class CompositeCommand extends HystrixCommand<Object> {
         setter.andThreadPoolPropertiesDefaults(threadPoolSetter);
 
         return setter;
+    }
+
+    private Histogram histogramOf(String name) {
+        Histogram histogram = registry.getHistograms().get(name);
+        if (histogram == null) {
+            synchronized (operation) {
+                histogram = registry.getHistograms().get(name);
+                if (histogram == null) {
+                    histogram = registry.histogram(MetricsCollectorFactory.metadataOf(name, MetricType.HISTOGRAM));
+                }
+            }
+        }
+        return histogram;
     }
 
 }
