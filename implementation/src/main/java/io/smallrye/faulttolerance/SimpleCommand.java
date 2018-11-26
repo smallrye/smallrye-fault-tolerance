@@ -20,6 +20,7 @@ import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 import com.netflix.hystrix.HystrixCircuitBreaker;
@@ -31,6 +32,10 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
  * @author Martin Kouba
  */
 public class SimpleCommand extends BasicCommand {
+
+    public static final Callable<Object> FORCED_FAILURE = () -> {
+        throw new RuntimeException("forced failure");
+    };
 
     public static String getCommandKey(Method method) {
         StringBuilder builder = new StringBuilder();
@@ -64,18 +69,19 @@ public class SimpleCommand extends BasicCommand {
         this.fallback = fallback;
         this.operation = operation;
         this.listeners = listeners;
+        this.continuation = ctx::proceed;
     }
 
     @Override
     protected Object run() throws Exception {
         if (listeners == null) {
-            return ctx.proceed();
+            return continuation.call();
         }
         try {
             for (CommandListener listener : listeners) {
                 listener.beforeExecution(operation);
             }
-            return ctx.proceed();
+            return continuation.call();
         } finally {
             for (CommandListener listener : listeners) {
                 listener.afterExecution(operation);
@@ -119,6 +125,8 @@ public class SimpleCommand extends BasicCommand {
 
     private final Iterable<CommandListener> listeners;
 
+    private Callable<Object> continuation;
+
     @Override
     FaultToleranceOperation getOperation() {
         return operation;
@@ -126,5 +134,9 @@ public class SimpleCommand extends BasicCommand {
 
     HystrixCircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
+    }
+
+    public void forceFallback() {
+        continuation = FORCED_FAILURE;
     }
 }

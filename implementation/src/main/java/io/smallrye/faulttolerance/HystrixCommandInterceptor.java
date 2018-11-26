@@ -179,16 +179,21 @@ public class HystrixCommandInterceptor {
         MetricsCollector metricsCollector = metricsCollectorFactory.createCollector(metadata.operation, retryContext, metadata.poolKey);
         metricsCollector.init(syncCircuitBreaker);
 
+        boolean forceFallback = false;
+
         while (true) {
             if (retryContext != null) {
                 LOGGER.debugf("Executing %s with %s", metadata.operation, retryContext);
             }
 
             Supplier<Object> fallback = null;
-            if (retryContext == null || retryContext.isLastAttempt()) {
+            if (forceFallback || retryContext == null || retryContext.isLastAttempt()) {
                 fallback = metadata.getFallback(ctx);
             }
             SimpleCommand command = commandFactory.apply(fallback);
+            if (forceFallback) {
+                command.forceFallback();
+            }
 
             metricsCollector.beforeExecute(command);
 
@@ -208,7 +213,12 @@ public class HystrixCommandInterceptor {
                 Exception res = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(), syncCircuitBreaker);
                 metricsCollector.onProcessedError(command, res);
                 if (res != null) {
-                    throw res;
+                    // if everything failed but fallback was not applied, force fallback
+                    if (fallback == null && metadata.getFallback(ctx) != null) {
+                        forceFallback = true;
+                    } else {
+                        throw res;
+                    }
                 }
             } finally {
                 metricsCollector.afterExecute(command);
@@ -403,30 +413,22 @@ public class HystrixCommandInterceptor {
         Supplier<Object> getFallback(ExecutionContextWithInvocationContext ctx) {
             Supplier<Object> fallback = null;
             if (fallbackMethod != null) {
-                fallback = new Supplier<Object>() {
-                    @Override
-                    public Object get() {
-                        try {
-                            if (fallbackMethod.isDefault()) {
-                                // Workaround for default methods (used e.g. in MP Rest Client)
-                                return DefaultMethodFallbackProvider.getFallback(fallbackMethod, ctx);
-                            } else {
-                                return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
-                            }
-                        } catch (Throwable e) {
-                            throw new FaultToleranceException("Error during fallback method invocation", e);
+                fallback = () -> {
+                    try {
+                        if (fallbackMethod.isDefault()) {
+                            // Workaround for default methods (used e.g. in MP Rest Client)
+                            return DefaultMethodFallbackProvider.getFallback(fallbackMethod, ctx);
+                        } else {
+                            return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
                         }
+                    } catch (Throwable e) {
+                        throw new FaultToleranceException("Error during fallback method invocation", e);
                     }
                 };
             } else {
                 FallbackHandler<?> fallbackHandler = fallbackHandlerProvider.get(operation);
                 if (fallbackHandler != null) {
-                    fallback = new Supplier<Object>() {
-                        @Override
-                        public Object get() {
-                            return fallbackHandler.handle(ctx);
-                        }
-                    };
+                    fallback = () -> fallbackHandler.handle(ctx);
                 }
             }
             return fallback;
