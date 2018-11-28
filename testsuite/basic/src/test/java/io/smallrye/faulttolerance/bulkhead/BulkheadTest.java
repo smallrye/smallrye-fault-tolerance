@@ -16,7 +16,9 @@
 package io.smallrye.faulttolerance.bulkhead;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -50,22 +53,24 @@ public class BulkheadTest {
     @Test
     public void testWaitingQueue(PingService pingService) throws InterruptedException, ExecutionException {
         int loop = QUEUE_SIZE * 2;
-        CountDownLatch startLatch = new CountDownLatch(loop);
+        CountDownLatch startLatch = new CountDownLatch(QUEUE_SIZE);
         CountDownLatch endLatch = new CountDownLatch(1);
         List<Future<String>> futures = new ArrayList<>();
         for (int i = 0; i < loop; i++) {
             futures.add(pingService.ping(startLatch, endLatch));
         }
-        startLatch.await(500, TimeUnit.MILLISECONDS);
+        assertTrue(startLatch.await(1000L, TimeUnit.MILLISECONDS));
         // Next invocation should not make it due to BulkheadException
         try {
             pingService.ping(null, null).get();
+            fail("The call finished successfully but BulkheadException was expected to be thrown");
         } catch (ExecutionException e) {
             assertTrue(e.getCause() instanceof BulkheadException);
         }
         endLatch.countDown();
         for (int i = 0; i < loop; i++) {
-            assertEquals("pong", futures.get(i).get());
+            assertFalse(futures.get(i).isCancelled());
+            assertEquals("the content check failed for future: " + futures.get(i), "pong", futures.get(i).get());
         }
     }
 

@@ -241,7 +241,7 @@ public class CommandInterceptorTest {
         }
 
         invokeCounter = serviceRetry.getSayHelloRetry();
-        assertEquals("The number of executions should be 4", invokeCounter, 4);
+        assertEquals("The number of executions should be 4", 4, invokeCounter);
     }
 
     @Test
@@ -255,7 +255,7 @@ public class CommandInterceptorTest {
             Assert.fail("serviceA should not throw a RuntimeException in testRetryTimeout");
         }
 
-        assertEquals("The execution count should be 2 (1 retry + 1)", serviceRetry.getCounterForInvokingServiceA(), 2);
+        assertEquals("The execution count should be 2 (1 retry + 1)", 2, serviceRetry.getCounterForInvokingServiceA());
     }
 
     @Test
@@ -267,13 +267,13 @@ public class CommandInterceptorTest {
         } catch (RuntimeException ex) {
             Assert.fail("serviceA should not throw a RuntimeException in testFallbackSuccess");
         }
-        assertEquals("The execution count should be 2 (1 retry + 1)", serviceRetry.getCounterForInvokingServiceA(), 2);
+        assertEquals("The execution count should be 2 (1 retry + 1)", 2, serviceRetry.getCounterForInvokingServiceA());
         try {
             String result = serviceRetry.serviceB();
             Assert.assertTrue("The message should be \"fallback for serviceB\"", result.contains("serviceB"));
         } catch (RuntimeException ex) {
             Assert.fail("serviceB should not throw a RuntimeException in testFallbackSuccess");
         }
-        assertEquals("The execution count should be 3 (2 retries + 1)", serviceRetry.getCounterForInvokingServiceB(), 3);
+        assertEquals("The execution count should be 3 (2 retries + 1)", 3, serviceRetry.getCounterForInvokingServiceB());
     }
 }
