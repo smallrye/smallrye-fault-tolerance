@@ -114,6 +114,7 @@ public class SimpleCommand extends BasicCommand {
         }
     }
 
+    // TODO: improve this, see: https://github.com/smallrye/smallrye-fault-tolerance/issues/52
     private Throwable translateException() {
         Exception e = executionResult.getExecutionException();
         if (e instanceof HystrixTimeoutException) {

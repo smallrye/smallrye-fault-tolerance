@@ -59,7 +59,8 @@ public class BulkheadTest {
         for (int i = 0; i < loop; i++) {
             futures.add(pingService.ping(startLatch, endLatch));
         }
-        assertTrue(startLatch.await(1000L, TimeUnit.MILLISECONDS));
+        assertTrue(startLatch.await(500L, TimeUnit.MILLISECONDS));
+        Thread.sleep(500L);
         // Next invocation should not make it due to BulkheadException
         try {
             pingService.ping(null, null).get();
