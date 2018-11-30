@@ -49,13 +49,13 @@ public class NonPublicFallbackMethodTest {
     public void testFallbackMethod() throws NoSuchMethodException, SecurityException {
         FaultyService.COUNTER.set(0);
         assertEquals(service.foo(), 1);
-        assertEquals(FaultyService.COUNTER.get(), 3);
+        assertEquals(3, FaultyService.COUNTER.get());
     }
 
     @Test
     public void testFallbackMethodParameterizedReturnType() throws NoSuchMethodException, SecurityException {
         FaultyService.COUNTER.set(0);
         assertEquals(service.fooParameterized(), Collections.emptyList());
-        assertEquals(FaultyService.COUNTER.get(), 3);
+        assertEquals(3, FaultyService.COUNTER.get());
     }
 }

@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.smallrye.faulttolerance.config.RetryConfig;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -29,6 +30,8 @@ class RetryContext {
 
     private final AtomicInteger remainingAttempts;
 
+    private final AtomicReference<Boolean> shouldRetry = new AtomicReference<>();
+
     private final long start;
 
     private final long maxDuration;
@@ -38,7 +41,7 @@ class RetryContext {
     RetryContext(RetryConfig config) {
         this.config = config;
         this.start = System.nanoTime();
-        this.remainingAttempts = new AtomicInteger(config.<Integer>get(RetryConfig.MAX_RETRIES) + 1);
+        this.remainingAttempts = new AtomicInteger(config.<Integer>get(RetryConfig.MAX_RETRIES));
         this.maxDuration = Duration.of(config.get(RetryConfig.MAX_DURATION), config.get(RetryConfig.DURATION_UNIT)).toNanos();
         this.delay = Duration.of(config.get(RetryConfig.DELAY), config.get(RetryConfig.DELAY_UNIT)).toMillis();
     }
@@ -55,9 +58,10 @@ class RetryContext {
      */
     Exception nextRetry(Throwable throwable) {
         // Decrement the retry count for this attempt
-        remainingAttempts.decrementAndGet();
         // Check the exception type
-        if (shouldRetryOn(throwable, System.nanoTime())) {
+        if (shouldRetryOn(throwable)) {
+            shouldRetry.set(null);
+            remainingAttempts.decrementAndGet();
             return delayIfNeeded();
         } else {
             if (throwable instanceof Error) {
@@ -79,16 +83,19 @@ class RetryContext {
         return remainingAttempts.get() == 1;
     }
 
-    boolean shouldRetryOn(Throwable exception, long time) {
-        return
-        // There are some remaining attempts left
-        shouldRetry()
-                // The given exception should not abort execution
-                && (config.getAbortOn().length == 0 || Arrays.stream(config.getAbortOn()).noneMatch(ex -> ex.isAssignableFrom(exception.getClass())))
-                // We should retry on the given exception
-                && retryOn(exception)
-                // Once the duration is reached, no more retries should be performed
-                && (time - start <= maxDuration);
+    boolean shouldRetryOn(Throwable exception) {
+        Boolean retry = shouldRetry.get();
+        if (retry == null) {
+            retry = shouldRetry()
+                    // The given exception should not abort execution
+                    && (config.getAbortOn().length == 0 || Arrays.stream(config.getAbortOn()).noneMatch(ex -> ex.isAssignableFrom(exception.getClass())))
+                    // We should retry on the given exception
+                    && retryOn(exception)
+                    // Once the duration is reached, no more retries should be performed
+                    && (System.nanoTime() - start <= maxDuration);
+            retry = shouldRetry.compareAndSet(null, retry) ? retry : shouldRetry.get();
+        }
+        return retry;
     }
 
     private boolean retryOn(Throwable throwable) {
@@ -97,7 +104,9 @@ class RetryContext {
             return false;
         }
         if (retryOn.length == 1) {
-            return retryOn[0].isAssignableFrom(throwable.getClass());
+            Class<?> exceptionClass = retryOn[0];
+
+            return throwable == null || exceptionClass.isAssignableFrom(throwable.getClass());
         }
         return Arrays.stream(retryOn).anyMatch(t -> t.isAssignableFrom(throwable.getClass()));
     }
@@ -126,6 +135,6 @@ class RetryContext {
     }
 
     boolean hasBeenRetried() {
-        return remainingAttempts.get() < (config.<Integer>get(RetryConfig.MAX_RETRIES) + 1);
+        return remainingAttempts.get() < (config.<Integer>get(RetryConfig.MAX_RETRIES));
     }
 }

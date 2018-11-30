@@ -32,7 +32,7 @@ public class PingService {
             startLatch.countDown();
         }
         if (endLatch != null) {
-            if (endLatch.await(1, TimeUnit.SECONDS)) {
+            if (endLatch.await(1500, TimeUnit.MILLISECONDS)) {
                 return CompletableFuture.completedFuture("pong");
             } else {
                 return CompletableFuture.completedFuture("timeout");

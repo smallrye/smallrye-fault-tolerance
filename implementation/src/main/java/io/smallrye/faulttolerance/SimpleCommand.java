@@ -26,6 +26,12 @@ import com.netflix.hystrix.HystrixCircuitBreaker;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
+
+import com.netflix.hystrix.exception.HystrixTimeoutException;
+import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
+import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
+import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+
 /**
  * @author Antoine Sabot-Durand
  * @author Martin Kouba
@@ -57,13 +63,18 @@ public class SimpleCommand extends BasicCommand {
      * @param operation Fault tolerance operation
      * @param listeners Command listeners
      */
-    protected SimpleCommand(Setter setter, ExecutionContextWithInvocationContext ctx, Supplier<Object> fallback, FaultToleranceOperation operation,
-            Iterable<CommandListener> listeners) {
+    protected SimpleCommand(Setter setter,
+                            ExecutionContextWithInvocationContext ctx,
+                            Supplier<Object> fallback,
+                            FaultToleranceOperation operation,
+                            Iterable<CommandListener> listeners,
+                            RetryContext retryContext) {
         super(setter);
         this.ctx = ctx;
         this.fallback = fallback;
         this.operation = operation;
         this.listeners = listeners;
+        this.retryContext = retryContext;
     }
 
     @Override
@@ -85,15 +96,39 @@ public class SimpleCommand extends BasicCommand {
 
     @Override
     protected Object getFallback() {
+        if (fallback == null) {
+            return super.getFallback();
+        }
         Throwable failure = getFailedExecutionException();
         if (failure != null && operation.hasCircuitBreaker() && !isFailureAssignableFromAnyFailureException(failure)) {
             // Command failed but the fallback should not be used
             throw new FailureNotHandledException(failure);
         }
-        if (fallback == null) {
+        if (failure == null) {
+            failure = translateException();
+        }
+        if (retryContext == null || !retryContext.shouldRetryOn(failure)) {
+            return fallback.get();
+        } else {
             return super.getFallback();
         }
-        return fallback.get();
+    }
+
+    // TODO: improve this, see: https://github.com/smallrye/smallrye-fault-tolerance/issues/52
+    private Throwable translateException() {
+        Exception e = executionResult.getExecutionException();
+        if (e instanceof HystrixTimeoutException) {
+            return new TimeoutException(e);
+        }
+
+        switch (e.getMessage()) {
+            case "could not acquire a semaphore for execution":
+                return new BulkheadException(e);
+            case "Hystrix circuit short-circuited and is OPEN":
+                return new CircuitBreakerOpenException(e);
+            default:
+                return e;
+        }
     }
 
     private boolean isFailureAssignableFromAnyFailureException(Throwable failure) {
@@ -118,6 +153,8 @@ public class SimpleCommand extends BasicCommand {
     private final ExecutionContextWithInvocationContext ctx;
 
     private final Iterable<CommandListener> listeners;
+
+    private final RetryContext retryContext;
 
     @Override
     FaultToleranceOperation getOperation() {
