@@ -382,8 +382,11 @@ public class HystrixCommandInterceptor {
                     if (!"".equals(fallbackMethodName)) {
                         try {
                             fallbackMethod = SecurityActions.getDeclaredMethod(method.getDeclaringClass(), fallbackMethodName, method.getParameterTypes());
+                            if (fallbackMethod == null) {
+                                throw new FaultToleranceException("Could not obtain fallback method " + fallbackMethodName);
+                            }
                             SecurityActions.setAccessible(fallbackMethod);
-                        } catch (NoSuchMethodException | PrivilegedActionException e) {
+                        } catch (PrivilegedActionException e) {
                             throw new FaultToleranceException("Could not obtain fallback method", e);
                         }
                     } else {

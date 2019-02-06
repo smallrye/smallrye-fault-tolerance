@@ -27,9 +27,21 @@ import java.security.PrivilegedExceptionAction;
  *
  * @author Martin Kouba
  */
-final class SecurityActions {
+public final class SecurityActions {
 
     private SecurityActions() {
+    }
+
+    public static Method getAnnotationMethod(Class<?> clazz, String name) throws PrivilegedActionException, NoSuchMethodException {
+        if (System.getSecurityManager() == null) {
+            return clazz.getMethod(name);
+        }
+        return AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+            @Override
+            public Method run() throws NoSuchMethodException, SecurityException {
+                return clazz.getMethod(name);
+            }
+        });
     }
 
     static Field getDeclaredField(Class<?> clazz, String name) throws NoSuchFieldException, PrivilegedActionException {
@@ -44,18 +56,6 @@ final class SecurityActions {
         });
     }
 
-    static Method getDeclaredMethod(Class<?> clazz, String name, Class<?>[] parameterTypes) throws NoSuchMethodException, PrivilegedActionException {
-        if (System.getSecurityManager() == null) {
-            return clazz.getDeclaredMethod(name, parameterTypes);
-        }
-        return AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-            @Override
-            public Method run() throws NoSuchMethodException {
-                return clazz.getDeclaredMethod(name, parameterTypes);
-            }
-        });
-    }
-
     static void setAccessible(final AccessibleObject accessibleObject) {
         if (System.getSecurityManager() == null) {
             accessibleObject.setAccessible(true);
@@ -64,6 +64,41 @@ final class SecurityActions {
             accessibleObject.setAccessible(true);
             return accessibleObject;
         });
+    }
+    public static Method getDeclaredMethod(Class<?> clazz, String name, Class<?>[] parameterTypes) throws PrivilegedActionException {
+        if (System.getSecurityManager() == null) {
+            return doGetMethod(clazz, name, parameterTypes);
+        }
+        return AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () -> doGetMethod(clazz, name, parameterTypes));
+    }
+
+    private static Method doGetMethod(final Class<?> clazz, String name, Class<?>[] parameterTypes) {
+        Method method = getMethodFromClass(clazz, name, parameterTypes);
+        Class current = clazz;
+        while (current != null) {
+            method = getMethodFromClass(clazz, name, parameterTypes);
+            if (method != null) {
+                return method;
+            } else {
+                current = current.getSuperclass();
+            }
+        }
+
+        for (Class<?> anInterface : clazz.getInterfaces()) {
+            method = getMethodFromClass(anInterface, name, parameterTypes);
+            if (method != null) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    private static Method getMethodFromClass(Class<?> clazz, String name, Class<?>[] parameterTypes) {
+        try {
+            return clazz.getDeclaredMethod(name, parameterTypes);
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        }
     }
 
     static Method[] getDeclaredMethods(Class<?> clazz) throws PrivilegedActionException {

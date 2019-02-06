@@ -25,6 +25,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.spi.AnnotatedMethod;
 
+import io.smallrye.faulttolerance.SecurityActions;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
@@ -55,9 +56,13 @@ public class FallbackConfig extends GenericConfig<Fallback> {
             Method fallbackMethod;
             try {
                 fallbackMethod = SecurityActions.getDeclaredMethod(method.getDeclaringClass(), get(FALLBACK_METHOD), method.getParameterTypes());
-            } catch (NoSuchMethodException | PrivilegedActionException e) {
+            } catch (PrivilegedActionException e) {
                 throw new FaultToleranceDefinitionException(
                         "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found", e);
+            }
+            if (fallbackMethod == null) {
+                throw new FaultToleranceDefinitionException(
+                        "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found");
             }
             if (!method.getReturnType().equals(void.class) && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
                 throw new FaultToleranceDefinitionException(

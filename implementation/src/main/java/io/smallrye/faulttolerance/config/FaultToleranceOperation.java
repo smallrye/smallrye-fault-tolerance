@@ -17,6 +17,7 @@ package io.smallrye.faulttolerance.config;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -157,7 +158,7 @@ public class FaultToleranceOperation {
      * Throws {@link FaultToleranceDefinitionException} if validation fails.
      */
     public void validate() {
-        if (async && !Future.class.equals(method.getReturnType())) {
+        if (async && !isAcceptableAsyncReturnType(method.getReturnType())) {
             throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method + " : the return type must be java.util.concurrent.Future");
         }
         if (bulkhead != null) {
@@ -175,6 +176,10 @@ public class FaultToleranceOperation {
         if (timeout != null) {
             timeout.validate();
         }
+    }
+
+    private boolean isAcceptableAsyncReturnType(Class<?> returnType) {
+        return Future.class.equals(returnType) || CompletionStage.class.equals(returnType);
     }
 
     @Override
