@@ -55,6 +55,11 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
             classContainer.addClass(HystrixCommandSemaphoreCleanup.class);
             classContainer.addAsResource(EmptyAsset.INSTANCE, "META-INF/beans.xml");
         }
+
+        if (!applicationArchive.contains("META-INF/beans.xml")) {
+            applicationArchive.add(EmptyAsset.INSTANCE, "META-INF/beans.xml");
+        }
+
         LOGGER.info("Added additional resources to " + applicationArchive.toString(true));
     }
 }
