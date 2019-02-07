@@ -44,6 +44,7 @@ public class FaultToleranceOperation {
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
         return new FaultToleranceOperation(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(),
                                            isAsync(annotatedMethod),
+                                           returnsCompletionStage(annotatedMethod),
                                            getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
                                            getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
                                            getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
@@ -54,6 +55,7 @@ public class FaultToleranceOperation {
     public static FaultToleranceOperation of(Class<?> beanClass, Method method) {
         return new FaultToleranceOperation(beanClass,method,
                                            isAsync(method, beanClass),
+                                           returnsCompletionStage(method),
                                            getConfig(Bulkhead.class, beanClass,method, BulkheadConfig::new),
                                            getConfig(CircuitBreaker.class, beanClass,method, CircuitBreakerConfig::new),
                                            getConfig(Fallback.class, beanClass,method, FallbackConfig::new),
@@ -67,6 +69,8 @@ public class FaultToleranceOperation {
 
     private final boolean async;
 
+    private final boolean returnsCompletionStage;
+
     private final BulkheadConfig bulkhead;
 
     private final CircuitBreakerConfig circuitBreaker;
@@ -77,11 +81,19 @@ public class FaultToleranceOperation {
 
     private final TimeoutConfig timeout;
 
-    private FaultToleranceOperation(Class<?> beanClass, Method method, boolean async, BulkheadConfig bulkhead, CircuitBreakerConfig circuitBreaker,
-            FallbackConfig fallback, RetryConfig retry, TimeoutConfig timeout) {
+    private FaultToleranceOperation(Class<?> beanClass,
+                                    Method method,
+                                    boolean async,
+                                    boolean returnsCompletionStage,
+                                    BulkheadConfig bulkhead,
+                                    CircuitBreakerConfig circuitBreaker,
+                                    FallbackConfig fallback,
+                                    RetryConfig retry,
+                                    TimeoutConfig timeout) {
         this.beanClass = beanClass;
         this.method = method;
         this.async = async;
+        this.returnsCompletionStage = returnsCompletionStage;
         this.bulkhead = bulkhead;
         this.circuitBreaker = circuitBreaker;
         this.fallback = fallback;
@@ -91,6 +103,10 @@ public class FaultToleranceOperation {
 
     public boolean isAsync() {
         return async;
+    }
+
+    public boolean returnsCompletionStage() {
+        return returnsCompletionStage;
     }
 
     public boolean hasBulkhead() {
@@ -194,6 +210,15 @@ public class FaultToleranceOperation {
             return function.apply(annotatedMethod);
         }
         return null;
+    }
+
+
+    private static boolean returnsCompletionStage(Method annotatedMethod) {
+        return CompletionStage.class.isAssignableFrom(annotatedMethod.getReturnType());
+    }
+    
+    private static boolean returnsCompletionStage(AnnotatedMethod<?> annotatedMethod) {
+        return returnsCompletionStage(annotatedMethod.getJavaMember());
     }
 
     private static boolean isAsync(Method method, Class<?> beanClass) {

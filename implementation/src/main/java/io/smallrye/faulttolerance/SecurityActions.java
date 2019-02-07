@@ -73,10 +73,10 @@ public final class SecurityActions {
     }
 
     private static Method doGetMethod(final Class<?> clazz, String name, Class<?>[] parameterTypes) {
-        Method method = getMethodFromClass(clazz, name, parameterTypes);
-        Class current = clazz;
+        Method method;
+        Class<?> current = clazz;
         while (current != null) {
-            method = getMethodFromClass(clazz, name, parameterTypes);
+            method = getMethodFromClass(current, name, parameterTypes);
             if (method != null) {
                 return method;
             } else {

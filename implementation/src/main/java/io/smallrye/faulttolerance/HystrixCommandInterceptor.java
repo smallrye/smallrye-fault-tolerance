@@ -22,6 +22,7 @@ import com.netflix.hystrix.HystrixCommand.Setter;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
+import com.netflix.hystrix.HystrixObservableCommand;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
@@ -43,6 +44,8 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.Logger;
+import rx.Observable;
+import rx.Subscription;
 
 import javax.annotation.Priority;
 import javax.enterprise.inject.Intercepted;
@@ -55,6 +58,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -146,7 +152,9 @@ public class HystrixCommandInterceptor {
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : invocationContext.getTarget().getClass();
 
         CommandMetadata metadata = commandMetadataCache.computeIfAbsent(method, k -> new CommandMetadata(beanClass, method));
-        if (!metadata.operation.isLegitimate()) {
+        FaultToleranceOperation operation = metadata.operation;
+
+        if (!operation.isLegitimate()) {
             // HystrixCommandBinding is present but no FT annotation is used
             return invocationContext.proceed();
         }
@@ -154,24 +162,36 @@ public class HystrixCommandInterceptor {
         ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(invocationContext);
         LOGGER.tracef("FT operation intercepted: %s", method);
 
-        RetryContext retryContext = nonFallBackEnable && metadata.operation.hasRetry() ? new RetryContext(metadata.operation.getRetry()) : null;
+        RetryContext retryContext = nonFallBackEnable && operation.hasRetry() ? new RetryContext(operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
 
-        Function<Supplier<Object>, SimpleCommand> commandFactory = (fallback) -> new SimpleCommand(metadata.setter, ctx, fallback, metadata.operation,
-                listenersProvider.getCommandListeners(), retryContext);
+        Function<Supplier<Object>, SimpleCommand> commandFactory =
+                (fallback) ->
+                        new SimpleCommand(metadata.setter, ctx, fallback, operation, listenersProvider.getCommandListeners(), retryContext);
 
-        if (metadata.operation.isAsync()) {
-            LOGGER.debugf("Queue up command for async execution: %s", metadata.operation);
-            return new AsyncFuture(
-                    CompositeCommand.createAndQueue(
-                            () -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker),
-                            metadata.operation,
-                            ctx,
-                            metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
-                    )
-            );
+        if (operation.isAsync()) {
+            LOGGER.debugf("Queue up command for async execution: %s", operation);
+            Callable callable = () -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker);
+            if (operation.returnsCompletionStage()) {
+                HystrixObservableCommand command = CompositeObservableCommand.create(
+                        (Callable<? extends CompletionStage<?>>) callable,
+                        operation,
+                        ctx,
+                        metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
+                );
+                return new ObservableCompletableFuture<>(command.observe());
+            } else {
+               Future future = CompositeCommand.createAndQueue(
+                       callable,
+                        operation,
+                        ctx,
+                        metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
+                );
+
+                return new AsyncFuture(future);
+            }
         } else {
-            LOGGER.debugf("Sync execution: %s]", metadata.operation);
+            LOGGER.debugf("Sync execution: %s]", operation);
             return executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker);
         }
     }
@@ -405,35 +425,41 @@ public class HystrixCommandInterceptor {
         Supplier<Object> getFallback(ExecutionContextWithInvocationContext ctx) {
             Supplier<Object> fallback = null;
             if (fallbackMethod != null) {
-                fallback = new Supplier<Object>() {
-                    @Override
-                    public Object get() {
-                        try {
-                            if (fallbackMethod.isDefault()) {
-                                // Workaround for default methods (used e.g. in MP Rest Client)
-                                return DefaultMethodFallbackProvider.getFallback(fallbackMethod, ctx);
-                            } else {
-                                return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
-                            }
-                        } catch (Throwable e) {
-                            throw new FaultToleranceException("Error during fallback method invocation", e);
+                fallback = () -> {
+                    try {
+                        if (fallbackMethod.isDefault()) {
+                            // Workaround for default methods (used e.g. in MP Rest Client)
+                            return DefaultMethodFallbackProvider.getFallback(fallbackMethod, ctx);
+                        } else {
+                            return fallbackMethod.invoke(ctx.getTarget(), ctx.getParameters());
                         }
+                    } catch (Throwable e) {
+                        throw new FaultToleranceException("Error during fallback method invocation", e);
                     }
                 };
             } else {
                 FallbackHandler<?> fallbackHandler = fallbackHandlerProvider.get(operation);
                 if (fallbackHandler != null) {
-                    fallback = new Supplier<Object>() {
-                        @Override
-                        public Object get() {
-                            return fallbackHandler.handle(ctx);
-                        }
-                    };
+                    fallback = () -> fallbackHandler.handle(ctx);
                 }
             }
             return fallback;
         }
+    }
 
+    static class ObservableCompletableFuture<T> extends CompletableFuture<T> {
+        private final Subscription subscription;
+
+        ObservableCompletableFuture(Observable<T> observable) {
+            subscription = observable.single()
+                    .subscribe(this::complete, this::completeExceptionally);
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            this.subscription.unsubscribe();
+            return super.cancel(mayInterruptIfRunning);
+        }
     }
 
     static class AsyncFuture implements Future<Object> {
@@ -504,29 +530,28 @@ public class HystrixCommandInterceptor {
             }
         }
 
-        private ExecutionException unwrapExecutionException(ExecutionException e) throws ExecutionException {
-            if (e.getCause() instanceof HystrixRuntimeException) {
-                Exception res;
-                HystrixRuntimeException hystrixRuntimeException = (HystrixRuntimeException) e.getCause();
-                if (FailureType.COMMAND_EXCEPTION.equals(hystrixRuntimeException.getFailureType())) {
-                    res = getCause(hystrixRuntimeException);
-                } else {
-                    res = errorProcessingHystrixRuntimeException(hystrixRuntimeException);
-                }
-                return new ExecutionException(res);
-            }
-            return e;
-        }
-
-        private IllegalStateException unableToUnwrap(Future<Object> future) {
-            return new IllegalStateException("Unable to get the result of: " + future);
-        }
-
         private Object logResult(Future<Object> future, Object unwrapped) {
             LOGGER.tracef("Unwrapped async result from %s: %s", future, unwrapped);
             return unwrapped;
         }
+    }
 
+    private static ExecutionException unwrapExecutionException(ExecutionException e) throws ExecutionException {
+        if (e.getCause() instanceof HystrixRuntimeException) {
+            Exception res;
+            HystrixRuntimeException hystrixRuntimeException = (HystrixRuntimeException) e.getCause();
+            if (FailureType.COMMAND_EXCEPTION.equals(hystrixRuntimeException.getFailureType())) {
+                res = getCause(hystrixRuntimeException);
+            } else {
+                res = errorProcessingHystrixRuntimeException(hystrixRuntimeException);
+            }
+            return new ExecutionException(res);
+        }
+        return e;
+    }
+
+    private static IllegalStateException unableToUnwrap(Future<Object> future) {
+        return new IllegalStateException("Unable to get the result of: " + future);
     }
 
 }
