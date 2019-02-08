@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.annotation.Priority;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.AnnotatedConstructor;
 import javax.enterprise.inject.spi.AnnotatedField;
@@ -32,8 +33,11 @@ import javax.enterprise.inject.spi.AnnotatedType;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
+import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessManagedBean;
+import javax.enterprise.util.AnnotationLiteral;
 
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
@@ -74,6 +78,16 @@ public class HystrixExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class), DefaultFallbackHandlerProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultCommandListenersProvider.class), DefaultCommandListenersProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
+    }
+
+    void changeInterceptorPriority(@Observes ProcessAnnotatedType<HystrixCommandInterceptor> event) {
+        ConfigProvider.getConfig()
+                .getOptionalValue("mp.fault.tolerance.interceptor.priority", Integer.class)
+                .ifPresent(configuredInterceptorPriority -> {
+                    event.configureAnnotatedType()
+                            .remove(ann -> ann instanceof Priority)
+                            .add(new PriorityLiteral(configuredInterceptorPriority));
+                });
     }
 
     /**
@@ -159,4 +173,18 @@ public class HystrixExtension implements Extension {
         private Set<Annotation> annotations;
     }
 
+    public static class PriorityLiteral extends AnnotationLiteral<Priority> implements Priority {
+        private static final long serialVersionUID = 1L;
+
+        private final int value;
+
+        public PriorityLiteral(int value) {
+            this.value = value;
+        }
+
+        @Override
+        public int value() {
+            return value;
+        }
+    }
 }

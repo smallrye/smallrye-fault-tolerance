@@ -85,7 +85,7 @@ import java.util.function.Supplier;
  */
 @Interceptor
 @HystrixCommandBinding
-@Priority(Interceptor.Priority.LIBRARY_AFTER + 1)
+@Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class HystrixCommandInterceptor {
 
     /**
