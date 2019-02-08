@@ -15,10 +15,6 @@
  */
 package io.smallrye.faulttolerance;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
@@ -64,6 +60,7 @@ public class HystrixInitializer {
     @PreDestroy
     void onShutdown() {
         LOGGER.info("### Reset Hystrix ###");
-        Hystrix.reset(1, TimeUnit.SECONDS);
+        // TODO increased timeout to 10 to avoid spurious TCK failures, should change back to 1 later
+        Hystrix.reset(10, TimeUnit.SECONDS);
     }
 }
