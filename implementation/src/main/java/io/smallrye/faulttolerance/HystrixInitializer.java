@@ -63,19 +63,7 @@ public class HystrixInitializer {
 
     @PreDestroy
     void onShutdown() {
-        CompletableFuture.runAsync( () -> {
-            LOGGER.info("### Reset Hystrix ###");
-            Hystrix.reset(1, TimeUnit.SECONDS);
-        }).acceptEither(failAfter(2, TimeUnit.SECONDS), ignored -> {});// mstodo bring back?
-    }
-
-    private CompletionStage<? extends Void> failAfter(int timeout, TimeUnit unit) {
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        executor.schedule(
-                () -> result.completeExceptionally(new RuntimeException("Failed to finish resetting Hystrix")),
-                timeout, unit
-        );
-        return result;
+        LOGGER.info("### Reset Hystrix ###");
+        Hystrix.reset(1, TimeUnit.SECONDS);
     }
 }

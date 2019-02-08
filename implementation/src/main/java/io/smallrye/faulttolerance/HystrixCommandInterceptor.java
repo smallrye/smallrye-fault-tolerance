@@ -179,7 +179,7 @@ public class HystrixCommandInterceptor {
                         ctx,
                         metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
                 );
-                return new ObservableCompletableFuture<>(command.observe());
+                return new ObservableCompletableFuture<>(command.observe(), retryContext, method, syncCircuitBreaker);
             } else {
                Future future = CompositeCommand.createAndQueue(
                        callable,
@@ -449,10 +449,24 @@ public class HystrixCommandInterceptor {
 
     static class ObservableCompletableFuture<T> extends CompletableFuture<T> {
         private final Subscription subscription;
+        private final RetryContext retryContext;
+        private final Method method;
+        private final SynchronousCircuitBreaker syncCircuitBreaker;
 
-        ObservableCompletableFuture(Observable<T> observable) {
+        ObservableCompletableFuture(Observable<T> observable, RetryContext retryContext, Method method, SynchronousCircuitBreaker syncCircuitBreaker) {
+            this.retryContext = retryContext;
+            this.method = method;
+            this.syncCircuitBreaker = syncCircuitBreaker;
             subscription = observable.single()
                     .subscribe(this::complete, this::completeExceptionally);
+        }
+
+        @Override
+        public boolean completeExceptionally(Throwable ex) {
+            if (ex instanceof HystrixRuntimeException) {
+                return super.completeExceptionally(processHystrixRuntimeException((HystrixRuntimeException) ex, retryContext, method, syncCircuitBreaker));
+            }
+            return super.completeExceptionally(ex);
         }
 
         @Override
