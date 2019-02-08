@@ -33,13 +33,13 @@
 
   <properties>
     <version.asciidoctor.plugin>1.5.7.1</version.asciidoctor.plugin>
-    <version.javax.enterprise.cdi-api>1.2</version.javax.enterprise.cdi-api>
+    <version.javax.enterprise.cdi-api>2.0.SP1</version.javax.enterprise.cdi-api>
     <version.javax.annotation-api>1.3.2</version.javax.annotation-api>
     <version.junit>4.12</version.junit>
     <version.org.jboss.arquillian>1.4.1.Final</version.org.jboss.arquillian>
     <version.org.jboss.arquillian.container.weld-embedded>2.0.0.Final</version.org.jboss.arquillian.container.weld-embedded>
     <version.org.jboss.logging>3.3.2.Final</version.org.jboss.logging>
-    <version.org.jboss.weld.core.impl>2.4.7.Final</version.org.jboss.weld.core.impl>
+    <version.org.jboss.weld.core.impl>3.0.5.Final</version.org.jboss.weld.core.impl>
     <version.hystrix>1.5.12</version.hystrix>
     <version.hdrHistogram>2.1.9</version.hdrHistogram>
     <version.mp-fault-tolerance>2.0</version.mp-fault-tolerance>
