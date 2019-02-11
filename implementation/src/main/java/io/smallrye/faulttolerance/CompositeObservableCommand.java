@@ -23,26 +23,30 @@ import java.util.concurrent.CompletionStage;
 public class CompositeObservableCommand extends HystrixObservableCommand {
     public static HystrixObservableCommand create(Callable<? extends CompletionStage<?>> callable,
                                                      FaultToleranceOperation operation,
+                                                     RetryContext retryContext,
                                                      ExecutionContextWithInvocationContext ctx,
                                                      MetricRegistry registry) {
-        return new CompositeObservableCommand(callable, operation, ctx, registry);
+        return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry);
     }
 
     private final Callable<? extends CompletionStage> callable;
     private final ExecutionContextWithInvocationContext ctx;
     private final FaultToleranceOperation operation;
+    private final RetryContext retryContext;
     private final MetricRegistry registry;
     private final long queuedAt;
 
 
     protected CompositeObservableCommand(Callable<? extends CompletionStage> callable,
                                          FaultToleranceOperation operation,
+                                         RetryContext retryContext,
                                          ExecutionContextWithInvocationContext ctx,
                                          MetricRegistry registry) {
         super(initSetter(operation));
         this.callable = callable;
         this.ctx = ctx;
         this.operation = operation;
+        this.retryContext = retryContext;
         this.registry = registry;
         this.queuedAt = System.nanoTime();
     }
@@ -54,7 +58,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
             histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
         }
 
-        return Observable.create(
+        Observable<Object> observable = Observable.create(
                 subscriber -> {
                     try {
                         CompletionStage<?> stage = callable.call();
@@ -63,14 +67,14 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                         } else {
                             stage.whenComplete(
                                     (value, error) -> {
-                                            if (error == null ) {
-                                                subscriber.onNext(value);
-                                                subscriber.onCompleted();
-                                            } else {
-                                                subscriber.onError(error);    // mstodo unwrap the error?
-                                                // mstodo investigate how it works
-                                            }
-                            }
+                                        if (error == null) {
+                                            subscriber.onNext(value);
+                                            subscriber.onCompleted();
+                                        } else {
+                                            subscriber.onError(error);    // mstodo unwrap the error?
+                                            // mstodo investigate how it works
+                                        }
+                                    }
                             );
                         }
                     } catch (Exception e) {
@@ -78,6 +82,30 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                     }
                 }
         );
+
+        if (retryContext != null) {
+            return observable.retryWhen(attempts -> {
+                return attempts.flatMap((Throwable error) -> {
+                    if (retryContext.shouldRetry()) {
+                        Exception shouldRetry = null;
+                        try {
+                            shouldRetry = retryContext.nextRetry(error);
+                        } catch (Throwable e) {
+                            return Observable.error(e);
+                        }
+                        if (shouldRetry != null) {
+                            return Observable.error(shouldRetry);
+                        } else {
+                            return Observable.just(""); // the value here doesn't matter, it's just a signal to retry
+                        }
+                    } else {
+                        return Observable.error(error);
+                    }
+                });
+            });
+        } else {
+            return observable;
+        }
     }
 
     private static HystrixObservableCommand.Setter initSetter(FaultToleranceOperation operation) {

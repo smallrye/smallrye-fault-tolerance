@@ -171,11 +171,13 @@ public class HystrixCommandInterceptor {
 
         if (operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", operation);
-            Callable callable = () -> executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker);
+            RetryContext retryContextForOneExecution = operation.returnsCompletionStage() ? null : retryContext;
+            Callable callable = () -> executeCommand(commandFactory, retryContextForOneExecution, metadata, ctx, syncCircuitBreaker);
             if (operation.returnsCompletionStage()) {
                 HystrixObservableCommand command = CompositeObservableCommand.create(
                         (Callable<? extends CompletionStage<?>>) callable,
                         operation,
+                        retryContext,
                         ctx,
                         metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
                 );
