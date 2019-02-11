@@ -55,7 +55,12 @@ public class FallbackConfig extends GenericConfig<Fallback> {
             }
             Method fallbackMethod;
             try {
-                fallbackMethod = SecurityActions.getDeclaredMethod(method.getDeclaringClass(), get(FALLBACK_METHOD), method.getGenericParameterTypes());
+                fallbackMethod = SecurityActions.getDeclaredMethod(
+                        annotatedMethod.getDeclaringType().getJavaClass(),
+                        method.getDeclaringClass(),
+                        get(FALLBACK_METHOD),
+                        method.getGenericParameterTypes()
+                );
             } catch (PrivilegedActionException e) {
                 throw new FaultToleranceDefinitionException(
                         "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found", e);
