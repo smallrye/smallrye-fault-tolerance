@@ -115,16 +115,14 @@ class RetryContext {
      *
      * @return an exception to rethrow or null if we should try again
      */
-    Exception delayIfNeeded() {
-        if (delay > 0) {
-            long jitterBase = config.getJitter();
-            long jitter = (long) (Math.random() * ((jitterBase * 2) + 1)) - jitterBase; // random number between -jitter and +jitter
-            try {
-                TimeUnit.MILLISECONDS.sleep(delay + Duration.of(jitter, config.getJitterDelayUnit()).toMillis());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return e;
-            }
+    private Exception delayIfNeeded() {
+        long jitterBase = config.getJitter();
+        long jitter = (long) (Math.random() * ((jitterBase * 2) + 1)) - jitterBase; // random number between -jitter and +jitter
+        try {
+            TimeUnit.MILLISECONDS.sleep(delay + Duration.of(jitter, config.getJitterDelayUnit()).toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return e;
         }
         return null;
     }
