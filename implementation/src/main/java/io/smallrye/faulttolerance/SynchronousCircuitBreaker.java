@@ -18,6 +18,7 @@ package io.smallrye.faulttolerance;
 import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.CLOSED;
 import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.HALF_OPEN;
 import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.OPEN;
+import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -256,6 +257,17 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
             rollingWindow.removeLast();
         }
     }
+
+    boolean failsOn(Throwable throwable) {
+        Class<?>[] exceptions = config.get(FAIL_ON);
+        for (Class<?> exception : exceptions) {
+            if (exception.isAssignableFrom(throwable.getClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     private final AtomicReference<Status> status;
 

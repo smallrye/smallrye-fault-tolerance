@@ -90,7 +90,7 @@ public class HystrixCommandInterceptor {
 
     /**
      * This config property key can be used to disable synchronous circuit breaker functionality. If disabled, {@link CircuitBreaker#successThreshold()} of
-     * value greater than 1 is not supported.
+     * value greater than 1 is not supported. Also the {@link CircuitBreaker#failOn()} configuration is ignored.
      * <p>
      * Moreover, circuit breaker does not necessarily transition from CLOSED to OPEN immediately when a fault tolerance operation completes. See also
      * <a href="https://github.com/Netflix/Hystrix/wiki/Configuration#metrics.healthSnapshot.intervalInMilliseconds">Hystrix configuration</a>
@@ -216,7 +216,8 @@ public class HystrixCommandInterceptor {
             try {
                 Object res = command.execute();
                 if (syncCircuitBreaker != null) {
-                    if (command.isFailedExecution()) {
+                    if (command.isFailedExecution() && syncCircuitBreaker.failsOn(command.getFailedExecutionException())) {
+                        // this branch is probably never taken...
                         syncCircuitBreaker.executionFailed();
                     } else {
                         syncCircuitBreaker.executionSucceeded();
@@ -252,7 +253,11 @@ public class HystrixCommandInterceptor {
         }
 
         if (syncCircuitBreaker != null) {
-            syncCircuitBreaker.executionFailed();
+            if (syncCircuitBreaker.failsOn(getCause(e))) {
+                syncCircuitBreaker.executionFailed();
+            } else {
+                syncCircuitBreaker.executionSucceeded();
+            }
         }
 
         switch (failureType) {
