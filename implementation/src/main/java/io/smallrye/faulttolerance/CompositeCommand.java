@@ -88,25 +88,21 @@ public class CompositeCommand extends BasicCommand {
         return callable.call();
     }
 
+    // needs to be identical to CompositeObservableCommand.initSetter
     private static Setter initSetter(FaultToleranceOperation operation) {
-        HystrixCommandProperties.Setter properties = HystrixCommandProperties.Setter();
-        HystrixCommandKey commandKey = HystrixCommandKey.Factory
-                .asKey(CompositeCommand.class.getSimpleName() + "#" + SimpleCommand.getCommandKey(operation.getMethod()));
+        HystrixCommandKey commandKey = hystrixCommandKey(operation);
 
-        properties.withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD);
-        properties.withFallbackEnabled(false);
-        properties.withCircuitBreakerEnabled(false);
-
-        Setter setter = Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey("CompositeCommandGroup")).andCommandKey(commandKey)
-                .andCommandPropertiesDefaults(properties);
-
-        // We use a dedicated thread pool for each async operation
-        setter.andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(commandKey.name()));
-        HystrixThreadPoolProperties.Setter threadPoolSetter = HystrixThreadPoolProperties.Setter();
-        threadPoolSetter.withAllowMaximumSizeToDivergeFromCoreSize(true);
-        setter.andThreadPoolPropertiesDefaults(threadPoolSetter);
-
-        return setter;
+        return Setter
+                .withGroupKey(hystrixCommandGroupKey())
+                .andCommandKey(commandKey)
+                .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
+                        .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
+                        .withFallbackEnabled(false)
+                        .withCircuitBreakerEnabled(false))
+                // We use a dedicated thread pool for each async operation
+                .andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(commandKey.name()))
+                .andThreadPoolPropertiesDefaults(HystrixThreadPoolProperties.Setter()
+                        .withAllowMaximumSizeToDivergeFromCoreSize(true));
     }
 
     private Histogram histogramOf(String name) {
@@ -122,4 +118,12 @@ public class CompositeCommand extends BasicCommand {
         return histogram;
     }
 
+    static HystrixCommandGroupKey hystrixCommandGroupKey() {
+        return HystrixCommandGroupKey.Factory.asKey("CompositeCommandGroup");
+    }
+
+    static HystrixCommandKey hystrixCommandKey(FaultToleranceOperation operation) {
+        return HystrixCommandKey.Factory.asKey(CompositeCommand.class.getSimpleName()
+                + "#" + SimpleCommand.getCommandKey(operation.getMethod()));
+    }
 }

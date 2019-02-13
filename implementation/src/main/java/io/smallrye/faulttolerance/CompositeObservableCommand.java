@@ -19,12 +19,16 @@ import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixObservableCommand;
+import com.netflix.hystrix.HystrixThreadPoolKey;
+import com.netflix.hystrix.HystrixThreadPoolProperties;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 import rx.Observable;
 
+import java.lang.reflect.Field;
+import java.security.PrivilegedActionException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 
@@ -123,19 +127,33 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         }
     }
 
-    private static HystrixObservableCommand.Setter initSetter(FaultToleranceOperation operation) {
-        HystrixCommandProperties.Setter properties = HystrixCommandProperties.Setter();
-        HystrixCommandKey commandKey = HystrixCommandKey.Factory
-                .asKey(CompositeCommand.class.getSimpleName() + "#" + SimpleCommand.getCommandKey(operation.getMethod()));
+    // needs to be identical to CompositeCommand.initSetter
+    private static Setter initSetter(FaultToleranceOperation operation) {
+        HystrixCommandKey commandKey = CompositeCommand.hystrixCommandKey(operation);
 
-        properties.withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD);
-        properties.withFallbackEnabled(false);
-        properties.withCircuitBreakerEnabled(false);
-
-        return HystrixObservableCommand.Setter
-                .withGroupKey(HystrixCommandGroupKey.Factory.asKey("CompositeCommandGroup"))
+        Setter result = Setter
+                .withGroupKey(CompositeCommand.hystrixCommandGroupKey())
                 .andCommandKey(commandKey)
-                .andCommandPropertiesDefaults(properties);
+                .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
+                        .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
+                        .withFallbackEnabled(false)
+                        .withCircuitBreakerEnabled(false));
+
+        try {
+            // unfortunately, Hystrix doesn't expose the API to set these, even though everything else is there
+            Field threadPoolKey = SecurityActions.getDeclaredField(Setter.class, "threadPoolKey");
+            SecurityActions.setAccessible(threadPoolKey);
+            threadPoolKey.set(result, HystrixThreadPoolKey.Factory.asKey(commandKey.name()));
+
+            Field threadPoolPropertiesDefaults = SecurityActions.getDeclaredField(Setter.class, "threadPoolPropertiesDefaults");
+            SecurityActions.setAccessible(threadPoolPropertiesDefaults);
+            threadPoolPropertiesDefaults.set(result, HystrixThreadPoolProperties.Setter()
+                    .withAllowMaximumSizeToDivergeFromCoreSize(true));
+        } catch (ReflectiveOperationException | PrivilegedActionException e) {
+            // oh well...
+        }
+
+        return result;
     }
 
     // mstodo pull out, it's copied from CompositeCommand
