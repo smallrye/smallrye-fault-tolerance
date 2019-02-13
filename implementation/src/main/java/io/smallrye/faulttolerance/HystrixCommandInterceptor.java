@@ -401,6 +401,8 @@ public class HystrixCommandInterceptor {
 
             if (nonFallBackEnable && operation.hasBulkhead() && operation.isAsync()) {
                 // Each bulkhead policy needs a dedicated thread pool
+                // Note that this is _in addition_ to the thread pool dedicated
+                // for processing the async invocations (see Composite[Observable]Command.initSetter)
                 poolKey = HystrixThreadPoolKey.Factory.asKey(commandKey.name());
             } else {
                 poolKey = HystrixThreadPoolKey.Factory.asKey("DefaultCommandGroup");
