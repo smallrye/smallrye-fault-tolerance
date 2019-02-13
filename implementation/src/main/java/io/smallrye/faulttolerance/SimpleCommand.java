@@ -16,27 +16,29 @@
 
 package io.smallrye.faulttolerance;
 
-import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
-
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.function.Supplier;
-
 import com.netflix.hystrix.HystrixCircuitBreaker;
-
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-
-
 import com.netflix.hystrix.exception.HystrixTimeoutException;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
+import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
 
 /**
  * @author Antoine Sabot-Durand
  * @author Martin Kouba
  */
 public class SimpleCommand extends BasicCommand {
+
+    private AtomicBoolean canceled = new AtomicBoolean(false);
+    private Thread executionThread;
 
     public static String getCommandKey(Method method) {
         StringBuilder builder = new StringBuilder();
@@ -79,6 +81,10 @@ public class SimpleCommand extends BasicCommand {
 
     @Override
     protected Object run() throws Exception {
+        executionThread = Thread.currentThread();
+        if (canceled.get()) {
+            return null;
+        }
         if (listeners == null) {
             return ctx.proceed();
         }
@@ -163,5 +169,14 @@ public class SimpleCommand extends BasicCommand {
 
     HystrixCircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
+    }
+
+    public void cancel(boolean mayInterrupt) {
+        canceled.set(true);
+        if (mayInterrupt) {
+            if (executionThread != null) {
+                executionThread.interrupt();
+            }
+        }
     }
 }

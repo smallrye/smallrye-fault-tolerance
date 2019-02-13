@@ -66,6 +66,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -162,12 +163,18 @@ public class HystrixCommandInterceptor {
         ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(invocationContext);
         LOGGER.tracef("FT operation intercepted: %s", method);
 
+
         RetryContext retryContext = nonFallBackEnable && operation.hasRetry() ? new RetryContext(operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
 
+        Cancelator cancelator = new Cancelator(retryContext);
+
         Function<Supplier<Object>, SimpleCommand> commandFactory =
-                (fallback) ->
-                        new SimpleCommand(metadata.setter, ctx, fallback, operation, listenersProvider.getCommandListeners(), retryContext);
+                (fallback) -> {
+                    SimpleCommand simpleCommand = new SimpleCommand(metadata.setter, ctx, fallback, operation, listenersProvider.getCommandListeners(), retryContext);
+                    cancelator.setCommand(simpleCommand);
+                    return simpleCommand;
+                };
 
         if (operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", operation);
@@ -190,7 +197,7 @@ public class HystrixCommandInterceptor {
                         metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
                 );
 
-                return new AsyncFuture(future);
+                return new AsyncFuture(future, cancelator);
             }
         } else {
             LOGGER.debugf("Sync execution: %s]", operation);
@@ -486,13 +493,16 @@ public class HystrixCommandInterceptor {
     static class AsyncFuture implements Future<Object> {
 
         private final Future<Object> delegate;
+        private final Cancelator cancelator;
 
-        public AsyncFuture(Future<Object> delegate) {
+        public AsyncFuture(Future<Object> delegate, Cancelator cancelator) {
             this.delegate = delegate;
+            this.cancelator = cancelator;
         }
 
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
+            cancelator.cancel(mayInterruptIfRunning);
             return delegate.cancel(mayInterruptIfRunning);
         }
 
@@ -575,4 +585,27 @@ public class HystrixCommandInterceptor {
         return new IllegalStateException("Unable to get the result of: " + future);
     }
 
+    private class Cancelator {
+        private final RetryContext retryContext;
+        private SimpleCommand command;
+        private AtomicBoolean canceled = new AtomicBoolean(false);
+
+        Cancelator(RetryContext retryContext) {
+            this.retryContext = retryContext;
+        }
+
+        void setCommand(SimpleCommand command) {
+            this.command = command;
+            if (canceled.get()) {
+                cancel(true);
+            }
+        }
+
+        void cancel(boolean mayInterruptIfRunning) {
+            if (retryContext != null) {
+                retryContext.cancel();
+            }
+            command.cancel(mayInterruptIfRunning);
+        }
+    }
 }

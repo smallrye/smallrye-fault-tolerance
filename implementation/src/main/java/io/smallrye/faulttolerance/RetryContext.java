@@ -135,4 +135,8 @@ class RetryContext {
     boolean hasBeenRetried() {
         return remainingAttempts.get() < (config.<Integer>get(RetryConfig.MAX_RETRIES));
     }
+
+    public void cancel() {
+        remainingAttempts.set(0);
+    }
 }
