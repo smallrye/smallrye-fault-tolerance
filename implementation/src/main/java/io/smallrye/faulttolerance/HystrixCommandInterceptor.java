@@ -301,10 +301,27 @@ public class HystrixCommandInterceptor {
 
     private static Throwable getRetryCause(HystrixRuntimeException e) {
         if (e.getCause() instanceof Exception) {
-            // For some reason Hystrix also wraps errors
-            return e.getCause().getCause() instanceof Error ? e.getCause().getCause() : e.getCause();
+            if (isHystrixWrapperForThrowable((Exception) e.getCause())) {
+                // the real cause was not `instanceof Exception`, so Hystrix wrapped it
+                // see AbstractCommand.getExceptionFromThrowable
+                return e.getCause().getCause();
+            }
+            return e.getCause();
         }
         return e;
+    }
+
+    private static boolean isHystrixWrapperForThrowable(Exception e) {
+        // previously, we just tested if the cause of the Exception is an Error, but this is a legitimate combination
+        // (and the TCK uses it in org.eclipse.microprofile.fault.tolerance.tck.bulkhead.clientserver.Checker.perform)
+        //
+        // so this check needs to be very precise; looking at the exception message would also be possible,
+        // as it's fairly unique, but inspecting the stack trace is better
+        return e.getClass() == Exception.class
+                && e.getStackTrace() != null
+                && e.getStackTrace().length > 0
+                && "com.netflix.hystrix.AbstractCommand".equals(e.getStackTrace()[0].getClassName());
+
     }
 
     private static Exception getCause(HystrixRuntimeException e) {
