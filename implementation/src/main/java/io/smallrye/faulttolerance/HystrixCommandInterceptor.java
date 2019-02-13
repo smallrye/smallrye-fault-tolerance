@@ -59,6 +59,7 @@ import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -522,11 +523,18 @@ public class HystrixCommandInterceptor {
             try {
                 future = unwrapFuture(delegate.get());
             } catch (ExecutionException e) {
-                throw unwrapExecutionException(e);
+                ExecutionException executionException = unwrapExecutionException(e);
+                if (isCancellation(executionException)) {
+                    throw new CancellationException();
+                }
+                throw executionException;
             }
             try {
                 return logResult(future, future.get());
             } catch (ExecutionException e) {
+                if (isCancellation(e)) {
+                    throw new CancellationException();
+                }
                 // Rethrow if completed exceptionally
                 throw e;
             } catch (Exception e) {
@@ -534,13 +542,21 @@ public class HystrixCommandInterceptor {
             }
         }
 
+        private boolean isCancellation(ExecutionException executionException) {
+            return cancelator.canceled.get() && executionException.getCause() instanceof InterruptedException;
+        }
+
         @Override
-        public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
+        public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException {
             Future<Object> future;
             try {
                 future = unwrapFuture(delegate.get());
             } catch (ExecutionException e) {
-                throw unwrapExecutionException(e);
+                ExecutionException executionException = unwrapExecutionException(e);
+                if (isCancellation(executionException)) {
+                    throw new CancellationException();
+                }
+                throw executionException;
             }
             try {
                 return logResult(future, future.get(timeout, unit));
@@ -602,6 +618,7 @@ public class HystrixCommandInterceptor {
         }
 
         void cancel(boolean mayInterruptIfRunning) {
+            canceled.set(true);
             if (retryContext != null) {
                 retryContext.cancel();
             }
