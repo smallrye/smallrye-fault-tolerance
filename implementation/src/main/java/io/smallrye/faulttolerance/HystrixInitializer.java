@@ -60,7 +60,6 @@ public class HystrixInitializer {
     @PreDestroy
     void onShutdown() {
         LOGGER.info("### Reset Hystrix ###");
-        // TODO increased timeout to 10 to avoid spurious TCK failures, should change back to 1 later
-        Hystrix.reset(10, TimeUnit.SECONDS);
+        Hystrix.reset(1, TimeUnit.SECONDS);
     }
 }
