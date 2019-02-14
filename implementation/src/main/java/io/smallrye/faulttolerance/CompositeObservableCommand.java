@@ -15,7 +15,6 @@
  */
 package io.smallrye.faulttolerance;
 
-import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixObservableCommand;
@@ -25,6 +24,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
+import org.jboss.logging.Logger;
 import rx.Observable;
 
 import java.lang.reflect.Field;
@@ -39,6 +39,9 @@ import java.util.concurrent.CompletionStage;
  * Date: 2/7/19
  */
 public class CompositeObservableCommand extends HystrixObservableCommand {
+
+    private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
+    
     public static HystrixObservableCommand create(Callable<? extends CompletionStage<?>> callable,
                                                      FaultToleranceOperation operation,
                                                      RetryContext retryContext,
@@ -71,9 +74,13 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
 
     @Override
     protected Observable construct() {
-        if (registry != null && operation.hasBulkhead()) {
-            // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
-            histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
+        try {
+            if (registry != null && operation.hasBulkhead()) {
+                // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
+                histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
+            }
+        } catch (Exception any) {
+            LOGGER.warn("Failed to update metrics", any);
         }
 
         Observable<Object> observable = Observable.create(
@@ -81,7 +88,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                     try {
                         CompletionStage<?> stage = callable.call();
                         if (stage == null) {
-                            subscriber.onError(new NullPointerException("A method that should return a CompletionStage returned null")); // mstodo better error
+                            subscriber.onError(new NullPointerException("A method that should return a CompletionStage returned null"));
                         } else {
                             stage.whenComplete(
                                     (value, error) -> {
@@ -90,8 +97,6 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                                             subscriber.onCompleted();
                                         } else {
                                             subscriber.onError(error);
-                                            // mstodo unwrap the error?
-                                            // mstodo investigate how it works
                                         }
                                     }
                             );
@@ -156,7 +161,6 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         return result;
     }
 
-    // mstodo pull out, it's copied from CompositeCommand
     private Histogram histogramOf(String name) {
         Histogram histogram = registry.getHistograms().get(name);
         if (histogram == null) {

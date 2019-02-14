@@ -31,6 +31,7 @@ import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import org.jboss.logging.Logger;
 
 /**
  * This command is used to wrap any {@link Asynchronous} operation.
@@ -38,6 +39,8 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
  * @author Martin Kouba
  */
 public class CompositeCommand extends BasicCommand {
+
+    private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
 
     public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx,
             MetricRegistry registry) {
@@ -81,9 +84,13 @@ public class CompositeCommand extends BasicCommand {
 
     @Override
     protected Object run() throws Exception {
-        if (registry != null && operation.hasBulkhead()) {
-            // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
-            histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
+        try {
+            if (registry != null && operation.hasBulkhead()) {
+                // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
+                histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
+            }
+        } catch (Exception any) {
+            LOGGER.warn("Failed to update metrics", any);
         }
         return callable.call();
     }
