@@ -91,7 +91,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         Observable<Object> observable = Observable.create(
                 subscriber -> {
                     try {
-                        if (retryContext != null && retryContext.hasBeenRetried()) {
+                        if (registry != null && retryContext != null && retryContext.hasBeenRetried()) {
                             counterOf(metricsPrefix + MetricNames.RETRY_RETRIES_TOTAL).inc();
                         }
                         CompletionStage<?> stage = callable.call();
@@ -101,7 +101,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                             stage.whenComplete(
                                     (value, error) -> {
                                         if (error == null) {
-                                            if (retryContext != null) {
+                                            if (registry != null && retryContext != null) {
                                                 if (retryContext.hasBeenRetried()) {
                                                     counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL).inc();
                                                 } else {
@@ -139,7 +139,9 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                             return Observable.just(""); // the value here doesn't matter, it's just a signal to retry
                         }
                     } else {
-                        counterOf(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL).inc();
+                        if (registry != null) {
+                            counterOf(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL).inc();
+                        }
                         return Observable.error(error);
                     }
                 });

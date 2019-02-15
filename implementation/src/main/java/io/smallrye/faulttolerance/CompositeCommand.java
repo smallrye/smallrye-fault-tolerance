@@ -107,14 +107,16 @@ public class CompositeCommand extends BasicCommand {
         // and MetricsCollectorFactory.MetricsCollectorImpl.beforeExecute/afterSuccess/onError
         while (true) {
             try {
-                if (retryContext.hasBeenRetried()) {
+                if (registry != null && retryContext.hasBeenRetried()) {
                     counterOf(metricsPrefix + MetricNames.RETRY_RETRIES_TOTAL).inc();
                 }
                 Object result = callable.call();
-                if (retryContext.hasBeenRetried()) {
-                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL).inc();
-                } else {
-                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL).inc();
+                if (registry != null) {
+                    if (retryContext.hasBeenRetried()) {
+                        counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL).inc();
+                    } else {
+                        counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL).inc();
+                    }
                 }
                 return result;
             } catch (Throwable e) {
@@ -124,7 +126,9 @@ public class CompositeCommand extends BasicCommand {
                         throw shouldRetry;
                     }
                 } else {
-                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL).inc();
+                    if (registry != null) {
+                        counterOf(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL).inc();
+                    }
                     throw e;
                 }
             }
