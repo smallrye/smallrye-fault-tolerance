@@ -29,13 +29,6 @@
 
     <classes>
       <!-- Issues in the TCK -->
-      <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/323 -->
-      <class name="org.eclipse.microprofile.fault.tolerance.tck.CircuitBreakerTest">
-        <methods>
-          <exclude name="testCircuitInitialSuccessDefaultSuccessThreshold"/>
-          <exclude name="testCircuitLateSuccessDefaultSuccessThreshold"/>
-        </methods>
-      </class>
       <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/336 -->
       <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.BulkheadMetricTest">
         <methods>
