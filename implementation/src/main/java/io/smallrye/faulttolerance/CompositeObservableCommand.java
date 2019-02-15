@@ -21,6 +21,7 @@ import com.netflix.hystrix.HystrixObservableCommand;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import org.eclipse.microprofile.metrics.Counter;
 import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
@@ -74,18 +75,25 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
 
     @Override
     protected Observable construct() {
+        String metricsPrefix = MetricNames.metricsPrefix(operation.getMethod());
+
         try {
             if (registry != null && operation.hasBulkhead()) {
                 // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
-                histogramOf(MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
+                histogramOf(metricsPrefix + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
             }
         } catch (Exception any) {
             LOGGER.warn("Failed to update metrics", any);
         }
 
+        // the retry metrics collection here mirrors the logic in HystrixCommandInterceptor.executeCommand
+        // and MetricsCollectorFactory.MetricsCollectorImpl.beforeExecute/afterSuccess/onError
         Observable<Object> observable = Observable.create(
                 subscriber -> {
                     try {
+                        if (retryContext != null && retryContext.hasBeenRetried()) {
+                            counterOf(metricsPrefix + MetricNames.RETRY_RETRIES_TOTAL).inc();
+                        }
                         CompletionStage<?> stage = callable.call();
                         if (stage == null) {
                             subscriber.onError(new NullPointerException("A method that should return a CompletionStage returned null"));
@@ -93,6 +101,14 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                             stage.whenComplete(
                                     (value, error) -> {
                                         if (error == null) {
+                                            if (retryContext != null) {
+                                                if (retryContext.hasBeenRetried()) {
+                                                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL).inc();
+                                                } else {
+                                                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL).inc();
+                                                }
+                                            }
+
                                             subscriber.onNext(value);
                                             subscriber.onCompleted();
                                         } else {
@@ -123,6 +139,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                             return Observable.just(""); // the value here doesn't matter, it's just a signal to retry
                         }
                     } else {
+                        counterOf(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL).inc();
                         return Observable.error(error);
                     }
                 });
@@ -162,6 +179,21 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         return result;
     }
 
+    // duplicate of MetricsCollectorFactory.MetricsCollectorImpl.counterOf
+    private Counter counterOf(String name) {
+        Counter counter = registry.getCounters().get(name);
+        if (counter == null) {
+            synchronized (operation) {
+                counter = registry.getCounters().get(name);
+                if (counter == null) {
+                    counter = registry.counter(MetricsCollectorFactory.metadataOf(name, MetricType.COUNTER));
+                }
+            }
+        }
+        return counter;
+    }
+
+    // duplicate of MetricsCollectorFactory.MetricsCollectorImpl.histogramOf
     private Histogram histogramOf(String name) {
         Histogram histogram = registry.getHistograms().get(name);
         if (histogram == null) {
