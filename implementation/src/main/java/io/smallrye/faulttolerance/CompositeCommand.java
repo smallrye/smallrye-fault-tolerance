@@ -126,7 +126,8 @@ public class CompositeCommand extends BasicCommand {
                 .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
                         .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
                         .withFallbackEnabled(false)
-                        .withCircuitBreakerEnabled(false))
+                        .withCircuitBreakerEnabled(false)
+                        .withExecutionTimeoutEnabled(shouldEnableTimeout()))
                 // We use a dedicated thread pool for each async operation
                 .andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(commandKey.name()))
                 .andThreadPoolPropertiesDefaults(HystrixThreadPoolProperties.Setter()
@@ -153,5 +154,9 @@ public class CompositeCommand extends BasicCommand {
     static HystrixCommandKey hystrixCommandKey(FaultToleranceOperation operation) {
         return HystrixCommandKey.Factory.asKey(CompositeCommand.class.getSimpleName()
                 + "#" + SimpleCommand.getCommandKey(operation.getMethod()));
+    }
+
+    static boolean shouldEnableTimeout() {
+        return System.getProperty("smallrye.hystrix.async.timeout.enabled") != null;
     }
 }

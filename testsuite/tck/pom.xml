@@ -32,6 +32,7 @@
           </dependenciesToScan>
           <systemPropertyVariables>
             <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
+            <smallrye.hystrix.async.timeout.enabled/>
           </systemPropertyVariables>
         </configuration>
       </plugin>

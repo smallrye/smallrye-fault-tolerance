@@ -142,7 +142,8 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                 .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
                         .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
                         .withFallbackEnabled(false)
-                        .withCircuitBreakerEnabled(false));
+                        .withCircuitBreakerEnabled(false)
+                        .withExecutionTimeoutEnabled(CompositeCommand.shouldEnableTimeout()));
 
         try {
             // unfortunately, Hystrix doesn't expose the API to set these, even though everything else is there
