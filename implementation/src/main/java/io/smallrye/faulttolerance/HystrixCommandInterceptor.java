@@ -192,15 +192,24 @@ public class HystrixCommandInterceptor {
                 );
                 return new ObservableCompletableFuture<>(command.observe(), retryContext, method, syncCircuitBreaker);
             } else {
-               Future future = CompositeCommand.createAndQueue(
-                       callable,
-                        operation,
-                        retryContext,
-                        ctx,
-                        metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
-                );
+                try {
+                    Future future = CompositeCommand.createAndQueue(
+                            callable,
+                            operation,
+                            retryContext,
+                            ctx,
+                            metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
+                    );
 
-                return new AsyncFuture(future, cancelator);
+                    return new AsyncFuture(future, cancelator);
+                } catch (HystrixRuntimeException e) {
+                    if (e.getFailureType() == FailureType.REJECTED_THREAD_EXECUTION) {
+                        // Hystrix can reject execution synchronously, if the thread pool and its queue are overloaded
+                        // TODO can this also happen in case of CompletionStage?
+                        return new FailedFuture(new BulkheadException(e));
+                    }
+                    throw e;
+                }
             }
         } else {
             LOGGER.debugf("Sync execution: %s]", operation);
@@ -601,6 +610,39 @@ public class HystrixCommandInterceptor {
         private Object logResult(Future<Object> future, Object unwrapped) {
             LOGGER.tracef("Unwrapped async result from %s: %s", future, unwrapped);
             return unwrapped;
+        }
+    }
+
+    static class FailedFuture implements Future<Object> {
+        private final Exception error;
+
+        FailedFuture(Exception error) {
+            this.error = error;
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return false;
+        }
+
+        @Override
+        public boolean isDone() {
+            return true;
+        }
+
+        @Override
+        public Object get() throws ExecutionException {
+            throw new ExecutionException(error);
+        }
+
+        @Override
+        public Object get(long timeout, TimeUnit unit) throws ExecutionException {
+            throw new ExecutionException(error);
         }
     }
 

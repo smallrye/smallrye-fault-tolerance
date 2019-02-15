@@ -29,14 +29,6 @@
 
     <classes>
       <!-- Issues in the TCK -->
-      <!-- https://github.com/eclipse/microprofile-fault-tolerance/pull/333 -->
-      <class
-          name="org.eclipse.microprofile.fault.tolerance.tck.bulkhead.BulkheadAsynchRetryTest">
-        <methods>
-          <exclude name="testBulkheadClassAsynchronous55RetryOverload"/>
-          <exclude name="testBulkheadMethodAsynchronous55RetryOverload"/>
-        </methods>
-      </class>
       <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/323 -->
       <class name="org.eclipse.microprofile.fault.tolerance.tck.CircuitBreakerTest">
         <methods>
