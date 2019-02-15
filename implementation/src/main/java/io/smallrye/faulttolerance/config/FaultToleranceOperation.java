@@ -175,7 +175,7 @@ public class FaultToleranceOperation {
      */
     public void validate() {
         if (async && !isAcceptableAsyncReturnType(method.getReturnType())) {
-            throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method + " : the return type must be java.util.concurrent.Future");
+            throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method + ": must return java.util.concurrent.Future or java.util.concurrent.CompletionStage");
         }
         if (bulkhead != null) {
             bulkhead.validate();
