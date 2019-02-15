@@ -42,9 +42,9 @@ public class CompositeCommand extends BasicCommand {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
 
-    public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx,
-            MetricRegistry registry) {
-        return new CompositeCommand(callable, operation, ctx, registry).queue();
+    public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation,
+            RetryContext retryContext, ExecutionContextWithInvocationContext ctx, MetricRegistry registry) {
+        return new CompositeCommand(callable, operation, retryContext, ctx, registry).queue();
     }
 
     @Override
@@ -63,6 +63,8 @@ public class CompositeCommand extends BasicCommand {
 
     private final FaultToleranceOperation operation;
 
+    private final RetryContext retryContext;
+
     private final MetricRegistry registry;
 
     private final long queuedAt;
@@ -72,11 +74,12 @@ public class CompositeCommand extends BasicCommand {
      * @param callable Asynchronous operation
      * @param operation Fault tolerance operation
      */
-    protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation, ExecutionContextWithInvocationContext ctx,
-            MetricRegistry registry) {
+    protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation, RetryContext retryContext,
+            ExecutionContextWithInvocationContext ctx, MetricRegistry registry) {
         super(initSetter(operation));
-        this.operation = operation;
         this.callable = callable;
+        this.operation = operation;
+        this.retryContext = retryContext;
         this.ctx = ctx;
         this.registry = registry;
         this.queuedAt = System.nanoTime();
@@ -92,7 +95,25 @@ public class CompositeCommand extends BasicCommand {
         } catch (Exception any) {
             LOGGER.warn("Failed to update metrics", any);
         }
-        return callable.call();
+
+        if (retryContext == null) {
+            return callable.call();
+        }
+
+        while (true) {
+            try {
+                return callable.call();
+            } catch (Throwable e) {
+                if (retryContext.shouldRetry()) {
+                    Exception shouldRetry = retryContext.nextRetry(e);
+                    if (shouldRetry != null) {
+                        throw shouldRetry;
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
     }
 
     // needs to be identical to CompositeObservableCommand.initSetter

@@ -179,8 +179,9 @@ public class HystrixCommandInterceptor {
 
         if (operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", operation);
-            RetryContext retryContextForOneExecution = operation.returnsCompletionStage() ? null : retryContext;
-            Callable callable = () -> executeCommand(commandFactory, retryContextForOneExecution, metadata, ctx, syncCircuitBreaker);
+            // always pass `null` for `retryContext`, because async operations need to handle retry on their own,
+            // at least in presence of bulkheads (because the operation needs to leave the bulkhead, per the spec)
+            Callable callable = () -> executeCommand(commandFactory, null, metadata, ctx, syncCircuitBreaker);
             if (operation.returnsCompletionStage()) {
                 HystrixObservableCommand command = CompositeObservableCommand.create(
                         (Callable<? extends CompletionStage<?>>) callable,
@@ -194,6 +195,7 @@ public class HystrixCommandInterceptor {
                Future future = CompositeCommand.createAndQueue(
                        callable,
                         operation,
+                        retryContext,
                         ctx,
                         metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
                 );
