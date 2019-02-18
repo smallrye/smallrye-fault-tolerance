@@ -32,6 +32,9 @@ import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 import io.smallrye.faulttolerance.config.FallbackConfig;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.config.TimeoutConfig;
+import io.smallrye.faulttolerance.metrics.BulkheadWaitRecorder;
+import io.smallrye.faulttolerance.metrics.MetricsCollector;
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -43,6 +46,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.jboss.logging.Logger;
 import rx.Observable;
 import rx.Subscription;
@@ -58,6 +62,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -170,20 +176,26 @@ public class HystrixCommandInterceptor {
 
         Cancelator cancelator = new Cancelator(retryContext);
 
-        Function<Supplier<Object>, SimpleCommand> commandFactory =
-                (fallback) -> {
-                    SimpleCommand simpleCommand = new SimpleCommand(metadata.setter, ctx, fallback, operation, listenersProvider.getCommandListeners(), retryContext);
-                    cancelator.setCommand(simpleCommand);
-                    return simpleCommand;
-                };
-
         if (operation.isAsync()) {
             LOGGER.debugf("Queue up command for async execution: %s", operation);
+            Function<Supplier<Object>, SimpleCommand> commandFactory =
+                    (fallback) -> {
+                        MetricRegistry metricRegistry = metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null;
+                        List<CommandListener> commandListeners = listenersProvider.getCommandListeners();
+                        if (metricRegistry != null && operation.hasBulkhead()) {
+                            commandListeners = commandListeners == null ? new ArrayList<>() : new ArrayList<>(commandListeners);
+                            commandListeners.add(new BulkheadWaitRecorder(metricRegistry));
+                        }
+                        SimpleCommand simpleCommand = new SimpleCommand(metadata.setter, ctx, fallback, operation, commandListeners, retryContext);
+                        cancelator.setCommand(simpleCommand);
+                        return simpleCommand;
+                    };
             // always pass `null` for `retryContext`, because async operations need to handle retry on their own,
             // at least in presence of bulkheads (because the operation needs to leave the bulkhead, per the spec)
             Callable callable = () -> executeCommand(commandFactory, null, metadata, ctx, syncCircuitBreaker);
             if (operation.returnsCompletionStage()) {
-                HystrixObservableCommand command = CompositeObservableCommand.create(
+                @SuppressWarnings("unchecked")
+                HystrixObservableCommand<?> command = CompositeObservableCommand.create(
                         (Callable<? extends CompletionStage<?>>) callable,
                         operation,
                         retryContext,
@@ -212,6 +224,12 @@ public class HystrixCommandInterceptor {
                 }
             }
         } else {
+            Function<Supplier<Object>, SimpleCommand> commandFactory =
+                    (fallback) -> {
+                        SimpleCommand simpleCommand = new SimpleCommand(metadata.setter, ctx, fallback, operation, listenersProvider.getCommandListeners(), retryContext);
+                        cancelator.setCommand(simpleCommand);
+                        return simpleCommand;
+                    };
             LOGGER.debugf("Sync execution: %s]", operation);
             return executeCommand(commandFactory, retryContext, metadata, ctx, syncCircuitBreaker);
         }

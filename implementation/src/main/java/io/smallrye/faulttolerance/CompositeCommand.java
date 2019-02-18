@@ -19,9 +19,10 @@ package io.smallrye.faulttolerance;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
+import io.smallrye.faulttolerance.metrics.MetricNames;
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.metrics.Counter;
-import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 
@@ -32,7 +33,6 @@ import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import org.jboss.logging.Logger;
 
 /**
  * This command is used to wrap any {@link Asynchronous} operation.
@@ -40,8 +40,6 @@ import org.jboss.logging.Logger;
  * @author Martin Kouba
  */
 public class CompositeCommand extends BasicCommand {
-
-    private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
 
     public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation,
             RetryContext retryContext, ExecutionContextWithInvocationContext ctx, MetricRegistry registry) {
@@ -68,7 +66,6 @@ public class CompositeCommand extends BasicCommand {
 
     private final MetricRegistry registry;
 
-    private final long queuedAt;
 
     /**
      *
@@ -78,26 +75,16 @@ public class CompositeCommand extends BasicCommand {
     protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation, RetryContext retryContext,
             ExecutionContextWithInvocationContext ctx, MetricRegistry registry) {
         super(initSetter(operation));
-        this.callable = callable;
         this.operation = operation;
+        this.callable = callable;
         this.retryContext = retryContext;
         this.ctx = ctx;
         this.registry = registry;
-        this.queuedAt = System.nanoTime();
     }
 
     @Override
     protected Object run() throws Exception {
         String metricsPrefix = MetricNames.metricsPrefix(operation.getMethod());
-
-        try {
-            if (registry != null && operation.hasBulkhead()) {
-                // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
-                histogramOf(metricsPrefix + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
-            }
-        } catch (Exception any) {
-            LOGGER.warn("Failed to update metrics", any);
-        }
 
         if (retryContext == null) {
             return callable.call();
@@ -165,20 +152,6 @@ public class CompositeCommand extends BasicCommand {
             }
         }
         return counter;
-    }
-
-    // duplicate of MetricsCollectorFactory.MetricsCollectorImpl.histogramOf
-    private Histogram histogramOf(String name) {
-        Histogram histogram = registry.getHistograms().get(name);
-        if (histogram == null) {
-            synchronized (operation) {
-                histogram = registry.getHistograms().get(name);
-                if (histogram == null) {
-                    histogram = registry.histogram(MetricsCollectorFactory.metadataOf(name, MetricType.HISTOGRAM));
-                }
-            }
-        }
-        return histogram;
     }
 
     static HystrixCommandGroupKey hystrixCommandGroupKey() {

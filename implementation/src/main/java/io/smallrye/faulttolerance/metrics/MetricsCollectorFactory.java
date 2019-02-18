@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance;
+package io.smallrye.faulttolerance.metrics;
 
 import com.netflix.hystrix.HystrixCircuitBreaker;
 import com.netflix.hystrix.HystrixCommandMetrics;
@@ -6,6 +6,10 @@ import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolMetrics;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
+import io.smallrye.faulttolerance.DefaultHystrixConcurrencyStrategy;
+import io.smallrye.faulttolerance.RetryContext;
+import io.smallrye.faulttolerance.SimpleCommand;
+import io.smallrye.faulttolerance.SynchronousCircuitBreaker;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
@@ -41,11 +45,11 @@ public class MetricsCollectorFactory {
         }
     }
 
-    MetricRegistry getRegistry() {
+    public MetricRegistry getRegistry() {
         return registry;
     }
 
-    boolean isMetricsEnabled() {
+    public boolean isMetricsEnabled() {
         return metricsEnabled;
     }
 
@@ -66,7 +70,7 @@ public class MetricsCollectorFactory {
 
         private long start;
 
-        public MetricsCollectorImpl(FaultToleranceOperation operation, RetryContext retryContext, HystrixThreadPoolKey threadPoolKey) {
+        MetricsCollectorImpl(FaultToleranceOperation operation, RetryContext retryContext, HystrixThreadPoolKey threadPoolKey) {
             this.operation = operation;
             this.retryContext = retryContext;
             this.threadPoolKey = threadPoolKey;
@@ -249,7 +253,7 @@ public class MetricsCollectorFactory {
         }
     }
 
-    static Metadata metadataOf(String name, MetricType metricType) {
+    public static Metadata metadataOf(String name, MetricType metricType) {
         Metadata res = new Metadata(name, metricType);
         res.setReusable(true);
         return res;

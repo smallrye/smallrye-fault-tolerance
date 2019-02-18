@@ -37,6 +37,7 @@ import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessManagedBean;
 import javax.enterprise.util.AnnotationLiteral;
 
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;

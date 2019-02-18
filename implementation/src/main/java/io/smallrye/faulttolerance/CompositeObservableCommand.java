@@ -21,11 +21,11 @@ import com.netflix.hystrix.HystrixObservableCommand;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.metrics.MetricNames;
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 import org.eclipse.microprofile.metrics.Counter;
-import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
-import org.jboss.logging.Logger;
 import rx.Observable;
 
 import java.lang.reflect.Field;
@@ -41,9 +41,7 @@ import java.util.concurrent.CompletionStage;
  */
 public class CompositeObservableCommand extends HystrixObservableCommand {
 
-    private static final Logger LOGGER = Logger.getLogger(DefaultHystrixConcurrencyStrategy.class);
-    
-    public static HystrixObservableCommand create(Callable<? extends CompletionStage<?>> callable,
+    public static HystrixObservableCommand<?> create(Callable<? extends CompletionStage<?>> callable,
                                                      FaultToleranceOperation operation,
                                                      RetryContext retryContext,
                                                      ExecutionContextWithInvocationContext ctx,
@@ -51,15 +49,14 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry);
     }
 
-    private final Callable<? extends CompletionStage> callable;
+    private final Callable<? extends CompletionStage<?>> callable;
     private final ExecutionContextWithInvocationContext ctx;
     private final FaultToleranceOperation operation;
     private final RetryContext retryContext;
     private final MetricRegistry registry;
-    private final long queuedAt;
 
 
-    protected CompositeObservableCommand(Callable<? extends CompletionStage> callable,
+    protected CompositeObservableCommand(Callable<? extends CompletionStage<?>> callable,
                                          FaultToleranceOperation operation,
                                          RetryContext retryContext,
                                          ExecutionContextWithInvocationContext ctx,
@@ -70,22 +67,11 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         this.operation = operation;
         this.retryContext = retryContext;
         this.registry = registry;
-        this.queuedAt = System.nanoTime();
     }
 
     @Override
-    protected Observable construct() {
+    protected Observable<?> construct() {
         String metricsPrefix = MetricNames.metricsPrefix(operation.getMethod());
-
-        try {
-            if (registry != null && operation.hasBulkhead()) {
-                // TODO: in fact, we do not record the time spent in the queue but the time between command creation and command execution
-                histogramOf(metricsPrefix + MetricNames.BULKHEAD_WAITING_DURATION).update(System.nanoTime() - queuedAt);
-            }
-        } catch (Exception any) {
-            LOGGER.warn("Failed to update metrics", any);
-        }
-
         // the retry metrics collection here mirrors the logic in HystrixCommandInterceptor.executeCommand
         // and MetricsCollectorFactory.MetricsCollectorImpl.beforeExecute/afterSuccess/onError
         Observable<Object> observable = Observable.create(
@@ -193,19 +179,5 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
             }
         }
         return counter;
-    }
-
-    // duplicate of MetricsCollectorFactory.MetricsCollectorImpl.histogramOf
-    private Histogram histogramOf(String name) {
-        Histogram histogram = registry.getHistograms().get(name);
-        if (histogram == null) {
-            synchronized (operation) {
-                histogram = registry.getHistograms().get(name);
-                if (histogram == null) {
-                    histogram = registry.histogram(MetricsCollectorFactory.metadataOf(name, MetricType.HISTOGRAM));
-                }
-            }
-        }
-        return histogram;
     }
 }

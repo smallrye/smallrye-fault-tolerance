@@ -167,7 +167,7 @@ public class SimpleCommand extends BasicCommand {
         return operation;
     }
 
-    HystrixCircuitBreaker getCircuitBreaker() {
+    public HystrixCircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
     }
 
