@@ -35,6 +35,12 @@
           <exclude name="testRetriesJoinBackOfQueue"/>
         </methods>
       </class>
+      <!-- https://github.com/eclipse/microprofile-fault-tolerance/pull/411 -->
+      <class name="org.eclipse.microprofile.fault.tolerance.tck.metrics.BulkheadMetricTest">
+        <methods>
+          <exclude name="bulkheadMetricAsyncTest"/>
+        </methods>
+      </class>
     </classes>
   </test>
 
