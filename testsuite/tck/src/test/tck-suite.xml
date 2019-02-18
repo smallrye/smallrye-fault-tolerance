@@ -41,6 +41,13 @@
           <exclude name="bulkheadMetricAsyncTest"/>
         </methods>
       </class>
+
+      <!-- https://github.com/eclipse/microprofile-fault-tolerance/issues/408 -->
+      <class name="org.eclipse.microprofile.fault.tolerance.tck.TimeoutUninterruptableTest">
+        <methods>
+          <exclude name="testTimeout"/>
+        </methods>
+      </class>
     </classes>
   </test>
 
