@@ -42,8 +42,9 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 public class CompositeCommand extends BasicCommand {
 
     public static Future<Object> createAndQueue(Callable<Object> callable, FaultToleranceOperation operation,
-            RetryContext retryContext, ExecutionContextWithInvocationContext ctx, MetricRegistry registry) {
-        return new CompositeCommand(callable, operation, retryContext, ctx, registry).queue();
+            RetryContext retryContext, ExecutionContextWithInvocationContext ctx, MetricRegistry registry,
+            boolean timeoutEnabled) {
+        return new CompositeCommand(callable, operation, retryContext, ctx, registry, timeoutEnabled).queue();
     }
 
     @Override
@@ -73,8 +74,8 @@ public class CompositeCommand extends BasicCommand {
      * @param operation Fault tolerance operation
      */
     protected CompositeCommand(Callable<Object> callable, FaultToleranceOperation operation, RetryContext retryContext,
-            ExecutionContextWithInvocationContext ctx, MetricRegistry registry) {
-        super(initSetter(operation));
+            ExecutionContextWithInvocationContext ctx, MetricRegistry registry, boolean timeoutEnabled) {
+        super(initSetter(operation, timeoutEnabled));
         this.operation = operation;
         this.callable = callable;
         this.retryContext = retryContext;
@@ -123,7 +124,7 @@ public class CompositeCommand extends BasicCommand {
     }
 
     // needs to be identical to CompositeObservableCommand.initSetter
-    private static Setter initSetter(FaultToleranceOperation operation) {
+    private static Setter initSetter(FaultToleranceOperation operation, boolean timeoutEnabled) {
         HystrixCommandKey commandKey = hystrixCommandKey(operation);
 
         return Setter
@@ -133,7 +134,7 @@ public class CompositeCommand extends BasicCommand {
                         .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
                         .withFallbackEnabled(false)
                         .withCircuitBreakerEnabled(false)
-                        .withExecutionTimeoutEnabled(shouldEnableTimeout()))
+                        .withExecutionTimeoutEnabled(timeoutEnabled))
                 // We use a dedicated thread pool for each async operation
                 .andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(commandKey.name()))
                 .andThreadPoolPropertiesDefaults(HystrixThreadPoolProperties.Setter()
@@ -161,9 +162,5 @@ public class CompositeCommand extends BasicCommand {
     static HystrixCommandKey hystrixCommandKey(FaultToleranceOperation operation) {
         return HystrixCommandKey.Factory.asKey(CompositeCommand.class.getSimpleName()
                 + "#" + SimpleCommand.getCommandKey(operation.getMethod()));
-    }
-
-    static boolean shouldEnableTimeout() {
-        return System.getProperty("smallrye.hystrix.async.timeout.enabled") != null;
     }
 }

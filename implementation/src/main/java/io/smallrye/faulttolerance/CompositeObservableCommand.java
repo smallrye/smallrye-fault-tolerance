@@ -45,8 +45,9 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                                                      FaultToleranceOperation operation,
                                                      RetryContext retryContext,
                                                      ExecutionContextWithInvocationContext ctx,
-                                                     MetricRegistry registry) {
-        return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry);
+                                                     MetricRegistry registry,
+                                                     boolean timeoutEnabled) {
+        return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry, timeoutEnabled);
     }
 
     private final Callable<? extends CompletionStage<?>> callable;
@@ -60,8 +61,9 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                                          FaultToleranceOperation operation,
                                          RetryContext retryContext,
                                          ExecutionContextWithInvocationContext ctx,
-                                         MetricRegistry registry) {
-        super(initSetter(operation));
+                                         MetricRegistry registry,
+                                         boolean timeoutEnabled) {
+        super(initSetter(operation, timeoutEnabled));
         this.callable = callable;
         this.ctx = ctx;
         this.operation = operation;
@@ -138,7 +140,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
     }
 
     // needs to be identical to CompositeCommand.initSetter
-    private static Setter initSetter(FaultToleranceOperation operation) {
+    private static Setter initSetter(FaultToleranceOperation operation, boolean timeoutEnabled) {
         HystrixCommandKey commandKey = CompositeCommand.hystrixCommandKey(operation);
 
         Setter result = Setter
@@ -148,7 +150,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                         .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
                         .withFallbackEnabled(false)
                         .withCircuitBreakerEnabled(false)
-                        .withExecutionTimeoutEnabled(CompositeCommand.shouldEnableTimeout()));
+                        .withExecutionTimeoutEnabled(timeoutEnabled));
 
         try {
             // unfortunately, Hystrix doesn't expose the API to set these, even though everything else is there

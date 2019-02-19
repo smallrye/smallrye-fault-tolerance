@@ -42,6 +42,7 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -109,6 +110,14 @@ public class HystrixCommandInterceptor {
      */
     public static final String SYNC_CIRCUIT_BREAKER_KEY = "io_smallrye_faulttolerance_syncCircuitBreaker";
 
+    /**
+     * This config property can be used to enable timeouts for async actions (that is, {@link CompositeCommand} and
+     * {@link CompositeObservableCommand}) even if {@link Timeout} isn't used. This isn't specified by MP FT, but
+     * can be used to make sure tests don't hang. When enabled, you should also explicitly configure the timeout using
+     * <a href="https://github.com/Netflix/Hystrix/wiki/Configuration#execution.isolation.thread.timeoutInMilliseconds">Hystrix configuration</a>.
+     */
+    public static final String ASYNC_TIMEOUT_KEY = "io_smallrye_faulttolerance_asyncTimeout";
+
     private static final Logger LOGGER = Logger.getLogger(HystrixCommandInterceptor.class);
 
     private final ConcurrentMap<String, HystrixCircuitBreaker> circuitBreakers;
@@ -118,6 +127,8 @@ public class HystrixCommandInterceptor {
     private final Boolean nonFallBackEnable;
 
     private final Boolean syncCircuitBreakerEnabled;
+
+    private final boolean asyncTimeout;
 
     private final FallbackHandlerProvider fallbackHandlerProvider;
 
@@ -136,6 +147,7 @@ public class HystrixCommandInterceptor {
             CommandListenersProvider listenersProvider, @Intercepted Bean<?> interceptedBean, MetricsCollectorFactory metricsCollectorFactory) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
+        this.asyncTimeout = config.getOptionalValue(ASYNC_TIMEOUT_KEY, Boolean.class).orElse(false);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.faultToleranceOperationProvider = faultToleranceOperationProvider;
         this.commandMetadataCache = new ConcurrentHashMap<>();
@@ -200,7 +212,8 @@ public class HystrixCommandInterceptor {
                         operation,
                         retryContext,
                         ctx,
-                        metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
+                        metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null,
+                        asyncTimeout
                 );
                 return new ObservableCompletableFuture<>(command.observe(), retryContext, method, syncCircuitBreaker);
             } else {
@@ -210,7 +223,8 @@ public class HystrixCommandInterceptor {
                             operation,
                             retryContext,
                             ctx,
-                            metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null
+                            metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null,
+                            asyncTimeout
                     );
 
                     return new AsyncFuture(future, cancelator);
