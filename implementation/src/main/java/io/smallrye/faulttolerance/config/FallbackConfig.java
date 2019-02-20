@@ -25,7 +25,6 @@ import java.util.Map;
 
 import javax.enterprise.inject.spi.AnnotatedMethod;
 
-import io.smallrye.faulttolerance.SecurityActions;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;

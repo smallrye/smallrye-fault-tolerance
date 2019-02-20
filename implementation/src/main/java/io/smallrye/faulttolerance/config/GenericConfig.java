@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.enterprise.inject.spi.AnnotatedMethod;
 
-import io.smallrye.faulttolerance.SecurityActions;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.smallrye.faulttolerance;
+package io.smallrye.faulttolerance.config;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
@@ -36,7 +36,7 @@ import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 
-// this must be kept identical to io.smallrye.faulttolerance.config.SecurityActions
+// this must be kept identical to io.smallrye.faulttolerance.SecurityActions
 /**
  * @author Martin Kouba
  */
