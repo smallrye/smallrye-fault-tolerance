@@ -54,10 +54,19 @@ public class FallbackConfig extends GenericConfig<Fallback> {
             }
             Method fallbackMethod;
             try {
-                fallbackMethod = SecurityActions.getDeclaredMethod(method.getDeclaringClass(), get(FALLBACK_METHOD), method.getParameterTypes());
-            } catch (NoSuchMethodException | PrivilegedActionException e) {
+                fallbackMethod = SecurityActions.getDeclaredMethod(
+                        annotatedMethod.getDeclaringType().getJavaClass(),
+                        method.getDeclaringClass(),
+                        get(FALLBACK_METHOD),
+                        method.getGenericParameterTypes()
+                );
+            } catch (PrivilegedActionException e) {
                 throw new FaultToleranceDefinitionException(
                         "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found", e);
+            }
+            if (fallbackMethod == null) {
+                throw new FaultToleranceDefinitionException(
+                        "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found");
             }
             if (!method.getReturnType().equals(void.class) && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
                 throw new FaultToleranceDefinitionException(

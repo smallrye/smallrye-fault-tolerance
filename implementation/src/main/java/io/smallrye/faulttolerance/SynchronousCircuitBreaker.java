@@ -18,6 +18,7 @@ package io.smallrye.faulttolerance;
 import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.CLOSED;
 import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.HALF_OPEN;
 import static io.smallrye.faulttolerance.SynchronousCircuitBreaker.Status.OPEN;
+import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -38,7 +39,7 @@ import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
  *
  * @see HystrixCommandInterceptor#SYNC_CIRCUIT_BREAKER_KEY
  */
-class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
+public class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
 
     private static final Logger LOGGER = Logger.getLogger(SynchronousCircuitBreaker.class);
 
@@ -142,15 +143,15 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         }
     }
 
-    long getClosedTotal() {
+    public long getClosedTotal() {
         return getTotalVal(CLOSED, closedTotal.get());
     }
 
-    long getOpenTotal() {
+    public long getOpenTotal() {
         return getTotalVal(OPEN, openTotal.get());
     }
 
-    long getHalfOpenTotal() {
+    public long getHalfOpenTotal() {
         return getTotalVal(HALF_OPEN, halfOpenTotal.get());
     }
 
@@ -256,6 +257,17 @@ class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
             rollingWindow.removeLast();
         }
     }
+
+    boolean failsOn(Throwable throwable) {
+        Class<?>[] exceptions = config.get(FAIL_ON);
+        for (Class<?> exception : exceptions) {
+            if (exception.isAssignableFrom(throwable.getClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     private final AtomicReference<Status> status;
 

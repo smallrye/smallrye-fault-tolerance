@@ -1,23 +1,23 @@
-package io.smallrye.faulttolerance;
+package io.smallrye.faulttolerance.metrics;
 
 import java.lang.reflect.Method;
 
-final class MetricNames {
+public final class MetricNames {
 
     private MetricNames() {
     }
 
-    static String metricsPrefix(Method method) {
+    public static String metricsPrefix(Method method) {
         return "ft." + method.getDeclaringClass().getCanonicalName() + "." + method.getName();
     }
 
     static final String INVOCATIONS_TOTAL = ".invocations.total";
     static final String INVOCATIONS_FAILED_TOTAL = ".invocations.failed.total";
 
-    static final String RETRY_RETRIES_TOTAL = ".retry.retries.total";
-    static final String RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL = ".retry.callsSucceededRetried.total";
-    static final String RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL = ".retry.callsSucceededNotRetried.total";
-    static final String RETRY_CALLS_FAILED_TOTAL = ".retry.callsFailed.total";
+    public static final String RETRY_RETRIES_TOTAL = ".retry.retries.total";
+    public static final String RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL = ".retry.callsSucceededRetried.total";
+    public static final String RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL = ".retry.callsSucceededNotRetried.total";
+    public static final String RETRY_CALLS_FAILED_TOTAL = ".retry.callsFailed.total";
 
     static final String TIMEOUT_CALLS_NOT_TIMED_OUT_TOTAL = ".timeout.callsNotTimedOut.total";
     static final String TIMEOUT_CALLS_TIMED_OUT_TOTAL = ".timeout.callsTimedOut.total";

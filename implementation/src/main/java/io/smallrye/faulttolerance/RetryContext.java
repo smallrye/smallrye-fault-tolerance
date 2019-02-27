@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.smallrye.faulttolerance.config.RetryConfig;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
-class RetryContext {
+public class RetryContext {
 
     private final RetryConfig config;
 
@@ -52,7 +52,6 @@ class RetryContext {
 
     /**
      *
-     * @param retryContext
      * @param throwable
      * @return an exception to rethrow or null if we should try again
      */
@@ -79,7 +78,7 @@ class RetryContext {
         return remainingAttempts.get() > 0;
     }
 
-    boolean isLastAttempt() {
+    public boolean isLastAttempt() {
         return remainingAttempts.get() == 1;
     }
 
@@ -115,16 +114,14 @@ class RetryContext {
      *
      * @return an exception to rethrow or null if we should try again
      */
-    Exception delayIfNeeded() {
-        if (delay > 0) {
-            long jitterBase = config.getJitter();
-            long jitter = (long) (Math.random() * ((jitterBase * 2) + 1)) - jitterBase; // random number between -jitter and +jitter
-            try {
-                TimeUnit.MILLISECONDS.sleep(delay + Duration.of(jitter, config.getJitterDelayUnit()).toMillis());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return e;
-            }
+    private Exception delayIfNeeded() {
+        long jitterBase = config.getJitter();
+        long jitter = (long) (Math.random() * ((jitterBase * 2) + 1)) - jitterBase; // random number between -jitter and +jitter
+        try {
+            TimeUnit.MILLISECONDS.sleep(delay + Duration.of(jitter, config.getJitterDelayUnit()).toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return e;
         }
         return null;
     }
@@ -134,7 +131,11 @@ class RetryContext {
         return "RetryContext [remainingAttempts=" + remainingAttempts + ", start=" + start + "]";
     }
 
-    boolean hasBeenRetried() {
+    public boolean hasBeenRetried() {
         return remainingAttempts.get() < (config.<Integer>get(RetryConfig.MAX_RETRIES));
+    }
+
+    public void cancel() {
+        remainingAttempts.set(0);
     }
 }

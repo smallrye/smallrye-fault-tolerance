@@ -15,6 +15,7 @@
  */
 package io.smallrye.faulttolerance.tck;
 
+import org.jboss.arquillian.container.spi.client.container.DeploymentExceptionTransformer;
 import org.jboss.arquillian.container.test.spi.client.deployment.ApplicationArchiveProcessor;
 import org.jboss.arquillian.core.spi.LoadableExtension;
 
@@ -27,6 +28,7 @@ public class FaultToleranceExtension implements LoadableExtension {
     @Override
     public void register(ExtensionBuilder builder) {
         builder.service(ApplicationArchiveProcessor.class, FaultToleranceApplicationArchiveProcessor.class);
+        builder.service(DeploymentExceptionTransformer.class, TckDeploymentExceptionTransformer.class);
     }
 
 }

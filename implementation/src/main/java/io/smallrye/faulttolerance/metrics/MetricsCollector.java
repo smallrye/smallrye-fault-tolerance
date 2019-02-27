@@ -1,10 +1,12 @@
-package io.smallrye.faulttolerance;
+package io.smallrye.faulttolerance.metrics;
 
 import com.netflix.hystrix.exception.HystrixRuntimeException;
+import io.smallrye.faulttolerance.SimpleCommand;
+import io.smallrye.faulttolerance.SynchronousCircuitBreaker;
 
 public interface MetricsCollector {
 
-    static final MetricsCollector NOOP = new MetricsCollector() {
+    MetricsCollector NOOP = new MetricsCollector() {
 
         @Override
         public void onError(SimpleCommand command, HystrixRuntimeException exception) {
