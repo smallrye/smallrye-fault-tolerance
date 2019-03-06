@@ -55,7 +55,7 @@ public class FallbackConfig extends GenericConfig<Fallback> {
             Method fallbackMethod;
             try {
                 fallbackMethod = SecurityActions.getDeclaredMethod(
-                        annotatedMethod.getDeclaringType().getJavaClass(),
+                        beanClass,
                         method.getDeclaringClass(),
                         get(FALLBACK_METHOD),
                         method.getGenericParameterTypes()

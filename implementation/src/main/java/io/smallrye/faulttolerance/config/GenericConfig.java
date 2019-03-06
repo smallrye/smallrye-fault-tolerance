@@ -41,19 +41,20 @@ public abstract class GenericConfig<X extends Annotation> {
     public static final String CONFIG_PARAMS_CACHE_KEY = "org_wildfly_swarm_microprofile_faulttolerance_configParamsCache";
 
     public GenericConfig(Class<X> annotationType, Class<?> beanClass, Method method) {
-        this(method, null,
+        this(beanClass, method, null,
                 method.isAnnotationPresent(annotationType) ? method.getAnnotation(annotationType) : getAnnotationFromClass(annotationType, beanClass),
                 method.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
     public GenericConfig(Class<X> annotationType, AnnotatedMethod<?> annotatedMethod) {
-        this(annotatedMethod.getJavaMember(), annotatedMethod,
+        this(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(), annotatedMethod,
                 annotatedMethod.isAnnotationPresent(annotationType) ? annotatedMethod.getAnnotation(annotationType)
                         : annotatedMethod.getDeclaringType().getAnnotation(annotationType),
                 annotatedMethod.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
-    private GenericConfig(Method method, AnnotatedMethod<?> annotatedMethod, X annotation, ElementType annotationSource) {
+    private GenericConfig(Class<?> beanClass, Method method, AnnotatedMethod<?> annotatedMethod, X annotation, ElementType annotationSource) {
+        this.beanClass = beanClass;
         this.method = method;
         this.annotatedMethod = annotatedMethod;
         this.annotation = annotation;
@@ -149,6 +150,8 @@ public abstract class GenericConfig<X extends Annotation> {
     protected abstract Class<X> getConfigType();
 
     protected abstract Map<String, Class<?>> getKeysToType();
+
+    protected final Class<?> beanClass;
 
     protected final Method method;
 
