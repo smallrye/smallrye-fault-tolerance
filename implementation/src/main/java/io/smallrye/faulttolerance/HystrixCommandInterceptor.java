@@ -169,7 +169,7 @@ public class HystrixCommandInterceptor {
     public Object interceptCommand(InvocationContext invocationContext) throws Exception {
 
         Method method = invocationContext.getMethod();
-        Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : invocationContext.getTarget().getClass();
+        Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
 
         CommandMetadata metadata = commandMetadataCache.computeIfAbsent(method, k -> new CommandMetadata(beanClass, method));
         FaultToleranceOperation operation = metadata.operation;
