@@ -367,7 +367,7 @@ public class HystrixCommandInterceptor {
 
     }
 
-    private static Exception getCause(HystrixRuntimeException e) {
+    public static Exception getCause(HystrixRuntimeException e) {
         return (e.getCause() instanceof Exception) ? (Exception) e.getCause() : e;
     }
 
