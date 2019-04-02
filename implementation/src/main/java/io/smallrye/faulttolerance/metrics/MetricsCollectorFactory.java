@@ -7,6 +7,7 @@ import com.netflix.hystrix.HystrixThreadPoolMetrics;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
 import io.smallrye.faulttolerance.DefaultHystrixConcurrencyStrategy;
+import io.smallrye.faulttolerance.HystrixCommandInterceptor;
 import io.smallrye.faulttolerance.RetryContext;
 import io.smallrye.faulttolerance.SimpleCommand;
 import io.smallrye.faulttolerance.SynchronousCircuitBreaker;
@@ -152,7 +153,11 @@ public class MetricsCollectorFactory {
                     if (e.getFailureType() == FailureType.SHORTCIRCUIT) {
                         counterInc(metricsPrefix + MetricNames.CB_CALLS_PREVENTED_TOTAL);
                     } else {
-                        counterInc(metricsPrefix + MetricNames.CB_CALLS_FAILED_TOTAL);
+                        if (circuitBreakerFailsOn(e, command)) {
+                            counterInc(metricsPrefix + MetricNames.CB_CALLS_FAILED_TOTAL);
+                        } else {
+                            counterInc(metricsPrefix + MetricNames.CB_CALLS_SUCCEEDED_TOTAL);
+                        }
                     }
                     isCircuitBreakerOpenBeforeExceptionProcessing = command.getCircuitBreaker().isOpen();
                 }
@@ -170,6 +175,18 @@ public class MetricsCollectorFactory {
                     counterInc(metricsPrefix + MetricNames.INVOCATIONS_FAILED_TOTAL);
                 }
             });
+        }
+
+        private boolean circuitBreakerFailsOn(HystrixRuntimeException e, SimpleCommand command) {
+            HystrixCircuitBreaker circuitBreaker = command.getCircuitBreaker();
+            if (circuitBreaker instanceof SynchronousCircuitBreaker) {
+                Exception cause = HystrixCommandInterceptor.getCause(e);
+                SynchronousCircuitBreaker cb = (SynchronousCircuitBreaker) circuitBreaker;
+                return cb.failsOn(cause);
+            }
+
+            // Hystrix's default circuit breaker fails on all exceptions
+            return true;
         }
 
         @Override

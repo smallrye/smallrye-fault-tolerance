@@ -258,7 +258,7 @@ public class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         }
     }
 
-    boolean failsOn(Throwable throwable) {
+    public boolean failsOn(Throwable throwable) {
         Class<?>[] exceptions = config.get(FAIL_ON);
         for (Class<?> exception : exceptions) {
             if (exception.isAssignableFrom(throwable.getClass())) {
