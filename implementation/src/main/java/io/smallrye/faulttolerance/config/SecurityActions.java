@@ -151,7 +151,6 @@ final class SecurityActions {
 
         List<Type> result = new ArrayList<>(actualTypeParams.size());
 
-        int i = 0;
         for (Type type : actualTypeParams) {
             if (type instanceof Class) {
                 result.add(type);
@@ -294,7 +293,7 @@ final class SecurityActions {
      */
     private static Type getArrayComponentType(Type parameterType) {
         if (parameterType instanceof Class) {
-            return ((Class) parameterType).getComponentType();
+            return ((Class<?>) parameterType).getComponentType();
         } else {
             return ((GenericArrayType) parameterType).getGenericComponentType();
         }
@@ -302,7 +301,7 @@ final class SecurityActions {
 
     private static boolean isArray(Type parameterType) {
         if (parameterType instanceof Class) {
-            return ((Class) parameterType).isArray();
+            return ((Class<?>) parameterType).isArray();
         } else {
             return parameterType instanceof GenericArrayType;
         }

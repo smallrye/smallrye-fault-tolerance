@@ -51,11 +51,6 @@ public class TimeoutConfig extends GenericConfig<Timeout> {
     }
 
     @Override
-    protected Class<Timeout> getConfigType() {
-        return Timeout.class;
-    }
-
-    @Override
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }
