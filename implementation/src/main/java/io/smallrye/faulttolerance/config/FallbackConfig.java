@@ -93,11 +93,6 @@ public class FallbackConfig extends GenericConfig<Fallback> {
     }
 
     @Override
-    protected Class<Fallback> getConfigType() {
-        return Fallback.class;
-    }
-
-    @Override
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }

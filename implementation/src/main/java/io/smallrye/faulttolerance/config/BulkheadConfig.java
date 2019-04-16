@@ -53,11 +53,6 @@ public class BulkheadConfig extends GenericConfig<Bulkhead> {
     }
 
     @Override
-    protected Class<Bulkhead> getConfigType() {
-        return Bulkhead.class;
-    }
-
-    @Override
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }

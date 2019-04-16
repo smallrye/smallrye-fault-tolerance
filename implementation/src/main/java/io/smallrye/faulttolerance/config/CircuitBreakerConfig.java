@@ -81,11 +81,6 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
     }
 
     @Override
-    protected Class<CircuitBreaker> getConfigType() {
-        return CircuitBreaker.class;
-    }
-
-    @Override
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }

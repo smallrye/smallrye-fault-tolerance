@@ -76,11 +76,6 @@ public class RetryConfig extends GenericConfig<Retry> {
         }
     }
 
-    @Override
-    protected Class<Retry> getConfigType() {
-        return Retry.class;
-    }
-
     public Class<?>[] getAbortOn() {
         return get(ABORT_ON);
     }
