@@ -15,6 +15,7 @@
  */
 package io.smallrye.faulttolerance;
 
+import io.smallrye.faulttolerance.tracing.TracingInstaller;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
@@ -53,7 +54,7 @@ public class HystrixInitializer {
         LOGGER.info("### Init Hystrix ###");
         HystrixConcurrencyStrategy strategy = instance.get();
         LOGGER.info("Hystrix concurrency strategy used: " + strategy.getClass().getSimpleName());
-        HystrixPlugins.getInstance().registerConcurrencyStrategy(strategy);
+        HystrixPlugins.getInstance().registerConcurrencyStrategy(TracingInstaller.wrap(strategy));
         HystrixPlugins.getInstance().registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
     }
 
