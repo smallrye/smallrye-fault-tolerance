@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.tracing;
 
+import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
 import org.jboss.logging.Logger;
 
 /**
@@ -14,12 +15,13 @@ public class TracingInstaller {
   /**
    * Install installs tracing if OpenTracing libraries are on classpath.
    */
-  public static void install() {
+  public static HystrixConcurrencyStrategy wrap(HystrixConcurrencyStrategy concurrencyStrategy) {
     try {
       Class.forName("io.opentracing.Tracer");
-      TracingConcurrencyStrategy.register(io.opentracing.util.GlobalTracer.get());
+      return new TracingConcurrencyStrategy(concurrencyStrategy, io.opentracing.util.GlobalTracer.get());
     } catch (ClassNotFoundException | LinkageError e) {
       LOGGER.debug("OpenTracing is not on classpath, skipping context propagation instrumentation");
+      return concurrencyStrategy;
     }
   }
 }

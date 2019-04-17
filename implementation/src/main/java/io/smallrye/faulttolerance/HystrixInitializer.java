@@ -15,8 +15,6 @@
  */
 package io.smallrye.faulttolerance;
 
-import io.opentracing.util.GlobalTracer;
-import io.smallrye.faulttolerance.tracing.TracingConcurrencyStrategy;
 import io.smallrye.faulttolerance.tracing.TracingInstaller;
 import java.util.concurrent.TimeUnit;
 
@@ -56,9 +54,8 @@ public class HystrixInitializer {
         LOGGER.info("### Init Hystrix ###");
         HystrixConcurrencyStrategy strategy = instance.get();
         LOGGER.info("Hystrix concurrency strategy used: " + strategy.getClass().getSimpleName());
-        HystrixPlugins.getInstance().registerConcurrencyStrategy(strategy);
+        HystrixPlugins.getInstance().registerConcurrencyStrategy(TracingInstaller.wrap(strategy));
         HystrixPlugins.getInstance().registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
-        TracingInstaller.install();
     }
 
     @PreDestroy
