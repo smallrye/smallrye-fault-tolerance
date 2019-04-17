@@ -19,7 +19,7 @@ public class TracingInstaller {
       Class.forName("io.opentracing.Tracer");
       TracingConcurrencyStrategy.register(io.opentracing.util.GlobalTracer.get());
     } catch (ClassNotFoundException | LinkageError e) {
-      LOGGER.info("OpenTracing is not on classpath, skipping context propagation instrumentation");
+      LOGGER.debug("OpenTracing is not on classpath, skipping context propagation instrumentation");
     }
   }
 }
