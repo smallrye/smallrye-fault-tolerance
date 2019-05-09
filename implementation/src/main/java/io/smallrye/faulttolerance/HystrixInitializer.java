@@ -51,16 +51,16 @@ public class HystrixInitializer {
 
     @PostConstruct
     void onStartup() {
-        LOGGER.info("### Init Hystrix ###");
+        LOGGER.debug("### Init Hystrix ###");
         HystrixConcurrencyStrategy strategy = instance.get();
-        LOGGER.info("Hystrix concurrency strategy used: " + strategy.getClass().getSimpleName());
+        LOGGER.debug("Hystrix concurrency strategy used: " + strategy.getClass().getSimpleName());
         HystrixPlugins.getInstance().registerConcurrencyStrategy(TracingInstaller.wrap(strategy));
         HystrixPlugins.getInstance().registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
     }
 
     @PreDestroy
     void onShutdown() {
-        LOGGER.info("### Reset Hystrix ###");
+        LOGGER.debug("### Reset Hystrix ###");
         Hystrix.reset(1, TimeUnit.SECONDS);
     }
 }
