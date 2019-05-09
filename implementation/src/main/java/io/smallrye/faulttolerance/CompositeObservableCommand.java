@@ -32,6 +32,7 @@ import java.lang.reflect.Field;
 import java.security.PrivilegedActionException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 
 /**
  *
@@ -46,8 +47,9 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                                                      RetryContext retryContext,
                                                      ExecutionContextWithInvocationContext ctx,
                                                      MetricRegistry registry,
-                                                     boolean timeoutEnabled) {
-        return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry, timeoutEnabled);
+                                                     boolean timeoutEnabled,
+                                                     Supplier<Object> fallback) {
+        return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry, timeoutEnabled, fallback);
     }
 
     private final Callable<? extends CompletionStage<?>> callable;
@@ -55,20 +57,22 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
     private final FaultToleranceOperation operation;
     private final RetryContext retryContext;
     private final MetricRegistry registry;
-
+    private final Supplier<Object> fallback;
 
     protected CompositeObservableCommand(Callable<? extends CompletionStage<?>> callable,
                                          FaultToleranceOperation operation,
                                          RetryContext retryContext,
                                          ExecutionContextWithInvocationContext ctx,
                                          MetricRegistry registry,
-                                         boolean timeoutEnabled) {
+                                         boolean timeoutEnabled,
+                                         Supplier<Object> fallback) {
         super(initSetter(operation, timeoutEnabled));
         this.callable = callable;
         this.ctx = ctx;
         this.operation = operation;
         this.retryContext = retryContext;
         this.registry = registry;
+        this.fallback = fallback;
     }
 
     @Override
@@ -139,7 +143,8 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         }
     }
 
-    // needs to be identical to CompositeCommand.initSetter
+    // needs to be identical to CompositeCommand.initSetter, with a single exception:
+    // fallback needs to be enabled, because it can't be fully handled synchronously (in the underlying commands)
     private static Setter initSetter(FaultToleranceOperation operation, boolean timeoutEnabled) {
         HystrixCommandKey commandKey = CompositeCommand.hystrixCommandKey(operation);
 
@@ -148,7 +153,7 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
                 .andCommandKey(commandKey)
                 .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
                         .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.THREAD)
-                        .withFallbackEnabled(false)
+                        .withFallbackEnabled(true)
                         .withCircuitBreakerEnabled(false)
                         .withExecutionTimeoutEnabled(timeoutEnabled));
 
@@ -167,6 +172,25 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         }
 
         return result;
+    }
+
+    @Override
+    protected Observable resumeWithFallback() {
+        if (fallback == null) {
+            return super.resumeWithFallback();
+        }
+
+        return Observable.create(subscriber -> {
+            CompletionStage<?> fallbackFuture = (CompletionStage<?>) fallback.get();
+            fallbackFuture.whenComplete((result, error) -> {
+                if (result != null) {
+                    subscriber.onNext(result);
+                    subscriber.onCompleted();
+                } else {
+                    subscriber.onError(error);
+                }
+            });
+        });
     }
 
     // duplicate of MetricsCollectorFactory.MetricsCollectorImpl.counterOf

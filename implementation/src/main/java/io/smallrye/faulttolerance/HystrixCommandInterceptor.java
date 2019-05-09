@@ -213,7 +213,8 @@ public class HystrixCommandInterceptor {
                         retryContext,
                         ctx,
                         metricsCollectorFactory.isMetricsEnabled() ? metricsCollectorFactory.getRegistry() : null,
-                        asyncTimeout
+                        asyncTimeout,
+                        metadata.getFallback(ctx)
                 );
                 return new ObservableCompletableFuture<>(command.observe(), retryContext, method, syncCircuitBreaker);
             } else {
