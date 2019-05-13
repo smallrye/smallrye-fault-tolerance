@@ -51,7 +51,7 @@
     <version.smallrye-metrics>1.1.3</version.smallrye-metrics>
     <version.opentracing>0.31.0</version.opentracing>
     <version.testng>6.14.3</version.testng>
-    <version.awaitility>3.1.5</version.awaitility>
+    <version.awaitility>3.1.6</version.awaitility>
     <version.slf4j-simple>1.7.25</version.slf4j-simple>
     <version.javax.enterprise.concurrent-api>1.0</version.javax.enterprise.concurrent-api>
     <version.javax.interceptor-api>1.2.2</version.javax.interceptor-api>
