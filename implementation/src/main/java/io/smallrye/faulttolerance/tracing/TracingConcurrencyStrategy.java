@@ -1,6 +1,5 @@
 package io.smallrye.faulttolerance.tracing;
 
-import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
 import io.opentracing.Scope;
 import io.opentracing.ScopeManager;
