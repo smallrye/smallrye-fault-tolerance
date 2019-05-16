@@ -58,10 +58,10 @@ public class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrateg
     public void initTreadManagerFactory() {
         if (managedThreadFactory != null) {
             threadFactory = managedThreadFactory;
-            LOGGER.info("### Managed Thread Factory used ###");
+            LOGGER.debug("### Managed Thread Factory used ###");
         } else {
             threadFactory = Executors.privilegedThreadFactory();
-            LOGGER.info("### Privilleged Thread Factory used ###");
+            LOGGER.debug("### Privilleged Thread Factory used ###");
         }
     }
 
