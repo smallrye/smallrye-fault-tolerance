@@ -25,8 +25,8 @@
     <version>6</version>
   </parent>
 
-  <artifactId>smallrye-fault-tolerance-parent</artifactId>
-  <version>2.0.6-SNAPSHOT</version>
+  <artifactId>smallrye-fault-tolerance-parent-2.0</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
 
   <packaging>pom</packaging>
   <name>SmallRye: MicroProfile Fault Tolerance - Parent</name>
@@ -45,6 +45,9 @@
     <!-- smallrye-metrics is purely used for testing -->
     <version.smallrye-metrics>1.1.3</version.smallrye-metrics>
     <version.opentracing>0.31.0</version.opentracing>
+
+    <!-- Used by release plugin to define git tag -->
+    <tagNameFormat>smallrye-fault-tolerance-2.0-@{project.version}</tagNameFormat>
   </properties>
 
   <scm>
@@ -143,7 +146,7 @@
       <!-- Dependencies provided by the project -->
       <dependency>
         <groupId>io.smallrye</groupId>
-        <artifactId>smallrye-fault-tolerance</artifactId>
+        <artifactId>smallrye-fault-tolerance-2.0</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>
@@ -173,4 +176,18 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <activation>
+        <property>
+          <name>!release.maven.bug.always.be.active</name>
+        </property>
+      </activation>
+      <modules>
+        <module>release</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>

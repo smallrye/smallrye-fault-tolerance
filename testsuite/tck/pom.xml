@@ -5,15 +5,11 @@
   <parent>
     <groupId>io.smallrye</groupId>
     <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
-    <version>2.0.6-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>smallrye-fault-tolerance-tck</artifactId>
   <name>SmallRye: MicroProfile Fault Tolerance - TCK</name>
-
-  <properties>
-    <maven.deploy.skip>true</maven.deploy.skip>
-  </properties>
 
   <build>
     <plugins>
@@ -42,7 +38,7 @@
   <dependencies>
     <dependency>
       <groupId>io.smallrye</groupId>
-      <artifactId>smallrye-fault-tolerance</artifactId>
+      <artifactId>smallrye-fault-tolerance-2.0</artifactId>
     </dependency>
 
     <dependency>
