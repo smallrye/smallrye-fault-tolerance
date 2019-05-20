@@ -16,6 +16,7 @@
 package io.smallrye.faulttolerance.metrics;
 
 import org.eclipse.microprofile.metrics.Histogram;
+import org.eclipse.microprofile.metrics.MetricID;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 import org.jboss.logging.Logger;
@@ -50,10 +51,11 @@ public class BulkheadWaitRecorder implements CommandListener {
 
     private Histogram histogramOf(FaultToleranceOperation operation) {
         String name = MetricNames.metricsPrefix(operation.getMethod()) + MetricNames.BULKHEAD_WAITING_DURATION;
-        Histogram histogram = registry.getHistograms().get(name);
+        MetricID metricID = new MetricID(name);
+        Histogram histogram = registry.getHistograms().get(metricID);
         if (histogram == null) {
             synchronized (operation) {
-                histogram = registry.getHistograms().get(name);
+                histogram = registry.getHistograms().get(metricID);
                 if (histogram == null) {
                     histogram = registry.histogram(MetricsCollectorFactory.metadataOf(name, MetricType.HISTOGRAM));
                 }
