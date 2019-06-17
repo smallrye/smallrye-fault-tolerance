@@ -20,7 +20,7 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 
 public class PingService {
 
-    @Fallback(fallbackMethod="fallback")
+    @Fallback(fallbackMethod = "fallback")
     @Bulkhead(value = 5)
     public String ping() {
         return "pong";

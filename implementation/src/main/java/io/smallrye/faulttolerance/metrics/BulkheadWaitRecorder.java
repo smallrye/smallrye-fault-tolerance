@@ -15,17 +15,16 @@
  */
 package io.smallrye.faulttolerance.metrics;
 
-import io.smallrye.faulttolerance.CommandListener;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 import org.jboss.logging.Logger;
 
+import io.smallrye.faulttolerance.CommandListener;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- * <br>
- * Date: 2/18/19
  */
 public class BulkheadWaitRecorder implements CommandListener {
 

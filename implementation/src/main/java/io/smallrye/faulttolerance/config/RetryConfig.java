@@ -60,19 +60,24 @@ public class RetryConfig extends GenericConfig<Retry> {
     @Override
     public void validate() {
         if (get(MAX_RETRIES, Integer.class) < -1) {
-            throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + getMethodInfo() + " : maxRetries shouldn't be lower than -1");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_RETRY_ON + getMethodInfo() + " : maxRetries shouldn't be lower than -1");
         }
         if (get(DELAY, Long.class) < 0) {
-            throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + getMethodInfo() + " : delay shouldn't be lower than 0");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_RETRY_ON + getMethodInfo() + " : delay shouldn't be lower than 0");
         }
         if (get(MAX_DURATION, Long.class) < 0) {
-            throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + getMethodInfo() + " : maxDuration shouldn't be lower than 0");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_RETRY_ON + getMethodInfo() + " : maxDuration shouldn't be lower than 0");
         }
         if (get(MAX_DURATION, Long.class) <= get(DELAY, Long.class)) {
-            throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + getMethodInfo() + " : maxDuration should be greater than delay");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_RETRY_ON + getMethodInfo() + " : maxDuration should be greater than delay");
         }
         if (get(JITTER, Long.class) < 0) {
-            throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + getMethodInfo() + " : jitter shouldn't be lower than 0");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_RETRY_ON + getMethodInfo() + " : jitter shouldn't be lower than 0");
         }
     }
 

@@ -22,8 +22,8 @@ import javax.enterprise.context.Dependent;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * An integrator is allowed to provide a custom implementation of {@link FaultToleranceOperationProvider}. The bean should be {@link Dependent}, must be marked
- * as alternative and selected globally for an application.
+ * An integrator is allowed to provide a custom implementation of {@link FaultToleranceOperationProvider}. The bean should be
+ * {@link Dependent}, must be marked as alternative and selected globally for an application.
  *
  * @author Martin Kouba
  */

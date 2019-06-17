@@ -22,7 +22,6 @@ import javax.inject.Inject;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
-
 @Dependent
 public class FaultToleranceOperations {
 

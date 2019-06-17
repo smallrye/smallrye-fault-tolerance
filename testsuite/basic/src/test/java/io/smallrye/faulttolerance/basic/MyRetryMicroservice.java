@@ -29,6 +29,7 @@ public class MyRetryMicroservice {
         counterForInvokingServiceA++;
         throw new RuntimeException("Connection failed");
     }
+
     @Retry(maxRetries = 2)
     @Fallback(StringFallbackHandler.class)
     public String serviceB() {
@@ -37,11 +38,12 @@ public class MyRetryMicroservice {
     }
 
     @CircuitBreaker(successThreshold = 2, requestVolumeThreshold = 4, failureRatio = 0.75, delay = 50000)
-    @Retry(retryOn = {RuntimeException.class}, maxRetries = 7)
+    @Retry(retryOn = { RuntimeException.class }, maxRetries = 7)
     public String sayHelloRetry() {
-        sayHelloRetry ++;
+        sayHelloRetry++;
         throw new RuntimeException("Connection failed");
     }
+
     public int getSayHelloRetry() {
         return sayHelloRetry;
     }
@@ -53,15 +55,16 @@ public class MyRetryMicroservice {
             counterForInvokingServiceA++;
             Thread.sleep(timeToSleep);
             throw new RuntimeException("Timeout did not interrupt");
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             //expected
         }
         return null;
     }
+
     public int getCounterForInvokingServiceA() {
         return counterForInvokingServiceA;
     }
+
     public int getCounterForInvokingServiceB() {
         return counterForInvokingServiceB;
     }
@@ -84,6 +87,5 @@ public class MyRetryMicroservice {
     private int counterForInvokingServiceC = 0;
     private int counterForInvokingServiceD = 0;
     private int counterForInvokingServiceE = 0;
-
 
 }

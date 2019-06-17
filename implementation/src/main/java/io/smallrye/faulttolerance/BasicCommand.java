@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance;
 
 import com.netflix.hystrix.HystrixCommand;
+
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 public abstract class BasicCommand extends HystrixCommand<Object> {
@@ -12,6 +13,5 @@ public abstract class BasicCommand extends HystrixCommand<Object> {
     abstract void setFailure(Throwable f);
 
     abstract FaultToleranceOperation getOperation();
-
 
 }

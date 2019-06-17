@@ -18,8 +18,8 @@ package io.smallrye.faulttolerance;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 
 /**
- * This exception is thrown if a hystrix command has a fallback defined but the failure is not assignable from any failure exception listed in
- * {@link CircuitBreaker#failOn()}.
+ * This exception is thrown if a hystrix command has a fallback defined but the failure is not assignable from any failure
+ * exception listed in {@link CircuitBreaker#failOn()}.
  *
  * @author Martin Kouba
  */

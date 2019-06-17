@@ -17,15 +17,15 @@ package io.smallrye.faulttolerance.async.requestcontext;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
-import io.smallrye.faulttolerance.TestArchive;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.TestArchive;
 
 /**
  *
@@ -36,11 +36,12 @@ public class AsynchronousRequestContextTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousRequestContextTest.class).addPackage(AsynchronousRequestContextTest.class.getPackage());
+        return TestArchive.createBase(AsynchronousRequestContextTest.class)
+                .addPackage(AsynchronousRequestContextTest.class.getPackage());
     }
 
     @Test
-    public void testRequestContextActive(AsyncService asyncService) throws IOException, InterruptedException, ExecutionException {
+    public void testRequestContextActive(AsyncService asyncService) throws InterruptedException, ExecutionException {
         assertEquals("ok", asyncService.perform().get());
     }
 

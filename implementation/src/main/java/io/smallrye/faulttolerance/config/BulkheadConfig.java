@@ -45,10 +45,12 @@ public class BulkheadConfig extends GenericConfig<Bulkhead> {
     @Override
     public void validate() {
         if (get(VALUE, Integer.class) < 0) {
-            throw new FaultToleranceDefinitionException("Invalid Bulkhead on " + getMethodInfo() + " : value shouldn't be lower than 0");
+            throw new FaultToleranceDefinitionException(
+                    "Invalid Bulkhead on " + getMethodInfo() + " : value shouldn't be lower than 0");
         }
         if (get(WAITING_TASK_QUEUE, Integer.class) < 1) {
-            throw new FaultToleranceDefinitionException("Invalid Bulkhead on " + getMethodInfo() + " : waitingTaskQueue shouldn't be lower than 1");
+            throw new FaultToleranceDefinitionException(
+                    "Invalid Bulkhead on " + getMethodInfo() + " : waitingTaskQueue shouldn't be lower than 1");
         }
     }
 

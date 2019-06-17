@@ -22,12 +22,13 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
-import io.smallrye.faulttolerance.TestArchive;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.TestArchive;
 
 /**
  *
@@ -42,7 +43,8 @@ public class AsynchronousRetryTest {
     }
 
     @Test
-    public void testAsyncRetrySuccess(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncRetrySuccess(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
         AsyncHelloService.COUNTER.set(0);
         assertEquals("Hello", helloService.retry(AsyncHelloService.Result.SUCCESS).get());
         assertEquals(1, AsyncHelloService.COUNTER.get());
@@ -61,7 +63,8 @@ public class AsynchronousRetryTest {
     }
 
     @Test
-    public void testAsyncRetryFutureCompletesExceptionally(AsyncHelloService helloService) throws IOException, InterruptedException {
+    public void testAsyncRetryFutureCompletesExceptionally(AsyncHelloService helloService)
+            throws IOException, InterruptedException {
         AsyncHelloService.COUNTER.set(0);
         try {
             helloService.retry(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).get();
@@ -73,14 +76,16 @@ public class AsynchronousRetryTest {
     }
 
     @Test
-    public void testAsyncRetryFallbackMethodThrows(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncRetryFallbackMethodThrows(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
         AsyncHelloService.COUNTER.set(0);
         assertEquals("Fallback", helloService.retryWithFallback(AsyncHelloService.Result.FAILURE).get());
         assertEquals(3, AsyncHelloService.COUNTER.get());
     }
 
     @Test
-    public void testAsyncRetryFallbackFutureCompletesExceptionally(AsyncHelloService helloService) throws IOException, InterruptedException {
+    public void testAsyncRetryFallbackFutureCompletesExceptionally(AsyncHelloService helloService)
+            throws IOException, InterruptedException {
         AsyncHelloService.COUNTER.set(0);
         try {
             helloService.retryWithFallback(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).get();

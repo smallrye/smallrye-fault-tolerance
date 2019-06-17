@@ -16,20 +16,21 @@
 
 package io.smallrye.faulttolerance;
 
-import com.netflix.hystrix.HystrixCircuitBreaker;
-import com.netflix.hystrix.exception.HystrixTimeoutException;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
+import com.netflix.hystrix.HystrixCircuitBreaker;
+import com.netflix.hystrix.exception.HystrixTimeoutException;
 
-import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
  * @author Antoine Sabot-Durand
@@ -66,11 +67,11 @@ public class SimpleCommand extends BasicCommand {
      * @param listeners Command listeners
      */
     protected SimpleCommand(Setter setter,
-                            ExecutionContextWithInvocationContext ctx,
-                            Supplier<Object> fallback,
-                            FaultToleranceOperation operation,
-                            Iterable<CommandListener> listeners,
-                            RetryContext retryContext) {
+            ExecutionContextWithInvocationContext ctx,
+            Supplier<Object> fallback,
+            FaultToleranceOperation operation,
+            Iterable<CommandListener> listeners,
+            RetryContext retryContext) {
         super(setter);
         this.ctx = ctx;
         this.fallback = fallback;
@@ -148,7 +149,7 @@ public class SimpleCommand extends BasicCommand {
     }
 
     @Override
-     void setFailure(Throwable f) {
+    void setFailure(Throwable f) {
         ctx.setFailure(f);
     }
 

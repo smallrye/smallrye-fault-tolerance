@@ -15,16 +15,19 @@
  */
 package io.smallrye.faulttolerance.tracing;
 
-import io.opentracing.Scope;
-import io.opentracing.mock.MockSpan;
-import io.smallrye.faulttolerance.TestArchive;
+import static org.junit.Assert.assertEquals;
+
 import java.util.List;
+
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import static org.junit.Assert.assertEquals;
+
+import io.opentracing.Scope;
+import io.opentracing.mock.MockSpan;
+import io.smallrye.faulttolerance.TestArchive;
 
 /**
  * @author Pavol Loffay
@@ -32,26 +35,27 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Arquillian.class)
 public class TracingContextPropagationTest {
 
-  @Deployment
-  public static JavaArchive createTestArchive() {
-    return TestArchive.createBase(TracingContextPropagationTest.class).addPackage(TracingContextPropagationTest.class.getPackage());
-  }
-
-  @Test
-  public void testCircuitBreakerOpens(Service service) {
-    try (Scope scope = Service.mockTracer.buildSpan("parent").startActive(true)) {
-      assertEquals("fallback", service.foo());
+    @Deployment
+    public static JavaArchive createTestArchive() {
+        return TestArchive.createBase(TracingContextPropagationTest.class)
+                .addPackage(TracingContextPropagationTest.class.getPackage());
     }
 
-    List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
-    assertEquals(4, mockSpans.size());
-    //test spans are part of the same trace
-    for (MockSpan mockSpan: mockSpans) {
-      assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
+    @Test
+    public void testCircuitBreakerOpens(Service service) {
+        try (Scope scope = Service.mockTracer.buildSpan("parent").startActive(true)) {
+            assertEquals("fallback", service.foo());
+        }
+
+        List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
+        assertEquals(4, mockSpans.size());
+        //test spans are part of the same trace
+        for (MockSpan mockSpan : mockSpans) {
+            assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
+        }
+        assertEquals("foo", mockSpans.get(0).operationName());
+        assertEquals("foo", mockSpans.get(1).operationName());
+        assertEquals("foo", mockSpans.get(2).operationName());
+        assertEquals("parent", mockSpans.get(3).operationName());
     }
-    assertEquals("foo", mockSpans.get(0).operationName());
-    assertEquals("foo", mockSpans.get(1).operationName());
-    assertEquals("foo", mockSpans.get(2).operationName());
-    assertEquals("parent", mockSpans.get(3).operationName());
-  }
 }

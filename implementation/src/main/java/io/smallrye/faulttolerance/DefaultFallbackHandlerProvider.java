@@ -28,7 +28,8 @@ public class DefaultFallbackHandlerProvider implements FallbackHandlerProvider {
             return new FallbackHandler<T>() {
                 @Override
                 public T handle(ExecutionContext context) {
-                    Unmanaged<FallbackHandler<T>> unmanaged = new Unmanaged<>(beanManager, operation.getFallback().get(FallbackConfig.VALUE));
+                    Unmanaged<FallbackHandler<T>> unmanaged = new Unmanaged<>(beanManager,
+                            operation.getFallback().get(FallbackConfig.VALUE));
                     Unmanaged.UnmanagedInstance<FallbackHandler<T>> unmanagedInstance = unmanaged.newInstance();
                     FallbackHandler<T> handler = unmanagedInstance.produce().inject().postConstruct().get();
                     try {

@@ -25,4 +25,3 @@ public class StringFallbackHandler implements FallbackHandler<String> {
         return "fallback for " + context.getMethod().getName();
     }
 }
-

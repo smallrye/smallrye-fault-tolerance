@@ -34,8 +34,9 @@ import com.netflix.hystrix.HystrixCircuitBreaker;
 import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 
 /**
- * This is an implementation of the HystrixCircuitBreaker that is expected to be used synchronously by the HystrixCommand implementation to track the state of
- * the circuit. This is needed for the current TCK tests as monitoring circuit state in a background thread does not work with the TCK expectations.
+ * This is an implementation of the HystrixCircuitBreaker that is expected to be used synchronously by the HystrixCommand
+ * implementation to track the state of the circuit. This is needed for the current TCK tests as monitoring circuit state
+ * in a background thread does not work with the TCK expectations.
  *
  * @see HystrixCommandInterceptor#SYNC_CIRCUIT_BREAKER_KEY
  */
@@ -44,7 +45,9 @@ public class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
     private static final Logger LOGGER = Logger.getLogger(SynchronousCircuitBreaker.class);
 
     enum Status {
-        CLOSED, OPEN, HALF_OPEN;
+        CLOSED,
+        OPEN,
+        HALF_OPEN;
     }
 
     SynchronousCircuitBreaker(CircuitBreakerConfig config) {
@@ -267,7 +270,6 @@ public class SynchronousCircuitBreaker implements HystrixCircuitBreaker {
         }
         return false;
     }
-
 
     private final AtomicReference<Status> status;
 

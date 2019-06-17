@@ -1,11 +1,13 @@
 package io.smallrye.faulttolerance.tracing;
 
+import java.util.concurrent.Callable;
+
 import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
+
 import io.opentracing.Scope;
 import io.opentracing.ScopeManager;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import java.util.concurrent.Callable;
 
 /**
  * This strategy configures Hystrix to propagate tracing context (Spans) across threads.
@@ -16,8 +18,8 @@ public class TracingConcurrencyStrategy extends HystrixConcurrencyStrategy {
     private Tracer tracer;
 
     public TracingConcurrencyStrategy(HystrixConcurrencyStrategy delegateStrategy, Tracer tracer) {
-          this.tracer = tracer;
-          this.delegateStrategy = delegateStrategy;
+        this.tracer = tracer;
+        this.delegateStrategy = delegateStrategy;
     }
 
     @Override

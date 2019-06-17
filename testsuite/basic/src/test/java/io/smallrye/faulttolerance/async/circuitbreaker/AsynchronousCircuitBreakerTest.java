@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import io.smallrye.faulttolerance.TestArchive;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -31,6 +30,8 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.TestArchive;
 
 /**
  *
@@ -41,11 +42,12 @@ public class AsynchronousCircuitBreakerTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousCircuitBreakerTest.class).addPackage(AsynchronousCircuitBreakerTest.class.getPackage());
+        return TestArchive.createBase(AsynchronousCircuitBreakerTest.class)
+                .addPackage(AsynchronousCircuitBreakerTest.class.getPackage());
     }
 
     @Test
-    public void testAsyncCircuitBreaker(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncCircuitBreaker(AsyncHelloService helloService) throws IOException, InterruptedException {
         AsyncHelloService.COUNTER.set(0);
         for (int i = 0; i < AsyncHelloService.THRESHOLD; i++) {
             try {

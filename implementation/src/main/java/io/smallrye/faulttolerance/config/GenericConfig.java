@@ -36,13 +36,16 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 public abstract class GenericConfig<X extends Annotation> {
 
     /**
-     * This config property key can be used to disable config parameters caching. If disabled, properties are resolved every time a config parameter is needed.
+     * This config property key can be used to disable config parameters caching. If disabled, properties are resolved every
+     * time a config parameter is needed.
      */
     public static final String CONFIG_PARAMS_CACHE_KEY = "org_wildfly_swarm_microprofile_faulttolerance_configParamsCache";
 
     public GenericConfig(Class<X> annotationType, Class<?> beanClass, Method method) {
         this(beanClass, method, null, annotationType,
-                method.isAnnotationPresent(annotationType) ? method.getAnnotation(annotationType) : getAnnotationFromClass(annotationType, beanClass),
+                method.isAnnotationPresent(annotationType)
+                        ? method.getAnnotation(annotationType)
+                        : getAnnotationFromClass(annotationType, beanClass),
                 method.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
@@ -55,14 +58,17 @@ public abstract class GenericConfig<X extends Annotation> {
                 annotatedMethod.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
-    private GenericConfig(Class<?> beanClass, Method method, AnnotatedMethod<?> annotatedMethod, Class<X> annotationType, X annotation, ElementType annotationSource) {
+    private GenericConfig(Class<?> beanClass, Method method, AnnotatedMethod<?> annotatedMethod, Class<X> annotationType,
+            X annotation, ElementType annotationSource) {
         this.beanClass = beanClass;
         this.method = method;
         this.annotatedMethod = annotatedMethod;
         this.annotationType = annotationType;
         this.annotation = annotation;
         this.annotationSource = annotationSource;
-        this.values = getConfig().getOptionalValue(CONFIG_PARAMS_CACHE_KEY, Boolean.class).orElse(true) ? new ConcurrentHashMap<>() : null;
+        this.values = getConfig().getOptionalValue(CONFIG_PARAMS_CACHE_KEY, Boolean.class).orElse(true)
+                ? new ConcurrentHashMap<>()
+                : null;
     }
 
     @SuppressWarnings("unchecked")
@@ -117,9 +123,11 @@ public abstract class GenericConfig<X extends Annotation> {
     private <U> U getConfigFromAnnotation(String key) {
         try {
             return (U) SecurityActions.getAnnotationMethod(annotationType, key).invoke(annotation);
-        } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException | IllegalArgumentException | PrivilegedActionException e) {
+        } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException | IllegalArgumentException
+                | PrivilegedActionException e) {
             throw new FaultToleranceDefinitionException(
-                    "Member " + key + " on annotation " + annotation.getClass().toString() + " doesn't exist or is not accessible");
+                    "Member " + key + " on annotation " + annotation.getClass().toString()
+                            + " doesn't exist or is not accessible");
         }
     }
 
@@ -147,7 +155,7 @@ public abstract class GenericConfig<X extends Annotation> {
             }
             beanClass = beanClass.getSuperclass();
         }
-       throw new IllegalStateException(annotationType + " not found on " + beanClass);
+        throw new IllegalStateException(annotationType + " not found on " + beanClass);
     }
 
     protected abstract Map<String, Class<?>> getKeysToType();
@@ -157,7 +165,7 @@ public abstract class GenericConfig<X extends Annotation> {
     protected final Method method;
 
     protected final X annotation;
-    
+
     protected final Class<X> annotationType;
 
     // Annotated method is optional

@@ -1,17 +1,10 @@
 package io.smallrye.faulttolerance.metrics;
 
-import com.netflix.hystrix.HystrixCircuitBreaker;
-import com.netflix.hystrix.HystrixCommandMetrics;
-import com.netflix.hystrix.HystrixThreadPoolKey;
-import com.netflix.hystrix.HystrixThreadPoolMetrics;
-import com.netflix.hystrix.exception.HystrixRuntimeException;
-import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
-import io.smallrye.faulttolerance.DefaultHystrixConcurrencyStrategy;
-import io.smallrye.faulttolerance.HystrixCommandInterceptor;
-import io.smallrye.faulttolerance.RetryContext;
-import io.smallrye.faulttolerance.SimpleCommand;
-import io.smallrye.faulttolerance.SynchronousCircuitBreaker;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import java.util.function.Supplier;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.eclipse.microprofile.metrics.Counter;
@@ -22,9 +15,19 @@ import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 import org.jboss.logging.Logger;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import java.util.function.Supplier;
+import com.netflix.hystrix.HystrixCircuitBreaker;
+import com.netflix.hystrix.HystrixCommandMetrics;
+import com.netflix.hystrix.HystrixThreadPoolKey;
+import com.netflix.hystrix.HystrixThreadPoolMetrics;
+import com.netflix.hystrix.exception.HystrixRuntimeException;
+import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
+
+import io.smallrye.faulttolerance.DefaultHystrixConcurrencyStrategy;
+import io.smallrye.faulttolerance.HystrixCommandInterceptor;
+import io.smallrye.faulttolerance.RetryContext;
+import io.smallrye.faulttolerance.SimpleCommand;
+import io.smallrye.faulttolerance.SynchronousCircuitBreaker;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 @ApplicationScoped
 public class MetricsCollectorFactory {
@@ -38,7 +41,8 @@ public class MetricsCollectorFactory {
     @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
     Boolean metricsEnabled;
 
-    public MetricsCollector createCollector(FaultToleranceOperation operation, RetryContext retryContext, HystrixThreadPoolKey threadPoolKey) {
+    public MetricsCollector createCollector(FaultToleranceOperation operation, RetryContext retryContext,
+            HystrixThreadPoolKey threadPoolKey) {
         if (metricsEnabled) {
             return new MetricsCollectorImpl(operation, retryContext, threadPoolKey);
         } else {
@@ -101,10 +105,12 @@ public class MetricsCollectorFactory {
                 if (operation.hasBulkhead()) {
                     if (operation.isAsync()) {
                         HystrixThreadPoolMetrics threadPoolMetrics = HystrixThreadPoolMetrics.getInstance(threadPoolKey);
-                        gaugeRegister(metricsPrefix + MetricNames.BULKHEAD_WAITING_QUEUE_POPULATION, () -> threadPoolMetrics.getCurrentQueueSize().longValue());
+                        gaugeRegister(metricsPrefix + MetricNames.BULKHEAD_WAITING_QUEUE_POPULATION,
+                                () -> threadPoolMetrics.getCurrentQueueSize().longValue());
                     }
                     HystrixCommandMetrics hcm = command.getMetrics();
-                    gaugeRegister(metricsPrefix + MetricNames.BULKHEAD_CONCURRENT_EXECUTIONS, () -> (long) hcm.getCurrentConcurrentExecutionCount());
+                    gaugeRegister(metricsPrefix + MetricNames.BULKHEAD_CONCURRENT_EXECUTIONS,
+                            () -> (long) hcm.getCurrentConcurrentExecutionCount());
                 }
             });
         }
@@ -145,7 +151,8 @@ public class MetricsCollectorFactory {
         public void onError(SimpleCommand command, HystrixRuntimeException e) {
             runSafely(() -> {
                 if (operation.hasBulkhead()
-                        && (FailureType.REJECTED_THREAD_EXECUTION == e.getFailureType() || FailureType.REJECTED_SEMAPHORE_EXECUTION == e.getFailureType())) {
+                        && (FailureType.REJECTED_THREAD_EXECUTION == e.getFailureType()
+                                || FailureType.REJECTED_SEMAPHORE_EXECUTION == e.getFailureType())) {
                     counterInc(metricsPrefix + MetricNames.BULKHEAD_CALLS_REJECTED_TOTAL);
                 }
 

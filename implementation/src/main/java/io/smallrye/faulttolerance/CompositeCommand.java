@@ -19,8 +19,6 @@ package io.smallrye.faulttolerance;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
-import io.smallrye.faulttolerance.metrics.MetricNames;
-import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.metrics.Counter;
 import org.eclipse.microprofile.metrics.MetricRegistry;
@@ -33,6 +31,8 @@ import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.metrics.MetricNames;
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
  * This command is used to wrap any {@link Asynchronous} operation.
@@ -66,7 +66,6 @@ public class CompositeCommand extends BasicCommand {
     private final RetryContext retryContext;
 
     private final MetricRegistry registry;
-
 
     /**
      *

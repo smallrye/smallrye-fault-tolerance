@@ -15,40 +15,43 @@
  */
 package io.smallrye.faulttolerance.async.compstage.fallback;
 
-import io.smallrye.faulttolerance.TestArchive;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import io.smallrye.faulttolerance.TestArchive;
 
 @RunWith(Arquillian.class)
 public class AsynchronousCompletionStageFallbackTest {
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousCompletionStageFallbackTest.class).addPackage(AsynchronousCompletionStageFallbackTest.class.getPackage());
+        return TestArchive.createBase(AsynchronousCompletionStageFallbackTest.class)
+                .addPackage(AsynchronousCompletionStageFallbackTest.class.getPackage());
     }
 
     @Test
-    public void testAsyncFallbackSuccess(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncFallbackSuccess(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
         assertEquals("Hello", helloService.hello(AsyncHelloService.Result.SUCCESS).toCompletableFuture().get());
     }
 
     @Test
-    public void testAsyncFallbackMethodThrows(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncFallbackMethodThrows(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
         assertEquals("Fallback", helloService.hello(AsyncHelloService.Result.FAILURE).toCompletableFuture().get());
     }
 
     @Test
-    public void testAsyncFallbackFutureCompletesExceptionally(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
-        assertEquals("Fallback", helloService.hello(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).toCompletableFuture().get());
+    public void testAsyncFallbackFutureCompletesExceptionally(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
+        assertEquals("Fallback",
+                helloService.hello(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).toCompletableFuture().get());
     }
 }

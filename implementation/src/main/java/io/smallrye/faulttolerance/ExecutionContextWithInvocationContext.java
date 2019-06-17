@@ -22,7 +22,6 @@ import javax.interceptor.InvocationContext;
 
 import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 
-
 /**
  * @author Antoine Sabot-Durand
  */
@@ -56,7 +55,7 @@ class ExecutionContextWithInvocationContext implements ExecutionContext {
     }
 
     public Object proceed() throws Exception {
-            return ic.proceed();
+        return ic.proceed();
     }
 
     private InvocationContext ic;

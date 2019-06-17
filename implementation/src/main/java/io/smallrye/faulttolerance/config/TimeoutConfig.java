@@ -46,7 +46,8 @@ public class TimeoutConfig extends GenericConfig<Timeout> {
     @Override
     public void validate() {
         if (get(VALUE, Long.class) < 0) {
-            throw new FaultToleranceDefinitionException("Invalid @Timeout on " + getMethodInfo() + " : value shouldn't be lower than 0");
+            throw new FaultToleranceDefinitionException(
+                    "Invalid @Timeout on " + getMethodInfo() + " : value shouldn't be lower than 0");
         }
     }
 

@@ -15,6 +15,10 @@
  */
 package io.smallrye.faulttolerance.retry;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.enterprise.context.Dependent;
+
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
@@ -22,13 +26,8 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
-import javax.enterprise.context.Dependent;
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- * <br>
- * Date: 11/23/18
  */
 @Dependent
 public class RetryTestBean {

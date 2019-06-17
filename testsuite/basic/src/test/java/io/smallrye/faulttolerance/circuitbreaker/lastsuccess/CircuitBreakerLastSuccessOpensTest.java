@@ -43,7 +43,8 @@ public class CircuitBreakerLastSuccessOpensTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerLastSuccessOpensTest.class).addPackage(CircuitBreakerLastSuccessOpensTest.class.getPackage());
+        return TestArchive.createBase(CircuitBreakerLastSuccessOpensTest.class)
+                .addPackage(CircuitBreakerLastSuccessOpensTest.class.getPackage());
     }
 
     @Test

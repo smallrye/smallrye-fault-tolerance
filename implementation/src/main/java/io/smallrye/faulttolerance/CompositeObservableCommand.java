@@ -15,40 +15,40 @@
  */
 package io.smallrye.faulttolerance;
 
-import com.netflix.hystrix.HystrixCommandKey;
-import com.netflix.hystrix.HystrixCommandProperties;
-import com.netflix.hystrix.HystrixObservableCommand;
-import com.netflix.hystrix.HystrixThreadPoolKey;
-import com.netflix.hystrix.HystrixThreadPoolProperties;
-import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.metrics.MetricNames;
-import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
-import org.eclipse.microprofile.metrics.Counter;
-import org.eclipse.microprofile.metrics.MetricRegistry;
-import org.eclipse.microprofile.metrics.MetricType;
-import rx.Observable;
-
 import java.lang.reflect.Field;
 import java.security.PrivilegedActionException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
+import org.eclipse.microprofile.metrics.Counter;
+import org.eclipse.microprofile.metrics.MetricRegistry;
+import org.eclipse.microprofile.metrics.MetricType;
+
+import com.netflix.hystrix.HystrixCommandKey;
+import com.netflix.hystrix.HystrixCommandProperties;
+import com.netflix.hystrix.HystrixObservableCommand;
+import com.netflix.hystrix.HystrixThreadPoolKey;
+import com.netflix.hystrix.HystrixThreadPoolProperties;
+
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.metrics.MetricNames;
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
+import rx.Observable;
+
 /**
  *
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- * <br>
- * Date: 2/7/19
  */
 public class CompositeObservableCommand extends HystrixObservableCommand {
 
     public static HystrixObservableCommand<?> create(Callable<? extends CompletionStage<?>> callable,
-                                                     FaultToleranceOperation operation,
-                                                     RetryContext retryContext,
-                                                     ExecutionContextWithInvocationContext ctx,
-                                                     MetricRegistry registry,
-                                                     boolean timeoutEnabled,
-                                                     Supplier<Object> fallback) {
+            FaultToleranceOperation operation,
+            RetryContext retryContext,
+            ExecutionContextWithInvocationContext ctx,
+            MetricRegistry registry,
+            boolean timeoutEnabled,
+            Supplier<Object> fallback) {
         return new CompositeObservableCommand(callable, operation, retryContext, ctx, registry, timeoutEnabled, fallback);
     }
 
@@ -60,12 +60,12 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
     private final Supplier<Object> fallback;
 
     protected CompositeObservableCommand(Callable<? extends CompletionStage<?>> callable,
-                                         FaultToleranceOperation operation,
-                                         RetryContext retryContext,
-                                         ExecutionContextWithInvocationContext ctx,
-                                         MetricRegistry registry,
-                                         boolean timeoutEnabled,
-                                         Supplier<Object> fallback) {
+            FaultToleranceOperation operation,
+            RetryContext retryContext,
+            ExecutionContextWithInvocationContext ctx,
+            MetricRegistry registry,
+            boolean timeoutEnabled,
+            Supplier<Object> fallback) {
         super(initSetter(operation, timeoutEnabled));
         this.callable = callable;
         this.ctx = ctx;
@@ -80,40 +80,36 @@ public class CompositeObservableCommand extends HystrixObservableCommand {
         String metricsPrefix = MetricNames.metricsPrefix(operation.getMethod());
         // the retry metrics collection here mirrors the logic in HystrixCommandInterceptor.executeCommand
         // and MetricsCollectorFactory.MetricsCollectorImpl.beforeExecute/afterSuccess/onError
-        Observable<Object> observable = Observable.create(
-                subscriber -> {
-                    try {
-                        if (registry != null && retryContext != null && retryContext.hasBeenRetried()) {
-                            counterOf(metricsPrefix + MetricNames.RETRY_RETRIES_TOTAL).inc();
-                        }
-                        CompletionStage<?> stage = callable.call();
-                        if (stage == null) {
-                            subscriber.onError(new NullPointerException("A method that should return a CompletionStage returned null"));
-                        } else {
-                            stage.whenComplete(
-                                    (value, error) -> {
-                                        if (error == null) {
-                                            if (registry != null && retryContext != null) {
-                                                if (retryContext.hasBeenRetried()) {
-                                                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL).inc();
-                                                } else {
-                                                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL).inc();
-                                                }
-                                            }
-
-                                            subscriber.onNext(value);
-                                            subscriber.onCompleted();
-                                        } else {
-                                            subscriber.onError(error);
-                                        }
-                                    }
-                            );
-                        }
-                    } catch (Exception e) {
-                        subscriber.onError(e);
-                    }
+        Observable<Object> observable = Observable.create(subscriber -> {
+            try {
+                if (registry != null && retryContext != null && retryContext.hasBeenRetried()) {
+                    counterOf(metricsPrefix + MetricNames.RETRY_RETRIES_TOTAL).inc();
                 }
-        );
+                CompletionStage<?> stage = callable.call();
+                if (stage == null) {
+                    subscriber.onError(new NullPointerException("A method that should return a CompletionStage returned null"));
+                } else {
+                    stage.whenComplete((value, error) -> {
+                        if (error == null) {
+                            if (registry != null && retryContext != null) {
+                                if (retryContext.hasBeenRetried()) {
+                                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL).inc();
+                                } else {
+                                    counterOf(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL).inc();
+                                }
+                            }
+
+                            subscriber.onNext(value);
+                            subscriber.onCompleted();
+                        } else {
+                            subscriber.onError(error);
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                subscriber.onError(e);
+            }
+        });
 
         if (retryContext != null) {
             return observable.retryWhen(attempts -> {

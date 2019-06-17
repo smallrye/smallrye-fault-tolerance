@@ -21,9 +21,9 @@ import javax.enterprise.context.Dependent;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * Any bean which implements this listener can be used to perfom actions before and after a Hystrix command that wraps a FT operation is executed. The bean
- * should be {@link Dependent} or {@link ApplicationScoped}. Note that a contextual instance of this bean is obtained for each command execution.
- *
+ * Any bean which implements this listener can be used to perfom actions before and after a Hystrix command that wraps a FT
+ * operation is executed. The bean should be {@link Dependent} or {@link ApplicationScoped}. Note that a contextual instance
+ * of this bean is obtained for each command execution.
  *
  * @author Martin Kouba
  * @see SimpleCommand#run()

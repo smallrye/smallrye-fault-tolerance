@@ -29,7 +29,6 @@ import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.HystrixCommandInterceptor;
 
-
 /**
  * @author Antoine Sabot-Durand
  */
@@ -49,7 +48,7 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
 
     public static final String SYNCHRONOUS_STATE_VALIDATION = "synchronousStateValidation";
 
-    private static final Logger LOGGER =  Logger.getLogger(CircuitBreakerConfig.class);
+    private static final Logger LOGGER = Logger.getLogger(CircuitBreakerConfig.class);
 
     public CircuitBreakerConfig(Class<?> beanClass, Method method) {
         super(CircuitBreaker.class, beanClass, method);
@@ -62,21 +61,26 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
     @Override
     public void validate() {
         if (get(DELAY, Long.class) < 0) {
-            throw new FaultToleranceDefinitionException(INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : delay shouldn't be lower than 0");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : delay shouldn't be lower than 0");
         }
         if (get(REQUEST_VOLUME_THRESHOLD, Integer.class) < 1) {
             throw new FaultToleranceDefinitionException(
                     INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : requestVolumeThreshold shouldn't be lower than 1");
         }
         if (get(FAILURE_RATIO, Double.class) < 0 || get(FAILURE_RATIO, Double.class) > 1) {
-            throw new FaultToleranceDefinitionException(INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : failureRation should be between 0 and 1");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : failureRation should be between 0 and 1");
         }
         int successThreshold = get(SUCCESS_THRESHOLD, Integer.class);
         if (successThreshold < 1) {
-            throw new FaultToleranceDefinitionException(INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : successThreshold shouldn't be lower than 1");
+            throw new FaultToleranceDefinitionException(
+                    INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : successThreshold shouldn't be lower than 1");
         }
-        if (!getConfig().getOptionalValue(HystrixCommandInterceptor.SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true) && successThreshold > 1) {
-            LOGGER.warnf("Synchronous circuit breaker disabled - successThreshold of value greater than 1 is not supported: " + getMethodInfo());
+        if (!getConfig().getOptionalValue(HystrixCommandInterceptor.SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true)
+                && successThreshold > 1) {
+            LOGGER.warnf("Synchronous circuit breaker disabled - successThreshold of value greater than 1 is not supported: "
+                    + getMethodInfo());
         }
     }
 

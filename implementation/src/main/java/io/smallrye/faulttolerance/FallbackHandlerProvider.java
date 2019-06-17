@@ -22,8 +22,8 @@ import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
- * An integrator is allowed to provide a custom implementation of {@link FallbackHandlerProvider}. The bean should be {@link Dependent}, must be marked as
- * alternative and selected globally for an application.
+ * An integrator is allowed to provide a custom implementation of {@link FallbackHandlerProvider}. The bean should be
+ * {@link Dependent}, must be marked as alternative and selected globally for an application.
  *
  * @author Martin Kouba
  */

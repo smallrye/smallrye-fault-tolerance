@@ -43,24 +43,24 @@ public class FaultToleranceOperation {
 
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
         return new FaultToleranceOperation(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(),
-                                           isAsync(annotatedMethod),
-                                           returnsCompletionStage(annotatedMethod),
-                                           getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
-                                           getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
-                                           getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
-                                           getConfig(Retry.class, annotatedMethod, RetryConfig::new),
-                                           getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
+                isAsync(annotatedMethod),
+                returnsCompletionStage(annotatedMethod),
+                getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
+                getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
+                getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
+                getConfig(Retry.class, annotatedMethod, RetryConfig::new),
+                getConfig(Timeout.class, annotatedMethod, TimeoutConfig::new));
     }
 
     public static FaultToleranceOperation of(Class<?> beanClass, Method method) {
-        return new FaultToleranceOperation(beanClass,method,
-                                           isAsync(method, beanClass),
-                                           returnsCompletionStage(method),
-                                           getConfig(Bulkhead.class, beanClass,method, BulkheadConfig::new),
-                                           getConfig(CircuitBreaker.class, beanClass,method, CircuitBreakerConfig::new),
-                                           getConfig(Fallback.class, beanClass,method, FallbackConfig::new),
-                                           getConfig(Retry.class, beanClass,method, RetryConfig::new),
-                                           getConfig(Timeout.class, beanClass, method, TimeoutConfig::new));
+        return new FaultToleranceOperation(beanClass, method,
+                isAsync(method, beanClass),
+                returnsCompletionStage(method),
+                getConfig(Bulkhead.class, beanClass, method, BulkheadConfig::new),
+                getConfig(CircuitBreaker.class, beanClass, method, CircuitBreakerConfig::new),
+                getConfig(Fallback.class, beanClass, method, FallbackConfig::new),
+                getConfig(Retry.class, beanClass, method, RetryConfig::new),
+                getConfig(Timeout.class, beanClass, method, TimeoutConfig::new));
     }
 
     private final Class<?> beanClass;
@@ -82,14 +82,14 @@ public class FaultToleranceOperation {
     private final TimeoutConfig timeout;
 
     private FaultToleranceOperation(Class<?> beanClass,
-                                    Method method,
-                                    boolean async,
-                                    boolean returnsCompletionStage,
-                                    BulkheadConfig bulkhead,
-                                    CircuitBreakerConfig circuitBreaker,
-                                    FallbackConfig fallback,
-                                    RetryConfig retry,
-                                    TimeoutConfig timeout) {
+            Method method,
+            boolean async,
+            boolean returnsCompletionStage,
+            BulkheadConfig bulkhead,
+            CircuitBreakerConfig circuitBreaker,
+            FallbackConfig fallback,
+            RetryConfig retry,
+            TimeoutConfig timeout) {
         this.beanClass = beanClass;
         this.method = method;
         this.async = async;
@@ -175,7 +175,8 @@ public class FaultToleranceOperation {
      */
     public void validate() {
         if (async && !isAcceptableAsyncReturnType(method.getReturnType())) {
-            throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method + ": must return java.util.concurrent.Future or java.util.concurrent.CompletionStage");
+            throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method
+                    + ": must return java.util.concurrent.Future or java.util.concurrent.CompletionStage");
         }
         if (bulkhead != null) {
             bulkhead.validate();
@@ -203,20 +204,18 @@ public class FaultToleranceOperation {
         return "FaultToleranceOperation [beanClass=" + beanClass + ", method=" + method.toGenericString() + "]";
     }
 
-
-    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod,
-                                                                                  Function<AnnotatedMethod<?>, C> function) {
+    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType,
+            AnnotatedMethod<?> annotatedMethod, Function<AnnotatedMethod<?>, C> function) {
         if (getConfigStatus(annotationType, annotatedMethod.getJavaMember()) && isAnnotated(annotationType, annotatedMethod)) {
             return function.apply(annotatedMethod);
         }
         return null;
     }
 
-
     private static boolean returnsCompletionStage(Method annotatedMethod) {
         return CompletionStage.class.isAssignableFrom(annotatedMethod.getReturnType());
     }
-    
+
     private static boolean returnsCompletionStage(AnnotatedMethod<?> annotatedMethod) {
         return returnsCompletionStage(annotatedMethod.getJavaMember());
     }
@@ -232,11 +231,12 @@ public class FaultToleranceOperation {
     }
 
     private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod) {
-        return annotatedMethod.isAnnotationPresent(annotationType) || annotatedMethod.getDeclaringType().isAnnotationPresent(annotationType);
+        return annotatedMethod.isAnnotationPresent(annotationType)
+                || annotatedMethod.getDeclaringType().isAnnotationPresent(annotationType);
     }
 
-    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Class<?> beanClass, Method method,
-            BiFunction<Class<?>, Method, C> function) {
+    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Class<?> beanClass,
+            Method method, BiFunction<Class<?>, Method, C> function) {
 
         if (getConfigStatus(annotationType, method) && isAnnotated(annotationType, method, beanClass)) {
             return function.apply(beanClass, method);
@@ -248,9 +248,9 @@ public class FaultToleranceOperation {
         Config config = ConfigProvider.getConfig();
         final String undifined = "undifined";
         String onMethod = config.getOptionalValue(method.getDeclaringClass().getName() +
-                          "/" + method.getName() + "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
+                "/" + method.getName() + "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
         String onClass = config.getOptionalValue(method.getDeclaringClass().getName() +
-                          "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
+                "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
         String onGlobal = config.getOptionalValue(annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
         Boolean returnConfig = true;
 
