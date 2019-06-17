@@ -26,12 +26,11 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
-
 /**
  * @author Antoine Sabot-Durand
  */
 @ApplicationScoped
-@CircuitBreaker(successThreshold = 2, requestVolumeThreshold = 4, failureRatio=0.75, delay = 50000)
+@CircuitBreaker(successThreshold = 2, requestVolumeThreshold = 4, failureRatio = 0.75, delay = 50000)
 public class MyMicroservice {
 
     @Timeout(500)
@@ -77,22 +76,23 @@ public class MyMicroservice {
         return CompletableFuture.completedFuture(HELLO);
     }
 
-    @CircuitBreaker(successThreshold = 2, requestVolumeThreshold = 4, failureRatio=0.75, delay = 50000)
+    @CircuitBreaker(successThreshold = 2, requestVolumeThreshold = 4, failureRatio = 0.75, delay = 50000)
     public String sayHelloBreaker() {
-        sayHelloBreakerCount ++;
-        if(sayHelloBreakerCount < 5) {
+        sayHelloBreakerCount++;
+        if (sayHelloBreakerCount < 5) {
             throw new RuntimeException("Connection failed");
         }
-        return "sayHelloBreaker#"+sayHelloBreakerCount;
+        return "sayHelloBreaker#" + sayHelloBreakerCount;
     }
 
     public String sayHelloBreakerClassLevel() {
-        sayHelloBreakerCount3 ++;
-        if(sayHelloBreakerCount3 < 5) {
+        sayHelloBreakerCount3++;
+        if (sayHelloBreakerCount3 < 5) {
             throw new RuntimeException("Connection failed");
         }
-        return "sayHelloBreakerClassLevel#"+sayHelloBreakerCount3;
+        return "sayHelloBreakerClassLevel#" + sayHelloBreakerCount3;
     }
+
     public int getSayHelloBreakerCount3() {
         return sayHelloBreakerCount3;
     }
@@ -101,42 +101,45 @@ public class MyMicroservice {
         return sayHelloBreakerCount;
     }
 
-    @CircuitBreaker(successThreshold = 1, requestVolumeThreshold = 4, failureRatio=0.75, delay = 200)
+    @CircuitBreaker(successThreshold = 1, requestVolumeThreshold = 4, failureRatio = 0.75, delay = 200)
     public String sayHelloBreaker2() {
-        sayHelloBreakerCount2 ++;
+        sayHelloBreakerCount2++;
         // Only one execution succeeds
-        if(sayHelloBreakerCount2 != 5) {
+        if (sayHelloBreakerCount2 != 5) {
             throw new RuntimeException("Connection failed");
         }
-        return "sayHelloBreaker#"+sayHelloBreakerCount2;
+        return "sayHelloBreaker#" + sayHelloBreakerCount2;
     }
+
     public int getSayHelloBreakerCount2() {
         return sayHelloBreakerCount2;
     }
 
     @CircuitBreaker(successThreshold = 2, requestVolumeThreshold = 2, failureRatio = 1, delay = 50000)
     public String sayHelloBreakerOverride() {
-        sayHelloBreakerCount4 ++;
+        sayHelloBreakerCount4++;
         // Only one execution succeeds
-        if(sayHelloBreakerCount4 != 5) {
+        if (sayHelloBreakerCount4 != 5) {
             throw new RuntimeException("Connection failed");
         }
-        return "sayHelloBreaker#"+sayHelloBreakerCount2;
+        return "sayHelloBreaker#" + sayHelloBreakerCount2;
     }
+
     public int getSayHelloBreakerCount4() {
         return sayHelloBreakerCount4;
     }
 
-    @CircuitBreaker(successThreshold = 3, requestVolumeThreshold = 4, failureRatio=0.75, delay = 200)
+    @CircuitBreaker(successThreshold = 3, requestVolumeThreshold = 4, failureRatio = 0.75, delay = 200)
     public String sayHelloBreakerHighThreshold() {
-        sayHelloBreakerCount5 ++;
+        sayHelloBreakerCount5++;
         System.err.printf("sayHelloBreakerHighThreshold, %d\n", sayHelloBreakerCount5);
         // Only two execution succeeds
-        if(sayHelloBreakerCount5 < 5 || sayHelloBreakerCount5 > 6) {
+        if (sayHelloBreakerCount5 < 5 || sayHelloBreakerCount5 > 6) {
             throw new RuntimeException("Connection failed");
         }
-        return "sayHelloBreaker#"+sayHelloBreakerCount5;
+        return "sayHelloBreaker#" + sayHelloBreakerCount5;
     }
+
     public int getSayHelloBreakerCount5() {
         return sayHelloBreakerCount5;
     }

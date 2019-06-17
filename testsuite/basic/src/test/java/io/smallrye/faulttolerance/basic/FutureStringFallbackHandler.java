@@ -26,7 +26,6 @@ import javax.inject.Inject;
 import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 
-
 /**
  * @author Antoine Sabot-Durand
  */

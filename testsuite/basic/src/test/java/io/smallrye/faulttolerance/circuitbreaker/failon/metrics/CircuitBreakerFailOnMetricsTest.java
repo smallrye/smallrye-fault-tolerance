@@ -15,7 +15,8 @@
  */
 package io.smallrye.faulttolerance.circuitbreaker.failon.metrics;
 
-import io.smallrye.faulttolerance.TestArchive;
+import static org.junit.Assert.assertEquals;
+
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -23,7 +24,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.assertEquals;
+import io.smallrye.faulttolerance.TestArchive;
 
 @RunWith(Arquillian.class)
 public class CircuitBreakerFailOnMetricsTest {
@@ -42,9 +43,19 @@ public class CircuitBreakerFailOnMetricsTest {
             }
         }
 
-        assertEquals(5,  metrics.getCounters().get("ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.circuitbreaker.callsSucceeded.total").getCount());
-        assertEquals(5,  metrics.getCounters().get("ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.circuitbreaker.callsFailed.total").getCount());
-        assertEquals(10, metrics.getCounters().get("ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.failed.total").getCount());
-        assertEquals(10, metrics.getCounters().get("ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.total").getCount());
+        assertEquals(5, metrics.getCounters().get(
+                "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.circuitbreaker.callsSucceeded.total")
+                .getCount());
+        assertEquals(5, metrics.getCounters().get(
+                "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.circuitbreaker.callsFailed.total")
+                .getCount());
+        assertEquals(10,
+                metrics.getCounters().get(
+                        "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.failed.total")
+                        .getCount());
+        assertEquals(10,
+                metrics.getCounters()
+                        .get("ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.total")
+                        .getCount());
     }
 }

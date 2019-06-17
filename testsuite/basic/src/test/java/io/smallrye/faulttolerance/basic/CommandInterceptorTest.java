@@ -25,7 +25,6 @@ import java.util.concurrent.Future;
 
 import javax.inject.Inject;
 
-import io.smallrye.faulttolerance.TestArchive;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -35,6 +34,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.smallrye.faulttolerance.TestArchive;
+
 /**
  * @author Antoine Sabot-Durand
  */
@@ -43,7 +44,8 @@ public class CommandInterceptorTest {
 
     @Deployment
     public static JavaArchive deploy() {
-        return TestArchive.createBase(CommandInterceptorTest.class).addPackages(false, CommandInterceptorTest.class.getPackage());
+        return TestArchive.createBase(CommandInterceptorTest.class)
+                .addPackages(false, CommandInterceptorTest.class.getPackage());
     }
 
     @Inject
@@ -146,7 +148,8 @@ public class CommandInterceptorTest {
                 System.out.printf("%d, RuntimeException\n", i);
             } catch (Exception ex) {
                 // Not Expected
-                fail("serviceA should throw a RuntimeException or CircuitBreakerOpenException in testCircuitDefaultSuccessThreshold " + "on iteration " + i);
+                fail("serviceA should throw a RuntimeException or CircuitBreakerOpenException in testCircuitDefaultSuccessThreshold "
+                        + "on iteration " + i);
             }
         }
         int count = service.getSayHelloBreakerCount2();
@@ -160,12 +163,14 @@ public class CommandInterceptorTest {
                 service.sayHelloBreakerOverride();
 
                 if (i < 2) {
-                    fail("sayHelloBreakerOverride should throw an Exception in testClassLevelCircuitOverride on iteration " + i);
+                    fail("sayHelloBreakerOverride should throw an Exception in testClassLevelCircuitOverride on iteration "
+                            + i);
                 }
             } catch (CircuitBreakerOpenException cboe) {
                 // Expected on iteration 4
                 if (i < 2) {
-                    fail("sayHelloBreakerOverride should throw a RuntimeException in testClassLevelCircuitOverride on iteration " + i);
+                    fail("sayHelloBreakerOverride should throw a RuntimeException in testClassLevelCircuitOverride on iteration "
+                            + i);
                 }
             } catch (RuntimeException ex) {
                 // Expected
@@ -208,7 +213,8 @@ public class CommandInterceptorTest {
                 // Expected
             } catch (Exception ex) {
                 // Not Expected
-                fail("serviceA should throw a RuntimeException or CircuitBreakerOpenException in testCircuitHighSuccessThreshold " + "on iteration " + i);
+                fail("serviceA should throw a RuntimeException or CircuitBreakerOpenException in testCircuitHighSuccessThreshold "
+                        + "on iteration " + i);
             }
         }
         int count = service.getSayHelloBreakerCount5();
@@ -217,7 +223,8 @@ public class CommandInterceptorTest {
     }
 
     /**
-     * A test to exercise Circuit Breaker thresholds with sufficient retries to open the Circuit and result in a CircuitBreakerOpenException.
+     * A test to exercise Circuit Breaker thresholds with sufficient retries to open the Circuit and result in a
+     * CircuitBreakerOpenException.
      */
     @Test
     public void testCircuitOpenWithMoreRetries() {
@@ -237,7 +244,8 @@ public class CommandInterceptorTest {
         } catch (Exception ex) {
             // Not Expected
             invokeCounter = serviceRetry.getSayHelloRetry();
-            fail("serviceA should retry or throw a CircuitBreakerOpenException in testCircuitOpenWithMoreRetries on iteration " + invokeCounter);
+            fail("serviceA should retry or throw a CircuitBreakerOpenException in testCircuitOpenWithMoreRetries on iteration "
+                    + invokeCounter);
         }
 
         invokeCounter = serviceRetry.getSayHelloRetry();

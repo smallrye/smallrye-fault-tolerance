@@ -47,7 +47,8 @@ public class BulkheadFallbackRejectTest {
     @Deployment
     public static JavaArchive createTestArchive() {
         // See also src/test/resources/config.properties
-        return TestArchive.createBase(BulkheadFallbackRejectTest.class).addPackage(BulkheadFallbackRejectTest.class.getPackage());
+        return TestArchive.createBase(BulkheadFallbackRejectTest.class)
+                .addPackage(BulkheadFallbackRejectTest.class.getPackage());
     }
 
     @Inject

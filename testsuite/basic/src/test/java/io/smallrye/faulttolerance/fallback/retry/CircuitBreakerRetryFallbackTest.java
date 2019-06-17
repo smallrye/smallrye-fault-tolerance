@@ -34,7 +34,8 @@ public class CircuitBreakerRetryFallbackTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerRetryFallbackTest.class).addPackage(CircuitBreakerRetryFallbackTest.class.getPackage());
+        return TestArchive.createBase(CircuitBreakerRetryFallbackTest.class)
+                .addPackage(CircuitBreakerRetryFallbackTest.class.getPackage());
     }
 
     @Test

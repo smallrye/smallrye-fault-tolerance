@@ -37,8 +37,8 @@ import com.netflix.hystrix.strategy.properties.HystrixProperty;
  * The default concurrency strategy using the managed version of {@link ThreadFactory}.
  *
  * <p>
- * An integrator or an application is allowed to provide a custom implementation of {@link HystrixConcurrencyStrategy}. The bean should be {@link Dependent}, must be marked as
- * alternative and selected globally for an application.
+ * An integrator or an application is allowed to provide a custom implementation of {@link HystrixConcurrencyStrategy}. The bean
+ * should be {@link Dependent}, must be marked as alternative and selected globally for an application.
  * </p>
  *
  * @author Martin Kouba
@@ -66,19 +66,23 @@ public class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrateg
     }
 
     @Override
-    public ThreadPoolExecutor getThreadPool(HystrixThreadPoolKey threadPoolKey, HystrixProperty<Integer> corePoolSize, HystrixProperty<Integer> maximumPoolSize,
-            HystrixProperty<Integer> keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
+    public ThreadPoolExecutor getThreadPool(HystrixThreadPoolKey threadPoolKey, HystrixProperty<Integer> corePoolSize,
+            HystrixProperty<Integer> maximumPoolSize, HystrixProperty<Integer> keepAliveTime, TimeUnit unit,
+            BlockingQueue<Runnable> workQueue) {
         int dynamicCoreSize = corePoolSize.get();
         int dynamicMaximumSize = maximumPoolSize.get();
 
-        LOGGER.debugf("Get thread pool executor for %s [core: %s, max: %s]", threadPoolKey.name(), dynamicCoreSize, dynamicMaximumSize);
+        LOGGER.debugf("Get thread pool executor for %s [core: %s, max: %s]", threadPoolKey.name(), dynamicCoreSize,
+                dynamicMaximumSize);
 
-        return new ThreadPoolExecutor(dynamicCoreSize, dynamicCoreSize > dynamicMaximumSize ? dynamicCoreSize : dynamicMaximumSize, keepAliveTime.get(), unit,
+        return new ThreadPoolExecutor(dynamicCoreSize,
+                dynamicCoreSize > dynamicMaximumSize ? dynamicCoreSize : dynamicMaximumSize, keepAliveTime.get(), unit,
                 workQueue, threadFactory);
     }
 
     @Override
-    public ThreadPoolExecutor getThreadPool(HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties threadPoolProperties) {
+    public ThreadPoolExecutor getThreadPool(HystrixThreadPoolKey threadPoolKey,
+            HystrixThreadPoolProperties threadPoolProperties) {
 
         boolean allowMaximumSizeToDivergeFromCoreSize = threadPoolProperties.getAllowMaximumSizeToDivergeFromCoreSize().get();
         int dynamicCoreSize = threadPoolProperties.coreSize().get();
@@ -87,14 +91,16 @@ public class DefaultHystrixConcurrencyStrategy extends HystrixConcurrencyStrateg
         int maxQueueSize = threadPoolProperties.maxQueueSize().get();
         BlockingQueue<Runnable> workQueue = getBlockingQueue(maxQueueSize);
 
-        LOGGER.debugf("Get thread pool executor for %s [allowMaximumSizeToDivergeFromCoreSize: %s, core: %s, max: %s]", threadPoolKey.name(), allowMaximumSizeToDivergeFromCoreSize,
-                dynamicCoreSize, dynamicMaximumSize);
+        LOGGER.debugf("Get thread pool executor for %s [allowMaximumSizeToDivergeFromCoreSize: %s, core: %s, max: %s]",
+                threadPoolKey.name(), allowMaximumSizeToDivergeFromCoreSize, dynamicCoreSize, dynamicMaximumSize);
 
         if (allowMaximumSizeToDivergeFromCoreSize) {
-            return new ThreadPoolExecutor(dynamicCoreSize, dynamicCoreSize > dynamicMaximumSize ? dynamicCoreSize : dynamicMaximumSize, keepAliveTime,
+            return new ThreadPoolExecutor(dynamicCoreSize,
+                    dynamicCoreSize > dynamicMaximumSize ? dynamicCoreSize : dynamicMaximumSize, keepAliveTime,
                     TimeUnit.MINUTES, workQueue, threadFactory);
         } else {
-            return new ThreadPoolExecutor(dynamicCoreSize, dynamicCoreSize, keepAliveTime, TimeUnit.MINUTES, workQueue, threadFactory);
+            return new ThreadPoolExecutor(dynamicCoreSize, dynamicCoreSize, keepAliveTime, TimeUnit.MINUTES, workQueue,
+                    threadFactory);
         }
     }
 

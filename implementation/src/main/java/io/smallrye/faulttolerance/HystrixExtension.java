@@ -37,7 +37,6 @@ import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessManagedBean;
 import javax.enterprise.util.AnnotationLiteral;
 
-import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
@@ -48,6 +47,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
  * @author Antoine Sabot-Durand
@@ -72,12 +72,17 @@ public class HystrixExtension implements Extension {
 
         // Add AnnotatedType for HystrixCommandInterceptor
         // It seems that fraction deployment module cannot be picked up as a CDI bean archive - see also SWARM-1725
-        bbd.addAnnotatedType(bm.createAnnotatedType(HystrixCommandInterceptor.class), HystrixCommandInterceptor.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(HystrixCommandInterceptor.class),
+                HystrixCommandInterceptor.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(HystrixInitializer.class), HystrixInitializer.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultHystrixConcurrencyStrategy.class), DefaultHystrixConcurrencyStrategy.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class), DefaultFaultToleranceOperationProvider.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class), DefaultFallbackHandlerProvider.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultCommandListenersProvider.class), DefaultCommandListenersProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultHystrixConcurrencyStrategy.class),
+                DefaultHystrixConcurrencyStrategy.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
+                DefaultFaultToleranceOperationProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class),
+                DefaultFallbackHandlerProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultCommandListenersProvider.class),
+                DefaultCommandListenersProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
     }
 
@@ -108,7 +113,8 @@ public class HystrixExtension implements Extension {
             if (operation.isLegitimate()) {
                 operation.validate();
                 LOGGER.debugf("Found %s", operation);
-                faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()), operation);
+                faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()),
+                        operation);
             }
         }
     }

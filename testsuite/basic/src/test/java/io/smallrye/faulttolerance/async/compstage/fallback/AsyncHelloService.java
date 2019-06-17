@@ -15,16 +15,16 @@
  */
 package io.smallrye.faulttolerance.async.compstage.fallback;
 
-import org.eclipse.microprofile.faulttolerance.Asynchronous;
-import org.eclipse.microprofile.faulttolerance.Fallback;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import javax.enterprise.context.ApplicationScoped;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Future;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import javax.enterprise.context.ApplicationScoped;
+
+import org.eclipse.microprofile.faulttolerance.Asynchronous;
+import org.eclipse.microprofile.faulttolerance.Fallback;
 
 @ApplicationScoped
 public class AsyncHelloService {
@@ -48,6 +48,8 @@ public class AsyncHelloService {
     }
 
     enum Result {
-        SUCCESS, FAILURE, COMPLETE_EXCEPTIONALLY
+        SUCCESS,
+        FAILURE,
+        COMPLETE_EXCEPTIONALLY
     }
 }

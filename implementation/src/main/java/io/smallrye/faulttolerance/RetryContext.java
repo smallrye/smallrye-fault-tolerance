@@ -21,8 +21,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.smallrye.faulttolerance.config.RetryConfig;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
+
+import io.smallrye.faulttolerance.config.RetryConfig;
 
 public class RetryContext {
 
@@ -41,7 +42,7 @@ public class RetryContext {
     RetryContext(RetryConfig config) {
         this.config = config;
         this.start = System.nanoTime();
-        this.remainingAttempts = new AtomicInteger(config.<Integer>get(RetryConfig.MAX_RETRIES));
+        this.remainingAttempts = new AtomicInteger(config.<Integer> get(RetryConfig.MAX_RETRIES));
         this.maxDuration = Duration.of(config.get(RetryConfig.MAX_DURATION), config.get(RetryConfig.DURATION_UNIT)).toNanos();
         this.delay = Duration.of(config.get(RetryConfig.DELAY), config.get(RetryConfig.DELAY_UNIT)).toMillis();
     }
@@ -87,7 +88,8 @@ public class RetryContext {
         if (retry == null) {
             retry = shouldRetry()
                     // The given exception should not abort execution
-                    && (config.getAbortOn().length == 0 || Arrays.stream(config.getAbortOn()).noneMatch(ex -> ex.isAssignableFrom(exception.getClass())))
+                    && (config.getAbortOn().length == 0
+                            || Arrays.stream(config.getAbortOn()).noneMatch(ex -> ex.isAssignableFrom(exception.getClass())))
                     // We should retry on the given exception
                     && retryOn(exception)
                     // Once the duration is reached, no more retries should be performed
@@ -132,7 +134,7 @@ public class RetryContext {
     }
 
     public boolean hasBeenRetried() {
-        return remainingAttempts.get() < (config.<Integer>get(RetryConfig.MAX_RETRIES));
+        return remainingAttempts.get() < (config.<Integer> get(RetryConfig.MAX_RETRIES));
     }
 
     public void cancel() {

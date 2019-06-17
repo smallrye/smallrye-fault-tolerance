@@ -41,7 +41,9 @@ public class AsyncHelloService {
 
     enum Result {
 
-        SUCCESS, FAILURE, COMPLETE_EXCEPTIONALLY
+        SUCCESS,
+        FAILURE,
+        COMPLETE_EXCEPTIONALLY
 
     }
 

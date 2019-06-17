@@ -15,7 +15,6 @@
  */
 package io.smallrye.faulttolerance;
 
-import io.smallrye.faulttolerance.tracing.TracingInstaller;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
@@ -31,6 +30,8 @@ import org.jboss.logging.Logger;
 import com.netflix.hystrix.Hystrix;
 import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
+
+import io.smallrye.faulttolerance.tracing.TracingInstaller;
 
 /**
  * This component configures Hystrix to use a specific {@link HystrixConcurrencyStrategy}.

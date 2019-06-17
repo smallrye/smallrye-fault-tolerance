@@ -41,7 +41,8 @@ public class CircuitBreakerRollingWindowTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerRollingWindowTest.class).addPackage(CircuitBreakerRollingWindowTest.class.getPackage());
+        return TestArchive.createBase(CircuitBreakerRollingWindowTest.class)
+                .addPackage(CircuitBreakerRollingWindowTest.class.getPackage());
     }
 
     @Test

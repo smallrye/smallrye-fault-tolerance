@@ -50,7 +50,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
     public void validate() {
         if (!"".equals(get(FALLBACK_METHOD))) {
             if (!Fallback.DEFAULT.class.equals(get(VALUE))) {
-                throw new FaultToleranceDefinitionException("Fallback configuration can't contain an handler class and method at the same time");
+                throw new FaultToleranceDefinitionException(
+                        "Fallback configuration can't contain an handler class and method at the same time");
             }
             Method fallbackMethod;
             try {
@@ -58,19 +59,21 @@ public class FallbackConfig extends GenericConfig<Fallback> {
                         beanClass,
                         method.getDeclaringClass(),
                         get(FALLBACK_METHOD),
-                        method.getGenericParameterTypes()
-                );
+                        method.getGenericParameterTypes());
             } catch (PrivilegedActionException e) {
-                throw new FaultToleranceDefinitionException(
-                        "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found", e);
+                throw new FaultToleranceDefinitionException("Fallback method " + get(FALLBACK_METHOD)
+                        + " with same parameters as " + method.getName() + " not found", e);
             }
             if (fallbackMethod == null) {
                 throw new FaultToleranceDefinitionException(
-                        "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName() + " not found");
+                        "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName()
+                                + " not found");
             }
-            if (!method.getReturnType().equals(void.class) && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
+            if (!method.getReturnType().equals(void.class)
+                    && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
                 throw new FaultToleranceDefinitionException(
-                        "Fallback method " + get(FALLBACK_METHOD) + " must have a return type assignable to " + method.getName());
+                        "Fallback method " + get(FALLBACK_METHOD) + " must have a return type assignable to "
+                                + method.getName());
             }
         }
         if (!Fallback.DEFAULT.class.equals(get(VALUE))) {

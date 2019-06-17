@@ -51,8 +51,10 @@ public class SyncCircuitBreakerDisabledTest {
 
     @Deployment
     public static JavaArchive createTestArchive() throws NoSuchMethodException, SecurityException {
-        return TestArchive.createBase(SyncCircuitBreakerDisabledTest.class).addPackage(SyncCircuitBreakerDisabledTest.class.getPackage())
-                .addAsManifestResource(new StringAsset(HystrixCommandInterceptor.SYNC_CIRCUIT_BREAKER_KEY + "=false"), "microprofile-config.properties");
+        return TestArchive.createBase(SyncCircuitBreakerDisabledTest.class)
+                .addPackage(SyncCircuitBreakerDisabledTest.class.getPackage())
+                .addAsManifestResource(new StringAsset(HystrixCommandInterceptor.SYNC_CIRCUIT_BREAKER_KEY + "=false"),
+                        "microprofile-config.properties");
     }
 
     @Inject
@@ -72,7 +74,8 @@ public class SyncCircuitBreakerDisabledTest {
         }
         assertEquals(ShakyServiceClient.REQUEST_THRESHOLD, ShakyServiceClient.COUNTER.get());
         // Should be OPEN now
-        HystrixCircuitBreaker breaker = HystrixCircuitBreaker.Factory.getInstance(HystrixCommandKey.Factory.asKey(getCommandKey()));
+        HystrixCircuitBreaker breaker = HystrixCircuitBreaker.Factory.getInstance(
+                HystrixCommandKey.Factory.asKey(getCommandKey()));
         assertNotNull(breaker);
         assertFalse(breaker.getClass().getName().contains("org.wildfly.swarm.microprofile.faulttolerance"));
         assertTrue(breaker.isOpen());

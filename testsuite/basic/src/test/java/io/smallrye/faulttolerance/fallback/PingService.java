@@ -27,8 +27,8 @@ public class PingService {
 
     private AtomicInteger pingCounter = new AtomicInteger(0);
 
-    @Fallback(fallbackMethod="getFallback")
-    @CircuitBreaker(requestVolumeThreshold=5)
+    @Fallback(fallbackMethod = "getFallback")
+    @CircuitBreaker(requestVolumeThreshold = 5)
     public String ping() {
         pingCounter.incrementAndGet();
         throw new IllegalStateException();

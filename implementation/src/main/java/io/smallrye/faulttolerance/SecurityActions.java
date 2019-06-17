@@ -15,6 +15,8 @@
  */
 package io.smallrye.faulttolerance;
 
+import static java.util.Arrays.asList;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
@@ -33,8 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
-
-import static java.util.Arrays.asList;
 
 // this must be kept identical to io.smallrye.faulttolerance.config.SecurityActions
 /**
@@ -71,8 +71,8 @@ final class SecurityActions {
 
     /**
      * Get method of a given name from beanClass or one of its super-classes or interfaces.
-     * The method should have the same parameter types as a method it is intended to be a fallback for (let's call it the original method).
-     * The original method can be defined in a superclass and have parameter types provided with generics.
+     * The method should have the same parameter types as a method it is intended to be a fallback for (let's call it the
+     * original method). The original method can be defined in a superclass and have parameter types provided with generics.
      *
      * @param beanClass the class of the bean that we search for the method for
      * @param declaringClass the class that defines the method that we search for a counterpart for
@@ -81,14 +81,17 @@ final class SecurityActions {
      * @return the method in search
      * @throws PrivilegedActionException
      */
-    static Method getDeclaredMethod(Class<?> beanClass, Class<?> declaringClass, String name, Type[] parameterTypes) throws PrivilegedActionException {
+    static Method getDeclaredMethod(Class<?> beanClass, Class<?> declaringClass, String name, Type[] parameterTypes)
+            throws PrivilegedActionException {
         if (System.getSecurityManager() == null) {
             return doGetMethod(beanClass, declaringClass, name, parameterTypes);
         }
-        return AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () -> doGetMethod(beanClass, declaringClass, name, parameterTypes));
+        return AccessController.doPrivileged(
+                (PrivilegedExceptionAction<Method>) () -> doGetMethod(beanClass, declaringClass, name, parameterTypes));
     }
 
-    private static Method doGetMethod(final Class<?> beanClass, final Class<?> declaringClass, String name, Type[] expectedParameters) {
+    private static Method doGetMethod(final Class<?> beanClass, final Class<?> declaringClass, String name,
+            Type[] expectedParameters) {
         Method method;
         Class<?> current = beanClass;
 
@@ -96,7 +99,8 @@ final class SecurityActions {
 
         ParametrizedParamsTranslator actualParamsTranslator = new ParametrizedParamsTranslator();
         while (true) {
-            method = getMethodFromClass(beanClass, current, name, expectedParameters, actualParamsTranslator, expectedParamsTranslator);
+            method = getMethodFromClass(beanClass, current, name, expectedParameters, actualParamsTranslator,
+                    expectedParamsTranslator);
             if (method != null) {
                 return method;
             } else {
@@ -109,7 +113,8 @@ final class SecurityActions {
         }
 
         for (Class<?> anInterface : beanClass.getInterfaces()) {
-            method = getMethodFromClass(beanClass, anInterface, name, expectedParameters, actualParamsTranslator, expectedParamsTranslator);
+            method = getMethodFromClass(beanClass, anInterface, name, expectedParameters, actualParamsTranslator,
+                    expectedParamsTranslator);
             if (method != null) {
                 return method;
             }
@@ -121,6 +126,7 @@ final class SecurityActions {
      * Bean class can be a sub-class of the class that defines the method.
      * This method prepares a translator for the eventual generic types of the method
      * to the types provided on the beanClass or any class between it and the class declaring the method
+     * 
      * @param beanClass class of the bean for which the fallback method has been declared
      * @param clazz class that declares the method
      * @return translator
@@ -143,7 +149,8 @@ final class SecurityActions {
         return result;
     }
 
-    private static List<Type> incomingTypesForSuperclass(Class<?> current, List<Type> typeParameters, List<Type> incomingTypes) {
+    private static List<Type> incomingTypesForSuperclass(Class<?> current, List<Type> typeParameters,
+            List<Type> incomingTypes) {
         Type genericSuperclass = current.getGenericSuperclass();
         List<Type> actualTypeParams = (genericSuperclass instanceof ParameterizedType)
                 ? asList(((ParameterizedType) genericSuperclass).getActualTypeArguments())
@@ -164,10 +171,10 @@ final class SecurityActions {
     }
 
     private static Method getMethodFromClass(Class<?> originatingClass,
-                                             Class<?> clazz, String name,
-                                             Type[] parameterTypes,
-                                             ParametrizedParamsTranslator translator,
-                                             ParametrizedParamsTranslator expectedParamsTranslator) {
+            Class<?> clazz, String name,
+            Type[] parameterTypes,
+            ParametrizedParamsTranslator translator,
+            ParametrizedParamsTranslator expectedParamsTranslator) {
         Optional<Method> maybeMethod = Arrays.stream(clazz.getDeclaredMethods())
                 .filter(method -> isAccessibleFrom(method, originatingClass))
                 .filter(method -> method.getName().equals(name))
@@ -193,8 +200,8 @@ final class SecurityActions {
     }
 
     private static Predicate<? super Method> parametersMatch(Type[] parameterTypes,
-                                                             ParametrizedParamsTranslator translator,
-                                                             ParametrizedParamsTranslator expectedParamsTranslator) {
+            ParametrizedParamsTranslator translator,
+            ParametrizedParamsTranslator expectedParamsTranslator) {
         return method -> {
             Type[] methodParams = method.getGenericParameterTypes();
             if (parameterTypes.length != methodParams.length) {
@@ -210,9 +217,9 @@ final class SecurityActions {
     }
 
     private static boolean parameterMatches(Type methodParam,
-                                            Type parameterType,
-                                            ParametrizedParamsTranslator translator,
-                                            ParametrizedParamsTranslator expectedParamsTranslator) {
+            Type parameterType,
+            ParametrizedParamsTranslator translator,
+            ParametrizedParamsTranslator expectedParamsTranslator) {
         methodParam = translator.translate(methodParam);
         parameterType = expectedParamsTranslator.translate(parameterType);
         if (methodParam instanceof Class) {
@@ -229,14 +236,16 @@ final class SecurityActions {
             }
             if (methodParam instanceof ParameterizedType) {
                 if (parameterType instanceof ParameterizedType) {
-                    return parameterizedTypeMatches((ParameterizedType) methodParam, (ParameterizedType) parameterType, translator, expectedParamsTranslator);
+                    return parameterizedTypeMatches((ParameterizedType) methodParam, (ParameterizedType) parameterType,
+                            translator, expectedParamsTranslator);
                 } else {
                     return false;
                 }
             }
             if (methodParam instanceof WildcardType) {
                 if (parameterType instanceof WildcardType) {
-                    return wildcardTypeMatches((WildcardType) methodParam, (WildcardType) parameterType, translator, expectedParamsTranslator);
+                    return wildcardTypeMatches((WildcardType) methodParam, (WildcardType) parameterType, translator,
+                            expectedParamsTranslator);
                 } else {
                     return false;
                 }
@@ -247,17 +256,20 @@ final class SecurityActions {
     }
 
     private static boolean wildcardTypeMatches(WildcardType methodParam,
-                                               WildcardType parameterType,
-                                               ParametrizedParamsTranslator translator,
-                                               ParametrizedParamsTranslator expectedParamsTranslator) {
-        return typeArrayMatches(methodParam.getLowerBounds(), parameterType.getLowerBounds(), translator, expectedParamsTranslator)
-                && typeArrayMatches(methodParam.getUpperBounds(), parameterType.getUpperBounds(), translator, expectedParamsTranslator);
+            WildcardType parameterType,
+            ParametrizedParamsTranslator translator,
+            ParametrizedParamsTranslator expectedParamsTranslator) {
+        boolean lowerBoundsMatch = typeArrayMatches(methodParam.getLowerBounds(), parameterType.getLowerBounds(), translator,
+                expectedParamsTranslator);
+        boolean upperBoundsMatch = typeArrayMatches(methodParam.getUpperBounds(), parameterType.getUpperBounds(), translator,
+                expectedParamsTranslator);
+        return lowerBoundsMatch && upperBoundsMatch;
     }
 
     private static boolean typeArrayMatches(Type[] methodTypes,
-                                            Type[] paramTypes,
-                                            ParametrizedParamsTranslator translator,
-                                            ParametrizedParamsTranslator expectedParamsTranslator) {
+            Type[] paramTypes,
+            ParametrizedParamsTranslator translator,
+            ParametrizedParamsTranslator expectedParamsTranslator) {
         if (methodTypes.length != paramTypes.length) {
             return false;
         }
@@ -270,9 +282,9 @@ final class SecurityActions {
     }
 
     private static boolean parameterizedTypeMatches(ParameterizedType methodParam,
-                                                    ParameterizedType parameterType,
-                                                    ParametrizedParamsTranslator translator,
-                                                    ParametrizedParamsTranslator expectedParamsTranslator) {
+            ParameterizedType parameterType,
+            ParametrizedParamsTranslator translator,
+            ParametrizedParamsTranslator expectedParamsTranslator) {
         Type[] methodParameters = methodParam.getActualTypeArguments();
         Type[] actualParameters = parameterType.getActualTypeArguments();
         if (methodParameters.length != actualParameters.length) {

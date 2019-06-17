@@ -24,7 +24,7 @@ public final class MetricNames {
     static final String TIMEOUT_EXECUTION_DURATION = ".timeout.executionDuration";
 
     static final String CB_CALLS_SUCCEEDED_TOTAL = ".circuitbreaker.callsSucceeded.total";
-    static final String CB_CALLS_PREVENTED_TOTAL =".circuitbreaker.callsPrevented.total";
+    static final String CB_CALLS_PREVENTED_TOTAL = ".circuitbreaker.callsPrevented.total";
     static final String CB_CALLS_FAILED_TOTAL = ".circuitbreaker.callsFailed.total";
     static final String CB_OPENED_TOTAL = ".circuitbreaker.opened.total";
     static final String CB_OPEN_TOTAL = ".circuitbreaker.open.total";

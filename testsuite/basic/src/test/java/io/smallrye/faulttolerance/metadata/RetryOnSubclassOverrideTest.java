@@ -20,7 +20,8 @@ public class RetryOnSubclassOverrideTest {
 
     @Deployment
     public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(RetryOnSubclassOverrideTest.class).addPackage(RetryOnSubclassOverrideTest.class.getPackage());
+        return TestArchive.createBase(RetryOnSubclassOverrideTest.class)
+                .addPackage(RetryOnSubclassOverrideTest.class.getPackage());
     }
 
     @Test

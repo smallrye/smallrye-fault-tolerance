@@ -5,7 +5,6 @@ import com.netflix.hystrix.strategy.executionhook.HystrixCommandExecutionHook;
 
 public class FaultToleranceCommandExecutionHook extends HystrixCommandExecutionHook {
 
-
     @Override
     public <T> Exception onExecutionError(HystrixInvokable<T> commandInstance, Exception e) {
         if (commandInstance instanceof BasicCommand) {
@@ -14,7 +13,5 @@ public class FaultToleranceCommandExecutionHook extends HystrixCommandExecutionH
         }
         return e;
     }
-
-
 
 }

@@ -31,7 +31,7 @@ public class AsyncService {
 
     @Asynchronous
     public Future<String> perform() {
-       return CompletableFuture.completedFuture(foo.getFoo());
+        return CompletableFuture.completedFuture(foo.getFoo());
     }
 
 }

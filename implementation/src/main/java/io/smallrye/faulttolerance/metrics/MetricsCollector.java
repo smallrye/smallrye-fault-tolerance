@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.metrics;
 
 import com.netflix.hystrix.exception.HystrixRuntimeException;
+
 import io.smallrye.faulttolerance.SimpleCommand;
 import io.smallrye.faulttolerance.SynchronousCircuitBreaker;
 

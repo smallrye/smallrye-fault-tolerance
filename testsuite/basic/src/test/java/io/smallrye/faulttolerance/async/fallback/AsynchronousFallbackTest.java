@@ -15,19 +15,20 @@
  */
 package io.smallrye.faulttolerance.async.fallback;
 
-import io.smallrye.faulttolerance.TestArchive;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import io.smallrye.faulttolerance.TestArchive;
 
 @RunWith(Arquillian.class)
 public class AsynchronousFallbackTest {
@@ -37,17 +38,20 @@ public class AsynchronousFallbackTest {
     }
 
     @Test
-    public void testAsyncFallbackSuccess(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncFallbackSuccess(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
         assertEquals("Hello", helloService.hello(AsyncHelloService.Result.SUCCESS).get());
     }
 
     @Test
-    public void testAsyncFallbackMethodThrows(AsyncHelloService helloService) throws IOException, InterruptedException, ExecutionException {
+    public void testAsyncFallbackMethodThrows(AsyncHelloService helloService)
+            throws IOException, InterruptedException, ExecutionException {
         assertEquals("Fallback", helloService.hello(AsyncHelloService.Result.FAILURE).get());
     }
 
     @Test
-    public void testAsyncFallbackFutureCompletesExceptionally(AsyncHelloService helloService) throws IOException, InterruptedException {
+    public void testAsyncFallbackFutureCompletesExceptionally(AsyncHelloService helloService)
+            throws IOException, InterruptedException {
         try {
             helloService.hello(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).get();
             fail();

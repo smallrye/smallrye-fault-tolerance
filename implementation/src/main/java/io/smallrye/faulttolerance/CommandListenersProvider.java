@@ -23,8 +23,8 @@ import javax.enterprise.context.Dependent;
  * Makes it possible to wrap/enhance the command listener instances.
  *
  * <p>
- * An integrator is allowed to provide a custom implementation of {@link CommandListenersProvider}. The bean should be {@link Dependent}, must be marked as
- * alternative and selected globally for an application.
+ * An integrator is allowed to provide a custom implementation of {@link CommandListenersProvider}. The bean should be
+ * {@link Dependent}, must be marked as alternative and selected globally for an application.
  * </p>
  */
 public interface CommandListenersProvider {

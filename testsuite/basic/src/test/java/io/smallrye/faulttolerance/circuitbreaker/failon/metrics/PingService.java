@@ -15,17 +15,17 @@
  */
 package io.smallrye.faulttolerance.circuitbreaker.failon.metrics;
 
-import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
-import org.eclipse.microprofile.faulttolerance.Fallback;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.enterprise.context.ApplicationScoped;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 
 @ApplicationScoped
 public class PingService {
     private AtomicInteger counter = new AtomicInteger(0);
 
-    @CircuitBreaker(failOn = {IllegalArgumentException.class})
+    @CircuitBreaker(failOn = { IllegalArgumentException.class })
     public String ping() {
         int count = counter.incrementAndGet();
 

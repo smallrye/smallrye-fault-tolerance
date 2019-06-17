@@ -17,7 +17,6 @@ package io.smallrye.faulttolerance;
 
 import javax.enterprise.inject.spi.Extension;
 
-import io.smallrye.faulttolerance.HystrixExtension;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.asset.EmptyAsset;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;

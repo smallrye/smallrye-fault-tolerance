@@ -15,15 +15,10 @@
  */
 package io.smallrye.faulttolerance.retry;
 
-import io.smallrye.faulttolerance.TestArchive;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -32,14 +27,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import javax.inject.Inject;
+
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.After;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.smallrye.faulttolerance.TestArchive;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- * <br>
- * Date: 11/23/18
  */
 @RunWith(Arquillian.class)
 public class RetryTest {
@@ -106,6 +106,7 @@ public class RetryTest {
         assertTrue("first call failed and was expected to be successful", results.contains("call0"));
         assertTrue("second call failed and was expected to be successful", results.contains("call1"));
     }
+
     @Test
     public void shouldFallbackOnNoRetryOnBulkhead() throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
@@ -117,8 +118,7 @@ public class RetryTest {
         assertTrue("first call failed and was expected to be successful", results.contains("call0"));
         assertTrue("second call failed and was expected to be successful", results.contains("call1"));
         assertTrue("third call didn't fall back",
-                results.stream().anyMatch(t -> t.startsWith("fallback"))
-        );
+                results.stream().anyMatch(t -> t.startsWith("fallback")));
     }
 
     private List<String> collectResultsAsummingFailures(List<Future<String>> futures, int expectedFailureCount) {
@@ -128,11 +128,12 @@ public class RetryTest {
             try {
                 resultList.add(future.get());
             } catch (InterruptedException | ExecutionException e) {
-                failureCount ++;
+                failureCount++;
             }
         }
 
-        assertEquals("Expected " + expectedFailureCount + " failures and got: " + failureCount, expectedFailureCount, failureCount);
+        assertEquals("Expected " + expectedFailureCount + " failures and got: " + failureCount,
+                expectedFailureCount, failureCount);
         return resultList;
     }
 }

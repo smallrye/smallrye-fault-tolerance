@@ -28,10 +28,10 @@ public class HelloService {
 
     @Retry(maxRetries = 2)
     public String hello() {
-       if (counter.incrementAndGet() > 1) {
-           return counter.toString();
-       }
-       throw new IllegalStateException();
+        if (counter.incrementAndGet() > 1) {
+            return counter.toString();
+        }
+        throw new IllegalStateException();
     }
 
 }

@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.enterprise.context.Dependent;
 
-
 @Dependent
 public class UnconfiguredService {
 
