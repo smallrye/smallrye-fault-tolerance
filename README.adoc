@@ -1,6 +1,7 @@
 :microprofile-fault-tolerance: https://github.com/eclipse/microprofile-fault-tolerance/
 
 image:https://semaphoreci.com/api/v1/smallrye/smallrye-fault-tolerance/branches/master/badge.svg["Semaphore CI", link="https://semaphoreci.com/smallrye/smallrye-fault-tolerance"]
+image:https://sonarcloud.io/api/project_badges/measure?project=smallrye_smallrye-fault-tolerance&metric=alert_status["Quality Gate Status", link="https://sonarcloud.io/dashboard?id=smallrye_smallrye-fault-tolerance"]
 image:https://img.shields.io/github/license/thorntail/thorntail.svg["License", link="http://www.apache.org/licenses/LICENSE-2.0"]
 
 = SmallRye Fault Tolerance
