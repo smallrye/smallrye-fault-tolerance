@@ -6,9 +6,9 @@ public class Fallback<V> implements Callable<V> {
     private final Callable<V> delegate;
     private final String description;
 
-    private final Callable<V> fallback;
+    private final FallbackFunction<V> fallback;
 
-    public Fallback(Callable<V> delegate, String description, Callable<V> fallback) {
+    public Fallback(Callable<V> delegate, String description, FallbackFunction<V> fallback) {
         this.delegate = delegate;
         this.description = description;
         this.fallback = fallback;
@@ -16,18 +16,20 @@ public class Fallback<V> implements Callable<V> {
 
     @Override
     public V call() throws Exception {
+        Throwable failure;
         try {
             return delegate.call();
         } catch (InterruptedException e) {
             throw e;
         } catch (Exception e) {
+            failure = e;
             if (Thread.interrupted()) {
                 throw new InterruptedException();
             }
         }
 
         try {
-            return fallback.call();
+            return fallback.call(failure);
         } catch (InterruptedException e) {
             throw e;
         } catch (Exception e) {
