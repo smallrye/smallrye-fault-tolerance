@@ -8,11 +8,11 @@ import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
 public class Timeout<V> implements Callable<V> {
-    private final Callable<V> delegate;
-    private final String description;
+    final Callable<V> delegate;
+    final String description;
 
-    private final long timeoutInMillis;
-    private final TimeoutWatcher watcher;
+    final long timeoutInMillis;
+    final TimeoutWatcher watcher;
 
     public Timeout(Callable<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher) {
         this.delegate = checkNotNull(delegate, "Timeout action must be set");
@@ -51,7 +51,7 @@ public class Timeout<V> implements Callable<V> {
         }
 
         if (execution.hasTimedOut()) {
-            throw new TimeoutException(description + " timed out");
+            throw timeoutException();
         }
 
         if (exception != null) {
@@ -59,5 +59,9 @@ public class Timeout<V> implements Callable<V> {
         }
 
         return result;
+    }
+
+    TimeoutException timeoutException() {
+        return new TimeoutException(description + " timed out");
     }
 }

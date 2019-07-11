@@ -23,7 +23,7 @@ public class ScheduledExecutorTimeoutWatcherTest {
 
     @After
     public void tearDown() throws InterruptedException {
-        executor.shutdown();
+        executor.shutdownNow();
         executor.awaitTermination(1, TimeUnit.SECONDS);
     }
 

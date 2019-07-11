@@ -33,6 +33,13 @@ public class TimeoutTest {
     }
 
     @Test
+    public void zeroTimeout() {
+        TestAction<String> action = TestAction.immediatelyReturning(() -> "foobar");
+        assertThatThrownBy(() -> new Timeout<>(action, "test action", 0, timeoutWatcher))
+                .isExactlyInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     public void immediatelyReturning_value() throws Exception {
         TestAction<String> action = TestAction.immediatelyReturning(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Timeout<>(action, "test action", 1000, timeoutWatcher));

@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SetOfThrowables {
     public static final SetOfThrowables EMPTY = new SetOfThrowables(Collections.emptySet());
+    public static final SetOfThrowables ALL = new SetOfThrowables(Collections.singleton(Throwable.class));
 
     /**
      * Returns a set of throwables without any additional constraints.

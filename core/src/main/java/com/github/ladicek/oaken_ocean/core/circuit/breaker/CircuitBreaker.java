@@ -5,7 +5,9 @@ import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -26,6 +28,8 @@ public class CircuitBreaker<V> implements Callable<V> {
     private final int failureThreshold;
     private final int successThreshold;
     private final Stopwatch stopwatch;
+
+    private final List<CircuitBreakerListener> listeners = new CopyOnWriteArrayList<>();
 
     private final AtomicReference<State> state;
 
@@ -68,9 +72,16 @@ public class CircuitBreaker<V> implements Callable<V> {
             if (failureThresholdReached) {
                 toOpen(state);
             }
+            listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
         } catch (Throwable e) {
-            boolean failureThresholdReached = failOn.includes(e.getClass())
+            boolean isFailure = failOn.includes(e.getClass());
+            if (isFailure) {
+                listeners.forEach(CircuitBreakerListener::failed);
+            } else {
+                listeners.forEach(CircuitBreakerListener::succeeded);
+            }
+            boolean failureThresholdReached = isFailure
                     ? state.rollingWindow.recordFailure() : state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
                 toOpen(state);
@@ -81,6 +92,7 @@ public class CircuitBreaker<V> implements Callable<V> {
 
     private V inOpen(State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
+            listeners.forEach(CircuitBreakerListener::rejected);
             throw new CircuitBreakerOpenException(description + " circuit breaker is open");
         } else {
             toHalfOpen(state);
@@ -96,8 +108,10 @@ public class CircuitBreaker<V> implements Callable<V> {
             if (successes >= successThreshold) {
                 toClosed(state);
             }
+            listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
         } catch (Throwable e) {
+            listeners.forEach(CircuitBreakerListener::failed);
             toOpen(state);
             throw e;
         }
@@ -145,5 +159,9 @@ public class CircuitBreaker<V> implements Callable<V> {
             result.consecutiveSuccesses = new AtomicInteger(0);
             return result;
         }
+    }
+
+    public void addListener(CircuitBreakerListener listener) {
+        listeners.add(listener);
     }
 }

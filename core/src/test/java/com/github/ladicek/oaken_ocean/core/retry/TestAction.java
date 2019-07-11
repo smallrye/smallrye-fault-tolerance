@@ -9,7 +9,7 @@ public final class TestAction<V> implements Callable<V> {
     private final Supplier<? extends Exception> initialFailure;
     private final Callable<V> result;
 
-    private AtomicInteger invocationCounter = new AtomicInteger(0);
+    private final AtomicInteger invocationCounter = new AtomicInteger(0);
 
     public static <V> TestAction<V> immediatelyReturning(Callable<V> result) {
         return new TestAction<>(0, null, result);

@@ -5,12 +5,9 @@ public class SystemStopwatch implements Stopwatch {
     public RunningStopwatch start() {
         long start = System.nanoTime();
 
-        return new RunningStopwatch() {
-            @Override
-            public long elapsedTimeInMillis() {
-                long now = System.nanoTime();
-                return (now - start) / 1_000_000;
-            }
+        return () -> {
+            long now = System.nanoTime();
+            return (now - start) / 1_000_000;
         };
     }
 }
