@@ -43,19 +43,19 @@ public class CircuitBreakerFailOnMetricsTest {
             }
         }
 
-        assertEquals(5, metrics.getCounters().get(
+        assertEquals(5, metrics.counter(
                 "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.circuitbreaker.callsSucceeded.total")
                 .getCount());
-        assertEquals(5, metrics.getCounters().get(
+        assertEquals(5, metrics.counter(
                 "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.circuitbreaker.callsFailed.total")
                 .getCount());
         assertEquals(10,
-                metrics.getCounters().get(
+                metrics.counter(
                         "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.failed.total")
                         .getCount());
         assertEquals(10,
-                metrics.getCounters()
-                        .get("ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.total")
+                metrics.counter(
+                        "ft.io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping.invocations.total")
                         .getCount());
     }
 }

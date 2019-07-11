@@ -21,6 +21,7 @@ import java.util.concurrent.Future;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.metrics.Counter;
+import org.eclipse.microprofile.metrics.MetricID;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 
@@ -142,10 +143,11 @@ public class CompositeCommand extends BasicCommand {
 
     // duplicate of MetricsCollectorFactory.MetricsCollectorImpl.counterOf
     private Counter counterOf(String name) {
-        Counter counter = registry.getCounters().get(name);
+        MetricID metricID = new MetricID(name);
+        Counter counter = registry.getCounters().get(metricID);
         if (counter == null) {
             synchronized (operation) {
-                counter = registry.getCounters().get(name);
+                counter = registry.getCounters().get(metricID);
                 if (counter == null) {
                     counter = registry.counter(MetricsCollectorFactory.metadataOf(name, MetricType.COUNTER));
                 }

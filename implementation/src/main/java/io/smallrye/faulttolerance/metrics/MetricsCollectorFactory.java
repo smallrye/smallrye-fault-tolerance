@@ -11,6 +11,7 @@ import org.eclipse.microprofile.metrics.Counter;
 import org.eclipse.microprofile.metrics.Gauge;
 import org.eclipse.microprofile.metrics.Histogram;
 import org.eclipse.microprofile.metrics.Metadata;
+import org.eclipse.microprofile.metrics.MetricID;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 import org.jboss.logging.Logger;
@@ -88,9 +89,9 @@ public class MetricsCollectorFactory {
                 counterInc(metricsPrefix + MetricNames.INVOCATIONS_TOTAL);
                 start = 0;
                 if (circuitBreaker != null) {
-                    gaugeRegister(metricsPrefix + MetricNames.CB_OPEN_TOTAL, () -> circuitBreaker.getOpenTotal());
-                    gaugeRegister(metricsPrefix + MetricNames.CB_CLOSED_TOTAL, () -> circuitBreaker.getClosedTotal());
-                    gaugeRegister(metricsPrefix + MetricNames.CB_HALF_OPEN_TOTAL, () -> circuitBreaker.getHalfOpenTotal());
+                    gaugeRegister(metricsPrefix + MetricNames.CB_OPEN_TOTAL, circuitBreaker::getOpenTotal);
+                    gaugeRegister(metricsPrefix + MetricNames.CB_CLOSED_TOTAL, circuitBreaker::getClosedTotal);
+                    gaugeRegister(metricsPrefix + MetricNames.CB_HALF_OPEN_TOTAL, circuitBreaker::getHalfOpenTotal);
                 }
             });
         }
@@ -226,12 +227,13 @@ public class MetricsCollectorFactory {
         }
 
         private void gaugeRegister(String name, Supplier<Long> supplier) {
-            Gauge<?> gauge = registry.getGauges().get(name);
+            MetricID metricID = new MetricID(name);
+            Gauge<?> gauge = registry.getGauges().get(metricID);
             if (gauge == null) {
                 synchronized (operation) {
-                    gauge = registry.getGauges().get(name);
+                    gauge = registry.getGauges().get(metricID);
                     if (gauge == null) {
-                        registry.register(name, (Gauge<Long>) () -> supplier.get());
+                        registry.register(name, (Gauge<Long>) supplier::get);
                     }
                 }
             }
@@ -242,10 +244,11 @@ public class MetricsCollectorFactory {
         }
 
         private Counter counterOf(String name) {
-            Counter counter = registry.getCounters().get(name);
+            MetricID metricID = new MetricID(name);
+            Counter counter = registry.getCounters().get(metricID);
             if (counter == null) {
                 synchronized (operation) {
-                    counter = registry.getCounters().get(name);
+                    counter = registry.getCounters().get(metricID);
                     if (counter == null) {
                         counter = registry.counter(metadataOf(name, MetricType.COUNTER));
                     }
@@ -255,10 +258,11 @@ public class MetricsCollectorFactory {
         }
 
         private Histogram histogramOf(String name) {
-            Histogram histogram = registry.getHistograms().get(name);
+            MetricID metricID = new MetricID(name);
+            Histogram histogram = registry.getHistograms().get(metricID);
             if (histogram == null) {
                 synchronized (operation) {
-                    histogram = registry.getHistograms().get(name);
+                    histogram = registry.getHistograms().get(metricID);
                     if (histogram == null) {
                         histogram = registry.histogram(metadataOf(name, MetricType.HISTOGRAM));
                     }
@@ -278,9 +282,11 @@ public class MetricsCollectorFactory {
     }
 
     public static Metadata metadataOf(String name, MetricType metricType) {
-        Metadata res = new Metadata(name, metricType);
-        res.setReusable(true);
-        return res;
+        return Metadata.builder()
+                .withName(name)
+                .withType(metricType)
+                .reusable()
+                .build();
     }
 
 }
