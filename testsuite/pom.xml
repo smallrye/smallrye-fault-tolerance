@@ -32,7 +32,6 @@
           <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
 
