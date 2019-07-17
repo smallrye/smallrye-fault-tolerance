@@ -24,19 +24,20 @@ public class Timeout<V> implements Callable<V> {
     @Override
     public V call() throws Exception {
         TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis);
-        watcher.schedule(execution);
-        // TODO ability to cancel scheduled watch inside/after execution.finish() would be nice to conserve resources
+        TimeoutWatch watch = watcher.schedule(execution);
 
         V result = null;
         Exception exception = null;
         boolean interrupted = false;
         try {
             result = delegate.call();
-            execution.finish();
         } catch (InterruptedException e) {
             interrupted = true;
         } catch (Exception e) {
             exception = e;
+        } finally {
+            // if the execution already timed out, this will be a noop
+            execution.finish(watch::cancel);
         }
 
         if (Thread.interrupted()) {

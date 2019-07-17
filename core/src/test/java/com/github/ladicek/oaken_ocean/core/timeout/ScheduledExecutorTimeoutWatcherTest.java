@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,8 +22,9 @@ public class ScheduledExecutorTimeoutWatcherTest {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException {
         executor.shutdown();
+        executor.awaitTermination(1, TimeUnit.SECONDS);
     }
 
     @Test
@@ -30,10 +32,19 @@ public class ScheduledExecutorTimeoutWatcherTest {
         AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
         Thread thread = run(wasInterrupted);
-        watcher.schedule(new TimeoutExecution(thread, 50L));
-        thread.join();
+        TimeoutExecution execution = new TimeoutExecution(thread, 50L);
+        TimeoutWatch watch = watcher.schedule(execution);
 
+        assertThat(execution.isRunning()).isTrue();
+        assertThat(watch.isRunning()).isTrue();
+
+        thread.join();
         assertThat(wasInterrupted).isTrue();
+
+        assertThat(execution.isRunning()).isFalse();
+        assertThat(execution.hasFinished()).isFalse();
+        assertThat(execution.hasTimedOut()).isTrue();
+        assertThat(watch.isRunning()).isFalse();
     }
 
     @Test
@@ -41,10 +52,20 @@ public class ScheduledExecutorTimeoutWatcherTest {
         AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
         Thread thread = run(wasInterrupted);
-        watcher.schedule(new TimeoutExecution(thread, 200L));
-        thread.join();
+        TimeoutExecution execution = new TimeoutExecution(thread, 200L);
+        TimeoutWatch watch = watcher.schedule(execution);
 
+        assertThat(execution.isRunning()).isTrue();
+        assertThat(watch.isRunning()).isTrue();
+
+        thread.join();
+        execution.finish(watch::cancel); // execution.finish() needs to be called explicitly
         assertThat(wasInterrupted).isFalse();
+
+        assertThat(execution.isRunning()).isFalse();
+        assertThat(execution.hasFinished()).isTrue();
+        assertThat(execution.hasTimedOut()).isFalse();
+        assertThat(watch.isRunning()).isFalse();
     }
 
     private Thread run(AtomicBoolean interruptionFlag) {

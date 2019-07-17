@@ -13,25 +13,43 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
     private final Barrier timeoutElapsedBarrier;
     private final Barrier executionInterruptedBarrier;
 
+    private final AtomicBoolean timeoutWatchCancelled = new AtomicBoolean(false);
+
     public TestTimeoutWatcher(Barrier timeoutElapsedBarrier, Barrier executionInterruptedBarrier) {
         this.timeoutElapsedBarrier = timeoutElapsedBarrier;
         this.executionInterruptedBarrier = executionInterruptedBarrier;
     }
 
+    boolean timeoutWatchWasCancelled() {
+        return timeoutWatchCancelled.get();
+    }
+
     @Override
-    public void schedule(TimeoutExecution execution) {
+    public TimeoutWatch schedule(TimeoutExecution execution) {
         if (alreadyUsed.compareAndSet(false, true)) {
-            new Thread(() -> {
+            Thread thread = new Thread(() -> {
                 try {
                     timeoutElapsedBarrier.await();
                     execution.timeoutAndInterrupt();
                     executionInterruptedBarrier.open();
                 } catch (InterruptedException e) {
-                    // TODO should scream louder, somehow
-                    System.err.println("Unexpected interruption");
-                    e.printStackTrace();
+                    // this is expected in case the watched code doesn't timeout (and so the watch is cancelled)
+                    // see also the return value of this method
                 }
-            }).start();
+            });
+            thread.start();
+            return new TimeoutWatch() {
+                @Override
+                public boolean isRunning() {
+                    return thread.isAlive();
+                }
+
+                @Override
+                public void cancel() {
+                    timeoutWatchCancelled.set(true);
+                    thread.interrupt();
+                }
+            };
         } else {
             throw new IllegalStateException("TestTimeoutWatcher cannot be reused");
         }

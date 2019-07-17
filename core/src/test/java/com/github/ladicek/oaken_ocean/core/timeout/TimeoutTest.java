@@ -15,7 +15,7 @@ public class TimeoutTest {
     private Barrier watcherTimeoutElapsedBarrier;
     private Barrier watcherExecutionInterruptedBarrier;
 
-    private TimeoutWatcher timeoutWatcher;
+    private TestTimeoutWatcher timeoutWatcher;
 
     @Before
     public void setUp() {
@@ -37,6 +37,7 @@ public class TimeoutTest {
         TestAction<String> action = TestAction.immediatelyReturning(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Timeout<>(action, "test action", 1000, timeoutWatcher));
         assertThat(result.await()).isEqualTo("foobar");
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
     @Test
@@ -44,6 +45,7 @@ public class TimeoutTest {
         TestAction<Void> action = TestAction.immediatelyReturning(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Timeout<>(action, "test action", 1000, timeoutWatcher));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
     @Test
@@ -54,6 +56,7 @@ public class TimeoutTest {
         TestThread<String> result = runOnTestThread(new Timeout<>(action, "test action", 1000, timeoutWatcher));
         actionDelayBarrier.open();
         assertThat(result.await()).isEqualTo("foobar");
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
     @Test
@@ -67,6 +70,7 @@ public class TimeoutTest {
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(TimeoutException.class)
                 .hasMessage("test action timed out");
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
     }
 
     @Test
@@ -81,6 +85,7 @@ public class TimeoutTest {
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(TimeoutException.class)
                 .hasMessage("test action timed out");
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
     }
 
     @Test
@@ -93,6 +98,7 @@ public class TimeoutTest {
         actionStartBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
     @Test
@@ -103,6 +109,7 @@ public class TimeoutTest {
         TestThread<Void> result = runOnTestThread(new Timeout<>(action, "test action", 1000, timeoutWatcher));
         actionDelayBarrier.open();
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
     @Test
@@ -116,6 +123,7 @@ public class TimeoutTest {
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(TimeoutException.class)
                 .hasMessage("test action timed out");
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
     }
 
     @Test
@@ -130,6 +138,7 @@ public class TimeoutTest {
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(TimeoutException.class)
                 .hasMessage("test action timed out");
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
     }
 
     @Test
@@ -142,5 +151,6 @@ public class TimeoutTest {
         actionStartBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 }

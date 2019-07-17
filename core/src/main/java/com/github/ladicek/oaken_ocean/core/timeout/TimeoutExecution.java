@@ -23,12 +23,22 @@ final class TimeoutExecution {
         return timeoutInMillis;
     }
 
+    boolean isRunning() {
+        return state.get() == STATE_RUNNING;
+    }
+
+    boolean hasFinished() {
+        return state.get() == STATE_FINISHED;
+    }
+
     boolean hasTimedOut() {
         return state.get() == STATE_TIMED_OUT;
     }
 
-    void finish() {
-        state.compareAndSet(STATE_RUNNING, STATE_FINISHED);
+    void finish(Runnable ifFinished) {
+        if (state.compareAndSet(STATE_RUNNING, STATE_FINISHED)) {
+            ifFinished.run();
+        }
     }
 
     void timeoutAndInterrupt() {
