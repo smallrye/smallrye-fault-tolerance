@@ -37,6 +37,7 @@
         <version.org.assertj.assertj-core>3.11.1</version.org.assertj.assertj-core>
         <version.org.eclipse.microprofile.fault-tolerance>2.0</version.org.eclipse.microprofile.fault-tolerance>
         <version.org.jacoco.jacoco-maven-plugin>0.8.2</version.org.jacoco.jacoco-maven-plugin>
+        <version.org.pitest.pitest-maven>1.4.9</version.org.pitest.pitest-maven>
 
         <jacoco.argLine></jacoco.argLine> <!-- will be set by the JaCoCo Maven plugin when active -->
     </properties>
@@ -135,6 +136,31 @@
                                 <goals>
                                     <goal>report</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>pit</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <version>${version.org.pitest.pitest-maven}</version>
+                        <executions>
+                            <execution>
+                                <id>mutation-coverage</id>
+                                <goals>
+                                    <goal>mutationCoverage</goal>
+                                </goals>
+                                <configuration>
+                                    <targetClasses>
+                                        <param>com.github.ladicek.oaken_ocean.*</param>
+                                    </targetClasses>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
