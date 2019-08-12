@@ -1,12 +1,13 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
-import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
+import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
@@ -26,11 +27,7 @@ public class CircuitBreaker<V> implements Callable<V> {
     private final int successThreshold;
     private final Stopwatch stopwatch;
 
-    // these state variables can only be mutated in the state transition methods (from*to*)
-    private int state = STATE_CLOSED;
-    private RollingWindow rollingWindow; // only consulted in CLOSED
-    private RunningStopwatch runningStopwatch; // only consulted in OPEN
-    private AtomicInteger consecutiveSuccesses; // only consulted in HALF_OPEN
+    private final AtomicReference<State> state;
 
     public CircuitBreaker(Callable<V> delegate, String description, SetOfThrowables failOn, long delayInMillis,
                           int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch) {
@@ -43,94 +40,110 @@ public class CircuitBreaker<V> implements Callable<V> {
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
 
-        this.rollingWindow = RollingWindow.create(rollingWindowSize, failureThreshold);
+        this.state = new AtomicReference<>(State.closed(rollingWindowSize, failureThreshold));
     }
 
     @Override
     public V call() throws Exception {
-        int state = this.state;
-        switch (state) {
+        // this is the only place where `state` can be dereferenced!
+        // it must be passed through as a parameter to all the state methods,
+        // so that they don't see the circuit breaker moving to a different state under them
+        State state = this.state.get();
+        switch (state.id) {
             case STATE_CLOSED:
-                return inClosed();
+                return inClosed(state);
             case STATE_OPEN:
-                return inOpen();
+                return inOpen(state);
             case STATE_HALF_OPEN:
-                return inHalfOpen();
+                return inHalfOpen(state);
             default:
-                throw new AssertionError("Invalid circuit breaker state: " + state);
+                throw new AssertionError("Invalid circuit breaker state: " + state.id);
         }
     }
 
-    private V inClosed() throws Exception {
+    private V inClosed(State state) throws Exception {
         try {
             V result = delegate.call();
-            boolean failureThresholdReached = rollingWindow.recordSuccess();
+            boolean failureThresholdReached = state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
-                fromClosedToOpen();
+                toOpen(state);
             }
             return result;
         } catch (Throwable e) {
             boolean failureThresholdReached = failOn.includes(e.getClass())
-                    ? rollingWindow.recordFailure() : rollingWindow.recordSuccess();
+                    ? state.rollingWindow.recordFailure() : state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
-                fromClosedToOpen();
+                toOpen(state);
             }
             throw e;
         }
     }
 
-    private V inOpen() throws Exception {
-        if (runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
+    private V inOpen(State state) throws Exception {
+        if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             throw new CircuitBreakerOpenException(description + " circuit breaker is open");
         } else {
-            fromOpenToHalfOpen();
-            return inHalfOpen();
+            toHalfOpen(state);
+            // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
+            return call();
         }
     }
 
-    private V inHalfOpen() throws Exception {
+    private V inHalfOpen(State state) throws Exception {
         try {
             V result = delegate.call();
-            int successes = consecutiveSuccesses.incrementAndGet();
+            int successes = state.consecutiveSuccesses.incrementAndGet();
             if (successes >= successThreshold) {
-                fromHalfOpenToClosed();
+                toClosed(state);
             }
             return result;
         } catch (Throwable e) {
-            fromHalfOpenToOpen();
+            toOpen(state);
             throw e;
         }
     }
 
-    // the state transitions must be happen atomically
-    // currently, the methods are synchronized, but it should be possible to embed all the state variables
-    // into an extra class, hold an AtomicReference to it and do a CAS
-
-    private synchronized void fromClosedToOpen() {
-        if (state == STATE_CLOSED) {
-            state = STATE_OPEN;
-            runningStopwatch = stopwatch.start();
-        }
+    private void toClosed(State state) {
+        State newState = State.closed(rollingWindowSize, failureThreshold);
+        this.state.compareAndSet(state, newState);
     }
 
-    private synchronized void fromOpenToHalfOpen() {
-        if (state == STATE_OPEN) {
-            state = STATE_HALF_OPEN;
-            consecutiveSuccesses = new AtomicInteger(0);
-        }
+    private void toOpen(State state) {
+        State newState = State.open(stopwatch);
+        this.state.compareAndSet(state, newState);
     }
 
-    private synchronized void fromHalfOpenToClosed() {
-        if (state == STATE_HALF_OPEN) {
-            state = STATE_CLOSED;
-            rollingWindow = RollingWindow.create(rollingWindowSize, failureThreshold);
-        }
+    private void toHalfOpen(State state) {
+        State newState = State.halfOpen();
+        this.state.compareAndSet(state, newState);
     }
 
-    private synchronized void fromHalfOpenToOpen() {
-        if (state == STATE_HALF_OPEN) {
-            state = STATE_OPEN;
-            runningStopwatch = stopwatch.start();
+    static final class State {
+        int id;
+        RollingWindow rollingWindow; // only consulted in CLOSED
+        RunningStopwatch runningStopwatch; // only consulted in OPEN
+        AtomicInteger consecutiveSuccesses; // only consulted in HALF_OPEN
+
+        private State(int id) {
+            this.id = id;
+        }
+
+        static State closed(int rollingWindowSize, int failureThreshold) {
+            State result = new State(STATE_CLOSED);
+            result.rollingWindow = RollingWindow.create(rollingWindowSize, failureThreshold);
+            return result;
+        }
+
+        static State open(Stopwatch stopwatch) {
+            State result = new State(STATE_OPEN);
+            result.runningStopwatch = stopwatch.start();
+            return result;
+        }
+
+        static State halfOpen() {
+            State result = new State(STATE_HALF_OPEN);
+            result.consecutiveSuccesses = new AtomicInteger(0);
+            return result;
         }
     }
 }
