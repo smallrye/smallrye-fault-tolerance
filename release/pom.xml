@@ -4,11 +4,11 @@
 
     <parent>
         <groupId>io.smallrye</groupId>
-        <artifactId>smallrye-fault-tolerance-parent-2.0</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <artifactId>smallrye-fault-tolerance-parent</artifactId>
+        <version>2.0.8-SNAPSHOT</version>
     </parent>
 
-    <artifactId>smallrye-fault-tolerance-release-2.0</artifactId>
+    <artifactId>smallrye-fault-tolerance-release</artifactId>
 
     <name>Empty Release Project to Avoid Maven Bug</name>
     <description>Empty Release Project to Avoid Maven Bug</description>
