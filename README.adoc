@@ -6,7 +6,7 @@ image:https://img.shields.io/github/license/thorntail/thorntail.svg["License", l
 
 = SmallRye Fault Tolerance
 
-SmallRye Fault Tolerance is an implementation of {microprofile-fault-tolerance}[Eclipse MicroProfile Fault Tolerance.
+SmallRye Fault Tolerance is an implementation of {microprofile-fault-tolerance}[Eclipse MicroProfile Fault Tolerance].
 
 The implementation depends on the xref:_hystrix[Hystrix fraction], which is added transitively into your application.
 
