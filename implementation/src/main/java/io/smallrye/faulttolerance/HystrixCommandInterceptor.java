@@ -44,7 +44,6 @@ import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
 import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
@@ -133,8 +132,6 @@ public class HystrixCommandInterceptor {
 
     private final ConcurrentMap<Method, CommandMetadata> commandMetadataCache;
 
-    private final Boolean nonFallBackEnable;
-
     private final Boolean syncCircuitBreakerEnabled;
 
     private final boolean asyncTimeout;
@@ -152,12 +149,10 @@ public class HystrixCommandInterceptor {
     @SuppressWarnings("unchecked")
     @Inject
     public HystrixCommandInterceptor(
-            @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, FallbackHandlerProvider fallbackHandlerProvider,
             FaultToleranceOperationProvider faultToleranceOperationProvider,
             CommandListenersProvider listenersProvider, @Intercepted Bean<?> interceptedBean,
             MetricsCollectorFactory metricsCollectorFactory) {
-        this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.asyncTimeout = config.getOptionalValue(ASYNC_TIMEOUT_KEY, Boolean.class).orElse(false);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
@@ -196,7 +191,7 @@ public class HystrixCommandInterceptor {
         ExecutionContextWithInvocationContext ctx = new ExecutionContextWithInvocationContext(invocationContext);
         LOGGER.tracef("FT operation intercepted: %s", method);
 
-        RetryContext retryContext = nonFallBackEnable && operation.hasRetry() ? new RetryContext(operation.getRetry()) : null;
+        RetryContext retryContext = operation.hasRetry() ? new RetryContext(operation.getRetry()) : null;
         SynchronousCircuitBreaker syncCircuitBreaker = getSynchronousCircuitBreaker(metadata);
 
         Cancelator cancelator = new Cancelator(retryContext);
@@ -389,7 +384,7 @@ public class HystrixCommandInterceptor {
     }
 
     private SynchronousCircuitBreaker getSynchronousCircuitBreaker(CommandMetadata metadata) {
-        if (nonFallBackEnable && syncCircuitBreakerEnabled && metadata.hasCircuitBreaker()) {
+        if (syncCircuitBreakerEnabled && metadata.hasCircuitBreaker()) {
             HystrixCircuitBreaker circuitBreaker = circuitBreakers.computeIfAbsent(metadata.commandKey.name(),
                     (key) -> new SynchronousCircuitBreaker(metadata.operation.getCircuitBreaker()));
             if (circuitBreaker instanceof SynchronousCircuitBreaker) {
@@ -415,7 +410,7 @@ public class HystrixCommandInterceptor {
             propertiesSetter.withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.SEMAPHORE);
         }
 
-        if (nonFallBackEnable && operation.hasTimeout()) {
+        if (operation.hasTimeout()) {
             Long value = Duration
                     .of(operation.getTimeout().get(TimeoutConfig.VALUE), operation.getTimeout().get(TimeoutConfig.UNIT))
                     .toMillis();
@@ -429,7 +424,7 @@ public class HystrixCommandInterceptor {
             propertiesSetter.withExecutionTimeoutEnabled(false);
         }
 
-        if (nonFallBackEnable && operation.hasCircuitBreaker()) {
+        if (operation.hasCircuitBreaker()) {
             propertiesSetter.withCircuitBreakerEnabled(true)
                     .withCircuitBreakerRequestVolumeThreshold(
                             operation.getCircuitBreaker().get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD))
@@ -447,7 +442,7 @@ public class HystrixCommandInterceptor {
                 // Each method must have a unique command key
                 .andCommandKey(commandKey).andCommandPropertiesDefaults(propertiesSetter).andThreadPoolKey(poolKey);
 
-        if (nonFallBackEnable && operation.hasBulkhead()) {
+        if (operation.hasBulkhead()) {
             BulkheadConfig bulkhead = operation.getBulkhead();
             if (operation.isAsync()) {
                 HystrixThreadPoolProperties.Setter threadPoolSetter = HystrixThreadPoolProperties.Setter();
@@ -484,7 +479,7 @@ public class HystrixCommandInterceptor {
             // Initialize Hystrix command setter
             commandKey = HystrixCommandKey.Factory.asKey(SimpleCommand.getCommandKey(method));
 
-            if (nonFallBackEnable && operation.hasBulkhead() && operation.isAsync()) {
+            if (operation.hasBulkhead() && operation.isAsync()) {
                 // Each bulkhead policy needs a dedicated thread pool
                 // Note that this is _in addition_ to the thread pool dedicated
                 // for processing the async invocations (see Composite[Observable]Command.initSetter)
