@@ -252,7 +252,9 @@ public class FaultToleranceOperation {
         String onClass = config.getOptionalValue(method.getDeclaringClass().getName() +
                 "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
         String onGlobal = config.getOptionalValue(annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
-        Boolean returnConfig = true;
+        Boolean returnConfig = !annotationType.equals(Fallback.class)
+                ? config.getOptionalValue("MP_Fault_Tolerance_NonFallback_Enabled", Boolean.class).orElse(true)
+                : true;
 
         if (!undifined.equals(onMethod)) {
             returnConfig = new Boolean(onMethod);
