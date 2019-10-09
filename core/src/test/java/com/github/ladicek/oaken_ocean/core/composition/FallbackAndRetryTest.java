@@ -1,4 +1,4 @@
-package com.github.ladicek.oaken_ocean.core.integration;
+package com.github.ladicek.oaken_ocean.core.composition;
 
 import com.github.ladicek.oaken_ocean.core.retry.TestAction;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
@@ -7,8 +7,8 @@ import org.junit.Test;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.github.ladicek.oaken_ocean.core.integration.Strategies.fallback;
-import static com.github.ladicek.oaken_ocean.core.integration.Strategies.retry;
+import static com.github.ladicek.oaken_ocean.core.composition.Strategies.fallback;
+import static com.github.ladicek.oaken_ocean.core.composition.Strategies.retry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class FallbackAndRetryTest {

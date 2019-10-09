@@ -1,4 +1,4 @@
-package com.github.ladicek.oaken_ocean.core.integration;
+package com.github.ladicek.oaken_ocean.core.composition;
 
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreakerListener;
 import com.github.ladicek.oaken_ocean.core.retry.TestAction;
@@ -8,8 +8,8 @@ import org.junit.Test;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.github.ladicek.oaken_ocean.core.integration.Strategies.circuitBreaker;
-import static com.github.ladicek.oaken_ocean.core.integration.Strategies.retry;
+import static com.github.ladicek.oaken_ocean.core.composition.Strategies.circuitBreaker;
+import static com.github.ladicek.oaken_ocean.core.composition.Strategies.retry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

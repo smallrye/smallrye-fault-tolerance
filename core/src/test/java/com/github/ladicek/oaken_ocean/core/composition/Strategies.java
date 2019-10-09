@@ -1,4 +1,4 @@
-package com.github.ladicek.oaken_ocean.core.integration;
+package com.github.ladicek.oaken_ocean.core.composition;
 
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreaker;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreakerListener;
@@ -13,7 +13,7 @@ import java.util.concurrent.Callable;
 
 /**
  * Factory methods for fault tolerance strategies that are easier to use than their constructors.
- * This is to be used for testing strategies integration, where one doesn't have to verify all possible
+ * This is to be used for testing strategies composition, where one doesn't have to verify all possible
  * behaviors of the strategy (they are covered by unit tests of individual strategies).
  */
 final class Strategies {
