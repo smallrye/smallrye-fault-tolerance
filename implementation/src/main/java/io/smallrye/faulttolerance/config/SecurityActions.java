@@ -32,8 +32,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 // this must be kept identical to io.smallrye.faulttolerance.SecurityActions
@@ -98,10 +100,20 @@ final class SecurityActions {
         ParametrizedParamsTranslator expectedParamsTranslator = prepareParamsTranslator(beanClass, declaringClass);
 
         ParametrizedParamsTranslator actualParamsTranslator = new ParametrizedParamsTranslator();
+
+        // gather all interface methods based on declaring class
+        Set<String> allInterfaceMethodNames = new HashSet<>();
+        for (Class<?> clazz : declaringClass.getInterfaces()) {
+            for (Method m : clazz.getMethods()) {
+                allInterfaceMethodNames.add(m.getName());
+            }
+        }
         while (true) {
             method = getMethodFromClass(beanClass, current, name, expectedParameters, actualParamsTranslator,
                     expectedParamsTranslator);
-            if (method != null) {
+            // fault tolerance spec is in 8.1.2; fallback method must be from same class, superclass, implemented interface
+            if (method != null
+                    && (current.isAssignableFrom(declaringClass) || allInterfaceMethodNames.contains(method.getName()))) {
                 return method;
             } else {
                 if (current.getSuperclass() == null) {
