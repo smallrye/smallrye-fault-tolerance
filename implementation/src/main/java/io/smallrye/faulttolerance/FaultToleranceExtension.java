@@ -52,9 +52,9 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 /**
  * @author Antoine Sabot-Durand
  */
-public class HystrixExtension implements Extension {
+public class FaultToleranceExtension implements Extension {
 
-    private static final Logger LOGGER = Logger.getLogger(HystrixExtension.class);
+    private static final Logger LOGGER = Logger.getLogger(FaultToleranceExtension.class);
 
     /**
      * @see #collectFaultToleranceOperations(ProcessManagedBean)
@@ -72,11 +72,8 @@ public class HystrixExtension implements Extension {
 
         // Add AnnotatedType for HystrixCommandInterceptor
         // It seems that fraction deployment module cannot be picked up as a CDI bean archive - see also SWARM-1725
-        bbd.addAnnotatedType(bm.createAnnotatedType(HystrixCommandInterceptor.class),
-                HystrixCommandInterceptor.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(HystrixInitializer.class), HystrixInitializer.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultHystrixConcurrencyStrategy.class),
-                DefaultHystrixConcurrencyStrategy.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(FaultToleranceInterceptor.class),
+                FaultToleranceInterceptor.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
                 DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class),
@@ -86,7 +83,7 @@ public class HystrixExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
     }
 
-    void changeInterceptorPriority(@Observes ProcessAnnotatedType<HystrixCommandInterceptor> event) {
+    void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {
         ConfigProvider.getConfig()
                 .getOptionalValue("mp.fault.tolerance.interceptor.priority", Integer.class)
                 .ifPresent(configuredInterceptorPriority -> {

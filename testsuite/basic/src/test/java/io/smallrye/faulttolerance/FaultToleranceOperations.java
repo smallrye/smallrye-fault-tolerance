@@ -26,7 +26,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 public class FaultToleranceOperations {
 
     @Inject
-    HystrixExtension extension;
+    FaultToleranceExtension extension;
 
     public FaultToleranceOperation get(Class<?> beanClass, Method method) {
         return extension.getFaultToleranceOperation(beanClass, method);

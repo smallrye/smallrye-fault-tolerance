@@ -97,9 +97,14 @@
       <artifactId>microprofile-fault-tolerance-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.netflix.hystrix</groupId>
-      <artifactId>hystrix-core</artifactId>
+      <groupId>com.github.ladicek</groupId>
+      <artifactId>oaken-ocean-core</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
+<!--    <dependency>-->
+<!--      <groupId>com.netflix.hystrix</groupId>-->
+<!--      <artifactId>hystrix-core</artifactId>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>javax.enterprise</groupId>
       <artifactId>cdi-api</artifactId>

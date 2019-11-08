@@ -47,8 +47,44 @@ public class RetryContext {
         this.delay = Duration.of(config.get(RetryConfig.DELAY), config.get(RetryConfig.DELAY_UNIT)).toMillis();
     }
 
-    RetryConfig getConfig() {
-        return config;
+    public static RetryContext ofConfig(RetryConfig config) {
+        if (config != null) {
+            return new RetryContext(config);
+        } else {
+            return new RetryContext(config) {
+                // mstodo much less needed here.
+                // mstodo extract interface from that?
+                @Override
+                Exception nextRetry(Throwable throwable) {
+                    return rethrow(throwable);
+                }
+
+                @Override
+                boolean shouldRetry() {
+                    return false;
+                }
+
+                @Override
+                public boolean isLastAttempt() {
+                    return true;
+                }
+
+                @Override
+                boolean shouldRetryOn(Throwable exception) {
+                    return false;
+                }
+
+                @Override
+                public boolean hasBeenRetried() {
+                    return false;
+                }
+
+                @Override
+                public void cancel() {
+                    super.cancel();
+                }
+            };
+        }
     }
 
     /**
@@ -64,14 +100,18 @@ public class RetryContext {
             remainingAttempts.decrementAndGet();
             return delayIfNeeded();
         } else {
-            if (throwable instanceof Error) {
-                throw (Error) throwable;
-            } else if (throwable instanceof Exception) {
-                return (Exception) throwable;
-            } else {
-                // Business method interceptors may only throw exceptions
-                return new FaultToleranceException(throwable);
-            }
+            return rethrow(throwable);
+        }
+    }
+
+    private static Exception rethrow(Throwable throwable) {
+        if (throwable instanceof Error) {
+            throw (Error) throwable;
+        } else if (throwable instanceof Exception) {
+            return (Exception) throwable;
+        } else {
+            // Business method interceptors may only throw exceptions
+            return new FaultToleranceException(throwable);
         }
     }
 

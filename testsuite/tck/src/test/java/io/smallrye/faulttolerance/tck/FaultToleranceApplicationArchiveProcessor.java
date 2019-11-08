@@ -51,11 +51,9 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
 
         if (applicationArchive instanceof LibraryContainer) {
             JavaArchive additionalBeanArchive = ShrinkWrap.create(JavaArchive.class);
-            additionalBeanArchive.addClass(HystrixCommandSemaphoreCleanup.class);
             additionalBeanArchive.addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml");
             ((LibraryContainer<?>) applicationArchive).addAsLibrary(additionalBeanArchive);
         } else {
-            classContainer.addClass(HystrixCommandSemaphoreCleanup.class);
             classContainer.addAsResource(EmptyAsset.INSTANCE, "META-INF/beans.xml");
         }
 

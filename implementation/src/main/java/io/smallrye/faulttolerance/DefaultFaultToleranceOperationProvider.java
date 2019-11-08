@@ -33,11 +33,11 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 @Dependent
 public class DefaultFaultToleranceOperationProvider implements FaultToleranceOperationProvider {
 
-    private final HystrixExtension extension;
+    private final FaultToleranceExtension extension;
 
     @Inject
     public DefaultFaultToleranceOperationProvider(BeanManager beanManager) {
-        this.extension = beanManager.getExtension(HystrixExtension.class);
+        this.extension = beanManager.getExtension(FaultToleranceExtension.class);
     }
 
     @Override
