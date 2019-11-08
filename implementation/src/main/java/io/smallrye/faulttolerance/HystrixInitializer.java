@@ -16,6 +16,7 @@
 package io.smallrye.faulttolerance;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -37,11 +38,17 @@ import io.smallrye.faulttolerance.tracing.TracingInstaller;
  * This component configures Hystrix to use a specific {@link HystrixConcurrencyStrategy}.
  *
  * @author Martin Kouba
+ * @author Radoslav Husar
  */
 @ApplicationScoped
 public class HystrixInitializer {
 
     private static final Logger LOGGER = Logger.getLogger(HystrixInitializer.class);
+
+    /**
+     * Maintains number of active deployments in the runtime.
+     */
+    private static final AtomicInteger deployments = new AtomicInteger();
 
     @Inject
     Instance<HystrixConcurrencyStrategy> instance;
@@ -52,16 +59,25 @@ public class HystrixInitializer {
 
     @PostConstruct
     void onStartup() {
-        LOGGER.debug("### Init Hystrix ###");
-        HystrixConcurrencyStrategy strategy = instance.get();
-        LOGGER.debug("Hystrix concurrency strategy used: " + strategy.getClass().getSimpleName());
-        HystrixPlugins.getInstance().registerConcurrencyStrategy(TracingInstaller.wrap(strategy));
-        HystrixPlugins.getInstance().registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
+        if (deployments.getAndIncrement() == 0) {
+            LOGGER.debug("### Init Hystrix ###");
+            HystrixConcurrencyStrategy strategy = instance.get();
+            LOGGER.debug("Hystrix concurrency strategy used: " + strategy.getClass().getSimpleName());
+
+            HystrixPlugins.getInstance().registerConcurrencyStrategy(TracingInstaller.wrap(strategy));
+            HystrixPlugins.getInstance().registerCommandExecutionHook(new FaultToleranceCommandExecutionHook());
+        } else {
+            LOGGER.debug("### Hystrix already initialized! Skipping. ###");
+        }
     }
 
     @PreDestroy
     void onShutdown() {
-        LOGGER.debug("### Reset Hystrix ###");
-        Hystrix.reset(1, TimeUnit.SECONDS);
+        if (deployments.decrementAndGet() == 0) {
+            LOGGER.debug("### Reset Hystrix ###");
+            Hystrix.reset(1, TimeUnit.SECONDS);
+        } else {
+            LOGGER.debug("### Hystrix still in use by other deployment! Skipping reset. ###");
+        }
     }
 }
