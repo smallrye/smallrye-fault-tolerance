@@ -28,7 +28,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Priority;
@@ -66,6 +68,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.config.GenericConfig;
 import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.config.TimeoutConfig;
+import io.smallrye.faulttolerance.impl.AsyncFuture;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
@@ -133,6 +136,7 @@ public class FaultToleranceInterceptor {
 
     // mstodo make more flexible, figure out if that's okay!
     private final ScheduledExecutorService timeoutExecutor = Executors.newScheduledThreadPool(5);
+    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(100); // mstodo modify, let customize, etc.
 
     @SuppressWarnings("unchecked")
     @Inject
@@ -182,8 +186,9 @@ public class FaultToleranceInterceptor {
         //        }
     }
 
-    private <T> T offload(Callable<T> o) {
-        return null;
+    private <T> Future<T> offload(Callable<T> o) {
+        Future<Future<T>> result = (Future<Future<T>>) asyncExecutor.submit(o);
+        return new AsyncFuture(result, new AsyncFuture.Cancelator());
     }
 
     private <T> T syncFlow(FaultToleranceOperation operation,
