@@ -36,11 +36,11 @@ import javax.interceptor.InterceptorBinding;
 @Retention(RUNTIME)
 @Documented
 @InterceptorBinding
-public @interface HystrixCommandBinding {
+public @interface FaultToleranceBinding {
 
-    class Literal extends AnnotationLiteral<HystrixCommandBinding> implements HystrixCommandBinding {
+    class Literal extends AnnotationLiteral<FaultToleranceBinding> implements FaultToleranceBinding {
 
-        public static final HystrixCommandBinding INSTANCE = new Literal();
+        public static final FaultToleranceBinding INSTANCE = new Literal();
 
         private static final long serialVersionUID = -6161473059431308528L;
     }

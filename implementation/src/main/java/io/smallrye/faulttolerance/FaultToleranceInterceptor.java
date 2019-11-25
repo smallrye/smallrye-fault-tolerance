@@ -18,6 +18,7 @@ package io.smallrye.faulttolerance;
 
 import static java.util.Arrays.asList;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.time.Duration;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -69,9 +71,11 @@ import io.smallrye.faulttolerance.config.GenericConfig;
 import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.config.TimeoutConfig;
 import io.smallrye.faulttolerance.impl.AsyncFuture;
+import io.smallrye.faulttolerance.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
+ * mstodo: check below
  * <h2>Implementation notes:</h2>
  * <p>
  * If {@link SynchronousCircuitBreaker} is used it is not possible to track the execution inside a Hystrix command because a
@@ -85,9 +89,10 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
  *
  * @author Antoine Sabot-Durand
  * @author Martin Kouba
+ * @author Michal Szynkiewicz
  */
 @Interceptor
-@HystrixCommandBinding
+@FaultToleranceBinding
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class FaultToleranceInterceptor {
 
@@ -158,24 +163,30 @@ public class FaultToleranceInterceptor {
 
     @AroundInvoke
     public Object interceptCommand(InvocationContext invocationContext) throws Exception {
-
         Method method = invocationContext.getMethod();
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
 
         FaultToleranceOperation operation = FaultToleranceOperation.of(beanClass, method);
+        InterceptionPoint point = new InterceptionPoint(beanClass, invocationContext);
+
+        MetricsCollector collector = getMetricsCollector(operation, point);
+        if (collector != null) {
+            collector.invoked();
+        }
 
         if (operation.isAsync() && operation.returnsCompletionStage()) {
-            return properAsyncFlow(invocationContext, operation);
+            return properAsyncFlow(invocationContext, operation, collector);
         } else if (operation.isAsync()) {
             // mstodo interruptions, etc?
             // mstodo maybe pass continuation
-            return offload(() -> syncFlow(operation, beanClass, invocationContext));
+            return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point));
         } else {
-            return syncFlow(operation, beanClass, invocationContext);
+            return syncFlow(operation, beanClass, invocationContext, collector, point);
         }
     }
 
-    private Object properAsyncFlow(InvocationContext invocationContext, FaultToleranceOperation operation) {
+    private Object properAsyncFlow(InvocationContext invocationContext, FaultToleranceOperation operation,
+            MetricsCollector collector) {
         throw new RuntimeException("unimplemented");
         //        try {
         //            return offload(() -> (CompletionStage<?>) syncFlow(operation, invocationContext))
@@ -193,19 +204,19 @@ public class FaultToleranceInterceptor {
 
     private <T> T syncFlow(FaultToleranceOperation operation,
             Class<?> beanClass,
-            InvocationContext invocationContext) throws Exception {
-
-        InterceptorPoint point = new InterceptorPoint(beanClass, invocationContext);
+            InvocationContext invocationContext,
+            MetricsCollector collector,
+            InterceptionPoint point) throws Exception {
 
         Callable<T> call = () -> (T) invocationContext.proceed();
 
         if (operation.hasBulkhead()) {
             // mstodo bulkhead, etc instances should be shared between inocations!
-            call = getBulkhead(point, operation.getBulkhead()).callable(call); //new Bulkhead(operation.getBulkhead(), call);
+            call = getBulkhead(point, operation.getBulkhead(), collector).callable(call); //new Bulkhead(operation.getBulkhead(), call);
         }
 
         if (operation.hasCircuitBreaker()) {
-            call = getCircuitBreaker(point, operation.getCircuitBreaker()).callable(call);
+            call = getCircuitBreaker(point, operation.getCircuitBreaker(), collector).callable(call);
         }
 
         if (operation.hasTimeout()) {
@@ -214,7 +225,8 @@ public class FaultToleranceInterceptor {
                     call,
                     "Timeout[" + point.name() + "]",
                     timeoutMs,
-                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor));
+                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
+                    collector);
         }
 
         if (operation.hasRetry()) {
@@ -224,7 +236,7 @@ public class FaultToleranceInterceptor {
             long delayMs = getTimeInMs(retryConf, RetryConfig.DELAY, RetryConfig.DELAY_UNIT);
 
             long jitterMs = getTimeInMs(retryConf, RetryConfig.JITTER, RetryConfig.JITTER_DELAY_UNIT);
-            Jitter jitter = new RandomJitter(jitterMs);
+            Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             call = new Retry<T>(
                     call,
@@ -234,7 +246,8 @@ public class FaultToleranceInterceptor {
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
-                    new SystemStopwatch());
+                    new SystemStopwatch(),
+                    collector);
         }
 
         if (operation.hasFallback()) {
@@ -242,10 +255,17 @@ public class FaultToleranceInterceptor {
             call = new Fallback<>(
                     call,
                     "Fallback[" + point.name() + "]",
-                    prepareFallbackFunction(invocationContext, beanClass, method, operation));
+                    prepareFallbackFunction(invocationContext, beanClass, method, operation),
+                    collector);
         }
-
-        return call.call();
+        try {
+            return call.call();
+        } catch (Exception any) {
+            if (collector != null) {
+                collector.failed();
+            }
+            throw any;
+        }
     }
 
     private <V> FallbackFunction<V> prepareFallbackFunction(
@@ -288,6 +308,13 @@ public class FaultToleranceInterceptor {
                         return (V) fallbackMethod.invoke(invocationContext.getTarget(), invocationContext.getParameters());
                     }
                 } catch (Throwable e) {
+                    // mstodo log failure?
+                    if (e instanceof InvocationTargetException) {
+                        e = e.getCause();
+                    }
+                    if (e instanceof Exception) {
+                        throw (Exception) e;
+                    }
                     throw new FaultToleranceException("Error during fallback method invocation", e);
                 }
             };
@@ -307,7 +334,8 @@ public class FaultToleranceInterceptor {
         return Duration.of(time, unit).toMillis();
     }
 
-    private CircuitBreaker getCircuitBreaker(InterceptorPoint point, CircuitBreakerConfig config) {
+    private CircuitBreaker getCircuitBreaker(InterceptionPoint point, CircuitBreakerConfig config,
+            MetricsCollector collector) {
         return circuitBreakers.computeIfAbsent(point,
                 anything -> {
                     String failOn = CircuitBreakerConfig.FAIL_ON;
@@ -318,7 +346,8 @@ public class FaultToleranceInterceptor {
                             config.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                             config.get(CircuitBreakerConfig.FAILURE_RATIO),
                             config.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
-                            new SystemStopwatch());
+                            new SystemStopwatch(),
+                            collector);
                 });
     }
 
@@ -337,20 +366,32 @@ public class FaultToleranceInterceptor {
         return throwableClasses == null ? Collections.emptyList() : asList(throwableClasses);
     }
 
-    private Bulkhead getBulkhead(InterceptorPoint point, BulkheadConfig bulkheadConfig) {
+    private Bulkhead getBulkhead(InterceptionPoint point, BulkheadConfig bulkheadConfig,
+            MetricsCollector collector) {
         return bulkheads.computeIfAbsent(point,
-                ignored -> new Bulkhead(bulkheadConfig.get(BulkheadConfig.VALUE)));
+                ignored -> new Bulkhead(bulkheadConfig.get(BulkheadConfig.VALUE),
+                        bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
+                        collector));
     }
 
-    private final Map<InterceptorPoint, CircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
-    private final Map<InterceptorPoint, Bulkhead> bulkheads = new ConcurrentHashMap<>();
+    private MetricsCollector getMetricsCollector(FaultToleranceOperation operation,
+            InterceptionPoint point) { // mstodo clean this up
+        return metricsCollectors
+                .computeIfAbsent(point,
+                        ignored -> Optional.ofNullable(metricsCollectorFactory.createCollector(operation)))
+                .orElse(null);
+    }
 
-    private static class InterceptorPoint { // mstodo pull out!
+    private final Map<InterceptionPoint, CircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
+    private final Map<InterceptionPoint, Optional<MetricsCollector>> metricsCollectors = new ConcurrentHashMap<>();
+    private final Map<InterceptionPoint, Bulkhead> bulkheads = new ConcurrentHashMap<>();
+
+    private static class InterceptionPoint { // mstodo pull out?
         private final String name;
         private final Class<?> beanClass;
         private final Method method;
 
-        public InterceptorPoint(Class<?> beanClass, InvocationContext invocationContext) {
+        InterceptionPoint(Class<?> beanClass, InvocationContext invocationContext) {
             this.beanClass = beanClass;
             method = invocationContext.getMethod();
             name = beanClass.getName() + "#" + method.getName();
@@ -366,7 +407,7 @@ public class FaultToleranceInterceptor {
                 return true;
             if (o == null || getClass() != o.getClass())
                 return false;
-            InterceptorPoint that = (InterceptorPoint) o;
+            InterceptionPoint that = (InterceptionPoint) o;
             return beanClass.equals(that.beanClass) &&
                     method.equals(that.method);
         }

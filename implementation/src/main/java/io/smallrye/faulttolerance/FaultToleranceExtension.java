@@ -63,12 +63,12 @@ public class FaultToleranceExtension implements Extension {
 
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOGGER.info("MicroProfile: Fault Tolerance activated");
-        bbd.addInterceptorBinding(new HystrixInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
-        bbd.addInterceptorBinding(new HystrixInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Retry.class)));
-        bbd.addInterceptorBinding(new HystrixInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Timeout.class)));
-        bbd.addInterceptorBinding(new HystrixInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
-        bbd.addInterceptorBinding(new HystrixInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
-        bbd.addInterceptorBinding(new HystrixInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Retry.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Timeout.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
 
         // Add AnnotatedType for HystrixCommandInterceptor
         // It seems that fraction deployment module cannot be picked up as a CDI bean archive - see also SWARM-1725
@@ -124,12 +124,12 @@ public class FaultToleranceExtension implements Extension {
         return faultToleranceOperations.get(getCacheKey(beanClass, method));
     }
 
-    public static class HystrixInterceptorBindingAnnotatedType<T extends Annotation> implements AnnotatedType<T> {
+    public static class FTInterceptorBindingAnnotatedType<T extends Annotation> implements AnnotatedType<T> {
 
-        public HystrixInterceptorBindingAnnotatedType(AnnotatedType<T> delegate) {
+        public FTInterceptorBindingAnnotatedType(AnnotatedType<T> delegate) {
             this.delegate = delegate;
             annotations = new HashSet<>(delegate.getAnnotations());
-            annotations.add(HystrixCommandBinding.Literal.INSTANCE);
+            annotations.add(FaultToleranceBinding.Literal.INSTANCE);
         }
 
         public Class<T> getJavaClass() {
@@ -158,8 +158,8 @@ public class FaultToleranceExtension implements Extension {
 
         @SuppressWarnings("unchecked")
         public <S extends Annotation> S getAnnotation(Class<S> annotationType) {
-            if (HystrixCommandBinding.class.equals(annotationType)) {
-                return (S) HystrixCommandBinding.Literal.INSTANCE;
+            if (FaultToleranceBinding.class.equals(annotationType)) {
+                return (S) FaultToleranceBinding.Literal.INSTANCE;
             }
             return delegate.getAnnotation(annotationType);
         }
@@ -169,7 +169,7 @@ public class FaultToleranceExtension implements Extension {
         }
 
         public boolean isAnnotationPresent(Class<? extends Annotation> annotationType) {
-            return HystrixCommandBinding.class.equals(annotationType) || delegate.isAnnotationPresent(annotationType);
+            return FaultToleranceBinding.class.equals(annotationType) || delegate.isAnnotationPresent(annotationType);
         }
 
         private AnnotatedType<T> delegate;
