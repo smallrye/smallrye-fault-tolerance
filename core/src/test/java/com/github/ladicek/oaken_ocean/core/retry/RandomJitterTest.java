@@ -19,9 +19,7 @@ public class RandomJitterTest {
 
     @Test
     public void zero() {
-        for (int i = 0; i < 10_000; i++) {
-            assertThatThrownBy(() -> new RandomJitter(0)).isExactlyInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> new RandomJitter(0)).isExactlyInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
