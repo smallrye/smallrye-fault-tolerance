@@ -16,30 +16,29 @@ import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
 public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
-    private static final int STATE_CLOSED = 0;
-    private static final int STATE_OPEN = 1;
-    private static final int STATE_HALF_OPEN = 2;
+    static final int STATE_CLOSED = 0;
+    static final int STATE_OPEN = 1;
+    static final int STATE_HALF_OPEN = 2;
 
-    private final FaultToleranceStrategy<V> delegate;
-    private final String description;
+    final FaultToleranceStrategy<V> delegate;
+    final String description;
 
-    private final SetOfThrowables failOn;
-    private final long delayInMillis;
-    private final int rollingWindowSize;
-    private final int failureThreshold;
-    private final int successThreshold;
-    private final Stopwatch stopwatch;
+    final SetOfThrowables failOn;
+    final long delayInMillis;
+    final int rollingWindowSize;
+    final int failureThreshold;
+    final int successThreshold;
+    final Stopwatch stopwatch;
 
-    private final List<CircuitBreakerListener> listeners = new CopyOnWriteArrayList<>();
+    final List<CircuitBreakerListener> listeners = new CopyOnWriteArrayList<>();
 
-    private final AtomicReference<State> state;
+    final AtomicReference<State> state;
 
-    private final MetricsRecorder metricsRecorder;
+    final MetricsRecorder metricsRecorder;
 
-    // TODO move to State?
-    private volatile long halfOpenStart;
-    private volatile long closedStart;
-    private volatile long openStart;
+    volatile long halfOpenStart;
+    volatile long closedStart;
+    volatile long openStart;
 
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn, long delayInMillis,
                           int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,

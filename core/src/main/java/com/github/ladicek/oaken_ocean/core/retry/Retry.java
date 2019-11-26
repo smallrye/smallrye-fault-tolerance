@@ -16,11 +16,11 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
     private final SetOfThrowables retryOn;
     private final SetOfThrowables abortOn;
-    private final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
-    private final long maxTotalDurationInMillis;
-    private final Delay delayBetweenRetries;
-    private final Stopwatch stopwatch;
-    private final MetricsRecorder metricsRecorder;
+    final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
+    final long maxTotalDurationInMillis;
+    final Delay delayBetweenRetries;
+    final Stopwatch stopwatch;
+    final MetricsRecorder metricsRecorder;
 
     private volatile Thread executionThread;
     // mstodo reattempt should not be triggered before the previous one. So we should be good
