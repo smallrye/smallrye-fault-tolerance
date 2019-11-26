@@ -55,12 +55,12 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
-            Thread.sleep(100);
+            Thread.sleep(200);
             return completedStage("foobar");
         }, "completion stage timeout", 1000, watcher, taskExecutor);
 
         assertThat(timeout.call().toCompletableFuture().get()).isEqualTo("foobar");
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(100, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
     }
 
     @Test
@@ -68,14 +68,14 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
-            Thread.sleep(100);
+            Thread.sleep(200);
             throw new TestException();
         }, "completion stage timeout", 1000, watcher, taskExecutor);
 
         assertThatThrownBy(timeout.call().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(100, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
     }
 
     @Test
@@ -83,14 +83,14 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
-            Thread.sleep(100);
+            Thread.sleep(200);
             return failedStage(new TestException());
         }, "completion stage timeout", 1000, watcher, taskExecutor);
 
         assertThatThrownBy(timeout.call().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(100, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
     }
 
     @Test
@@ -98,13 +98,13 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
-            Thread.sleep(200);
+            Thread.sleep(1000);
             return completedStage("foobar");
-        }, "completion stage timeout", 100, watcher, taskExecutor);
+        }, "completion stage timeout", 500, watcher, taskExecutor);
 
         assertThatThrownBy(timeout.call().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(100, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(500, tolerance);
     }
 }
