@@ -27,12 +27,21 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
             try {
                 originalResult = delegate.call();
             } catch (Exception e) {
-                result.completeExceptionally(timeoutExecution.hasTimedOut() ? timeoutException() : e);
+                // this comes first, so that when the future is completed, the timeout watcher is already cancelled
+                // (this isn't exactly needed, but makes tests easier to write)
                 timeoutExecution.finish(watch::cancel);
+
+                result.completeExceptionally(timeoutExecution.hasTimedOut() ? timeoutException() : e);
                 return;
             }
 
             originalResult.whenComplete((value, exception) -> {
+                // if the execution timed out, this will be a noop
+                //
+                // this comes first, so that when the future is completed, the timeout watcher is already cancelled
+                // (this isn't exactly needed, but makes tests easier to write)
+                timeoutExecution.finish(watch::cancel);
+
                 if (timeoutExecution.hasTimedOut()) {
                     result.completeExceptionally(timeoutException());
                 } else if (exception != null) {
@@ -40,9 +49,6 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
                 } else {
                     result.complete(value);
                 }
-
-                // if the execution timed out, this will be a noop
-                timeoutExecution.finish(watch::cancel);
             });
         });
 
