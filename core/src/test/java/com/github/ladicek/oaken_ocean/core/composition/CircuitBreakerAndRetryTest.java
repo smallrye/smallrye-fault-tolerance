@@ -1,7 +1,8 @@
 package com.github.ladicek.oaken_ocean.core.composition;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreakerListener;
-import com.github.ladicek.oaken_ocean.core.retry.TestAction;
+import com.github.ladicek.oaken_ocean.core.retry.TestInvocation;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
 import org.junit.Test;
 
@@ -20,15 +21,15 @@ public class CircuitBreakerAndRetryTest {
 
         // fail 2x and then succeed, under circuit breaker
         // circuit breaker volume threshold = 5, so CB will stay closed
-        Callable<String> operation =
+        FaultToleranceStrategy<String> operation =
                 retry(
                         circuitBreaker(
-                                TestAction.initiallyFailing(2, TestException::new, () -> "foobar"),
+                                TestInvocation.initiallyFailing(2, TestException::new, () -> "foobar"),
                                 recorder
                         )
                 );
 
-        assertThat(operation.call()).isEqualTo("foobar");
+        assertThat(operation.apply(null)).isEqualTo("foobar");
         assertThat(recorder.failureCount.get()).isEqualTo(2);
         assertThat(recorder.successCount.get()).isEqualTo(1);
     }
@@ -41,15 +42,15 @@ public class CircuitBreakerAndRetryTest {
         // CB volume threshold = 5, so the CB will open right after all the failures and before the success
         // CB delay is 0, so with the successful attempt, the CB will immediately move to half-open and succeed
         // doing 6 attemps (1 initial + 5 retries)
-        Callable<String> operation =
+        FaultToleranceStrategy<String> operation =
                 retry(
                         circuitBreaker(
-                                TestAction.initiallyFailing(5, TestException::new, () -> "foobar"),
+                                TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
                                 recorder
                         )
                 );
 
-        assertThat(operation.call()).isEqualTo("foobar");
+        assertThat(operation.apply(null)).isEqualTo("foobar");
         assertThat(recorder.failureCount.get()).isEqualTo(5);
         assertThat(recorder.successCount.get()).isEqualTo(1);
     }
@@ -62,15 +63,15 @@ public class CircuitBreakerAndRetryTest {
         // CB volume threshold = 5, so the CB will open right after all the failures and before the success
         // CB delay is > 0, so the successful attempt will be prevented, because the CB will be open
         // doing 11 attemps (1 initial + 10 retries, because max retries = 10)
-        Callable<String> operation =
+        FaultToleranceStrategy<String> operation =
                 retry(
                         circuitBreaker(
-                                TestAction.initiallyFailing(5, TestException::new, () -> "foobar"),
+                                TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
                                 100, recorder
                         )
                 );
 
-        assertThatThrownBy(operation::call).hasMessage("retry reached max retries or max retry duration");
+        assertThatThrownBy(() -> operation.apply(null)).hasMessage("retry reached max retries or max retry duration");
         assertThat(recorder.failureCount.get()).isEqualTo(5);
         assertThat(recorder.rejectedCount.get()).isEqualTo(6);
         assertThat(recorder.successCount.get()).isEqualTo(0);

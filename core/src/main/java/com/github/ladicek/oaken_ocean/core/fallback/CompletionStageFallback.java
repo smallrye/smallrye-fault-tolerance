@@ -1,5 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.fallback;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -8,20 +10,20 @@ import java.util.concurrent.Executor;
 public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
     private final Executor executor;
 
-    public CompletionStageFallback(Callable<CompletionStage<V>> delegate, String description,
+    public CompletionStageFallback(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
                                    FallbackFunction<CompletionStage<V>> fallback, Executor executor) {
         super(delegate, description, fallback);
         this.executor = executor;
     }
 
     @Override
-    public CompletionStage<V> call() {
+    public CompletionStage<V> apply(Callable<CompletionStage<V>> target) throws Exception {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {
             CompletionStage<V> originalResult;
             try {
-                originalResult = delegate.call();
+                originalResult = delegate.apply(target);
             } catch (Exception e) {
                 CompletableFuture<V> failure = new CompletableFuture<>();
                 failure.completeExceptionally(e);

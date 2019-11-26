@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.SystemStopwatch;
@@ -10,7 +11,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.github.ladicek.oaken_ocean.core.Invocation.invocation;
 import static com.github.ladicek.oaken_ocean.core.util.CompletionStages.completedStage;
 import static com.github.ladicek.oaken_ocean.core.util.CompletionStages.failedStage;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,12 +55,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldReturnRightAway() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", 1000, watcher, taskExecutor);
+
+        assertThat(timeout.apply(() -> {
             Thread.sleep(200);
             return completedStage("foobar");
-        }, "completion stage timeout", 1000, watcher, taskExecutor);
-
-        assertThat(timeout.call().toCompletableFuture().get()).isEqualTo("foobar");
+        }).toCompletableFuture().get()).isEqualTo("foobar");
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
     }
 
@@ -67,12 +69,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateMethodError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", 1000, watcher, taskExecutor);
+
+        assertThatThrownBy(timeout.apply(() -> {
             Thread.sleep(200);
             throw new TestException();
-        }, "completion stage timeout", 1000, watcher, taskExecutor);
-
-        assertThatThrownBy(timeout.call().toCompletableFuture()::get)
+        }).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
@@ -82,12 +85,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateCompletionStageError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", 1000, watcher, taskExecutor);
+
+        assertThatThrownBy(timeout.apply(() -> {
             Thread.sleep(200);
             return failedStage(new TestException());
-        }, "completion stage timeout", 1000, watcher, taskExecutor);
-
-        assertThatThrownBy(timeout.call().toCompletableFuture()::get)
+        }).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
@@ -97,12 +101,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldTimeOut() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        Callable<CompletionStage<String>> timeout = new CompletionStageTimeout<>(() -> {
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", 500, watcher, taskExecutor);
+
+        assertThatThrownBy(timeout.apply(() -> {
             Thread.sleep(1000);
             return completedStage("foobar");
-        }, "completion stage timeout", 500, watcher, taskExecutor);
-
-        assertThatThrownBy(timeout.call().toCompletableFuture()::get)
+        }).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(500, tolerance);

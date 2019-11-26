@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
 import java.util.concurrent.Callable;
@@ -7,22 +8,22 @@ import java.util.concurrent.Callable;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
-public class Timeout<V> implements Callable<V> {
-    final Callable<V> delegate;
+public class Timeout<V> implements FaultToleranceStrategy<V> {
+    final FaultToleranceStrategy<V> delegate;
     final String description;
 
     final long timeoutInMillis;
     final TimeoutWatcher watcher;
 
-    public Timeout(Callable<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher) {
-        this.delegate = checkNotNull(delegate, "Timeout action must be set");
-        this.description = checkNotNull(description, "Timeout action description must be set");
+    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher) {
+        this.delegate = checkNotNull(delegate, "Timeout delegate must be set");
+        this.description = checkNotNull(description, "Timeout description must be set");
         this.timeoutInMillis = check(timeoutInMillis, timeoutInMillis > 0, "Timeout must be > 0");
         this.watcher = checkNotNull(watcher, "Timeout watcher must be set");
     }
 
     @Override
-    public V call() throws Exception {
+    public V apply(Callable<V> target) throws Exception {
         TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis);
         TimeoutWatch watch = watcher.schedule(execution);
 
@@ -30,7 +31,7 @@ public class Timeout<V> implements Callable<V> {
         Exception exception = null;
         boolean interrupted = false;
         try {
-            result = delegate.call();
+            result = delegate.apply(target);
         } catch (InterruptedException e) {
             interrupted = true;
         } catch (Exception e) {

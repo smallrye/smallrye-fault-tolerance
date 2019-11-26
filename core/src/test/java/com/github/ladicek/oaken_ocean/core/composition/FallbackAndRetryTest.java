@@ -1,12 +1,13 @@
 package com.github.ladicek.oaken_ocean.core.composition;
 
-import com.github.ladicek.oaken_ocean.core.retry.TestAction;
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.retry.TestInvocation;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
 import org.junit.Test;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.github.ladicek.oaken_ocean.core.Invocation.invocation;
 import static com.github.ladicek.oaken_ocean.core.composition.Strategies.fallback;
 import static com.github.ladicek.oaken_ocean.core.composition.Strategies.retry;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,26 +15,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FallbackAndRetryTest {
     @Test
     public void shouldFallbackAfterRetrying() throws Exception {
-        Callable<String> operation = fallback(retry(TestException::doThrow));
+        FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
 
-        assertThat(operation.call()).isEqualTo("fallback after [retry reached max retries or max retry duration]");
+        assertThat(operation.apply( TestException::doThrow)).isEqualTo("fallback after [retry reached max retries or max retry duration]");
     }
 
     @Test
     public void shouldNotFallbackOnSuccess() throws Exception {
-        Callable<String> operation = fallback(retry(() -> "foobar"));
+        FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
 
-        assertThat(operation.call()).isEqualTo("foobar");
+        assertThat(operation.apply(() -> "foobar")).isEqualTo("foobar");
     }
 
     @Test
     public void shouldNotFallbackOnSuccessAtSecondAttempt() throws Exception {
         AtomicInteger failures = new AtomicInteger(0);
 
-        Callable<String> operation =
+        FaultToleranceStrategy<String> operation =
                 fallback(
                         retry(
-                                TestAction.initiallyFailing(
+                                TestInvocation.initiallyFailing(
                                         3, () -> {
                                             failures.incrementAndGet();
                                             return new RuntimeException();
@@ -43,6 +44,6 @@ public class FallbackAndRetryTest {
                         )
                 );
 
-        assertThat(operation.call()).isEqualTo("success after 3 failures");
+        assertThat(operation.apply(null)).isEqualTo("success after 3 failures");
     }
 }

@@ -9,11 +9,11 @@ import org.junit.Test;
 
 import java.util.Collections;
 
+import static com.github.ladicek.oaken_ocean.core.Invocation.invocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class CircuitBreakerTest {
-    private static final SetOfThrowables exception = SetOfThrowables.create(Collections.singletonList(Exception.class));
     private static final SetOfThrowables testException = SetOfThrowables.create(Collections.singletonList(TestException.class));
 
     private TestStopwatch stopwatch;
@@ -25,89 +25,63 @@ public class CircuitBreakerTest {
 
     @Test
     public void test1() throws Exception {
-        TestAction<String> action = TestAction.create(
-                () -> "foobar1",
-                () -> "foobar2",
-                () -> { throw new RuntimeException(); },
-                () -> "foobar3",
-                () -> "foobar4",
-                () -> "foobar5",
-                TestException::doThrow,
-                () -> "foobar6",
-                TestException::doThrow,
-                () -> "foobar7",
-                TestException::doThrow,
-                () -> "foobar8",
-                () -> "foobar9",
-                () -> "foobar10"
-        );
-        CircuitBreaker<String> cb = new CircuitBreaker<>(action, "test action", testException,
+        CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation", testException,
                 1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
-        assertThat(cb.call()).isEqualTo("foobar1");
-        assertThat(cb.call()).isEqualTo("foobar2");
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(RuntimeException.class); // treated as success
-        assertThat(cb.call()).isEqualTo("foobar3");
-        assertThat(cb.call()).isEqualTo("foobar4");
-        assertThat(cb.call()).isEqualTo("foobar5");
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(TestException.class);
-        assertThat(cb.call()).isEqualTo("foobar6");
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(TestException.class);
+        assertThat(cb.apply(() -> "foobar1")).isEqualTo("foobar1");
+        assertThat(cb.apply(() -> "foobar2")).isEqualTo("foobar2");
+        assertThatThrownBy(() -> cb.apply(() -> { throw new RuntimeException(); })).isExactlyInstanceOf(RuntimeException.class); // treated as success
+        assertThat(cb.apply(() -> "foobar3")).isEqualTo("foobar3");
+        assertThat(cb.apply(() -> "foobar4")).isEqualTo("foobar4");
+        assertThat(cb.apply(() -> "foobar5")).isEqualTo("foobar5");
+        assertThatThrownBy(() -> cb.apply(TestException::doThrow)).isExactlyInstanceOf(TestException.class);
+        assertThat(cb.apply(() -> "foobar6")).isEqualTo("foobar6");
+        assertThatThrownBy(() -> cb.apply(TestException::doThrow)).isExactlyInstanceOf(TestException.class);
         // circuit breaker is open
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
         stopwatch.setCurrentValue(1500);
-        assertThat(cb.call()).isEqualTo("foobar7");
+        assertThat(cb.apply(() -> "foobar7")).isEqualTo("foobar7");
         // circuit breaker is half-open
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(TestException.class);
+        assertThatThrownBy(() -> cb.apply(TestException::doThrow)).isExactlyInstanceOf(TestException.class);
         // circuit breaker is open
         stopwatch.setCurrentValue(0);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
         stopwatch.setCurrentValue(1500);
-        assertThat(cb.call()).isEqualTo("foobar8");
+        assertThat(cb.apply(() -> "foobar8")).isEqualTo("foobar8");
         // circuit breaker is half-open
-        assertThat(cb.call()).isEqualTo("foobar9");
+        assertThat(cb.apply(() -> "foobar9")).isEqualTo("foobar9");
         // circuit breaker is closed
-        assertThat(cb.call()).isEqualTo("foobar10");
+        assertThat(cb.apply(() -> "foobar10")).isEqualTo("foobar10");
     }
 
     @Test
     public void test2() throws Exception {
-        TestAction<String> action = TestAction.create(
-                () -> "foobar1",
-                TestException::doThrow,
-                TestException::doThrow,
-                () -> "foobar2",
-                // open
-                () -> "foobar3",
-                () -> "foobar4",
-                () -> "foobar5"
-        );
-        CircuitBreaker<String> cb = new CircuitBreaker<>(action, "test action", testException,
+        CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation", testException,
                 1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
-        assertThat(cb.call()).isEqualTo("foobar1");
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(TestException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(TestException.class);
-        assertThat(cb.call()).isEqualTo("foobar2");
+        assertThat(cb.apply(() -> "foobar1")).isEqualTo("foobar1");
+        assertThatThrownBy(() -> cb.apply(TestException::doThrow)).isExactlyInstanceOf(TestException.class);
+        assertThatThrownBy(() -> cb.apply(TestException::doThrow)).isExactlyInstanceOf(TestException.class);
+        assertThat(cb.apply(() -> "foobar2")).isEqualTo("foobar2");
         // circuit breaker is open
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(cb::call).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> cb.apply(() -> "ignored")).isExactlyInstanceOf(CircuitBreakerOpenException.class);
         stopwatch.setCurrentValue(1500);
-        assertThat(cb.call()).isEqualTo("foobar3");
+        assertThat(cb.apply(() -> "foobar3")).isEqualTo("foobar3");
         // circuit breaker is half-open
-        assertThat(cb.call()).isEqualTo("foobar4");
+        assertThat(cb.apply(() -> "foobar4")).isEqualTo("foobar4");
         // circuit breaker is closed
-        assertThat(cb.call()).isEqualTo("foobar5");
+        assertThat(cb.apply(() -> "foobar5")).isEqualTo("foobar5");
     }
 }

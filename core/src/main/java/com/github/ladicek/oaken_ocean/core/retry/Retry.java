@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
@@ -9,8 +10,8 @@ import java.util.concurrent.Callable;
 
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
-public class Retry<V> implements Callable<V> {
-    private final Callable<V> delegate;
+public class Retry<V> implements FaultToleranceStrategy<V> {
+    private final FaultToleranceStrategy<V> delegate;
     private final String description;
 
     private final SetOfThrowables retryOn;
@@ -20,10 +21,10 @@ public class Retry<V> implements Callable<V> {
     private final Delay delayBetweenRetries;
     private final Stopwatch stopwatch;
 
-    public Retry(Callable<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
+    public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
                  long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch) {
-        this.delegate = checkNotNull(delegate, "Retry action must be set");
-        this.description = checkNotNull(description, "Retry action description must be set");
+        this.delegate = checkNotNull(delegate, "Retry delegate must be set");
+        this.description = checkNotNull(description, "Retry description must be set");
         this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
         this.abortOn = checkNotNull(abortOn, "Set of abort-on throwables must be set");
         this.maxRetries = maxRetries < 0 ? Long.MAX_VALUE : maxRetries;
@@ -33,12 +34,12 @@ public class Retry<V> implements Callable<V> {
     }
 
     @Override
-    public V call() throws Exception {
+    public V apply(Callable<V> target) throws Exception {
         long counter = 0;
         RunningStopwatch runningStopwatch = stopwatch.start();
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
             try {
-                return delegate.call();
+                return delegate.apply(target);
             } catch (InterruptedException e) {
                 throw e;
             } catch (Throwable e) {

@@ -3,8 +3,8 @@ package com.github.ladicek.oaken_ocean.core.retry;
 import com.github.ladicek.oaken_ocean.core.stopwatch.TestStopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
-import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 import com.github.ladicek.oaken_ocean.core.util.TestThread;
+import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,166 +28,166 @@ public class RetryTest {
 
     @Test
     public void immediatelyReturning_value() throws Exception {
-        TestAction<String> action = TestAction.immediatelyReturning(() -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThat(result.await()).isEqualTo("foobar");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
     public void immediatelyReturning_retriedException() {
-        TestAction<Void> action = TestAction.immediatelyReturning(TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void immediatelyReturning_abortingException() {
-        TestAction<Void> action = TestAction.immediatelyReturning(TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
     public void immediatelyReturning_unknownException() {
-        TestAction<Void> action = TestAction.immediatelyReturning(TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
-    public void immediatelyReturning_interruptedInAction() throws InterruptedException {
-        Barrier startActionBarrier = Barrier.interruptible();
-        Barrier endActionBarrier = Barrier.interruptible();
-        TestAction<String> action = TestAction.immediatelyReturning(() -> {
-            startActionBarrier.open();
-            endActionBarrier.await();
+    public void immediatelyReturning_interruptedInInvocation() throws InterruptedException {
+        Barrier startInvocationBarrier = Barrier.interruptible();
+        Barrier endInvocationBarrier = Barrier.interruptible();
+        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> {
+            startInvocationBarrier.open();
+            endInvocationBarrier.await();
             return "foobar";
         });
-        TestThread<String> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestThread<String> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        startActionBarrier.await();
+        startInvocationBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
-    public void immediatelyReturning_selfInterruptedInAction() throws InterruptedException {
-        Barrier startActionBarrier = Barrier.interruptible();
-        Barrier endActionBarrier = Barrier.interruptible();
-        TestAction<Void> action = TestAction.immediatelyReturning(() -> {
-            startActionBarrier.open();
-            endActionBarrier.await();
+    public void immediatelyReturning_selfInterruptedInInvocation() throws InterruptedException {
+        Barrier startInvocationBarrier = Barrier.interruptible();
+        Barrier endInvocationBarrier = Barrier.interruptible();
+        TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(() -> {
+            startInvocationBarrier.open();
+            endInvocationBarrier.await();
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         });
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        startActionBarrier.await();
-        endActionBarrier.open();
+        startInvocationBarrier.await();
+        endInvocationBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenValue_lessThanMaxRetries() throws Exception {
-        TestAction<String> action = TestAction.initiallyFailing(2, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(2, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThat(result.await()).isEqualTo("foobar");
-        assertThat(action.numberOfInvocations()).isEqualTo(3);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(3);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenValue_equalToMaxRetries() throws Exception {
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThat(result.await()).isEqualTo("foobar");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenValue_moreThanMaxRetries() {
-        TestAction<String> action = TestAction.initiallyFailing(4, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenRetriedException_lessThanMaxRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(2, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(2, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenRetriedException_equalToMaxRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenRetriedException_moreThanMaxRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(4, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenAbortingException_lessThanMaxRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(2, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(2, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(3);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(3);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenAbortingException_equalToMaxRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenAbortingException_moreThanMaxRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(4, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -195,14 +195,14 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(500);
         endDelayBarrier.open();
         assertThat(result.await()).isEqualTo("foobar");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -210,16 +210,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1000);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -227,16 +227,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1500);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -244,16 +244,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(500);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -261,16 +261,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1000);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -278,16 +278,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1500);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -295,14 +295,14 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(500);
         endDelayBarrier.open();
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -310,16 +310,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1000);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -327,34 +327,34 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1500);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenValue_infiniteRetries() throws Exception {
-        TestAction<String> action = TestAction.initiallyFailing(10, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(10, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, -1, 1000, Delay.NONE, stopwatch));
         assertThat(result.await()).isEqualTo("foobar");
-        assertThat(action.numberOfInvocations()).isEqualTo(11);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(11);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenAbortingException_infiniteRetries() {
-        TestAction<Void> action = TestAction.initiallyFailing(10, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(10, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, -1, 1000, Delay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(11);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(11);
     }
 
     @Test
@@ -362,14 +362,14 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, -1, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1_000_000_000L);
         endDelayBarrier.open();
         assertThat(result.await()).isEqualTo("foobar");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -377,16 +377,16 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, -1, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1_000_000_000L);
         endDelayBarrier.open();
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test action reached max retries or max retry duration");
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -394,65 +394,65 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, -1, delay, stopwatch));
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1_000_000_000L);
         endDelayBarrier.open();
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenValue_interruptedInAction() throws InterruptedException {
-        Barrier startActionBarrier = Barrier.interruptible();
-        Barrier endActionBarrier = Barrier.interruptible();
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> {
-            startActionBarrier.open();
-            endActionBarrier.await();
+    public void initiallyFailing_retriedExceptionThenValue_interruptedInInvocation() throws InterruptedException {
+        Barrier startInvocationBarrier = Barrier.interruptible();
+        Barrier endInvocationBarrier = Barrier.interruptible();
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> {
+            startInvocationBarrier.open();
+            endInvocationBarrier.await();
             return "foobar";
         });
-        TestThread<String> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestThread<String> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
-        startActionBarrier.await();
+        startInvocationBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenRetriedException_interruptedInAction() throws InterruptedException {
-        Barrier startActionBarrier = Barrier.interruptible();
-        Barrier endActionBarrier = Barrier.interruptible();
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> {
-            startActionBarrier.open();
-            endActionBarrier.await();
+    public void initiallyFailing_retriedExceptionThenRetriedException_interruptedInInvocation() throws InterruptedException {
+        Barrier startInvocationBarrier = Barrier.interruptible();
+        Barrier endInvocationBarrier = Barrier.interruptible();
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> {
+            startInvocationBarrier.open();
+            endInvocationBarrier.await();
             throw new TestException();
         });
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        startActionBarrier.await();
+        startInvocationBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenAbortingException_interruptedInAction() throws InterruptedException {
-        Barrier startActionBarrier = Barrier.interruptible();
-        Barrier endActionBarrier = Barrier.interruptible();
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> {
-            startActionBarrier.open();
-            endActionBarrier.await();
+    public void initiallyFailing_retriedExceptionThenAbortingException_interruptedInInvocation() throws InterruptedException {
+        Barrier startInvocationBarrier = Barrier.interruptible();
+        Barrier endInvocationBarrier = Barrier.interruptible();
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> {
+            startInvocationBarrier.open();
+            endInvocationBarrier.await();
             throw new TestException();
         });
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
-        startActionBarrier.await();
+        startInvocationBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -460,13 +460,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -474,13 +474,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -488,13 +488,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -502,13 +502,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.exceptionThrowing(startDelayBarrier, endDelayBarrier, RuntimeException::new);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         endDelayBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(RuntimeException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -516,13 +516,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.exceptionThrowing(startDelayBarrier, endDelayBarrier, RuntimeException::new);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         endDelayBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(RuntimeException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -530,31 +530,31 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.exceptionThrowing(startDelayBarrier, endDelayBarrier, RuntimeException::new);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         endDelayBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(RuntimeException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
     public void initiallyFailing_retriedExceptionThenSelfInterrupt() throws InterruptedException {
-        Barrier startActionBarrier = Barrier.interruptible();
-        Barrier endActionBarrier = Barrier.interruptible();
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> {
-            startActionBarrier.open();
-            endActionBarrier.await();
+        Barrier startInvocationBarrier = Barrier.interruptible();
+        Barrier endInvocationBarrier = Barrier.interruptible();
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> {
+            startInvocationBarrier.open();
+            endInvocationBarrier.await();
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         });
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        startActionBarrier.await();
-        endActionBarrier.open();
+        startInvocationBarrier.await();
+        endInvocationBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(4);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
     @Test
@@ -562,13 +562,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.selfInterrupting(startDelayBarrier, endDelayBarrier);
-        TestAction<String> action = TestAction.initiallyFailing(3, RuntimeException::new, () -> "foobar");
-        TestThread<String> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<String> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, () -> "foobar");
+        TestThread<String> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         endDelayBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -576,13 +576,13 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.selfInterrupting(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         endDelayBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
     @Test
@@ -590,12 +590,12 @@ public class RetryTest {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.selfInterrupting(startDelayBarrier, endDelayBarrier);
-        TestAction<Void> action = TestAction.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new Retry<>(action, "test action",
+        TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, delay, stopwatch));
         startDelayBarrier.await();
         endDelayBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
-        assertThat(action.numberOfInvocations()).isEqualTo(1);
+        assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 }
