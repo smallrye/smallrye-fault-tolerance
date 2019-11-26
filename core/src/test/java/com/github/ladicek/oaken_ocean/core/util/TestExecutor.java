@@ -1,4 +1,4 @@
-package com.github.ladicek.oaken_ocean.core.timeout;
+package com.github.ladicek.oaken_ocean.core.util;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
