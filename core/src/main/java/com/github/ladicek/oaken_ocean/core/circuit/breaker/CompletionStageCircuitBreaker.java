@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
@@ -8,11 +9,11 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
-import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
+// mstodo read through to potentially simplify/reuse more from CircuitBreaker
+public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionStage<V>> {
 
-public class CompletionStageCircuitBreaker extends CircuitBreaker {
-
-    public CompletionStageCircuitBreaker(String description,
+    public CompletionStageCircuitBreaker(FaultToleranceStrategy<CompletionStage<V>> delegate,
+          String description,
                                          SetOfThrowables failOn,
                                          long delayInMillis,
                                          int requestVolumeThreshold,
@@ -20,37 +21,31 @@ public class CompletionStageCircuitBreaker extends CircuitBreaker {
                                          int successThreshold,
                                          Stopwatch stopwatch,
                                          MetricsRecorder metricsRecorder) {
-        super(description, failOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold, stopwatch, metricsRecorder);
+        super(delegate, description, failOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold, stopwatch, metricsRecorder);
     }
 
-    public <V> Callable<CompletionStage<V>> asyncCallable(final Callable<CompletionStage<V>> delegate) {
-        checkNotNull(delegate, "Circuit breaker action must be set");
-        return () -> {
-            // this is the only place where `state` can be dereferenced!
-            // it must be passed through as a parameter to all the state methods,
-            // so that they don't see the circuit breaker moving to a different state under them
-            return CompletionStageCircuitBreaker.this.performCall(delegate);
-        };
-    }
-
-    private <V> CompletionStage<V> performCall(Callable<CompletionStage<V>> delegate) throws Exception {
+    public CompletionStage<V> apply(Callable<CompletionStage<V>> target) throws Exception {
+        // this is the only place where `state` can be dereferenced!
+        // it must be passed through as a parameter to all the state methods,
+        // so that they don't see the circuit breaker moving to a different state under them
         CircuitBreaker.State currentState = state.get();
         switch (currentState.id) {
             case STATE_CLOSED:
-                return inClosed(delegate, currentState);
+                return inClosed(target, currentState);
             case STATE_OPEN:
-                return inOpen(delegate, currentState);
+                return inOpen(target, currentState);
             case STATE_HALF_OPEN:
-                return inHalfOpen(delegate, currentState);
+                return inHalfOpen(target, currentState);
             default:
                 throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
         }
     }
 
 
-    private <V> CompletionStage<V> inClosed(Callable<CompletionStage<V>> delegate, CircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inClosed(Callable<CompletionStage<V>> target,
+                                            CircuitBreaker.State state) throws Exception {
         try {
-            CompletionStage<V> result = delegate.call();
+            CompletionStage<V> result = delegate.apply(target);
 
             return result.handle((val, error) -> {
                 if (error != null) {
@@ -98,7 +93,8 @@ public class CompletionStageCircuitBreaker extends CircuitBreaker {
         }
     }
 
-    private <V> CompletionStage<V> inOpen(Callable<CompletionStage<V>> delegate, CircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inOpen(Callable<CompletionStage<V>> target,
+                                          CircuitBreaker.State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
@@ -111,13 +107,13 @@ public class CompletionStageCircuitBreaker extends CircuitBreaker {
 
             toHalfOpen(state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return performCall(delegate);
+            return apply(target);
         }
     }
 
-    private <V> V inHalfOpen(Callable<V> delegate, CircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inHalfOpen(Callable<CompletionStage<V>> target, CircuitBreaker.State state) throws Exception {
         try {
-            V result = delegate.call();
+            CompletionStage<V> result = delegate.apply(target);
             metricsRecorder.circuitBreakerSucceeded();
 
             int successes = state.consecutiveSuccesses.incrementAndGet();

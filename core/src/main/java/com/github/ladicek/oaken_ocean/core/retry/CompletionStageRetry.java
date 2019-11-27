@@ -1,17 +1,20 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
-    public CompletionStageRetry(Callable<CompletionStage<V>> delegate,
+    public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate,
                                 String description,
                                 SetOfThrowables retryOn,
                                 SetOfThrowables abortOn,
@@ -24,38 +27,76 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     // mstodo move to the call class if we were to separate from the context class
 
     @Override
-    public CompletionStage<V> call() throws Exception {
+    public CompletionStage<V> apply(Callable<CompletionStage<V>> target) throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        return doRetry(delegate, 0, runningStopwatch);
+        return doRetry(target, 0, runningStopwatch, null);
     }
 
-    public CompletionStage<V> doRetry(Callable<CompletionStage<V>> delegate, int attempt, RunningStopwatch stopwatch)
+    public CompletionStage<V> doRetry(Callable<CompletionStage<V>> target,
+                                      int attempt,
+                                      RunningStopwatch stopwatch,
+                                      Throwable latestFailure)
           throws Exception {
-        if (attempt > 0) {
+        if (attempt > 0 && attempt <= maxRetries) {
             metricsRecorder.retryRetried();
+            try {
+                delayBetweenRetries.sleep();
+            } catch (InterruptedException e) {
+                metricsRecorder.retryFailed();
+                throw e;
+            } catch (Exception e) {
+                metricsRecorder.retryFailed();
+                if (Thread.interrupted()) {
+                    throw new InterruptedException();
+                }
+
+                throw e;
+            }
+        }
+        if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
+            if (latestFailure != null) {
+                metricsRecorder.retryFailed(); // mstodo a single place to bump it
+                throw getError(latestFailure);
+            } else {
+                metricsRecorder.retryFailed();
+                throw new FaultToleranceException(description + " reached max retries or max retry duration");
+            }
         }
         try {
-            delegate.call();
-            recordSuccess(attempt);
+            return delegate.apply(target)
+                  .thenApply()
+                  .handleAsync((value, error) -> {
+                     if (value != null) {
+                         recordSuccess(attempt);
+                         return value;
+                     } else {
+                         metricsRecorder.retryFailed();
+                         if (abortOn.includes(error.getClass()) || !retryOn.includes(error.getClass())) {
+                             metricsRecorder.retryFailed();
+                             throw new CompletionException(error);
+                         } else {
+                             try {
+                                 return doRetry(target, attempt + 1, stopwatch, error);
+                             } catch (CompletionException ce) {
+                                 throw ce;
+                             } catch (Exception any) {
+                                 throw new CompletionException(any);
+                             }
+                         }
+                     }
+                  });
         } catch (Throwable th) {
-            recordFailure(attempt, th);
+            doRetry(target, attempt+1, stopwatch, th);
+        }
+    }
 
-            if (attempt <= maxRetries && stopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
-                try {
-                    delayBetweenRetries.sleep();
-                } catch (InterruptedException e) {
-                    metricsRecorder.retryFailed();
-                    throw e;
-                } catch (Exception e) {
-                    metricsRecorder.retryFailed();
-                    if (Thread.interrupted()) {
-                        throw new InterruptedException();
-                    }
-
-                    throw e;
-                }
-            }
+    private Exception getError(Throwable latestFailure) throws Exception {
+        // TODO: TCK expects that but it seems un(der)specified in the spec
+        if (latestFailure instanceof Exception) {
+            return (Exception)latestFailure; // mstodo is it okay?
+        } else {
+            return new FaultToleranceException(latestFailure.getMessage(), latestFailure);
         }
     }
 

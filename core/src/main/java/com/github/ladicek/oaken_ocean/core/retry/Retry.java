@@ -11,11 +11,11 @@ import java.util.concurrent.Callable;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
 public class Retry<V> implements FaultToleranceStrategy<V> {
-    private final FaultToleranceStrategy<V> delegate;
-    private final String description;
+    final FaultToleranceStrategy<V> delegate;
+    final String description;
 
-    private final SetOfThrowables retryOn;
-    private final SetOfThrowables abortOn;
+    final SetOfThrowables retryOn;
+    final SetOfThrowables abortOn;
     final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
     final long maxTotalDurationInMillis;
     final Delay delayBetweenRetries;
