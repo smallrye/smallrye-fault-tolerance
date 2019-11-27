@@ -10,7 +10,6 @@ import com.github.ladicek.oaken_ocean.core.stopwatch.TestStopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 
 /**
  * Factory methods for fault tolerance strategies that are easier to use than their constructors.
@@ -19,7 +18,7 @@ import java.util.concurrent.Callable;
  */
 final class Strategies {
     static Fallback<String> fallback(FaultToleranceStrategy<String> delegate) {
-        return new Fallback<>(delegate, "fallback", e -> "fallback after [" + e.getMessage() + "]");
+        return new Fallback<>(delegate, "fallback", e -> "fallback after " + e.getClass().getSimpleName());
     }
 
     static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {

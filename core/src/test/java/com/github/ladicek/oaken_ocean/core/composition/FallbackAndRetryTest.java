@@ -17,7 +17,7 @@ public class FallbackAndRetryTest {
     public void shouldFallbackAfterRetrying() throws Exception {
         FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
 
-        assertThat(operation.apply( TestException::doThrow)).isEqualTo("fallback after [retry reached max retries or max retry duration]");
+        assertThat(operation.apply(TestException::doThrow)).isEqualTo("fallback after TestException");
     }
 
     @Test

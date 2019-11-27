@@ -5,7 +5,6 @@ import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
 import com.github.ladicek.oaken_ocean.core.util.TestThread;
 import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -40,9 +39,7 @@ public class RetryTest {
         TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -122,9 +119,7 @@ public class RetryTest {
         TestInvocation<String> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new, () -> "foobar");
         TestThread<String> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -133,9 +128,7 @@ public class RetryTest {
         TestInvocation<Void> invocation = TestInvocation.initiallyFailing(2, RuntimeException::new, TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -144,9 +137,7 @@ public class RetryTest {
         TestInvocation<Void> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new, TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -155,9 +146,7 @@ public class RetryTest {
         TestInvocation<Void> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new, TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -184,9 +173,7 @@ public class RetryTest {
         TestInvocation<Void> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new, TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Retry<>(invocation, "test invocation",
                 exception, testException, 3, 1000, Delay.NONE, stopwatch));
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -216,9 +203,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1000);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
@@ -233,9 +218,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1500);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
@@ -250,9 +233,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(500);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 
@@ -267,9 +248,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1000);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
@@ -284,9 +263,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1500);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
@@ -316,9 +293,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1000);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
@@ -333,9 +308,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1500);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
 
@@ -383,9 +356,7 @@ public class RetryTest {
         startDelayBarrier.await();
         stopwatch.setCurrentValue(1_000_000_000L);
         endDelayBarrier.open();
-        assertThatThrownBy(result::await)
-                .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessage("test invocation reached max retries or max retry duration");
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
 

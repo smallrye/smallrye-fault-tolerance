@@ -21,6 +21,10 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     private final Delay delayBetweenRetries;
     private final Stopwatch stopwatch;
 
+    private volatile Thread executionThread;
+    // mstodo reattempt should not be triggered before the previous one. So we should be good
+    // mstodo move to the call class if we were to separate from the context class
+
     public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
                  long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
@@ -35,8 +39,10 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(Callable<V> target) throws Exception {
+        executionThread = Thread.currentThread();
         long counter = 0;
         RunningStopwatch runningStopwatch = stopwatch.start();
+        Throwable lastFailure = null;
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
             try {
                 return delegate.apply(target);
@@ -52,6 +58,8 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 if (abortOn.includes(e.getClass()) || !retryOn.includes(e.getClass())) {
                     throw e;
                 }
+
+                lastFailure = e;
             }
 
             try {
@@ -69,6 +77,19 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
             counter++;
         }
 
-        throw new FaultToleranceException(description + " reached max retries or max retry duration");
+        if (lastFailure != null) {
+            // TODO: TCK expects that but it seems un(der)specified in the spec
+            if (lastFailure instanceof Exception) {
+                throw (Exception) lastFailure; // mstodo is it okay?
+            } else {
+                throw new FaultToleranceException(lastFailure.getMessage(), lastFailure);
+            }
+        } else {
+            throw new FaultToleranceException(description + " reached max retries or max retry duration");
+        }
+    }
+
+    public void cancel() {
+        executionThread.interrupt(); // mstodo handle if needed
     }
 }

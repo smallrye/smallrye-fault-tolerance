@@ -4,9 +4,9 @@ import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreakerListener;
 import com.github.ladicek.oaken_ocean.core.retry.TestInvocation;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
+import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.junit.Test;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.github.ladicek.oaken_ocean.core.composition.Strategies.circuitBreaker;
@@ -71,7 +71,7 @@ public class CircuitBreakerAndRetryTest {
                         )
                 );
 
-        assertThatThrownBy(() -> operation.apply(null)).hasMessage("retry reached max retries or max retry duration");
+        assertThatThrownBy(() -> operation.apply(null)).isExactlyInstanceOf(CircuitBreakerOpenException.class);
         assertThat(recorder.failureCount.get()).isEqualTo(5);
         assertThat(recorder.rejectedCount.get()).isEqualTo(6);
         assertThat(recorder.successCount.get()).isEqualTo(0);
