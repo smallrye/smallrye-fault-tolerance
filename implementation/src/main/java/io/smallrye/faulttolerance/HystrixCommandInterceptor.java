@@ -68,6 +68,7 @@ import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.netflix.hystrix.exception.HystrixRuntimeException.FailureType;
+import com.netflix.hystrix.util.Exceptions;
 
 import io.smallrye.faulttolerance.config.BulkheadConfig;
 import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
@@ -293,6 +294,9 @@ public class HystrixCommandInterceptor {
                         syncCircuitBreaker);
                 metricsCollector.onProcessedError(command, res);
                 if (res != null) {
+                    if (res instanceof ThrowableWrapper) {
+                        throw Exceptions.sneakyThrow(((ThrowableWrapper) res).wrappedThrowable());
+                    }
                     throw res;
                 }
             } finally {
@@ -367,6 +371,10 @@ public class HystrixCommandInterceptor {
     }
 
     private static boolean isHystrixWrapperForThrowable(Exception e) {
+        if (e instanceof ThrowableWrapper) {
+            return true;
+        }
+
         // previously, we just tested if the cause of the Exception is an Error, but this is a legitimate combination
         // (and the TCK uses it in org.eclipse.microprofile.fault.tolerance.tck.bulkhead.clientserver.Checker.perform)
         //

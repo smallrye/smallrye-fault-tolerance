@@ -17,6 +17,8 @@
 package io.smallrye.faulttolerance;
 
 import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.FAIL_ON;
+import static io.smallrye.faulttolerance.config.CircuitBreakerConfig.SKIP_ON;
+import static io.smallrye.faulttolerance.config.FallbackConfig.APPLY_ON;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -115,10 +117,19 @@ public class SimpleCommand extends BasicCommand {
             failure = translateException();
         }
         if (retryContext == null || !retryContext.shouldRetryOn(failure)) {
-            return fallback.get();
-        } else {
-            return super.getFallback();
+            if (shouldApplyFallback(failure)) {
+                return fallback.get();
+            }
         }
+        return super.getFallback();
+    }
+
+    @Override
+    protected Exception getExceptionFromThrowable(Throwable t) {
+        if (t instanceof Exception) {
+            return (Exception) t;
+        }
+        return new ThrowableWrapper(t);
     }
 
     // TODO: improve this, see: https://github.com/smallrye/smallrye-fault-tolerance/issues/52
@@ -139,8 +150,30 @@ public class SimpleCommand extends BasicCommand {
     }
 
     private boolean isFailureAssignableFromAnyFailureException(Throwable failure) {
-        Class<?>[] exceptions = operation.getCircuitBreaker().<Class<?>[]> get(FAIL_ON);
-        for (Class<?> exception : exceptions) {
+        Class<?>[] skipOn = operation.getCircuitBreaker().get(SKIP_ON);
+        for (Class<?> exception : skipOn) {
+            if (exception.isAssignableFrom(failure.getClass())) {
+                return false;
+            }
+        }
+        Class<?>[] failOn = operation.getCircuitBreaker().get(FAIL_ON);
+        for (Class<?> exception : failOn) {
+            if (exception.isAssignableFrom(failure.getClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean shouldApplyFallback(Throwable failure) {
+        Class<?>[] skipOn = operation.getFallback().get(SKIP_ON);
+        for (Class<?> exception : skipOn) {
+            if (exception.isAssignableFrom(failure.getClass())) {
+                return false;
+            }
+        }
+        Class<?>[] applyOn = operation.getFallback().get(APPLY_ON);
+        for (Class<?> exception : applyOn) {
             if (exception.isAssignableFrom(failure.getClass())) {
                 return true;
             }
@@ -150,7 +183,11 @@ public class SimpleCommand extends BasicCommand {
 
     @Override
     void setFailure(Throwable f) {
-        ctx.setFailure(f);
+        if (f instanceof ThrowableWrapper) {
+            ctx.setFailure(((ThrowableWrapper) f).wrappedThrowable());
+        } else {
+            ctx.setFailure(f);
+        }
     }
 
     private final FaultToleranceOperation operation;

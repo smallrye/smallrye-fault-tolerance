@@ -29,6 +29,7 @@ public class FaultToleranceExtension implements LoadableExtension {
     public void register(ExtensionBuilder builder) {
         builder.service(ApplicationArchiveProcessor.class, FaultToleranceApplicationArchiveProcessor.class);
         builder.service(DeploymentExceptionTransformer.class, TckDeploymentExceptionTransformer.class);
+        builder.observer(HystrixCleanupObserver.class);
     }
 
 }
