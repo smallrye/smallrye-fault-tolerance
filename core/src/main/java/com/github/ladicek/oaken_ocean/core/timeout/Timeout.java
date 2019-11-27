@@ -14,18 +14,22 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
 
     final long timeoutInMillis;
     final TimeoutWatcher watcher;
+    final MetricsRecorder metricsRecorder;
 
-    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher) {
+    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher,
+                   MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Timeout delegate must be set");
         this.description = checkNotNull(description, "Timeout description must be set");
         this.timeoutInMillis = check(timeoutInMillis, timeoutInMillis > 0, "Timeout must be > 0");
         this.watcher = checkNotNull(watcher, "Timeout watcher must be set");
+        this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
     @Override
     public V apply(Callable<V> target) throws Exception {
         TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis);
         TimeoutWatch watch = watcher.schedule(execution);
+        long start = System.nanoTime();
 
         V result = null;
         Exception exception = null;
@@ -52,17 +56,36 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         }
 
         if (execution.hasTimedOut()) {
+            long end = System.nanoTime();
+            metricsRecorder.timeoutTimedOut(end - start);
             throw timeoutException();
         }
 
         if (exception != null) {
             throw exception;
         }
+        long end = System.nanoTime();
+        metricsRecorder.timeoutSucceeded(end - start);
 
         return result;
     }
 
     TimeoutException timeoutException() {
         return new TimeoutException(description + " timed out");
+    }
+
+    public interface MetricsRecorder {
+        void timeoutSucceeded(long time);
+        void timeoutTimedOut(long time);
+
+        MetricsRecorder NO_OP = new MetricsRecorder() {
+            @Override
+            public void timeoutSucceeded(long time) {
+            }
+
+            @Override
+            public void timeoutTimedOut(long time) {
+            }
+        };
     }
 }

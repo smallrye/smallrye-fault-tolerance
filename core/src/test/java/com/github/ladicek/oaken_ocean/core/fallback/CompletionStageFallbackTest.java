@@ -28,42 +28,42 @@ public class CompletionStageFallbackTest {
     @Test
     public void immediatelyReturning_valueThenValue() throws Exception {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(() -> completedStage("foobar"));
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("foobar");
     }
 
     @Test
     public void immediatelyReturning_valueThenDirectException() throws Exception {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(() -> completedStage("foobar"));
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> TestException.doThrow(), testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> TestException.doThrow(), testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("foobar");
     }
 
     @Test
     public void immediatelyReturning_valueThenCompletionStageException() throws Exception {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(() -> completedStage("foobar"));
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> failedStage(new TestException()), testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> failedStage(new TestException()), testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("foobar");
     }
 
     @Test
     public void immediatelyReturning_directExceptionThenValue() throws Exception {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("fallback");
     }
 
     @Test
     public void immediatelyReturning_completionStageExceptionThenValue() throws Exception {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(() -> failedStage(new TestException()));
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("fallback");
     }
 
     @Test
     public void immediatelyReturning_directExceptionThenDirectException() throws Exception {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
-        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> { throw new RuntimeException(); }, testExecutor));
+        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> { throw new RuntimeException(); }, testExecutor, null));
         assertThatThrownBy(result.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(RuntimeException.class);
@@ -72,7 +72,7 @@ public class CompletionStageFallbackTest {
     @Test
     public void immediatelyReturning_directExceptionThenCompletionStageException() throws Exception {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
-        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> failedStage(new RuntimeException()), testExecutor));
+        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> failedStage(new RuntimeException()), testExecutor, null));
         assertThatThrownBy(result.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(RuntimeException.class);
@@ -81,7 +81,7 @@ public class CompletionStageFallbackTest {
     @Test
     public void immediatelyReturning_completionStageExceptionThenDirectException() throws Exception {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(() -> failedStage(new TestException()));
-        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> { throw new RuntimeException(); }, testExecutor));
+        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> { throw new RuntimeException(); }, testExecutor, null));
         assertThatThrownBy(result.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(RuntimeException.class);
@@ -90,7 +90,7 @@ public class CompletionStageFallbackTest {
     @Test
     public void immediatelyReturning_completionStageExceptionThenCompletionStageException() throws Exception {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(() -> failedStage(new TestException()));
-        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> failedStage(new RuntimeException()), testExecutor));
+        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> failedStage(new RuntimeException()), testExecutor, null));
         assertThatThrownBy(result.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(RuntimeException.class);
@@ -104,7 +104,7 @@ public class CompletionStageFallbackTest {
         Barrier startBarrier = Barrier.interruptible();
         Barrier endBarrier = Barrier.interruptible();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.waitingOnBarrier(startBarrier, endBarrier, () -> completedStage("foobar"));
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         startBarrier.await();
         testExecutor.interruptExecutingThread();
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
@@ -122,7 +122,7 @@ public class CompletionStageFallbackTest {
             endBarrier.await();
             return completedStage("fallback");
         };
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor, null));
         startBarrier.await();
         testExecutor.interruptExecutingThread();
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
@@ -140,7 +140,7 @@ public class CompletionStageFallbackTest {
             endBarrier.await();
             return completedStage("fallback");
         };
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor, null));
         startBarrier.await();
         testExecutor.interruptExecutingThread();
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
@@ -154,7 +154,7 @@ public class CompletionStageFallbackTest {
             Thread.currentThread().interrupt();
             return completedStage("foobar");
         };
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("foobar");
     }
 
@@ -164,7 +164,7 @@ public class CompletionStageFallbackTest {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(InterruptedException.class);
@@ -176,7 +176,7 @@ public class CompletionStageFallbackTest {
             Thread.currentThread().interrupt();
             return failedStage(new RuntimeException());
         };
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", e -> completedStage("fallback"), testExecutor, null));
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(InterruptedException.class);
@@ -189,7 +189,7 @@ public class CompletionStageFallbackTest {
             Thread.currentThread().interrupt();
             return completedStage("fallback");
         };
-        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor));
+        TestThread<CompletionStage<String>> result = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor, null));
         assertThat(result.await().toCompletableFuture().get()).isEqualTo("fallback");
     }
 
@@ -200,7 +200,7 @@ public class CompletionStageFallbackTest {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor, null));
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(RuntimeException.class);
@@ -213,7 +213,7 @@ public class CompletionStageFallbackTest {
             Thread.currentThread().interrupt();
             return failedStage(new RuntimeException());
         };
-        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor));
+        TestThread<CompletionStage<String>> executingThread = runOnTestThread(new CompletionStageFallback<>(invocation, "test invocation", fallback, testExecutor, null));
         assertThatThrownBy(executingThread.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(RuntimeException.class);

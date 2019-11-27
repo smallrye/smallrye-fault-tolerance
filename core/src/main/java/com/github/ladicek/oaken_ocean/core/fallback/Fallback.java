@@ -9,11 +9,14 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
     final String description;
 
     final FallbackFunction<V> fallback;
+    final MetricsRecorder metricsRecorder;
 
-    public Fallback(FaultToleranceStrategy<V> delegate, String description, FallbackFunction<V> fallback) {
+    public Fallback(FaultToleranceStrategy<V> delegate, String description, FallbackFunction<V> fallback,
+                    MetricsRecorder metricsRecorder) {
         this.delegate = delegate;
         this.description = description;
         this.fallback = fallback;
+        this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
     @Override
@@ -29,6 +32,14 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
             throw new InterruptedException();
         }
 
+        metricsRecorder.fallbackCalled();
         return fallback.call(failure);
+    }
+
+    public interface MetricsRecorder {
+        void fallbackCalled();
+
+        MetricsRecorder NO_OP = () -> {
+        };
     }
 }

@@ -56,7 +56,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", 1000, watcher, taskExecutor);
+                "completion stage timeout", 1000, watcher, taskExecutor, null);
 
         assertThat(timeout.apply(() -> {
             Thread.sleep(200);
@@ -70,7 +70,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", 1000, watcher, taskExecutor);
+                "completion stage timeout", 1000, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(() -> {
             Thread.sleep(200);
@@ -86,7 +86,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", 1000, watcher, taskExecutor);
+                "completion stage timeout", 1000, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(() -> {
             Thread.sleep(200);
@@ -102,7 +102,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", 500, watcher, taskExecutor);
+                "completion stage timeout", 500, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(() -> {
             Thread.sleep(1000);

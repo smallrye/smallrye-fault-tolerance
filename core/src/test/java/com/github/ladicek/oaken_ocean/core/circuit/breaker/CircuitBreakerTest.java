@@ -26,7 +26,7 @@ public class CircuitBreakerTest {
     @Test
     public void test1() throws Exception {
         CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation", testException,
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
         assertThat(cb.apply(() -> "foobar1")).isEqualTo("foobar1");
@@ -64,7 +64,7 @@ public class CircuitBreakerTest {
     @Test
     public void test2() throws Exception {
         CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation", testException,
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
         assertThat(cb.apply(() -> "foobar1")).isEqualTo("foobar1");
