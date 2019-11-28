@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
@@ -36,8 +38,11 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     final MetricsRecorder metricsRecorder;
 
+    AtomicLong previousHalfOpenTime = new AtomicLong();
     volatile long halfOpenStart;
+    AtomicLong previousClosedTime = new AtomicLong();
     volatile long closedStart;
+    AtomicLong previousOpenTime = new AtomicLong();
     volatile long openStart;
 
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn, long delayInMillis,
@@ -56,6 +61,25 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
         this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
         this.closedStart = System.nanoTime();
+
+        // mstodo: wrap this measurements in some object not to duplicate this logic
+        this.metricsRecorder.circuitBreakerClosedTimeProvider(() -> {
+            return state.get().id == STATE_CLOSED
+                  ? previousClosedTime.get() + System.nanoTime() - closedStart
+                  : previousClosedTime.get();
+            });
+        this.metricsRecorder.circuitBreakerHalfOpenTimeProvider(() -> {
+            return state.get().id == STATE_HALF_OPEN
+                  ? previousHalfOpenTime.get() + System.nanoTime() - halfOpenStart
+                  : previousHalfOpenTime.get();
+            });
+
+        this.metricsRecorder.circuitBreakerOpenTimeProvider(() -> {
+            return state.get().id == STATE_OPEN
+                  ? previousOpenTime.get() + System.nanoTime() - openStart
+                  : previousOpenTime.get();
+            });
+
     }
 
     @Override
@@ -101,7 +125,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
                 long now = System.nanoTime();
 
                 openStart = now;
-                metricsRecorder.circuitBreakerClosedTime(now - closedStart);
+                previousClosedTime.addAndGet(now - closedStart);
                 metricsRecorder.circuitBreakerClosedToOpen();
 
                 toOpen(state);
@@ -119,7 +143,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             long now = System.nanoTime();
 
             halfOpenStart = now;
-            metricsRecorder.circuitBreakerOpenTime(now - openStart);
+            previousOpenTime.addAndGet(now - openStart);
 
             toHalfOpen(state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
@@ -136,7 +160,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             if (successes >= successThreshold) {
                 long now = System.nanoTime();
                 closedStart = now;
-                metricsRecorder.circuitBreakerHalfOpenTime(now - halfOpenStart);
+                previousHalfOpenTime.addAndGet(now - halfOpenStart);
 
                 toClosed(state);
             }
@@ -200,9 +224,9 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     public interface MetricsRecorder {
         void circuitBreakerRejected();
-        void circuitBreakerOpenTime(long time);
-        void circuitBreakerHalfOpenTime(long time);
-        void circuitBreakerClosedTime(long time);
+        void circuitBreakerOpenTimeProvider(Supplier<Long> supplier);
+        void circuitBreakerHalfOpenTimeProvider(Supplier<Long> supplier);
+        void circuitBreakerClosedTimeProvider(Supplier<Long> supplier);
         void circuitBreakerClosedToOpen();
         void circuitBreakerFailed();
         void circuitBreakerSucceeded();
@@ -213,16 +237,17 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             }
 
             @Override
-            public void circuitBreakerOpenTime(long time) {
+            public void circuitBreakerOpenTimeProvider(Supplier<Long> supplier) {
             }
 
             @Override
-            public void circuitBreakerHalfOpenTime(long time) {
+            public void circuitBreakerHalfOpenTimeProvider(Supplier<Long> supplier) {
             }
 
             @Override
-            public void circuitBreakerClosedTime(long time) {
+            public void circuitBreakerClosedTimeProvider(Supplier<Long> supplier) {
             }
+
 
             @Override
             public void circuitBreakerClosedToOpen() {

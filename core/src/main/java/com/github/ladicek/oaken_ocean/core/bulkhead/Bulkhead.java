@@ -10,13 +10,13 @@ import java.util.concurrent.Semaphore;
  * This class is a one big TODO :)
  */
 public class Bulkhead<V> implements FaultToleranceStrategy<V> {
-    private final FaultToleranceStrategy<V> delegate;
+    final FaultToleranceStrategy<V> delegate;
     private final String description;
 
     private final Semaphore bulkheadSemaphore;
     private final MetricsRecorder recorder;
 
-    public Bulkhead(FaultToleranceStrategy<V> delegate, String description, int size, int queueSize,
+    public Bulkhead(FaultToleranceStrategy<V> delegate, String description, int size,
                     MetricsRecorder metricsRecorder) {
         this.delegate = delegate;
         this.description = description;

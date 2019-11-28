@@ -80,7 +80,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             long now = System.nanoTime();
 
             openStart = now;
-            metricsRecorder.circuitBreakerClosedTime(now - closedStart);
+            previousClosedTime.addAndGet(now - closedStart);
             metricsRecorder.circuitBreakerClosedToOpen();
 
             toOpen(state);
@@ -103,7 +103,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             long now = System.nanoTime();
 
             halfOpenStart = now;
-            metricsRecorder.circuitBreakerOpenTime(now - openStart);
+            previousOpenTime.addAndGet(now - openStart);
 
             toHalfOpen(state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
@@ -120,7 +120,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             if (successes >= successThreshold) {
                 long now = System.nanoTime();
                 closedStart = now;
-                metricsRecorder.circuitBreakerHalfOpenTime(now - halfOpenStart);
+                previousHalfOpenTime.addAndGet(now - halfOpenStart);
 
                 toClosed(state);
             }

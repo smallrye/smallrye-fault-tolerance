@@ -11,8 +11,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
-import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
-
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate,
                                 String description,
@@ -38,7 +36,9 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                                       RunningStopwatch stopwatch,
                                       Throwable latestFailure)
           throws Exception {
-        if (attempt > 0 && attempt <= maxRetries) {
+        if (attempt == 0) { // mstodo the ifs here can be simplified
+            // do not sleep
+        } else if (attempt > 0 && attempt <= maxRetries) {
             metricsRecorder.retryRetried();
             try {
                 delayBetweenRetries.sleep();
@@ -53,6 +53,9 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
                 throw e;
             }
+        } else {
+            // mstodo max retry reached, do we need to do anything more here?
+            throw getError(latestFailure);
         }
         if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
             if (latestFailure != null) {
@@ -65,11 +68,12 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
         }
         try {
             return delegate.apply(target)
-                  .thenApply()
-                  .handleAsync((value, error) -> {
-                     if (value != null) {
+                  .handle(DelegateResultCarrier::new)
+                  .thenCompose(result -> {
+                     Throwable error = result.error;
+                     if (error == null) {
                          recordSuccess(attempt);
-                         return value;
+                         return CompletableFuture.completedFuture(result.value);
                      } else {
                          metricsRecorder.retryFailed();
                          if (abortOn.includes(error.getClass()) || !retryOn.includes(error.getClass())) {
@@ -87,7 +91,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                      }
                   });
         } catch (Throwable th) {
-            doRetry(target, attempt+1, stopwatch, th);
+            return doRetry(target, attempt+1, stopwatch, th);
         }
     }
 
@@ -171,35 +175,17 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 //        }
 //    }
 
-    public void cancel() {
-        executionThread.interrupt(); // mstodo handle if needed
-    }
+//    public void cancel() {
+//        executionThread.interrupt(); // mstodo handle if needed
+//    }
 
-    public interface MetricsRecorder {
-        void retrySucceededNotRetried();
+    private class DelegateResultCarrier {
+        final V value;
+        final Throwable error;
 
-        void retrySucceededRetried();
-
-        void retryFailed();
-
-        void retryRetried();
-
-        MetricsRecorder NO_OP = new MetricsRecorder() {
-            @Override
-            public void retrySucceededNotRetried() {
-            }
-
-            @Override
-            public void retrySucceededRetried() {
-            }
-
-            @Override
-            public void retryFailed() {
-            }
-
-            @Override
-            public void retryRetried() {
-            }
-        };
+        private DelegateResultCarrier(V value, Throwable error) {
+            this.value = value;
+            this.error = error;
+        }
     }
 }
