@@ -64,20 +64,19 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
                   }
 
                   if (interrupted && !execution.hasTimedOut()) {
-                      result.setFailure(new InterruptedException());
+                      exception = new InterruptedException();
                   }
 
+                  long end = System.nanoTime();
                   if (execution.hasTimedOut()) {
-                      long end = System.nanoTime();
                       metricsRecorder.timeoutTimedOut(end - start);
                       result.setFailure(timeoutException());
-                  }
-
-                  if (exception != null) {
+                  } else if (exception != null) {
                       result.setFailure(exception);
+                      metricsRecorder.timeoutFailed(end - start);
+                  } else {
+                      metricsRecorder.timeoutSucceeded(end - start);
                   }
-                  long end = System.nanoTime();
-                  metricsRecorder.timeoutSucceeded(end - start);
               }
         );
         result.waitForFutureInitialization();
@@ -111,19 +110,20 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         }
 
         if (interrupted && !execution.hasTimedOut()) {
-            throw new InterruptedException();
+            exception = new InterruptedException();
         }
 
+        long end = System.nanoTime();
         if (execution.hasTimedOut()) {
-            long end = System.nanoTime();
             metricsRecorder.timeoutTimedOut(end - start);
             throw timeoutException();
         }
 
         if (exception != null) {
+            metricsRecorder.timeoutFailed(end - start);
             throw exception;
         }
-        long end = System.nanoTime();
+
         metricsRecorder.timeoutSucceeded(end - start);
 
         return result;
@@ -136,6 +136,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
     public interface MetricsRecorder {
         void timeoutSucceeded(long time);
         void timeoutTimedOut(long time);
+        void timeoutFailed(long time);
 
         MetricsRecorder NO_OP = new MetricsRecorder() {
             @Override
@@ -144,6 +145,10 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
 
             @Override
             public void timeoutTimedOut(long time) {
+            }
+
+            @Override
+            public void timeoutFailed(long time) {
             }
         };
     }

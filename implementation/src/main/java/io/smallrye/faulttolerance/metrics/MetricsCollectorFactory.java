@@ -214,6 +214,11 @@ public class MetricsCollectorFactory {
             histogramUpdate(metricsPrefix + MetricNames.TIMEOUT_EXECUTION_DURATION, time);
             counterInc(metricsPrefix + MetricNames.TIMEOUT_CALLS_TIMED_OUT_TOTAL);
         }
+
+        @Override
+        public void timeoutFailed(long time) {
+            histogramUpdate(metricsPrefix + MetricNames.TIMEOUT_EXECUTION_DURATION, time);
+        }
         // mstodo do we need to update histogram when timeout failed in a different way?
 
         @Override

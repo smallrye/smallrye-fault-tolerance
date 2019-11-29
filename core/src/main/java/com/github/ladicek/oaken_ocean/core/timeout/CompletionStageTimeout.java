@@ -16,8 +16,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         this.executor = executor;
     }
 
-    // TODO interruptions?
-    // TODO metrics
+    // mstodo metrics!!!
     @Override
     public CompletionStage<V> apply(Callable<CompletionStage<V>> target) throws Exception {
         CompletableFuture<V> result = new CompletableFuture<>();
