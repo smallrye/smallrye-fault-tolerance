@@ -7,8 +7,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
 
-import com.github.ladicek.oaken_ocean.core.retry.Retry;
-
 import io.smallrye.faulttolerance.FaultToleranceInterceptor;
 
 /**
@@ -20,16 +18,14 @@ public class AsyncFuture<T> implements Future<T> {
     private static final Logger LOGGER = Logger.getLogger(FaultToleranceInterceptor.class);
 
     private final Future<?> delegate;
-    private final Cancelator cancelator;
 
-    public AsyncFuture(Future<?> delegate, Cancelator cancelator) {
+    public AsyncFuture(Future<?> delegate) {
         this.delegate = delegate;
-        this.cancelator = cancelator;
     }
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        cancelator.cancel();
+        System.out.println("canceling the AsyncFuture. The delegate is: " + delegate); // mstodo remove
         return delegate.cancel(mayInterruptIfRunning);
     }
 
@@ -66,7 +62,7 @@ public class AsyncFuture<T> implements Future<T> {
     }
 
     private boolean isCancellation(ExecutionException executionException) {
-        return cancelator.canceled && executionException.getCause() instanceof InterruptedException;
+        return executionException.getCause() instanceof InterruptedException;
     }
 
     @Override
@@ -102,24 +98,5 @@ public class AsyncFuture<T> implements Future<T> {
     private T logResult(Future<T> future, T unwrapped) {
         LOGGER.tracef("Unwrapped async result from %s: %s", future, unwrapped);
         return unwrapped;
-    }
-
-    public static class Cancelator {
-        private volatile boolean canceled = false;
-        private volatile Retry retry;
-
-        void setRetry(Retry retry) {
-            this.retry = retry;
-            if (canceled) {
-                cancel();
-            }
-        }
-
-        void cancel() {
-            canceled = true;
-            if (retry != null) {
-                retry.cancel();
-            }
-        }
     }
 }

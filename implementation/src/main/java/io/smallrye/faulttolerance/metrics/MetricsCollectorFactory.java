@@ -46,10 +46,6 @@ public class MetricsCollectorFactory {
         private final String metricsPrefix;
         private final FaultToleranceOperation operation;
 
-        private volatile AtomicLong cbOpenTotal = new AtomicLong(0);
-        private volatile AtomicLong cbClosedTotal = new AtomicLong(0);
-        private volatile AtomicLong cbHalfOpenTotal = new AtomicLong(0);
-
         private volatile AtomicLong bulkheadQueueSize = new AtomicLong(0);
         private volatile AtomicLong bulkheadConcurrentExecutions = new AtomicLong(0);
 
@@ -57,11 +53,6 @@ public class MetricsCollectorFactory {
             this.metricsPrefix = MetricNames.metricsPrefix(operation.getMethod());
             this.operation = operation;
             runSafely(() -> {
-                if (operation.hasCircuitBreaker()) {
-                    gaugeRegister(metricsPrefix + MetricNames.CB_OPEN_TOTAL, cbOpenTotal::get);
-                    gaugeRegister(metricsPrefix + MetricNames.CB_CLOSED_TOTAL, cbClosedTotal::get);
-                    gaugeRegister(metricsPrefix + MetricNames.CB_HALF_OPEN_TOTAL, cbHalfOpenTotal::get);
-                }
                 if (operation.hasBulkhead()) {
                     if (operation.isAsync()) {
                         gaugeRegister(metricsPrefix + MetricNames.BULKHEAD_WAITING_QUEUE_POPULATION,
@@ -154,18 +145,18 @@ public class MetricsCollectorFactory {
         }
 
         @Override
-        public void circuitBreakerOpenTime(long time) {
-            cbOpenTotal.addAndGet(time);
+        public void circuitBreakerOpenTimeProvider(Supplier<Long> supplier) {
+            gaugeRegister(metricsPrefix + MetricNames.CB_OPEN_TOTAL, supplier);
         }
 
         @Override
-        public void circuitBreakerHalfOpenTime(long time) {
-            cbHalfOpenTotal.addAndGet(time);
+        public void circuitBreakerHalfOpenTimeProvider(Supplier<Long> supplier) {
+            gaugeRegister(metricsPrefix + MetricNames.CB_HALF_OPEN_TOTAL, supplier);
         }
 
         @Override
-        public void circuitBreakerClosedTime(long time) {
-            cbClosedTotal.addAndGet(time);
+        public void circuitBreakerClosedTimeProvider(Supplier<Long> supplier) {
+            gaugeRegister(metricsPrefix + MetricNames.CB_CLOSED_TOTAL, supplier);
         }
 
         @Override
@@ -216,8 +207,10 @@ public class MetricsCollectorFactory {
 
         @Override
         public void timeoutTimedOut(long time) {
+            histogramUpdate(metricsPrefix + MetricNames.TIMEOUT_EXECUTION_DURATION, time);
             counterInc(metricsPrefix + MetricNames.TIMEOUT_CALLS_TIMED_OUT_TOTAL);
         }
+        // mstodo do we need to update histogram when timeout failed in a different way?
 
         @Override
         public void invoked() {
