@@ -1,6 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.fallback;
 
-import com.github.ladicek.oaken_ocean.core.Cancelator;
+import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 
 import java.util.concurrent.Callable;
@@ -26,8 +26,8 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
-        return doApply(() -> delegate.asyncFutureApply(target, cancelator));
+    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
+        return doApply(() -> delegate.asyncFutureApply(target, cancellator));
     }
 
     private V doApply(Callable<V> c) throws Exception {

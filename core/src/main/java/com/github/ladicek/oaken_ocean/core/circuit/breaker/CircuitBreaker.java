@@ -1,6 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
-import com.github.ladicek.oaken_ocean.core.Cancelator;
+import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
@@ -101,8 +101,8 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
-        return doApply(target, () -> delegate.asyncFutureApply(target, cancelator));
+    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
+        return doApply(target, () -> delegate.asyncFutureApply(target, cancellator));
     }
 
     private V inClosed(Callable<V> apply, State state) throws Exception {

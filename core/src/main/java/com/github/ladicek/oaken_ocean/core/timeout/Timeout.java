@@ -1,6 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
-import com.github.ladicek.oaken_ocean.core.Cancelator;
+import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.FutureOrFailure;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
@@ -32,7 +32,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
+    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
         if (asyncExecutor == null) {
             throw new IllegalStateException("Async Future execution requires asyncExecutor");
         }
@@ -47,7 +47,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
                   Exception exception = null;
                   boolean interrupted = false;
                   try {
-                      result.setDelegate((Future)delegate.asyncFutureApply(target, cancelator));
+                      result.setDelegate((Future)delegate.asyncFutureApply(target, cancellator));
                   } catch (InterruptedException e) {
                       interrupted = true;
                   } catch (Exception e) {

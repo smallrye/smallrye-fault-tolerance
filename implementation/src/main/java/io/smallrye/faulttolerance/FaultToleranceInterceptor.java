@@ -52,7 +52,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceExceptio
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.Logger;
 
-import com.github.ladicek.oaken_ocean.core.Cancelator;
+import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.Invocation;
 import com.github.ladicek.oaken_ocean.core.bulkhead.Bulkhead;
@@ -180,8 +180,8 @@ public class FaultToleranceInterceptor {
         if (operation.isAsync() && operation.returnsCompletionStage()) {
             return properAsyncFlow(operation, beanClass, invocationContext, collector, point);
         } else if (operation.isAsync()) {
-            Cancelator cancelator = new Cancelator();
-            return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point, cancelator), cancelator);
+            Cancellator cancellator = new Cancellator();
+            return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point, cancellator), cancellator);
         } else {
             return syncFlow(operation, beanClass, invocationContext, collector, point, null);
         }
@@ -232,9 +232,9 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private <T> Future<T> offload(Callable<T> o, Cancelator cancelator) {
+    private <T> Future<T> offload(Callable<T> o, Cancellator cancellator) {
         Future<Future<T>> result = (Future<Future<T>>) asyncExecutor.submit(o);
-        return new AsyncFuture(result, cancelator);
+        return new AsyncFuture(result, cancellator);
     }
 
     @SuppressWarnings("unchecked")
@@ -243,12 +243,12 @@ public class FaultToleranceInterceptor {
             InvocationContext invocationContext,
             MetricsCollector collector,
             InterceptionPoint point,
-            Cancelator cancelator) throws Exception {
+            Cancellator cancellator) throws Exception {
         FaultToleranceStrategy<T> strategy = (FaultToleranceStrategy<T>) strategies.computeIfAbsent(point,
                 ignored -> prepareStrategy(operation, point, beanClass, invocationContext, collector));
         try {
             if (operation.isAsync()) {
-                return strategy.asyncFutureApply(() -> (T) invocationContext.proceed(), cancelator);
+                return strategy.asyncFutureApply(() -> (T) invocationContext.proceed(), cancellator);
             } else {
                 return strategy.apply(() -> (T) invocationContext.proceed());
             }

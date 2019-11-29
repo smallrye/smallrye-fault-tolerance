@@ -1,6 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.bulkhead;
 
-import com.github.ladicek.oaken_ocean.core.Cancelator;
+import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.FutureOrFailure;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
@@ -57,13 +57,13 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
+    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
         try {
             FutureOrFailure result = new FutureOrFailure<>();
             BulkheadTask bulkheadTask = new BulkheadTask(System.nanoTime(), target, result);
             // mstodo get rid of passing the result in the bulkhead task
             executor.execute(bulkheadTask);
-            cancelator.addCancelAction(() -> workQueue.remove(bulkheadTask));
+            cancellator.addCancelAction(() -> workQueue.remove(bulkheadTask));
             recorder.bulkheadQueueEntered();
 
             try {

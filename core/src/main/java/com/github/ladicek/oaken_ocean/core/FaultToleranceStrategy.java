@@ -1,7 +1,6 @@
 package com.github.ladicek.oaken_ocean.core;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 /**
  * A fault tolerance strategy that guards invocations of arbitrary {@link Callable}s.
@@ -25,7 +24,8 @@ public interface FaultToleranceStrategy<V> {
     V apply(Callable<V> target) throws Exception;
 
 
-    default V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
+    default V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
+        // mstodo that is wrong, we need to propagate the cancelator
         return apply(target);
     }
 }

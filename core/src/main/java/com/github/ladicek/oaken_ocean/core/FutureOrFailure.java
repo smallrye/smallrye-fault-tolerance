@@ -13,6 +13,8 @@ import java.util.concurrent.TimeUnit;
 public class FutureOrFailure<V> implements Future<V> {
     private final CountDownLatch latch = new CountDownLatch(1);
 
+    // mstodo instead of a ton of volatile fields, it might be better to have
+    // mstodo one immutable value holder in an AtomicReference
     private volatile boolean canceled;
     private volatile Future<V> delegate;
     private volatile Exception failure;
@@ -21,6 +23,7 @@ public class FutureOrFailure<V> implements Future<V> {
     public void setDelegate(Future<V> delegate) {
         this.delegate = delegate;
         if (canceled) {
+            // mstodo is this needed/correct?
             delegate.cancel(mayInterruptIfRunning);
         }
         latch.countDown();
