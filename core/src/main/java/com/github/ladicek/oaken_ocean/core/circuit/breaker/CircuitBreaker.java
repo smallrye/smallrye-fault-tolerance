@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
+import com.github.ladicek.oaken_ocean.core.Cancelator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
@@ -84,25 +85,34 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(Callable<V> target) throws Exception {
+        return doApply(target, () -> delegate.apply(target));
+    }
+
+    private V doApply(Callable<V> target, Callable<V> apply) throws Exception {
         // this is the only place where `state` can be dereferenced!
         // it must be passed through as a parameter to all the state methods,
         // so that they don't see the circuit breaker moving to a different state under them
         State state = this.state.get();
         switch (state.id) {
             case STATE_CLOSED:
-                return inClosed(state, target);
+                return inClosed(apply, state, target);
             case STATE_OPEN:
                 return inOpen(state, target);
             case STATE_HALF_OPEN:
-                return inHalfOpen(state, target);
+                return inHalfOpen(apply, state, target);
             default:
                 throw new AssertionError("Invalid circuit breaker state: " + state.id);
         }
     }
 
-    private V inClosed(State state, Callable<V> target) throws Exception {
+    @Override
+    public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
+        return doApply(target, () -> delegate.asyncFutureApply(target, cancelator));
+    }
+
+    private V inClosed(Callable<V> apply, State state, Callable<V> target) throws Exception {
         try {
-            V result = delegate.apply(target);
+            V result = apply.call();
             metricsRecorder.circuitBreakerSucceeded();
             boolean failureThresholdReached = state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
@@ -151,9 +161,9 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    private V inHalfOpen(State state, Callable<V> target) throws Exception {
+    private V inHalfOpen(Callable<V> apply, State state, Callable<V> target) throws Exception {
         try {
-            V result = delegate.apply(target);
+            V result = apply.call();
             metricsRecorder.circuitBreakerSucceeded();
 
             int successes = state.consecutiveSuccesses.incrementAndGet();

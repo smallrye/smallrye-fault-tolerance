@@ -12,7 +12,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
 
     public CompletionStageTimeout(FaultToleranceStrategy<CompletionStage<V>> delegate, String description, long timeoutInMillis,
                                   TimeoutWatcher watcher, Executor executor, MetricsRecorder metricsRecorder) {
-        super(delegate, description, timeoutInMillis, watcher, metricsRecorder);
+        super(delegate, description, timeoutInMillis, watcher, metricsRecorder, executor);
         this.executor = executor;
     }
 
@@ -23,7 +23,8 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {
-            TimeoutExecution timeoutExecution = new TimeoutExecution(Thread.currentThread(), null, timeoutInMillis);
+            TimeoutExecution timeoutExecution =
+                  new TimeoutExecution(Thread.currentThread(), () -> result.completeExceptionally(timeoutException()), timeoutInMillis);
             TimeoutWatch watch = watcher.schedule(timeoutExecution);
 
             CompletionStage<V> originalResult;
@@ -33,8 +34,13 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
                 // this comes first, so that when the future is completed, the timeout watcher is already cancelled
                 // (this isn't exactly needed, but makes tests easier to write)
                 timeoutExecution.finish(watch::cancel);
+                if (!result.isDone()) {
+                    result.completeExceptionally(timeoutExecution.hasTimedOut() ? timeoutException() : e);
+                }
+                return;
+            }
 
-                result.completeExceptionally(timeoutExecution.hasTimedOut() ? timeoutException() : e);
+            if (result.isDone()) {
                 return;
             }
 

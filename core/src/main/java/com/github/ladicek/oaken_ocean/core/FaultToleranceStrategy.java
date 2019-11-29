@@ -13,6 +13,7 @@ import java.util.concurrent.Future;
  * This is important in case of strategies that maintain some state over time (such as circuit breaker).
  * @param <V> the result type of method {@code apply}; also the result type of the guarded {@code Callable}
  */
+@FunctionalInterface
 public interface FaultToleranceStrategy<V> {
     /**
      * Apply the fault tolerance strategy around the target {@link Callable}.
@@ -24,5 +25,7 @@ public interface FaultToleranceStrategy<V> {
     V apply(Callable<V> target) throws Exception;
 
 
-    V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception;
+    default V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
+        return apply(target);
+    }
 }

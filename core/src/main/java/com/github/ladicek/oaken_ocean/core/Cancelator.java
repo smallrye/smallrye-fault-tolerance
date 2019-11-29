@@ -10,7 +10,7 @@ public class Cancelator {
     private boolean canceled = false;
     private final List<Runnable> cancelActions = new ArrayList<>();
 
-    synchronized void addCancelAction(Runnable runnable) {
+    public synchronized void addCancelAction(Runnable runnable) {
         if (canceled) {
             runnable.run();
         } else {
@@ -18,7 +18,7 @@ public class Cancelator {
         }
     }
 
-    synchronized void cancel() {
+    public synchronized void cancel() {
         canceled = true;
         cancelActions.forEach(Runnable::run);
     }
