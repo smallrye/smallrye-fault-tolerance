@@ -23,7 +23,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {
-            TimeoutExecution timeoutExecution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis);
+            TimeoutExecution timeoutExecution = new TimeoutExecution(Thread.currentThread(), null, timeoutInMillis);
             TimeoutWatch watch = watcher.schedule(timeoutExecution);
 
             CompletionStage<V> originalResult;

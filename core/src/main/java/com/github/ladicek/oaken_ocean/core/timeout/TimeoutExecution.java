@@ -10,13 +10,19 @@ final class TimeoutExecution {
     private final AtomicInteger state;
 
     private final Thread executingThread;
+    private final Runnable timeoutAction;
 
     private final long timeoutInMillis;
 
     TimeoutExecution(Thread executingThread, long timeoutInMillis) {
+        this(executingThread, null, timeoutInMillis);
+    }
+
+    TimeoutExecution(Thread executingThread, Runnable timeoutAction, long timeoutInMillis) {
         this.state = new AtomicInteger(STATE_RUNNING);
         this.executingThread = executingThread;
         this.timeoutInMillis = timeoutInMillis;
+        this.timeoutAction = timeoutAction;
     }
 
     long timeoutInMillis() {
@@ -44,6 +50,9 @@ final class TimeoutExecution {
     void timeoutAndInterrupt() {
         if (state.compareAndSet(STATE_RUNNING, STATE_TIMED_OUT)) {
             executingThread.interrupt();
+            if (timeoutAction != null) {
+                timeoutAction.run();
+            }
         }
     }
 }

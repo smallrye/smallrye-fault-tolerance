@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
+import com.github.ladicek.oaken_ocean.core.Cancelator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
@@ -7,6 +8,7 @@ import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
@@ -42,6 +44,15 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(Callable<V> target) throws Exception {
+        return doApply(() -> delegate.apply(target));
+    }
+
+    @Override
+    public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
+        return doApply(() -> delegate.asyncFutureApply(target, cancelator));
+    }
+
+    private V doApply(Callable<V> doApply) throws Exception {
         executionThread = Thread.currentThread();
         long counter = 0;
         RunningStopwatch runningStopwatch = stopwatch.start();
@@ -51,7 +62,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 metricsRecorder.retryRetried();
             }
             try {
-                V result = delegate.apply(target);
+                V result = doApply.call();
                 if (counter == 0) {
                     metricsRecorder.retrySucceededNotRetried();
                 } else {

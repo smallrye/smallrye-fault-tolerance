@@ -1,10 +1,11 @@
-package com.github.ladicek.oaken_ocean.core.bulkhead;
+package com.github.ladicek.oaken_ocean.core;
+
+import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
@@ -27,9 +28,16 @@ public class FutureOrFailure<V> implements Future<V> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
+        System.out.println("canceling the future or failure, with interrupting: " + mayInterruptIfRunning); // mstodo remove
         this.canceled = true;
         this.mayInterruptIfRunning = mayInterruptIfRunning;
-        return delegate == null || delegate.cancel(true);
+        if (delegate != null) {
+            delegate.cancel(true);
+        }
+        if (mayInterruptIfRunning) {
+            Thread.currentThread().interrupt();
+        }
+        return true;
     }
 
     @Override
@@ -39,17 +47,20 @@ public class FutureOrFailure<V> implements Future<V> {
 
     @Override
     public boolean isDone() {
-        return delegate != null && delegate.isDone();
+        return latch.getCount() > 0;
     }
 
     @Override
     public V get() throws InterruptedException, ExecutionException {
         latch.await();
+        if (failure != null) {
+            throw new ExecutionException(failure);
+        }
         return delegate.get();
     }
 
     @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
         latch.await(timeout, unit);
         if (failure != null) {
             throw new ExecutionException(failure);
@@ -66,14 +77,18 @@ public class FutureOrFailure<V> implements Future<V> {
     }
 
     public void setFailure(Exception e) {
-        if (delegate != null) {
-            throw new IllegalStateException("Failure set when the delegate is already set!");
-        }
         this.failure = e;
         latch.countDown();
     }
 
-    public Exception getFailure() {
-        return failure;
+    public void timeout() {
+        System.out.println("canceling");
+        // mstodo synchronization
+        if (failure == null && (delegate == null || !delegate.isDone())) {
+            System.out.println("in cancel");
+            setFailure(new TimeoutException()); // mstodo propagate some message?
+        }
+        latch.countDown();
+        System.out.println("releasing");
     }
 }
