@@ -46,6 +46,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     AtomicLong previousOpenTime = new AtomicLong();
     volatile long openStart;
 
+    @SuppressWarnings("UnnecessaryThis")
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn, long delayInMillis,
                           int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,
                           MetricsRecorder metricsRecorder) {
@@ -53,10 +54,10 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         this.description = checkNotNull(description, "Circuit breaker description must be set");
         this.failOn = checkNotNull(failOn, "Set of fail-on throwables must be set");
         this.delayInMillis = check(delayInMillis, delayInMillis >= 0, "Circuit breaker delay must be >= 0");
-        this.rollingWindowSize = check(requestVolumeThreshold, requestVolumeThreshold > 0, "Circuit breaker rolling window size must be > 0");
-        this.failureThreshold = check((int) (failureRatio * requestVolumeThreshold), failureRatio >= 0.0 && failureRatio <= 1.0, "Circuit breaker rolling window failure ratio must be >= 0 && <= 1");
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
+        this.failureThreshold = check((int) (failureRatio * requestVolumeThreshold), failureRatio >= 0.0 && failureRatio <= 1.0, "Circuit breaker rolling window failure ratio must be >= 0 && <= 1");
+        this.rollingWindowSize = check(requestVolumeThreshold, requestVolumeThreshold > 0, "Circuit breaker rolling window size must be > 0");
 
         this.state = new AtomicReference<>(State.closed(rollingWindowSize, failureThreshold));
 
@@ -64,23 +65,17 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         this.closedStart = System.nanoTime();
 
         // mstodo: wrap this measurements in some object not to duplicate this logic
-        this.metricsRecorder.circuitBreakerClosedTimeProvider(() -> {
-            return state.get().id == STATE_CLOSED
-                  ? previousClosedTime.get() + System.nanoTime() - closedStart
-                  : previousClosedTime.get();
-            });
-        this.metricsRecorder.circuitBreakerHalfOpenTimeProvider(() -> {
-            return state.get().id == STATE_HALF_OPEN
-                  ? previousHalfOpenTime.get() + System.nanoTime() - halfOpenStart
-                  : previousHalfOpenTime.get();
-            });
+        this.metricsRecorder.circuitBreakerClosedTimeProvider(() -> getTime(STATE_CLOSED, closedStart, previousClosedTime));
+        this.metricsRecorder.circuitBreakerHalfOpenTimeProvider(() -> getTime(STATE_HALF_OPEN, halfOpenStart, previousHalfOpenTime));
 
-        this.metricsRecorder.circuitBreakerOpenTimeProvider(() -> {
-            return state.get().id == STATE_OPEN
-                  ? previousOpenTime.get() + System.nanoTime() - openStart
-                  : previousOpenTime.get();
-            });
+        this.metricsRecorder.circuitBreakerOpenTimeProvider(() -> getTime(STATE_OPEN, openStart, previousOpenTime));
 
+    }
+
+    private Long getTime(int measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
+        return state.get().id == measuredState
+              ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
+              : prevMeasuredStateTime.get();
     }
 
     @Override
@@ -95,11 +90,11 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         State state = this.state.get();
         switch (state.id) {
             case STATE_CLOSED:
-                return inClosed(apply, state, target);
+                return inClosed(apply, state);
             case STATE_OPEN:
                 return inOpen(state, target);
             case STATE_HALF_OPEN:
-                return inHalfOpen(apply, state, target);
+                return inHalfOpen(apply, state);
             default:
                 throw new AssertionError("Invalid circuit breaker state: " + state.id);
         }
@@ -110,7 +105,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         return doApply(target, () -> delegate.asyncFutureApply(target, cancelator));
     }
 
-    private V inClosed(Callable<V> apply, State state, Callable<V> target) throws Exception {
+    private V inClosed(Callable<V> apply, State state) throws Exception {
         try {
             V result = apply.call();
             metricsRecorder.circuitBreakerSucceeded();
@@ -161,7 +156,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    private V inHalfOpen(Callable<V> apply, State state, Callable<V> target) throws Exception {
+    private V inHalfOpen(Callable<V> apply, State state) throws Exception {
         try {
             V result = apply.call();
             metricsRecorder.circuitBreakerSucceeded();

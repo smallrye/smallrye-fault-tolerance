@@ -41,9 +41,8 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(Callable<V> target) throws Exception {
-        recorder.bulkheadQueueEntered(); // mstodo needed or not?
         if (bulkheadSemaphore.tryAcquire()) {
-            recorder.bulkheadEntered(0L); // mstodo do it only for async execution
+            recorder.bulkheadEntered();
             long startTime = System.nanoTime();
             try {
                 return delegate.apply(target);
@@ -53,13 +52,12 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
             }
         } else {
             recorder.bulkheadRejected();
-            throw new BulkheadException(); // mstodo
+            throw bulkheadRejected();
         }
     }
 
     @Override
     public V asyncFutureApply(Callable<V> target, Cancelator cancelator) throws Exception {
-        System.out.print("enqueuing...\t");
         try {
             FutureOrFailure result = new FutureOrFailure<>();
             BulkheadTask bulkheadTask = new BulkheadTask(System.nanoTime(), target, result);
@@ -68,12 +66,9 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
             cancelator.addCancelAction(() -> workQueue.remove(bulkheadTask));
             recorder.bulkheadQueueEntered();
 
-            System.out.println("[ENQUEUED]");
-            System.out.println("waiting for future initialization");
             try {
                 result.waitForFutureInitialization(); // mstodo: sort of kills the idea of separate thread, this thread will wait for the bulkhead thread...
             } catch (InterruptedException e) {
-                System.out.println("interrupting bulkhead execution");
                 workQueue.remove(bulkheadTask);
                 bulkheadTask.interrupt();
                 // mstodo what to return?
@@ -81,15 +76,15 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
                 e.printStackTrace();
                 throw e;
             }
-            System.out.println("finished waiting, thread interrupted: " + Thread.interrupted());
-
-            System.out.println("done");
             return (V)result;
         } catch (RejectedExecutionException queueFullException) {
-            System.out.println("[REJECTED]");
             recorder.bulkheadRejected();
-            throw new BulkheadException(); // mstodo
+            throw bulkheadRejected();
         }
+    }
+
+    private BulkheadException bulkheadRejected() {
+        return new BulkheadException(description + " rejected from bulkhead");
     }
 
     private class BulkheadTask<W> implements Runnable {
@@ -108,7 +103,8 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
         public void run() {
             myThread = Thread.currentThread();
             long startTime = System.nanoTime();
-            recorder.bulkheadEntered(startTime - timeEnqueued);
+            recorder.bulkheadQueueLeft(startTime - timeEnqueued);
+            recorder.bulkheadEntered();
             try {
                 result.setDelegate(task.call());
             } catch (Exception e) {
@@ -128,7 +124,8 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
 
     public interface MetricsRecorder {
         void bulkheadQueueEntered();
-        void bulkheadEntered(long timeInQueue);
+        void bulkheadQueueLeft(long timeInQueue);
+        void bulkheadEntered();
         void bulkheadRejected();
         void bulkheadLeft(long processingTime);
 
@@ -138,7 +135,11 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
             }
 
             @Override
-            public void bulkheadEntered(long timeInQueue) {
+            public void bulkheadQueueLeft(long timeInQueue) {
+            }
+
+            @Override
+            public void bulkheadEntered() {
             }
 
             @Override

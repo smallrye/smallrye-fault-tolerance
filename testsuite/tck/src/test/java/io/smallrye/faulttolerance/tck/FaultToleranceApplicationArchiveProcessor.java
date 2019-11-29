@@ -44,8 +44,6 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
             return;
         }
         ClassContainer<?> classContainer = (ClassContainer<?>) applicationArchive;
-        // add CommandListener implementation that activates request context around FT operations if needed
-        classContainer.addClass(RequestContextCommandListener.class);
 
         classContainer.addAsResource(new File("src/test/resources/config.properties"));
 

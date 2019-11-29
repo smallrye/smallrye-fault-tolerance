@@ -11,12 +11,12 @@ import java.util.concurrent.TimeUnit;
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
 public class FutureOrFailure<V> implements Future<V> {
-    // mstodo synchronization
-    private Future<V> delegate;
-    private CountDownLatch latch = new CountDownLatch(1);
-    private boolean canceled;
-    private boolean mayInterruptIfRunning;
-    private Exception failure;
+    private final CountDownLatch latch = new CountDownLatch(1);
+
+    private volatile boolean canceled;
+    private volatile Future<V> delegate;
+    private volatile Exception failure;
+    private volatile boolean mayInterruptIfRunning;
 
     public void setDelegate(Future<V> delegate) {
         this.delegate = delegate;
@@ -27,14 +27,14 @@ public class FutureOrFailure<V> implements Future<V> {
     }
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        System.out.println("canceling the future or failure, with interrupting: " + mayInterruptIfRunning); // mstodo remove
-        this.canceled = true;
-        this.mayInterruptIfRunning = mayInterruptIfRunning;
+    public boolean cancel(boolean interrupt) {
+        mayInterruptIfRunning = interrupt;
+        canceled = true;
+
         if (delegate != null) {
             delegate.cancel(true);
         }
-        if (mayInterruptIfRunning) {
+        if (interrupt) {
             Thread.currentThread().interrupt();
         }
         return true;
@@ -82,13 +82,9 @@ public class FutureOrFailure<V> implements Future<V> {
     }
 
     public void timeout() {
-        System.out.println("canceling");
-        // mstodo synchronization
         if (failure == null && (delegate == null || !delegate.isDone())) {
-            System.out.println("in cancel");
             setFailure(new TimeoutException()); // mstodo propagate some message?
         }
         latch.countDown();
-        System.out.println("releasing");
     }
 }

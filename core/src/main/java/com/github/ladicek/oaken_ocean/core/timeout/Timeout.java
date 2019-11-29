@@ -37,7 +37,6 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
             throw new IllegalStateException("Async Future execution requires asyncExecutor");
         }
         FutureOrFailure<?> result = new FutureOrFailure<>();
-        System.out.println("adding to time-out execution");
         asyncExecutor.execute(
               () -> {
                   TimeoutExecution execution =
@@ -68,9 +67,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
                       result.setFailure(new InterruptedException());
                   }
 
-                  // mstodo remove printlns
                   if (execution.hasTimedOut()) {
-                      System.out.println("timed out execution the normal way");
                       long end = System.nanoTime();
                       metricsRecorder.timeoutTimedOut(end - start);
                       result.setFailure(timeoutException());

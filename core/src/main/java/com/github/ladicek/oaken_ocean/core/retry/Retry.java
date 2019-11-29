@@ -8,7 +8,6 @@ import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import java.util.concurrent.Callable;
-import java.util.function.Supplier;
 
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
@@ -24,7 +23,6 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     final Stopwatch stopwatch;
     final MetricsRecorder metricsRecorder;
 
-    private volatile Thread executionThread;
     // mstodo reattempt should not be triggered before the previous one. So we should be good
     // mstodo move to the call class if we were to separate from the context class
 
@@ -53,7 +51,6 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     }
 
     private V doApply(Callable<V> doApply) throws Exception {
-        executionThread = Thread.currentThread();
         long counter = 0;
         RunningStopwatch runningStopwatch = stopwatch.start();
         Throwable lastFailure = null;
@@ -104,23 +101,17 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
             counter++;
         }
 
+        metricsRecorder.retryFailed();
         if (lastFailure != null) {
-            metricsRecorder.retryFailed(); // mstodo a single place to bump it
 
-            // TODO: TCK expects that but it seems un(der)specified in the spec
             if (lastFailure instanceof Exception) {
-                throw (Exception) lastFailure; // mstodo is it okay?
+                throw (Exception) lastFailure;
             } else {
                 throw new FaultToleranceException(lastFailure.getMessage(), lastFailure);
             }
         } else {
-            metricsRecorder.retryFailed();
             throw new FaultToleranceException(description + " reached max retries or max retry duration");
         }
-    }
-
-    public void cancel() {
-        executionThread.interrupt(); // mstodo handle if needed
     }
 
     public interface MetricsRecorder {

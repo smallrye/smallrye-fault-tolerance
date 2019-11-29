@@ -119,11 +119,15 @@ public class MetricsCollectorFactory {
         }
 
         @Override
-        public void bulkheadEntered(long timeInQueue) {
+        public void bulkheadQueueLeft(long timeInQueue) {
             if (timeInQueue > 0) {
                 histogramUpdate(metricsPrefix + MetricNames.BULKHEAD_WAITING_DURATION, timeInQueue);
             }
             bulkheadQueueSize.decrementAndGet();
+        }
+
+        @Override
+        public void bulkheadEntered() {
             bulkheadConcurrentExecutions.incrementAndGet();
             counterInc(metricsPrefix + MetricNames.BULKHEAD_CALLS_ACCEPTED_TOTAL);
         }

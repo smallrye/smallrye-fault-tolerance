@@ -140,32 +140,26 @@ public class FaultToleranceInterceptor {
 
     private final FallbackHandlerProvider fallbackHandlerProvider;
 
-    private final FaultToleranceOperationProvider faultToleranceOperationProvider;
-
-    private final CommandListenersProvider listenersProvider;
-
     private final Bean<?> interceptedBean;
 
     private final MetricsCollectorFactory metricsCollectorFactory;
 
     // mstodo make more flexible, figure out if that's okay!
     private final ScheduledExecutorService timeoutExecutor = Executors.newScheduledThreadPool(5);
-    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(100); // mstodo modify, let customize, etc.
+    // mstodo modify, let customize, etc.
+    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(100);
 
     @SuppressWarnings("unchecked")
     @Inject
     public FaultToleranceInterceptor(
             @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, FallbackHandlerProvider fallbackHandlerProvider,
-            FaultToleranceOperationProvider faultToleranceOperationProvider,
-            CommandListenersProvider listenersProvider, @Intercepted Bean<?> interceptedBean,
+            @Intercepted Bean<?> interceptedBean,
             MetricsCollectorFactory metricsCollectorFactory) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.asyncTimeout = config.getOptionalValue(ASYNC_TIMEOUT_KEY, Boolean.class).orElse(false);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
-        this.faultToleranceOperationProvider = faultToleranceOperationProvider;
-        this.listenersProvider = listenersProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
     }
@@ -187,8 +181,6 @@ public class FaultToleranceInterceptor {
             return properAsyncFlow(operation, beanClass, invocationContext, collector, point);
         } else if (operation.isAsync()) {
             Cancelator cancelator = new Cancelator();
-            // mstodo interruptions, etc?
-            // mstodo maybe pass continuation
             return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point, cancelator), cancelator);
         } else {
             return syncFlow(operation, beanClass, invocationContext, collector, point, null);

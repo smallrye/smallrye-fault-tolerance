@@ -63,6 +63,7 @@
   </scm>
 
   <modules>
+    <module>core</module>
     <module>implementation</module>
     <module>docs</module>
     <module>testsuite</module>

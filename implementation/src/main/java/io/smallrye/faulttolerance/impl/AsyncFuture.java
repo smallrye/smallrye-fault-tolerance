@@ -29,7 +29,6 @@ public class AsyncFuture<T> implements Future<T> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        System.out.println("canceling the AsyncFuture. The delegate is: " + delegate); // mstodo remove
         cancelator.cancel();
         return delegate.cancel(mayInterruptIfRunning);
     }

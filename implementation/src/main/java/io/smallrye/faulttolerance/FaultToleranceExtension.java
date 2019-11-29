@@ -74,12 +74,8 @@ public class FaultToleranceExtension implements Extension {
         // It seems that fraction deployment module cannot be picked up as a CDI bean archive - see also SWARM-1725
         bbd.addAnnotatedType(bm.createAnnotatedType(FaultToleranceInterceptor.class),
                 FaultToleranceInterceptor.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
-                DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class),
                 DefaultFallbackHandlerProvider.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultCommandListenersProvider.class),
-                DefaultCommandListenersProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
     }
 
