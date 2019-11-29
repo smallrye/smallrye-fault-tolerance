@@ -52,10 +52,10 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceExceptio
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.Logger;
 
+import com.github.ladicek.oaken_ocean.core.Cancelator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.Invocation;
 import com.github.ladicek.oaken_ocean.core.bulkhead.Bulkhead;
-import com.github.ladicek.oaken_ocean.core.bulkhead.FutureBulkhead;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreaker;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CompletionStageCircuitBreaker;
 import com.github.ladicek.oaken_ocean.core.fallback.CompletionStageFallback;
@@ -68,7 +68,6 @@ import com.github.ladicek.oaken_ocean.core.retry.Retry;
 import com.github.ladicek.oaken_ocean.core.retry.ThreadSleepDelay;
 import com.github.ladicek.oaken_ocean.core.stopwatch.SystemStopwatch;
 import com.github.ladicek.oaken_ocean.core.timeout.CompletionStageTimeout;
-import com.github.ladicek.oaken_ocean.core.timeout.FutureTimeout;
 import com.github.ladicek.oaken_ocean.core.timeout.ScheduledExecutorTimeoutWatcher;
 import com.github.ladicek.oaken_ocean.core.timeout.Timeout;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
@@ -187,11 +186,12 @@ public class FaultToleranceInterceptor {
         if (operation.isAsync() && operation.returnsCompletionStage()) {
             return properAsyncFlow(operation, beanClass, invocationContext, collector, point);
         } else if (operation.isAsync()) {
+            Cancelator cancelator = new Cancelator();
             // mstodo interruptions, etc?
             // mstodo maybe pass continuation
-            return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point));
+            return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point, cancelator), cancelator);
         } else {
-            return syncFlow(operation, beanClass, invocationContext, collector, point);
+            return syncFlow(operation, beanClass, invocationContext, collector, point, null);
         }
     }
 
@@ -240,9 +240,9 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private <T> Future<T> offload(Callable<T> o) {
+    private <T> Future<T> offload(Callable<T> o, Cancelator cancelator) {
         Future<Future<T>> result = (Future<Future<T>>) asyncExecutor.submit(o);
-        return new AsyncFuture(result);
+        return new AsyncFuture(result, cancelator);
     }
 
     @SuppressWarnings("unchecked")
@@ -250,11 +250,16 @@ public class FaultToleranceInterceptor {
             Class<?> beanClass,
             InvocationContext invocationContext,
             MetricsCollector collector,
-            InterceptionPoint point) throws Exception {
+            InterceptionPoint point,
+            Cancelator cancelator) throws Exception {
         FaultToleranceStrategy<T> strategy = (FaultToleranceStrategy<T>) strategies.computeIfAbsent(point,
                 ignored -> prepareStrategy(operation, point, beanClass, invocationContext, collector));
         try {
-            return strategy.apply(() -> (T) invocationContext.proceed());
+            if (operation.isAsync()) {
+                return strategy.asyncFutureApply(() -> (T) invocationContext.proceed(), cancelator);
+            } else {
+                return strategy.apply(() -> (T) invocationContext.proceed());
+            }
         } catch (Exception any) {
             collector.failed();
             throw any;
@@ -330,38 +335,20 @@ public class FaultToleranceInterceptor {
         FaultToleranceStrategy<T> result = Invocation.invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
-            if (operation.isAsync()) {
-                // the result of the operation is Future
-                result = (FaultToleranceStrategy<T>) new FutureBulkhead(result,
-                        "Bulkhead[" + point.name() + "]",
-                        bulkheadConfig.get(BulkheadConfig.VALUE),
-                        bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
-                        collector);
-            } else {
-                result = new Bulkhead<>(result,
-                        "Bulkhead[" + point.name() + "]",
-                        bulkheadConfig.get(BulkheadConfig.VALUE),
-                        collector);
-            }
+            result = new Bulkhead<>(result,
+                    "Bulkhead[" + point.name() + "]",
+                    bulkheadConfig.get(BulkheadConfig.VALUE),
+                    bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
+                    collector);
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            if (operation.isAsync()) {
-                result = (FaultToleranceStrategy<T>) new FutureTimeout(
-                        (FaultToleranceStrategy<Future<?>>) result,
-                        "Timeout[" + point.name() + "]",
-                        timeoutMs,
-                        new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                        collector,
-                        asyncExecutor);
-            } else {
-                result = new Timeout<>(result, "Timeout[" + point.name() + "]",
-                        timeoutMs,
-                        new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                        collector,
-                        asyncExecutor);
-            }
+            result = new Timeout<>(result, "Timeout[" + point.name() + "]",
+                    timeoutMs,
+                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
+                    collector,
+                    asyncExecutor);
         }
 
         if (operation.hasCircuitBreaker()) {

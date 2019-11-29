@@ -7,6 +7,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
 
+import com.github.ladicek.oaken_ocean.core.Cancelator;
+
 import io.smallrye.faulttolerance.FaultToleranceInterceptor;
 
 /**
@@ -18,14 +20,17 @@ public class AsyncFuture<T> implements Future<T> {
     private static final Logger LOGGER = Logger.getLogger(FaultToleranceInterceptor.class);
 
     private final Future<?> delegate;
+    private final Cancelator cancelator;
 
-    public AsyncFuture(Future<?> delegate) {
+    public AsyncFuture(Future<?> delegate, Cancelator cancelator) {
         this.delegate = delegate;
+        this.cancelator = cancelator;
     }
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         System.out.println("canceling the AsyncFuture. The delegate is: " + delegate); // mstodo remove
+        cancelator.cancel();
         return delegate.cancel(mayInterruptIfRunning);
     }
 
