@@ -227,7 +227,7 @@ public class FaultToleranceInterceptor {
                 if (e instanceof RuntimeException) {
                     throw (RuntimeException) e;
                 } else {
-                    throw new FaultToleranceException(e); // mstodo do not wrap if already wrapped, special handling for error, etc
+                    throw new FaultToleranceException(e);
                 }
             });
         } catch (Exception e) {
@@ -344,8 +344,6 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    // mstodo the number of differences between async future and sync flow is high
-    // mstodo maybe high enough to separate them...
     private <T> FaultToleranceStrategy<T, SimpleInvocationContext<T>> prepareSyncStrategy(FaultToleranceOperation operation,
             InterceptionPoint point,
             Class<?> beanClass, InvocationContext invocationContext, MetricsCollector collector) {
@@ -504,8 +502,8 @@ public class FaultToleranceInterceptor {
         }
 
         ExecutionContextWithInvocationContext executionContext = new ExecutionContextWithInvocationContext(invocationContext);
-        FallbackFunction<V> fallback = null;
-        // mstodo throw an exception instaed of returning null ?
+        FallbackFunction<V> fallback;
+        // mstodo throw an exception instead of returning null ?
         if (fallbackMethod != null) {
             fallback = whatever -> {
                 try {
@@ -536,6 +534,8 @@ public class FaultToleranceInterceptor {
                         return fallbackHandler.handle(executionContext);
                     }
                 };
+            } else {
+                throw new IllegalStateException("Fallback defined but no ")
             }
         }
 
