@@ -5,7 +5,6 @@ import java.util.List;
 /*
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
-// mstodo remove or use
 public class Cancellator {
     private boolean canceled = false;
     private final List<Runnable> cancelActions = new ArrayList<>();

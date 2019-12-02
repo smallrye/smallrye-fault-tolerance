@@ -6,22 +6,24 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
 public class FutureOrFailure<V> implements Future<V> {
-    private final CountDownLatch latch = new CountDownLatch(1);
+    private final State<V> EMPTY = new State<>(null, null);
 
-    // mstodo instead of a ton of volatile fields, it might be better to have
-    // mstodo one immutable value holder in an AtomicReference
+    private final CountDownLatch latch = new CountDownLatch(1);
+    private final AtomicReference<State<V>> currentState = new AtomicReference<>(EMPTY);
+
     private volatile boolean canceled;
-    private volatile Future<V> delegate;
-    private volatile Exception failure;
     private volatile boolean mayInterruptIfRunning;
 
+
     public void setDelegate(Future<V> delegate) {
-        this.delegate = delegate;
+        State<V> state = new State<>(delegate, null);
+        currentState.compareAndSet(EMPTY, state);
         if (canceled) {
             // mstodo is this needed/correct?
             delegate.cancel(mayInterruptIfRunning);
@@ -34,8 +36,9 @@ public class FutureOrFailure<V> implements Future<V> {
         mayInterruptIfRunning = interrupt;
         canceled = true;
 
-        if (delegate != null) {
-            delegate.cancel(true);
+        State<V> state = currentState.get();
+        if (state.delegate != null) {
+            state.delegate.cancel(true);
         }
         if (interrupt) {
             Thread.currentThread().interrupt();
@@ -56,38 +59,64 @@ public class FutureOrFailure<V> implements Future<V> {
     @Override
     public V get() throws InterruptedException, ExecutionException {
         latch.await();
-        if (failure != null) {
-            throw new ExecutionException(failure);
+        State<V> state = currentState.get();
+        if (state.failure != null) {
+            throw new ExecutionException(state.failure);
         }
-        return delegate.get();
+        return state.delegate.get();
     }
 
     @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
+    public V get(long timeout, TimeUnit unit)
+          throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
         latch.await(timeout, unit);
-        if (failure != null) {
-            throw new ExecutionException(failure);
+        State<V> state = currentState.get();
+        if (state.failure != null) {
+            throw new ExecutionException(state.failure);
         }
-        return delegate.get(timeout, unit);
+        return state.delegate.get(timeout, unit);
     }
 
     public Future<V> waitForFutureInitialization() throws Exception {
         latch.await();
-        if (failure != null) {
-            throw failure;
+        State<V> state = currentState.get();
+        if (state.failure != null) {
+            throw state.failure;
         }
-        return delegate;
+        return state.delegate;
     }
 
     public void setFailure(Exception e) {
-        this.failure = e;
+        currentState.compareAndSet(EMPTY, new State<>(null, e));
         latch.countDown();
     }
 
     public void timeout() {
-        if (failure == null && (delegate == null || !delegate.isDone())) {
-            setFailure(new TimeoutException()); // mstodo propagate some message?
+        // TODO: simplify?
+        State<V> previous = EMPTY;
+        State<V> timedOutState = new State<>(null, new TimeoutException());
+        int safetyValve = 0;
+        while (!currentState.compareAndSet(previous, timedOutState)) {
+            previous = currentState.get();
+            if (previous.failure != null
+                  || (previous.delegate != null && previous.delegate.isDone())) {
+                break;
+            }
+            if (safetyValve++ > 10) {
+                // mstodo: log problem
+                break;
+            }
         }
         latch.countDown();
+    }
+
+    private static class State<V> {
+        private final Future<V> delegate;
+        private final Exception failure;
+
+        private State(Future<V> delegate, Exception failure) {
+            this.delegate = delegate;
+            this.failure = failure;
+        }
     }
 }

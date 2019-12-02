@@ -482,6 +482,7 @@ public class FaultToleranceInterceptor {
     }
 
     // mstodo with this we have bean-scoped FT strategies, they should probably be global
+    // mstodo the problem is fallback
     private final Map<InterceptionPoint, FaultToleranceStrategy<?>> strategies = new ConcurrentHashMap<>();
     private final Map<InterceptionPoint, Optional<MetricsCollector>> metricsCollectors = new ConcurrentHashMap<>();
 
