@@ -54,22 +54,29 @@ import org.jboss.logging.Logger;
 
 import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
 import com.github.ladicek.oaken_ocean.core.Invocation;
-import com.github.ladicek.oaken_ocean.core.bulkhead.Bulkhead;
-import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreaker;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
+import com.github.ladicek.oaken_ocean.core.bulkhead.FutureBulkhead;
+import com.github.ladicek.oaken_ocean.core.bulkhead.SyncBulkhead;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CompletionStageCircuitBreaker;
+import com.github.ladicek.oaken_ocean.core.circuit.breaker.FutureCircuitBreaker;
+import com.github.ladicek.oaken_ocean.core.circuit.breaker.SyncCircuitBreaker;
 import com.github.ladicek.oaken_ocean.core.fallback.CompletionStageFallback;
-import com.github.ladicek.oaken_ocean.core.fallback.Fallback;
 import com.github.ladicek.oaken_ocean.core.fallback.FallbackFunction;
+import com.github.ladicek.oaken_ocean.core.fallback.FutureFallback;
+import com.github.ladicek.oaken_ocean.core.fallback.SyncFallback;
 import com.github.ladicek.oaken_ocean.core.retry.CompletionStageRetry;
+import com.github.ladicek.oaken_ocean.core.retry.FutureRetry;
 import com.github.ladicek.oaken_ocean.core.retry.Jitter;
 import com.github.ladicek.oaken_ocean.core.retry.RandomJitter;
-import com.github.ladicek.oaken_ocean.core.retry.Retry;
+import com.github.ladicek.oaken_ocean.core.retry.SyncRetry;
 import com.github.ladicek.oaken_ocean.core.retry.ThreadSleepDelay;
 import com.github.ladicek.oaken_ocean.core.stopwatch.SystemStopwatch;
 import com.github.ladicek.oaken_ocean.core.timeout.CompletionStageTimeout;
+import com.github.ladicek.oaken_ocean.core.timeout.FutureTimeout;
 import com.github.ladicek.oaken_ocean.core.timeout.ScheduledExecutorTimeoutWatcher;
-import com.github.ladicek.oaken_ocean.core.timeout.Timeout;
+import com.github.ladicek.oaken_ocean.core.timeout.SyncTimeout;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 
 import io.smallrye.faulttolerance.config.BulkheadConfig;
@@ -92,7 +99,7 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
  * </p>
  * <p>
  * We never use {@link HystrixCommand#queue()} for async execution. Mostly to workaround various problems of
- * {@link Asynchronous} {@link Retry} combination. Instead, we create a composite command and inside its run() method we
+ * {@link Asynchronous} {@link SyncRetry} combination. Instead, we create a composite command and inside its run() method we
  * execute commands synchronously.
  * </p>
  *
@@ -107,8 +114,8 @@ public class FaultToleranceInterceptor {
 
     /**
      * This config property key can be used to disable synchronous circuit breaker functionality. If disabled,
-     * {@link CircuitBreaker#successThreshold()} of value greater than 1 is not supported. Also the
-     * {@link CircuitBreaker#failOn()} configuration is ignored.
+     * {@link SyncCircuitBreaker#successThreshold()} of value greater than 1 is not supported. Also the
+     * {@link SyncCircuitBreaker#failOn()} configuration is ignored.
      * <p>
      * Moreover, circuit breaker does not necessarily transition from CLOSED to OPEN immediately when a fault tolerance
      * operation completes. See also
@@ -181,9 +188,10 @@ public class FaultToleranceInterceptor {
             return properAsyncFlow(operation, beanClass, invocationContext, collector, point);
         } else if (operation.isAsync()) {
             Cancellator cancellator = new Cancellator();
-            return offload(() -> syncFlow(operation, beanClass, invocationContext, collector, point, cancellator), cancellator);
+            return offload(() -> futureFlow(operation, beanClass, invocationContext, collector, point, cancellator),
+                    cancellator);
         } else {
-            return syncFlow(operation, beanClass, invocationContext, collector, point, null);
+            return syncFlow(operation, beanClass, invocationContext, collector, point);
         }
     }
 
@@ -192,12 +200,12 @@ public class FaultToleranceInterceptor {
             InvocationContext invocationContext,
             MetricsCollector collector,
             InterceptionPoint point) {
-        FaultToleranceStrategy<CompletionStage<T>> strategy = (FaultToleranceStrategy<CompletionStage<T>>) strategies
+        FaultToleranceStrategy<CompletionStage<T>, SimpleInvocationContext<CompletionStage<T>>> strategy = (FaultToleranceStrategy<CompletionStage<T>, SimpleInvocationContext<CompletionStage<T>>>) strategies
                 .computeIfAbsent(point,
                         ignored -> prepareAsyncStrategy(operation, point, beanClass, invocationContext, collector));
         // mstodo simplify!
         try {
-            return strategy.apply(() -> {
+            return strategy.apply(new SimpleInvocationContext<>(() -> {
                 CompletableFuture<Object> base = new CompletableFuture<>();
                 CompletableFuture<T> result = base
                         .thenComposeAsync(any -> {
@@ -214,12 +222,12 @@ public class FaultToleranceInterceptor {
                         });
                 base.complete(null);
                 return result;
-            }).exceptionally(e -> {
+            })).exceptionally(e -> {
                 collector.failed();
                 if (e instanceof RuntimeException) {
                     throw (RuntimeException) e;
                 } else {
-                    throw new FaultToleranceException(e); // mstodo do not wrapped if already wrapped, special handling for error, etc
+                    throw new FaultToleranceException(e); // mstodo do not wrap if already wrapped, special handling for error, etc
                 }
             });
         } catch (Exception e) {
@@ -242,26 +250,42 @@ public class FaultToleranceInterceptor {
             Class<?> beanClass,
             InvocationContext invocationContext,
             MetricsCollector collector,
-            InterceptionPoint point,
-            Cancellator cancellator) throws Exception {
-        FaultToleranceStrategy<T> strategy = (FaultToleranceStrategy<T>) strategies.computeIfAbsent(point,
-                ignored -> prepareStrategy(operation, point, beanClass, invocationContext, collector));
+            InterceptionPoint point) throws Exception {
+        FaultToleranceStrategy<T, SimpleInvocationContext<T>> strategy = (FaultToleranceStrategy<T, SimpleInvocationContext<T>>) strategies
+                .computeIfAbsent(point,
+                        ignored -> prepareSyncStrategy(operation, point, beanClass, invocationContext, collector));
         try {
-            if (operation.isAsync()) {
-                return strategy.asyncFutureApply(() -> (T) invocationContext.proceed(), cancellator);
-            } else {
-                return strategy.apply(() -> (T) invocationContext.proceed());
-            }
+            return strategy.apply(new SimpleInvocationContext<>(() -> (T) invocationContext.proceed()));
         } catch (Exception any) {
             collector.failed();
             throw any;
         }
     }
 
-    private <T> FaultToleranceStrategy<CompletionStage<T>> prepareAsyncStrategy(FaultToleranceOperation operation,
+    @SuppressWarnings("unchecked")
+    private <T> Future<T> futureFlow(FaultToleranceOperation operation,
+            Class<?> beanClass,
+            InvocationContext invocationContext,
+            MetricsCollector collector,
+            InterceptionPoint point,
+            Cancellator cancellator) throws Exception {
+        FaultToleranceStrategy<Future<T>, FutureInvocationContext<T>> strategy = (FaultToleranceStrategy<Future<T>, FutureInvocationContext<T>>) strategies
+                .computeIfAbsent(point,
+                        ignored -> prepareFutureStrategy(operation, point, beanClass, invocationContext, collector));
+        try {
+            return strategy.apply(new FutureInvocationContext<T>(cancellator, () -> (Future<T>) invocationContext.proceed()));
+        } catch (Exception any) {
+            collector.failed();
+            throw any;
+        }
+    }
+
+    private <T> FaultToleranceStrategy<CompletionStage<T>, SimpleInvocationContext<CompletionStage<T>>> prepareAsyncStrategy(
+            FaultToleranceOperation operation,
             InterceptionPoint point,
             Class<?> beanClass, InvocationContext invocationContext, MetricsCollector collector) {
-        FaultToleranceStrategy<CompletionStage<T>> result = Invocation.invocation();
+        FaultToleranceStrategy<CompletionStage<T>, SimpleInvocationContext<CompletionStage<T>>> result = Invocation
+                .invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             throw new RuntimeException("Completion stage bulkhead not supported yet");
@@ -322,12 +346,13 @@ public class FaultToleranceInterceptor {
 
     // mstodo the number of differences between async future and sync flow is high
     // mstodo maybe high enough to separate them...
-    private <T> FaultToleranceStrategy<T> prepareStrategy(FaultToleranceOperation operation, InterceptionPoint point,
+    private <T> FaultToleranceStrategy<T, SimpleInvocationContext<T>> prepareSyncStrategy(FaultToleranceOperation operation,
+            InterceptionPoint point,
             Class<?> beanClass, InvocationContext invocationContext, MetricsCollector collector) {
-        FaultToleranceStrategy<T> result = Invocation.invocation();
+        FaultToleranceStrategy<T, SimpleInvocationContext<T>> result = Invocation.invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
-            result = new Bulkhead<>(result,
+            result = new SyncBulkhead<>(result,
                     "Bulkhead[" + point.name() + "]",
                     bulkheadConfig.get(BulkheadConfig.VALUE),
                     bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
@@ -336,16 +361,15 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            result = new Timeout<>(result, "Timeout[" + point.name() + "]",
+            result = new SyncTimeout<>(result, "Timeout[" + point.name() + "]",
                     timeoutMs,
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    collector,
-                    asyncExecutor);
+                    collector);
         }
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
-            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
+            result = new SyncCircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     cbConfig.get(CircuitBreakerConfig.DELAY),
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
@@ -364,7 +388,7 @@ public class FaultToleranceInterceptor {
             long jitterMs = getTimeInMs(retryConf, RetryConfig.JITTER, RetryConfig.JITTER_DELAY_UNIT);
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
-            result = new Retry<>(result,
+            result = new SyncRetry<>(result,
                     "Retry[" + point.name() + "]",
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
@@ -377,7 +401,73 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasFallback()) {
             Method method = invocationContext.getMethod();
-            result = new Fallback<>(
+            result = new SyncFallback<>(
+                    result,
+                    "Fallback[" + point.name() + "]",
+                    prepareFallbackFunction(invocationContext, beanClass, method, operation),
+                    collector);
+        }
+        return result;
+    }
+
+    private <T> FaultToleranceStrategy<Future<T>, FutureInvocationContext<T>> prepareFutureStrategy(
+            FaultToleranceOperation operation, InterceptionPoint point,
+            Class<?> beanClass,
+            InvocationContext invocationContext, MetricsCollector collector) {
+        FaultToleranceStrategy<Future<T>, FutureInvocationContext<T>> result = Invocation.invocation();
+        if (operation.hasBulkhead()) {
+            BulkheadConfig bulkheadConfig = operation.getBulkhead();
+            result = new FutureBulkhead<>(result,
+                    "Bulkhead[" + point.name() + "]",
+                    bulkheadConfig.get(BulkheadConfig.VALUE),
+                    bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
+                    collector);
+        }
+
+        if (operation.hasTimeout()) {
+            long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
+            result = new FutureTimeout<>(result, "Timeout[" + point.name() + "]",
+                    timeoutMs,
+                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
+                    collector,
+                    asyncExecutor);
+        }
+
+        if (operation.hasCircuitBreaker()) {
+            CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
+            result = new FutureCircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
+                    getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
+                    cbConfig.get(CircuitBreakerConfig.DELAY),
+                    cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
+                    cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
+                    cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
+                    new SystemStopwatch(),
+                    collector);
+        }
+
+        if (operation.hasRetry()) {
+            RetryConfig retryConf = operation.getRetry();
+            long maxDurationMs = getTimeInMs(retryConf, RetryConfig.MAX_DURATION, RetryConfig.DURATION_UNIT);
+
+            long delayMs = getTimeInMs(retryConf, RetryConfig.DELAY, RetryConfig.DELAY_UNIT);
+
+            long jitterMs = getTimeInMs(retryConf, RetryConfig.JITTER, RetryConfig.JITTER_DELAY_UNIT);
+            Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
+
+            result = new FutureRetry<>(result,
+                    "Retry[" + point.name() + "]",
+                    getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
+                    getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
+                    (int) retryConf.get(RetryConfig.MAX_RETRIES),
+                    maxDurationMs,
+                    new ThreadSleepDelay(delayMs, jitter),
+                    new SystemStopwatch(),
+                    collector);
+        }
+
+        if (operation.hasFallback()) {
+            Method method = invocationContext.getMethod();
+            result = new FutureFallback<>(
                     result,
                     "Fallback[" + point.name() + "]",
                     prepareFallbackFunction(invocationContext, beanClass, method, operation),
@@ -388,7 +478,7 @@ public class FaultToleranceInterceptor {
 
     private <V> FallbackFunction<V> prepareFallbackFunction(
             InvocationContext invocationContext,
-            Class beanClass,
+            Class<?> beanClass,
             Method method,
             FaultToleranceOperation operation) {
         FallbackConfig fallbackConfig = operation.getFallback();
@@ -483,7 +573,7 @@ public class FaultToleranceInterceptor {
 
     // mstodo with this we have bean-scoped FT strategies, they should probably be global
     // mstodo the problem is fallback
-    private final Map<InterceptionPoint, FaultToleranceStrategy<?>> strategies = new ConcurrentHashMap<>();
+    private final Map<InterceptionPoint, FaultToleranceStrategy<?, ?>> strategies = new ConcurrentHashMap<>();
     private final Map<InterceptionPoint, Optional<MetricsCollector>> metricsCollectors = new ConcurrentHashMap<>();
 
     private static class InterceptionPoint { // mstodo pull out?

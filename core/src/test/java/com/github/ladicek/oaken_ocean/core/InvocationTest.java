@@ -10,11 +10,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class InvocationTest {
     @Test
     public void identicalResult() throws Exception {
-        assertThat(invocation().apply(() -> "foobar")).isEqualTo("foobar");
+        assertThat(invocation().apply(new SimpleInvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
     }
 
     @Test
     public void identicalException() {
-        assertThatThrownBy(() -> invocation().apply(TestException::doThrow)).isExactlyInstanceOf(TestException.class);
+        assertThatThrownBy(() -> invocation().apply(new SimpleInvocationContext<>(TestException::doThrow))).isExactlyInstanceOf(TestException.class);
     }
 }

@@ -1,11 +1,12 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 
 import java.util.concurrent.Callable;
 
-public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
+public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
     private final Barrier startBarrier;
     private final Barrier delayBarrier;
     private final Callable<V> result;
@@ -29,7 +30,7 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(Callable<V> target) throws Exception {
+    public V apply(SimpleInvocationContext<V> target) throws Exception {
         if (startBarrier != null) {
             startBarrier.open();
         }

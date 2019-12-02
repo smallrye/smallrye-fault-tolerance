@@ -1,6 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.SystemStopwatch;
@@ -55,13 +56,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldReturnRightAway() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
-        assertThat(timeout.apply(() -> {
+        assertThat(timeout.apply(new SimpleInvocationContext<>(() -> {
             Thread.sleep(200);
             return completedStage("foobar");
-        }).toCompletableFuture().get()).isEqualTo("foobar");
+        })).toCompletableFuture().get()).isEqualTo("foobar");
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
     }
 
@@ -69,13 +70,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateMethodError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
-        assertThatThrownBy(timeout.apply(() -> {
+        assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
             Thread.sleep(200);
             throw new TestException();
-        }).toCompletableFuture()::get)
+        })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
@@ -85,13 +86,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateCompletionStageError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
-        assertThatThrownBy(timeout.apply(() -> {
+        assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
             Thread.sleep(200);
             return failedStage(new TestException());
-        }).toCompletableFuture()::get)
+        })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
@@ -101,13 +102,13 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldTimeOut() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
                 "completion stage timeout", 500, watcher, taskExecutor, null);
 
-        assertThatThrownBy(timeout.apply(() -> {
+        assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
             Thread.sleep(1000);
             return completedStage("foobar");
-        }).toCompletableFuture()::get)
+        })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(500, tolerance);

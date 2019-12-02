@@ -1,18 +1,16 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
-import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.InvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
-import java.util.concurrent.Callable;
-
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
-public class Retry<V> implements FaultToleranceStrategy<V> {
-    final FaultToleranceStrategy<V> delegate;
+public abstract class RetryBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
+    final FaultToleranceStrategy<V, ContextType> delegate;
     final String description;
 
     final SetOfThrowables retryOn;
@@ -26,9 +24,9 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     // mstodo reattempt should not be triggered before the previous one. So we should be good
     // mstodo move to the call class if we were to separate from the context class
 
-    public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
-                 long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,
-                 MetricsRecorder metricsRecorder) {
+    public RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
+                     long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,
+                     MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
         this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
@@ -40,17 +38,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
-    @Override
-    public V apply(Callable<V> target) throws Exception {
-        return doApply(() -> delegate.apply(target));
-    }
-
-    @Override
-    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
-        return doApply(() -> delegate.asyncFutureApply(target, cancellator));
-    }
-
-    private V doApply(Callable<V> doApply) throws Exception {
+    V doApply(ContextType context) throws Exception {
         long counter = 0;
         RunningStopwatch runningStopwatch = stopwatch.start();
         Throwable lastFailure = null;
@@ -59,7 +47,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 metricsRecorder.retryRetried();
             }
             try {
-                V result = doApply.call();
+                V result = delegate.apply(context);
                 if (counter == 0) {
                     metricsRecorder.retrySucceededNotRetried();
                 } else {

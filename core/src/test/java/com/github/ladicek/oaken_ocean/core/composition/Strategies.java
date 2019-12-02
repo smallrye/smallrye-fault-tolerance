@@ -1,11 +1,12 @@
 package com.github.ladicek.oaken_ocean.core.composition;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreaker;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
+import com.github.ladicek.oaken_ocean.core.circuit.breaker.SyncCircuitBreaker;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreakerListener;
-import com.github.ladicek.oaken_ocean.core.fallback.Fallback;
+import com.github.ladicek.oaken_ocean.core.fallback.SyncFallback;
 import com.github.ladicek.oaken_ocean.core.retry.Delay;
-import com.github.ladicek.oaken_ocean.core.retry.Retry;
+import com.github.ladicek.oaken_ocean.core.retry.SyncRetry;
 import com.github.ladicek.oaken_ocean.core.stopwatch.TestStopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 
@@ -17,22 +18,22 @@ import java.util.Collections;
  * behaviors of the strategy (they are covered by unit tests of individual strategies).
  */
 final class Strategies {
-    static Fallback<String> fallback(FaultToleranceStrategy<String> delegate) {
-        return new Fallback<>(delegate, "fallback", e -> "fallback after " + e.getClass().getSimpleName(), null);
+    static SyncFallback<String> fallback(FaultToleranceStrategy<String, SimpleInvocationContext<String>> delegate) {
+        return new SyncFallback<>(delegate, "fallback", e -> "fallback after " + e.getClass().getSimpleName(), null);
     }
 
-    static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {
-        return new Retry<>(delegate, "retry",
+    static <V> SyncRetry<V> retry(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate) {
+        return new SyncRetry<>(delegate, "retry",
                 SetOfThrowables.withoutCustomThrowables(Collections.singletonList(Exception.class)),
                 SetOfThrowables.EMPTY, 10, 0, Delay.NONE, new TestStopwatch(), null);
     }
 
-    static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, CircuitBreakerListener listener) {
+    static <V> SyncCircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate, CircuitBreakerListener listener) {
         return circuitBreaker(delegate, 0, listener);
     }
 
-    static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, int delayInMillis, CircuitBreakerListener listener) {
-        CircuitBreaker<V> result = new CircuitBreaker<>(delegate, "circuit breaker", SetOfThrowables.ALL,
+    static <V> SyncCircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate, int delayInMillis, CircuitBreakerListener listener) {
+        SyncCircuitBreaker<V> result = new SyncCircuitBreaker<>(delegate, "circuit breaker", SetOfThrowables.ALL,
                 delayInMillis, 5, 0.2, 3, new TestStopwatch(), null);
         result.addListener(listener);
         return result;

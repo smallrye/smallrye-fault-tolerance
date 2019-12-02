@@ -3,7 +3,7 @@ package com.github.ladicek.oaken_ocean.core;
 import java.util.concurrent.Callable;
 
 /**
- * A fault tolerance strategy that guards invocations of arbitrary {@link Callable}s.
+ * A fault tolerance strategy that guards invocations of arbitrary {@link Callable}s that are wrapped in {@link InvocationContext}.
  * Fault tolerance strategies are expected to be nested; that is, implementations of this interface will typically delegate to some other {@code FaultToleranceStrategy}.
  * The last strategy in the chain will invoke the guarded {@code Callable}; all other strategies are supposed to ignore it and just pass it down the chain.
  * Usually, the last strategy will be {@link Invocation}.
@@ -13,7 +13,7 @@ import java.util.concurrent.Callable;
  * @param <V> the result type of method {@code apply}; also the result type of the guarded {@code Callable}
  */
 @FunctionalInterface
-public interface FaultToleranceStrategy<V> {
+public interface FaultToleranceStrategy<V, ContextType extends InvocationContext<V>> {
     /**
      * Apply the fault tolerance strategy around the target {@link Callable}.
      *
@@ -21,11 +21,5 @@ public interface FaultToleranceStrategy<V> {
      * @return result computed by the target {@code Callable}
      * @throws Exception if result couldn't be computed
      */
-    V apply(Callable<V> target) throws Exception;
-
-
-    default V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
-        // mstodo that is wrong, we need to propagate the cancelator
-        return apply(target);
-    }
+    V apply(ContextType target) throws Exception;
 }

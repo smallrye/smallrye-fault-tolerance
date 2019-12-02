@@ -1,12 +1,13 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
+public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
     private final int initialFailuresCount;
     private final Supplier<? extends Exception> initialFailure;
     private final Callable<V> result;
@@ -28,7 +29,7 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(Callable<V> target) throws Exception {
+    public V apply(SimpleInvocationContext<V> target) throws Exception {
         int invocations = invocationCounter.incrementAndGet();
 
         if (initialFailuresCount > 0 && invocations <= initialFailuresCount) {

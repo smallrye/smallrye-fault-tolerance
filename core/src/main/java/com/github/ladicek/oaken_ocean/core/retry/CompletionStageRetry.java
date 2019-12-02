@@ -1,6 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
@@ -11,25 +12,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
-public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
-    public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate,
+public class CompletionStageRetry<V> extends SyncRetry<CompletionStage<V>> {
+    public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
                                 String description,
                                 SetOfThrowables retryOn,
                                 SetOfThrowables abortOn,
                                 long maxRetries, long maxTotalDurationInMillis,
                                 Delay delayBetweenRetries, Stopwatch stopwatch,
-                                Retry.MetricsRecorder metricsRecorder) {
+                                SyncRetry.MetricsRecorder metricsRecorder) {
         super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, delayBetweenRetries, stopwatch, metricsRecorder);
     }
 
     @Override
-    public CompletionStage<V> apply(Callable<CompletionStage<V>> target) throws Exception {
+    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
-
-        return doRetry(target, 0, runningStopwatch, null);
+        return doRetry(context, 0, runningStopwatch, null);
     }
 
-    public CompletionStage<V> doRetry(Callable<CompletionStage<V>> target,
+    public CompletionStage<V> doRetry(SimpleInvocationContext<CompletionStage<V>> target,
                                       int attempt,
                                       RunningStopwatch stopwatch,
                                       Throwable latestFailure)

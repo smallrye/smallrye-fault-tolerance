@@ -1,14 +1,13 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
-import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.InvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -18,12 +17,12 @@ import java.util.function.Supplier;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
-public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
+public abstract class CircuitBreakerBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
     static final int STATE_CLOSED = 0;
     static final int STATE_OPEN = 1;
     static final int STATE_HALF_OPEN = 2;
 
-    final FaultToleranceStrategy<V> delegate;
+    final FaultToleranceStrategy<V, ContextType> delegate;
     final String description;
 
     final SetOfThrowables failOn;
@@ -47,9 +46,9 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     volatile long openStart;
 
     @SuppressWarnings("UnnecessaryThis")
-    public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn, long delayInMillis,
-                          int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,
-                          MetricsRecorder metricsRecorder) {
+    CircuitBreakerBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables failOn, long delayInMillis,
+                              int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,
+                              MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Circuit breaker delegate must be set");
         this.description = checkNotNull(description, "Circuit breaker description must be set");
         this.failOn = checkNotNull(failOn, "Set of fail-on throwables must be set");
@@ -78,36 +77,26 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
               : prevMeasuredStateTime.get();
     }
 
-    @Override
-    public V apply(Callable<V> target) throws Exception {
-        return doApply(target, () -> delegate.apply(target));
-    }
-
-    private V doApply(Callable<V> target, Callable<V> apply) throws Exception {
+    V doApply(ContextType context) throws Exception {
         // this is the only place where `state` can be dereferenced!
         // it must be passed through as a parameter to all the state methods,
         // so that they don't see the circuit breaker moving to a different state under them
         State state = this.state.get();
         switch (state.id) {
             case STATE_CLOSED:
-                return inClosed(apply, state);
+                return inClosed(context, state);
             case STATE_OPEN:
-                return inOpen(state, target);
+                return inOpen(context, state);
             case STATE_HALF_OPEN:
-                return inHalfOpen(apply, state);
+                return inHalfOpen(context, state);
             default:
                 throw new AssertionError("Invalid circuit breaker state: " + state.id);
         }
     }
 
-    @Override
-    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
-        return doApply(target, () -> delegate.asyncFutureApply(target, cancellator));
-    }
-
-    private V inClosed(Callable<V> apply, State state) throws Exception {
+    private V inClosed(ContextType context, State state) throws Exception {
         try {
-            V result = apply.call();
+            V result = delegate.apply(context);
             metricsRecorder.circuitBreakerSucceeded();
             boolean failureThresholdReached = state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
@@ -139,7 +128,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    private V inOpen(State state, Callable<V> target) throws Exception {
+    private V inOpen(ContextType context, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
@@ -152,13 +141,13 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
             toHalfOpen(state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return apply(target);
+            return doApply(context);
         }
     }
 
-    private V inHalfOpen(Callable<V> apply, State state) throws Exception {
+    private V inHalfOpen(ContextType context, State state) throws Exception {
         try {
-            V result = apply.call();
+            V result = delegate.apply(context);
             metricsRecorder.circuitBreakerSucceeded();
 
             int successes = state.consecutiveSuccesses.incrementAndGet();

@@ -1,6 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.fallback;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
 import com.github.ladicek.oaken_ocean.core.util.TestExecutor;
 import com.github.ladicek.oaken_ocean.core.util.TestThread;
@@ -150,7 +151,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_value() throws Exception {
-        FaultToleranceStrategy<CompletionStage<String>> invocation = (ignored) -> {
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             return completedStage("foobar");
         };
@@ -160,7 +161,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_directException() throws Exception {
-        FaultToleranceStrategy<CompletionStage<String>> invocation = (ignored) -> {
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };
@@ -172,7 +173,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_completionStageException() throws Exception {
-        FaultToleranceStrategy<CompletionStage<String>> invocation = (ignored) -> {
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             return failedStage(new RuntimeException());
         };

@@ -2,35 +2,26 @@ package com.github.ladicek.oaken_ocean.core.fallback;
 
 import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.InvocationContext;
 
 import java.util.concurrent.Callable;
 
-public class Fallback<V> implements FaultToleranceStrategy<V> {
-    final FaultToleranceStrategy<V> delegate;
+public abstract class FallbackBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
+    final FaultToleranceStrategy<V, ContextType> delegate;
     final String description;
 
     final FallbackFunction<V> fallback;
     final MetricsRecorder metricsRecorder;
 
-    public Fallback(FaultToleranceStrategy<V> delegate, String description, FallbackFunction<V> fallback,
-                    MetricsRecorder metricsRecorder) {
+    public FallbackBase(FaultToleranceStrategy<V, ContextType> delegate, String description, FallbackFunction<V> fallback,
+                        MetricsRecorder metricsRecorder) {
         this.delegate = delegate;
         this.description = description;
         this.fallback = fallback;
         this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
-    @Override
-    public V apply(Callable<V> target) throws Exception {
-        return doApply(() -> delegate.apply(target));
-    }
-
-    @Override
-    public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
-        return doApply(() -> delegate.asyncFutureApply(target, cancellator));
-    }
-
-    private V doApply(Callable<V> c) throws Exception {
+    V doApply(Callable<V> c) throws Exception {
         Throwable failure;
         try {
             return c.call();

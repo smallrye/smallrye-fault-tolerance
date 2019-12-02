@@ -1,6 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.composition;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.circuit.breaker.CircuitBreakerListener;
 import com.github.ladicek.oaken_ocean.core.retry.TestInvocation;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
@@ -21,7 +22,7 @@ public class CircuitBreakerAndRetryTest {
 
         // fail 2x and then succeed, under circuit breaker
         // circuit breaker volume threshold = 5, so CB will stay closed
-        FaultToleranceStrategy<String> operation =
+        FaultToleranceStrategy<String, SimpleInvocationContext<String>> operation =
                 retry(
                         circuitBreaker(
                                 TestInvocation.initiallyFailing(2, TestException::new, () -> "foobar"),
@@ -42,7 +43,7 @@ public class CircuitBreakerAndRetryTest {
         // CB volume threshold = 5, so the CB will open right after all the failures and before the success
         // CB delay is 0, so with the successful attempt, the CB will immediately move to half-open and succeed
         // doing 6 attemps (1 initial + 5 retries)
-        FaultToleranceStrategy<String> operation =
+        FaultToleranceStrategy<String, SimpleInvocationContext<String>> operation =
                 retry(
                         circuitBreaker(
                                 TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
@@ -63,7 +64,7 @@ public class CircuitBreakerAndRetryTest {
         // CB volume threshold = 5, so the CB will open right after all the failures and before the success
         // CB delay is > 0, so the successful attempt will be prevented, because the CB will be open
         // doing 11 attemps (1 initial + 10 retries, because max retries = 10)
-        FaultToleranceStrategy<String> operation =
+        FaultToleranceStrategy<String, SimpleInvocationContext<String>> operation =
                 retry(
                         circuitBreaker(
                                 TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),

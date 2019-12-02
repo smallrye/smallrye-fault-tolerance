@@ -1,6 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.composition;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.retry.TestInvocation;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
 import org.junit.Test;
@@ -15,23 +16,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class FallbackAndRetryTest {
     @Test
     public void shouldFallbackAfterRetrying() throws Exception {
-        FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
+        FaultToleranceStrategy<String, SimpleInvocationContext<String>> operation = fallback(retry(invocation()));
 
-        assertThat(operation.apply(TestException::doThrow)).isEqualTo("fallback after TestException");
+        assertThat(operation.apply(new SimpleInvocationContext<>(TestException::doThrow))).isEqualTo("fallback after TestException");
     }
 
     @Test
     public void shouldNotFallbackOnSuccess() throws Exception {
-        FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
+        FaultToleranceStrategy<String, SimpleInvocationContext<String>> operation = fallback(retry(invocation()));
 
-        assertThat(operation.apply(() -> "foobar")).isEqualTo("foobar");
+        assertThat(operation.apply(new SimpleInvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
     }
 
     @Test
     public void shouldNotFallbackOnSuccessAtSecondAttempt() throws Exception {
         AtomicInteger failures = new AtomicInteger(0);
 
-        FaultToleranceStrategy<String> operation =
+        FaultToleranceStrategy<String, SimpleInvocationContext<String>> operation =
                 fallback(
                         retry(
                                 TestInvocation.initiallyFailing(
