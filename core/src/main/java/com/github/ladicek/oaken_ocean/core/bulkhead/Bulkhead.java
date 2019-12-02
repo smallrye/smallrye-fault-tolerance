@@ -59,7 +59,7 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
     @Override
     public V asyncFutureApply(Callable<V> target, Cancellator cancellator) throws Exception {
         try {
-            FutureOrFailure<?> result = new FutureOrFailure<>();
+            FutureOrFailure result = new FutureOrFailure<>();
             BulkheadTask bulkheadTask = new BulkheadTask(System.nanoTime(), target, result);
             // mstodo get rid of passing the result in the bulkhead task
             executor.execute(bulkheadTask);
@@ -76,7 +76,7 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
                 e.printStackTrace();
                 throw e;
             }
-            return (V) result;
+            return (V)result;
         } catch (RejectedExecutionException queueFullException) {
             recorder.bulkheadRejected();
             throw bulkheadRejected();
@@ -106,7 +106,7 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
             recorder.bulkheadQueueLeft(startTime - timeEnqueued);
             recorder.bulkheadEntered();
             try {
-                result.setDelegate(task.call());
+                result.setDelegate((Future<W>)delegate.apply((Callable<V>)task));
             } catch (Exception e) {
                 result.setFailure(e);
             } finally {
