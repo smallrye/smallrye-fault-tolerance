@@ -49,7 +49,6 @@ import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
-import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.Logger;
 
 import com.github.ladicek.oaken_ocean.core.Cancellator;
@@ -535,7 +534,8 @@ public class FaultToleranceInterceptor {
                     }
                 };
             } else {
-                throw new IllegalStateException("Fallback defined but no ")
+                // mstodo error message
+                throw new IllegalStateException("Fallback defined but failed to determine the handler or method");
             }
         }
 

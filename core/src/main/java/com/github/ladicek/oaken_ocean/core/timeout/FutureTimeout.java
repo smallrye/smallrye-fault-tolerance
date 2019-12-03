@@ -17,26 +17,38 @@ public class FutureTimeout<V> extends TimeoutBase<Future<V>, FutureInvocationCon
     public FutureTimeout(FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher, MetricsRecorder metricsRecorder, Executor asyncExecutor) {
         super(delegate, description, timeoutInMillis, watcher, metricsRecorder);
         this.asyncExecutor = asyncExecutor;
+        if (asyncExecutor == null) {
+            throw new IllegalArgumentException("Async Future execution requires an asyncExecutor, none provided");
+        }
     }
 
 
     @Override
     public Future<V> apply(FutureInvocationContext<V> context) throws Exception {
-        if (asyncExecutor == null) {
-            throw new IllegalStateException("Async Future execution requires asyncExecutor");
-        }
         FutureOrFailure<V> result = new FutureOrFailure<>();
         asyncExecutor.execute(
               () -> {
                   TimeoutExecution execution =
-                        new TimeoutExecution(Thread.currentThread(), result::timeout, timeoutInMillis);
+                        new TimeoutExecution(Thread.currentThread(), () -> result.timeout(timeoutException()), timeoutInMillis);
+
                   TimeoutWatch watch = watcher.schedule(execution);
+                  if (context.getCancellator() != null) {
+                      context.getCancellator().addCancelAction(
+                            interrupt -> {
+                                result.cancel(interrupt);
+                                watch.cancel();
+                            }
+                      );
+                  }
+
                   long start = System.nanoTime();
 
                   Exception exception = null;
                   boolean interrupted = false;
                   try {
-                      result.setDelegate(delegate.apply(context));
+                      Future<V> rawResult = delegate.apply(context);
+                      watch.cancel();
+                      result.setDelegate(rawResult);
                   } catch (InterruptedException e) {
                       interrupted = true;
                   } catch (Exception e) {

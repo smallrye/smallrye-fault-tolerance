@@ -40,7 +40,6 @@ public class FutureRetryTest {
         ).await();
 
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
-        assertThat(result.isDone()).isEqualTo(true);
 
         assertThatThrownBy(result::get).hasCause(exception);
     }

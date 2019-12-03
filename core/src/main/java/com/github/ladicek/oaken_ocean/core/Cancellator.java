@@ -7,18 +7,25 @@ import java.util.List;
  */
 public class Cancellator {
     private boolean canceled = false;
-    private final List<Runnable> cancelActions = new ArrayList<>();
+    private boolean mayInterruptIfRunning = false;
+    private final List<CancelAction> cancelActions = new ArrayList<>();
 
-    public synchronized void addCancelAction(Runnable runnable) {
+    public synchronized void addCancelAction(CancelAction action) {
         if (canceled) {
-            runnable.run();
+            action.cancel(mayInterruptIfRunning);
         } else {
-            cancelActions.add(runnable);
+            cancelActions.add(action);
         }
     }
 
-    public synchronized void cancel() {
+    public synchronized void cancel(boolean mayInterruptIfRunning) {
+        this.mayInterruptIfRunning = mayInterruptIfRunning;
         canceled = true;
-        cancelActions.forEach(Runnable::run);
+        cancelActions.forEach(action -> action.cancel(mayInterruptIfRunning));
+    }
+
+    @FunctionalInterface
+    public interface CancelAction {
+        void cancel(boolean mayInterruptIfRunning);
     }
 }

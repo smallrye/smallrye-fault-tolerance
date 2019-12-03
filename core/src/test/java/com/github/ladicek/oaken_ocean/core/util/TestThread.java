@@ -2,7 +2,6 @@ package com.github.ladicek.oaken_ocean.core.util;
 
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.InvocationContext;
-import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 
 import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
 

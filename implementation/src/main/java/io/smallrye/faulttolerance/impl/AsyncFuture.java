@@ -29,7 +29,7 @@ public class AsyncFuture<T> implements Future<T> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        cancellator.cancel();
+        cancellator.cancel(mayInterruptIfRunning);
         return delegate.cancel(mayInterruptIfRunning);
     }
 

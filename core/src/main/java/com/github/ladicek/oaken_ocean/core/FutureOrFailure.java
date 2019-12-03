@@ -20,7 +20,6 @@ public class FutureOrFailure<V> implements Future<V> {
     private volatile boolean canceled;
     private volatile boolean mayInterruptIfRunning;
 
-
     public void setDelegate(Future<V> delegate) {
         State<V> state = new State<>(delegate, null);
         currentState.compareAndSet(EMPTY, state);
@@ -43,6 +42,12 @@ public class FutureOrFailure<V> implements Future<V> {
         if (interrupt) {
             Thread.currentThread().interrupt();
         }
+
+        State<V> canceledState = new State<>(null, new InterruptedException());
+        if (currentState.compareAndSet(EMPTY, canceledState)) {
+            latch.countDown();
+        }
+
         return true;
     }
 
@@ -53,7 +58,7 @@ public class FutureOrFailure<V> implements Future<V> {
 
     @Override
     public boolean isDone() {
-        return latch.getCount() > 0;
+        return latch.getCount() == 0;
     }
 
     @Override
@@ -91,10 +96,10 @@ public class FutureOrFailure<V> implements Future<V> {
         latch.countDown();
     }
 
-    public void timeout() {
+    public void timeout(TimeoutException exception) {
         // TODO: simplify?
         State<V> previous = EMPTY;
-        State<V> timedOutState = new State<>(null, new TimeoutException());
+        State<V> timedOutState = new State<>(null, exception);
         int safetyValve = 0;
         while (!currentState.compareAndSet(previous, timedOutState)) {
             previous = currentState.get();
