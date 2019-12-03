@@ -37,7 +37,7 @@ public class FutureOrFailure<V> implements Future<V> {
 
         State<V> state = currentState.get();
         if (state.delegate != null) {
-            state.delegate.cancel(true);
+            state.delegate.cancel(interrupt);
         }
         if (interrupt) {
             Thread.currentThread().interrupt();
@@ -53,7 +53,8 @@ public class FutureOrFailure<V> implements Future<V> {
 
     @Override
     public boolean isCancelled() {
-        return canceled;
+        Future<V> delegate = currentState.get().delegate;
+        return canceled || (delegate != null && delegate.isCancelled());
     }
 
     @Override

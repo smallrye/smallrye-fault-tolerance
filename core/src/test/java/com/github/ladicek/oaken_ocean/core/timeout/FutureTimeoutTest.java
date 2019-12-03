@@ -11,9 +11,12 @@ import org.junit.Test;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.ladicek.oaken_ocean.core.timeout.FutureTestInvocation.immediatelyReturning;
 import static com.github.ladicek.oaken_ocean.core.util.CancellableTestThread.mockContext;
@@ -120,7 +123,7 @@ public class FutureTimeoutTest {
     }
 
     @Test
-    public void delayed_value_Cancelled() throws InterruptedException {
+    public void delayed_value_cancelled() throws InterruptedException {
         Barrier invocationStartBarrier = Barrier.interruptible();
         Barrier invocationDelayBarrier = Barrier.interruptible();
 
@@ -130,67 +133,125 @@ public class FutureTimeoutTest {
 
         CancellableTestThread<String> executingThread =
               runOnTestThread(new FutureTimeout<>(invocation, "test invocation",
-              1000, timeoutWatcher, null, asyncExecutor), new FutureInvocationContext<>(cancellator, null));
+                    100000, timeoutWatcher, null, asyncExecutor), new FutureInvocationContext<>(cancellator, null));
         invocationStartBarrier.await();
 
         cancellator.cancel(false);
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
-// mstodo
-//    // mstodo interruption test!
-//    // mstodo start here
-//
-//    @Test
-//    public void delayed_exception_notTimedOut() {
-//        Barrier invocationDelayBarrier = Barrier.interruptible();
-//
-//        TestInvocation<Void> invocation = TestInvocation.delayed(invocationDelayBarrier, TestException::doThrow);
-//        TestThread<Void> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
-//        invocationDelayBarrier.open();
-//        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
-//        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
-//    }
-//
-//    @Test
-//    public void delayed_exception_timedOut() throws InterruptedException {
-//        Barrier invocationDelayBarrier = Barrier.interruptible();
-//
-//        TestInvocation<Void> invocation = TestInvocation.delayed(invocationDelayBarrier, TestException::doThrow);
-//        TestThread<Void> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
-//        watcherTimeoutElapsedBarrier.open();
-//        watcherExecutionInterruptedBarrier.await();
-//        assertThatThrownBy(result::await)
-//              .isExactlyInstanceOf(TimeoutException.class)
-//              .hasMessage("test invocation timed out");
-//        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
-//    }
-//
-//    @Test
-//    public void delayed_exception_timedOutNoninterruptibly() throws InterruptedException {
-//        Barrier invocationDelayBarrier = Barrier.noninterruptible();
-//
-//        TestInvocation<Void> invocation = TestInvocation.delayed(invocationDelayBarrier, TestException::doThrow);
-//        TestThread<Void> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
-//        watcherTimeoutElapsedBarrier.open();
-//        watcherExecutionInterruptedBarrier.await();
-//        invocationDelayBarrier.open();
-//        assertThatThrownBy(result::await)
-//              .isExactlyInstanceOf(TimeoutException.class)
-//              .hasMessage("test invocation timed out");
-//        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
-//    }
-//
-//    @Test
-//    public void delayed_exception_interruptedEarly() throws InterruptedException {
-//        Barrier invocationStartBarrier = Barrier.interruptible();
-//        Barrier invocationDelayBarrier = Barrier.interruptible();
-//
-//        TestInvocation<Void> invocation = TestInvocation.delayed(invocationStartBarrier, invocationDelayBarrier, TestException::doThrow);
-//        TestThread<Void> executingThread = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
-//        invocationStartBarrier.await();
-//        executingThread.interrupt();
-//        assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
-//        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
-//    }
+
+    @Test
+    public void delayed_value_selfInterrupted() throws Exception {
+        Barrier delayBarrier = Barrier.interruptible();
+
+        Callable<Future<String>> action = () -> {
+            Thread.currentThread().interrupt();
+            delayBarrier.await();
+            return CompletableFuture.completedFuture("foobar");
+        };
+        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(action);
+        Cancellator cancellator = new Cancellator();
+
+        CancellableTestThread<String> executingThread =
+              runOnTestThread(new FutureTimeout<>(invocation, "test invocation",
+                    100000, timeoutWatcher, null, asyncExecutor), new FutureInvocationContext<>(cancellator, null));
+        delayBarrier.open();
+
+        assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+    }
+
+    @Test
+    public void immediate_value_nonInterruptibleCancelShouldBePropagated() throws Exception {
+        Barrier delayBarrier = Barrier.interruptible();
+
+        Callable<Future<String>> action = () ->
+              CompletableFuture.supplyAsync(() -> {
+                  try {
+                      delayBarrier.await();
+                  } catch (InterruptedException e) {
+                      throw new CompletionException(e);
+                  }
+                  return "foobar";
+              });
+        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(action);
+
+        CancellableTestThread<String> executingThread =
+              runOnTestThread(new FutureTimeout<>(invocation, "test invocation",
+                    100000, timeoutWatcher, null, asyncExecutor), mockContext());
+
+        Future<String> future = executingThread.await();
+        future.cancel(false);
+
+        assertThat(future.isCancelled());
+    }
+
+    @Test
+    public void immediate_value_interruptibleCancelShouldBePropagated() throws Exception {
+        Barrier delayBarrier = Barrier.interruptible();
+
+        Callable<Future<String>> action = () ->
+              CompletableFuture.supplyAsync(() -> {
+                  try {
+                      delayBarrier.await();
+                  } catch (InterruptedException e) {
+                      throw new CompletionException(e);
+                  }
+                  return "foobar";
+              });
+        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(action);
+
+        CancellableTestThread<String> executingThread =
+              runOnTestThread(new FutureTimeout<>(invocation, "test invocation",
+                    100000, timeoutWatcher, null, asyncExecutor), mockContext());
+
+        Future<String> future = executingThread.await();
+        future.cancel(true);
+
+        assertThat(future.isCancelled());
+        assertThatThrownBy(future::get).isExactlyInstanceOf(InterruptedException.class);
+    }
+
+    @Test
+    public void delayed_value_timedGetRethrowsEventualError() throws Exception {
+        RuntimeException exception = new RuntimeException("forced");
+
+        Callable<Future<String>> action = () ->
+              CompletableFuture.supplyAsync(() -> {
+                  throw exception;
+              });
+        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(action);
+
+        CancellableTestThread<String> executingThread =
+              runOnTestThread(new FutureTimeout<>(invocation, "test invocation",
+                    100000, timeoutWatcher, null, asyncExecutor), mockContext());
+
+        Future<String> future = executingThread.await();
+
+        assertThatThrownBy(() -> future.get(1000, TimeUnit.MILLISECONDS))
+              .isExactlyInstanceOf(ExecutionException.class)
+              .hasCause(exception);
+    }
+
+    @Test
+    public void delayed_value_getRethrowsError() throws Exception {
+        RuntimeException exception = new RuntimeException("forced");
+
+        Callable<Future<String>> action = () ->
+              CompletableFuture.supplyAsync(() -> {
+                  throw exception;
+              });
+        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(action);
+
+        CancellableTestThread<String> executingThread =
+              runOnTestThread(new FutureTimeout<>(invocation, "test invocation",
+                    100000, timeoutWatcher, null, asyncExecutor), mockContext());
+
+        Future<String> future = executingThread.await();
+
+        assertThatThrownBy(future::get)
+              .isExactlyInstanceOf(ExecutionException.class)
+              .hasCause(exception);
+    }
 }

@@ -8,6 +8,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
@@ -191,5 +192,28 @@ public class CompletionStageTimeoutTest {
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(InterruptedException.class);
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+    }
+
+    // mstodo remove?
+    @Test
+    public void immediatelyReturning_completionStageTimedOut() throws Exception {
+        Barrier barrier = Barrier.interruptible();
+
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(
+              () -> CompletableFuture.supplyAsync(() -> {
+                  try {
+                      barrier.await();
+                  } catch (InterruptedException e) {
+                      throw new RuntimeException("interrupted");
+                  }
+                  return null;
+              })
+        );
+        TestThread<CompletionStage<Void>> result = runOnTestThread(new CompletionStageTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, testExecutor, null));
+        watcherTimeoutElapsedBarrier.open();
+        watcherExecutionInterruptedBarrier.await();
+        assertThatThrownBy(result.await().toCompletableFuture()::get)
+              .isExactlyInstanceOf(ExecutionException.class)
+              .hasCauseExactlyInstanceOf(TimeoutException.class);
     }
 }
