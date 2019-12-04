@@ -1,13 +1,15 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
-import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.InvocationContext;
-import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
-public abstract class TimeoutBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
+import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.InvocationContext;
+
+public abstract class TimeoutBase<V, ContextType extends InvocationContext<V>>
+        implements FaultToleranceStrategy<V, ContextType> {
     final FaultToleranceStrategy<V, ContextType> delegate;
     final String description;
 
@@ -15,8 +17,9 @@ public abstract class TimeoutBase<V, ContextType extends InvocationContext<V>> i
     final TimeoutWatcher watcher;
     final MetricsRecorder metricsRecorder;
 
-    TimeoutBase(FaultToleranceStrategy<V, ContextType> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher,
-                       MetricsRecorder metricsRecorder) {
+    TimeoutBase(FaultToleranceStrategy<V, ContextType> delegate, String description, long timeoutInMillis,
+            TimeoutWatcher watcher,
+            MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Timeout delegate must be set");
         this.description = checkNotNull(description, "Timeout description must be set");
         this.timeoutInMillis = check(timeoutInMillis, timeoutInMillis > 0, "Timeout must be > 0");
@@ -30,7 +33,9 @@ public abstract class TimeoutBase<V, ContextType extends InvocationContext<V>> i
 
     public interface MetricsRecorder {
         void timeoutSucceeded(long time);
+
         void timeoutTimedOut(long time);
+
         void timeoutFailed(long time);
 
         MetricsRecorder NO_OP = new MetricsRecorder() {

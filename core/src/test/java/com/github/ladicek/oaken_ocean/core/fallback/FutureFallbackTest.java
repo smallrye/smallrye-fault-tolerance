@@ -1,24 +1,27 @@
 package com.github.ladicek.oaken_ocean.core.fallback;
 
-import com.github.ladicek.oaken_ocean.core.util.TestException;
-import com.github.ladicek.oaken_ocean.core.util.TestThread;
-import org.junit.Test;
+import static com.github.ladicek.oaken_ocean.core.util.TestThread.runOnTestThread;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import static com.github.ladicek.oaken_ocean.core.util.TestThread.runOnTestThread;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.Test;
+
+import com.github.ladicek.oaken_ocean.core.util.TestException;
+import com.github.ladicek.oaken_ocean.core.util.TestThread;
 
 public class FutureFallbackTest {
     @Test
     public void shouldNotFallBackOnFailingFuture() throws Exception {
         RuntimeException forcedException = new RuntimeException();
-        FutureTestInvocation<String> invocation =
-              FutureTestInvocation.immediatelyReturning(
-                    () -> CompletableFuture.<String>supplyAsync(() -> {throw forcedException;}).toCompletableFuture());
-        TestThread<Future<String>> result = runOnTestThread(new FutureFallback<>(invocation, "test invocation", this::fallback, null));
+        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(
+                () -> CompletableFuture.<String> supplyAsync(() -> {
+                    throw forcedException;
+                }).toCompletableFuture());
+        TestThread<Future<String>> result = runOnTestThread(
+                new FutureFallback<>(invocation, "test invocation", this::fallback, null));
         Future<String> future = result.await();
         assertThatThrownBy(future::get).hasCause(forcedException);
     }
@@ -29,15 +32,18 @@ public class FutureFallbackTest {
         FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(() -> {
             throw forcedException;
         });
-        TestThread<Future<String>> result = runOnTestThread(new FutureFallback<>(invocation, "test invocation", this::fallback, null));
+        TestThread<Future<String>> result = runOnTestThread(
+                new FutureFallback<>(invocation, "test invocation", this::fallback, null));
         Future<String> await = result.await();
         assertThat(await.get()).isEqualTo("fallback");
     }
 
     @Test
     public void shouldSucceed() throws Exception {
-        FutureTestInvocation<String> invocation = FutureTestInvocation.immediatelyReturning(() -> CompletableFuture.completedFuture("invocation"));
-        TestThread<Future<String>> result = runOnTestThread(new FutureFallback<>(invocation, "test invocation", this::fallback, null));
+        FutureTestInvocation<String> invocation = FutureTestInvocation
+                .immediatelyReturning(() -> CompletableFuture.completedFuture("invocation"));
+        TestThread<Future<String>> result = runOnTestThread(
+                new FutureFallback<>(invocation, "test invocation", this::fallback, null));
         Future<String> future = result.await();
         assertThat(future.get()).isEqualTo("invocation");
     }

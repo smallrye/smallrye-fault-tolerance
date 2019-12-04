@@ -1,10 +1,10 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
-import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
+import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
 
 import java.util.function.Supplier;
 
-import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
+import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 
 public class TestDelay implements Delay {
     private final Barrier startBarrier;
@@ -21,12 +21,12 @@ public class TestDelay implements Delay {
     }
 
     public static TestDelay exceptionThrowing(Barrier startBarrier, Barrier endBarrier,
-                                              Supplier<? extends Throwable> exception) {
+            Supplier<? extends Throwable> exception) {
         return new TestDelay(startBarrier, endBarrier, false, exception);
     }
 
     private TestDelay(Barrier startBarrier, Barrier endBarrier, boolean selfInterrupt,
-                     Supplier<? extends Throwable> exception) {
+            Supplier<? extends Throwable> exception) {
         this.startBarrier = startBarrier;
         this.endBarrier = endBarrier;
         this.selfInterrupt = selfInterrupt;

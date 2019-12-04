@@ -1,8 +1,8 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
-import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
-
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 
 /**
  * Can only be used once; subsequent usages will throw an exception during {@code schedule}.

@@ -1,11 +1,11 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.SplittableRandom;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.Test;
 
 public class RandomJitterTest {
     @Test

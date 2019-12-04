@@ -10,7 +10,7 @@ import java.util.concurrent.Future;
  *
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
-public final class FutureInvocationContext<V> implements InvocationContext<Future<V>>{
+public final class FutureInvocationContext<V> implements InvocationContext<Future<V>> {
 
     private final Cancellator cancellator;
     private final Callable<Future<V>> delegate;

@@ -1,10 +1,10 @@
 package com.github.ladicek.oaken_ocean.core.stopwatch;
 
-import org.assertj.core.data.Percentage;
-import org.junit.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Percentage.withPercentage;
+
+import org.assertj.core.data.Percentage;
+import org.junit.Test;
 
 public class SystemStopwatchTest {
     private static final Percentage tolerance = withPercentage(10);

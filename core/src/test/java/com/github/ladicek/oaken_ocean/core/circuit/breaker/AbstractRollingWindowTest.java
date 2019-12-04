@@ -1,8 +1,8 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
-import org.junit.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.Test;
 
 public abstract class AbstractRollingWindowTest {
     @Test

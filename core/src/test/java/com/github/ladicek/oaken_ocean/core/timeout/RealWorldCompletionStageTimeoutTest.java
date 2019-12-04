@@ -1,16 +1,11 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
-import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
-import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
-import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
-import com.github.ladicek.oaken_ocean.core.stopwatch.SystemStopwatch;
-import com.github.ladicek.oaken_ocean.core.util.TestException;
-import org.assertj.core.data.Percentage;
-import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static com.github.ladicek.oaken_ocean.core.Invocation.invocation;
+import static com.github.ladicek.oaken_ocean.core.util.CompletionStages.completedStage;
+import static com.github.ladicek.oaken_ocean.core.util.CompletionStages.failedStage;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.data.Percentage.withPercentage;
 
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -19,12 +14,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.github.ladicek.oaken_ocean.core.Invocation.invocation;
-import static com.github.ladicek.oaken_ocean.core.util.CompletionStages.completedStage;
-import static com.github.ladicek.oaken_ocean.core.util.CompletionStages.failedStage;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.data.Percentage.withPercentage;
+import org.assertj.core.data.Percentage;
+import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
+import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
+import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
+import com.github.ladicek.oaken_ocean.core.stopwatch.SystemStopwatch;
+import com.github.ladicek.oaken_ocean.core.util.TestException;
 
 public class RealWorldCompletionStageTimeoutTest {
     private static final Percentage tolerance = withPercentage(10);
@@ -56,7 +57,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldReturnRightAway() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+                invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
         assertThat(timeout.apply(new SimpleInvocationContext<>(() -> {
@@ -70,7 +72,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateMethodError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+                invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
@@ -86,7 +89,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateCompletionStageError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+                invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
@@ -102,7 +106,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldTimeOut() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(invocation(),
+        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+                invocation(),
                 "completion stage timeout", 500, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {

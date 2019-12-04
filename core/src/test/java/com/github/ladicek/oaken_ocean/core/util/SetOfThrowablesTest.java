@@ -1,11 +1,11 @@
 package com.github.ladicek.oaken_ocean.core.util;
 
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.Test;
 
 public class SetOfThrowablesTest {
     @Test

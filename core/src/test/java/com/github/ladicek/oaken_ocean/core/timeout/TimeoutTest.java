@@ -1,15 +1,16 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
-import com.github.ladicek.oaken_ocean.core.util.TestException;
-import com.github.ladicek.oaken_ocean.core.util.TestThread;
-import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
+import static com.github.ladicek.oaken_ocean.core.util.TestThread.runOnTestThread;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.github.ladicek.oaken_ocean.core.util.TestThread.runOnTestThread;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.github.ladicek.oaken_ocean.core.util.TestException;
+import com.github.ladicek.oaken_ocean.core.util.TestThread;
+import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 
 public class TimeoutTest {
     private Barrier watcherTimeoutElapsedBarrier;
@@ -42,7 +43,8 @@ public class TimeoutTest {
     @Test
     public void immediatelyReturning_value() throws Exception {
         TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "foobar");
-        TestThread<String> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
+        TestThread<String> result = runOnTestThread(
+                new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
         assertThat(result.await()).isEqualTo("foobar");
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
@@ -60,7 +62,8 @@ public class TimeoutTest {
         Barrier invocationDelayBarrier = Barrier.interruptible();
 
         TestInvocation<String> invocation = TestInvocation.delayed(invocationDelayBarrier, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
+        TestThread<String> result = runOnTestThread(
+                new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
         invocationDelayBarrier.open();
         assertThat(result.await()).isEqualTo("foobar");
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
@@ -71,7 +74,8 @@ public class TimeoutTest {
         Barrier invocationDelayBarrier = Barrier.interruptible();
 
         TestInvocation<String> invocation = TestInvocation.delayed(invocationDelayBarrier, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
+        TestThread<String> result = runOnTestThread(
+                new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
         watcherTimeoutElapsedBarrier.open();
         watcherExecutionInterruptedBarrier.await();
         assertThatThrownBy(result::await)
@@ -85,7 +89,8 @@ public class TimeoutTest {
         Barrier invocationDelayBarrier = Barrier.noninterruptible();
 
         TestInvocation<String> invocation = TestInvocation.delayed(invocationDelayBarrier, () -> "foobar");
-        TestThread<String> result = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
+        TestThread<String> result = runOnTestThread(
+                new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
         watcherTimeoutElapsedBarrier.open();
         watcherExecutionInterruptedBarrier.await();
         invocationDelayBarrier.open();
@@ -100,8 +105,10 @@ public class TimeoutTest {
         Barrier invocationStartBarrier = Barrier.interruptible();
         Barrier invocationDelayBarrier = Barrier.interruptible();
 
-        TestInvocation<String> invocation = TestInvocation.delayed(invocationStartBarrier, invocationDelayBarrier, () -> "foobar");
-        TestThread<String> executingThread = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
+        TestInvocation<String> invocation = TestInvocation.delayed(invocationStartBarrier, invocationDelayBarrier,
+                () -> "foobar");
+        TestThread<String> executingThread = runOnTestThread(
+                new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
         invocationStartBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
@@ -153,8 +160,10 @@ public class TimeoutTest {
         Barrier invocationStartBarrier = Barrier.interruptible();
         Barrier invocationDelayBarrier = Barrier.interruptible();
 
-        TestInvocation<Void> invocation = TestInvocation.delayed(invocationStartBarrier, invocationDelayBarrier, TestException::doThrow);
-        TestThread<Void> executingThread = runOnTestThread(new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
+        TestInvocation<Void> invocation = TestInvocation.delayed(invocationStartBarrier, invocationDelayBarrier,
+                TestException::doThrow);
+        TestThread<Void> executingThread = runOnTestThread(
+                new SyncTimeout<>(invocation, "test invocation", 1000, timeoutWatcher, null));
         invocationStartBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);

@@ -1,10 +1,10 @@
 package com.github.ladicek.oaken_ocean.core.fallback;
 
+import java.util.concurrent.Callable;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
-
-import java.util.concurrent.Callable;
 
 public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
     private final Barrier startBarrier;

@@ -6,10 +6,10 @@ import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 public class SyncTimeout<V> extends TimeoutBase<V, SimpleInvocationContext<V>> {
 
     public SyncTimeout(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate,
-                       String description,
-                       long timeoutInMillis,
-                       TimeoutWatcher watcher,
-                       MetricsRecorder metricsRecorder) {
+            String description,
+            long timeoutInMillis,
+            TimeoutWatcher watcher,
+            MetricsRecorder metricsRecorder) {
         super(delegate, description, timeoutInMillis, watcher, metricsRecorder);
     }
 

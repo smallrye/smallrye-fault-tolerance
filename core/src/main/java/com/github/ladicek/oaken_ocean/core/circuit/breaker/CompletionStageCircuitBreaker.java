@@ -1,29 +1,31 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+
+import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
-import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 
 // mstodo read through to potentially simplify/reuse more from CircuitBreaker
 // mstodo or make this class totally separate
 public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<CompletionStage<V>> {
 
-    public CompletionStageCircuitBreaker(FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
-                                         String description,
-                                         SetOfThrowables failOn,
-                                         long delayInMillis,
-                                         int requestVolumeThreshold,
-                                         double failureRatio,
-                                         int successThreshold,
-                                         Stopwatch stopwatch,
-                                         MetricsRecorder metricsRecorder) {
-        super(delegate, description, failOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold, stopwatch, metricsRecorder);
+    public CompletionStageCircuitBreaker(
+            FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
+            String description,
+            SetOfThrowables failOn,
+            long delayInMillis,
+            int requestVolumeThreshold,
+            double failureRatio,
+            int successThreshold,
+            Stopwatch stopwatch,
+            MetricsRecorder metricsRecorder) {
+        super(delegate, description, failOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold, stopwatch,
+                metricsRecorder);
     }
 
     @Override
@@ -45,7 +47,7 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
     }
 
     private CompletionStage<V> inClosed(SimpleInvocationContext<CompletionStage<V>> target,
-                                            SyncCircuitBreaker.State state) throws Exception {
+            SyncCircuitBreaker.State state) throws Exception {
         try {
             CompletionStage<V> result = delegate.apply(target);
 
@@ -77,7 +79,8 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
             metricsRecorder.circuitBreakerSucceeded();
         }
         boolean failureThresholdReached = isFailure
-              ? state.rollingWindow.recordFailure() : state.rollingWindow.recordSuccess();
+                ? state.rollingWindow.recordFailure()
+                : state.rollingWindow.recordSuccess();
         if (failureThresholdReached) {
             long now = System.nanoTime();
 
@@ -95,8 +98,8 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
         }
     }
 
-    private CompletionStage<V> inOpen(SimpleInvocationContext<CompletionStage<V>>  target,
-                                          SyncCircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inOpen(SimpleInvocationContext<CompletionStage<V>> target,
+            SyncCircuitBreaker.State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
@@ -113,7 +116,8 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
         }
     }
 
-    private CompletionStage<V> inHalfOpen(SimpleInvocationContext<CompletionStage<V>>  target, SyncCircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inHalfOpen(SimpleInvocationContext<CompletionStage<V>> target, SyncCircuitBreaker.State state)
+            throws Exception {
         try {
             CompletionStage<V> result = delegate.apply(target);
             metricsRecorder.circuitBreakerSucceeded();

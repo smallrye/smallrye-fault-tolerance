@@ -1,7 +1,8 @@
 package com.github.ladicek.oaken_ocean.core.util;
 
 public class Preconditions {
-    private Preconditions() {} // avoid instantiation
+    private Preconditions() {
+    } // avoid instantiation
 
     public static <T> T checkNotNull(T value, String message) {
         if (value == null) {

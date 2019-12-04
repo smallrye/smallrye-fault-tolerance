@@ -352,7 +352,6 @@ public class FaultToleranceInterceptor {
             result = new SyncBulkhead<>(result,
                     "Bulkhead[" + point.name() + "]",
                     bulkheadConfig.get(BulkheadConfig.VALUE),
-                    bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
                     collector);
         }
 

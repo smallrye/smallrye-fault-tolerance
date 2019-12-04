@@ -13,7 +13,8 @@ public class ScheduledExecutorTimeoutWatcher implements TimeoutWatcher {
 
     @Override
     public TimeoutWatch schedule(TimeoutExecution execution) {
-        ScheduledFuture<?> future = executor.schedule(execution::timeoutAndInterrupt, execution.timeoutInMillis(), TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future = executor.schedule(execution::timeoutAndInterrupt, execution.timeoutInMillis(),
+                TimeUnit.MILLISECONDS);
         return new TimeoutWatch() {
             @Override
             public boolean isRunning() {

@@ -1,12 +1,12 @@
 package com.github.ladicek.oaken_ocean.core.fallback;
 
-import com.github.ladicek.oaken_ocean.core.Cancellator;
+import java.util.concurrent.Callable;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.InvocationContext;
 
-import java.util.concurrent.Callable;
-
-public abstract class FallbackBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
+public abstract class FallbackBase<V, ContextType extends InvocationContext<V>>
+        implements FaultToleranceStrategy<V, ContextType> {
     final FaultToleranceStrategy<V, ContextType> delegate;
     final String description;
 
@@ -14,7 +14,7 @@ public abstract class FallbackBase<V, ContextType extends InvocationContext<V>> 
     final MetricsRecorder metricsRecorder;
 
     public FallbackBase(FaultToleranceStrategy<V, ContextType> delegate, String description, FallbackFunction<V> fallback,
-                        MetricsRecorder metricsRecorder) {
+            MetricsRecorder metricsRecorder) {
         this.delegate = delegate;
         this.description = description;
         this.fallback = fallback;

@@ -1,9 +1,9 @@
 package com.github.ladicek.oaken_ocean.core.util;
 
+import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.InvocationContext;
-
-import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
 
 public final class TestThread<V> extends Thread {
     private final FaultToleranceStrategy<V, ? extends InvocationContext<V>> invocation;

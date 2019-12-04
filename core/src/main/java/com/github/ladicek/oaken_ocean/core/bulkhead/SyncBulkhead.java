@@ -1,9 +1,9 @@
 package com.github.ladicek.oaken_ocean.core.bulkhead;
 
+import java.util.concurrent.Semaphore;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
-
-import java.util.concurrent.Semaphore;
 
 /**
  * This class is a one big TODO :)
@@ -11,8 +11,8 @@ import java.util.concurrent.Semaphore;
 public class SyncBulkhead<V> extends BulkheadBase<V, SimpleInvocationContext<V>> {
     private final Semaphore bulkheadSemaphore;
 
-    public SyncBulkhead(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate, String description, int size, int queueSize,
-                        MetricsRecorder metricsRecorder) {
+    public SyncBulkhead(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate, String description, int size,
+            MetricsRecorder metricsRecorder) {
         super(description, delegate, metricsRecorder);
         this.bulkheadSemaphore = new Semaphore(size);
     }

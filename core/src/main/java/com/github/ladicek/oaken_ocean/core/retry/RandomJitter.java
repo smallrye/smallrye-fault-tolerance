@@ -1,8 +1,8 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Provided a {@code maxJitter} value, generates random numbers that are greater than or equal to {@code -maxJitter}

@@ -1,13 +1,15 @@
 package com.github.ladicek.oaken_ocean.core.bulkhead;
 
+import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.InvocationContext;
-import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
-public abstract class BulkheadBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
+public abstract class BulkheadBase<V, ContextType extends InvocationContext<V>>
+        implements FaultToleranceStrategy<V, ContextType> {
     private final String description;
     final FaultToleranceStrategy<V, ContextType> delegate;
     final SyncBulkhead.MetricsRecorder recorder;
@@ -24,9 +26,13 @@ public abstract class BulkheadBase<V, ContextType extends InvocationContext<V>> 
 
     public interface MetricsRecorder {
         void bulkheadQueueEntered();
+
         void bulkheadQueueLeft(long timeInQueue);
+
         void bulkheadEntered();
+
         void bulkheadRejected();
+
         void bulkheadLeft(long processingTime);
 
         MetricsRecorder NOOP = new MetricsRecorder() {

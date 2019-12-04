@@ -1,12 +1,12 @@
 package com.github.ladicek.oaken_ocean.core;
 
-import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
@@ -74,7 +74,7 @@ public class FutureOrFailure<V> implements Future<V> {
 
     @Override
     public V get(long timeout, TimeUnit unit)
-          throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
+            throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
         latch.await(timeout, unit);
         State<V> state = currentState.get();
         if (state.failure != null) {
@@ -105,7 +105,7 @@ public class FutureOrFailure<V> implements Future<V> {
         while (!currentState.compareAndSet(previous, timedOutState)) {
             previous = currentState.get();
             if (previous.failure != null
-                  || (previous.delegate != null && previous.delegate.isDone())) {
+                    || (previous.delegate != null && previous.delegate.isDone())) {
                 break;
             }
             if (safetyValve++ > 10) {

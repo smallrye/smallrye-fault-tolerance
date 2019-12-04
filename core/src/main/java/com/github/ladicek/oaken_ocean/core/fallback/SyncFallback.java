@@ -8,9 +8,9 @@ import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
  */
 public class SyncFallback<V> extends FallbackBase<V, SimpleInvocationContext<V>> {
     public SyncFallback(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate,
-                        String description,
-                        FallbackFunction<V> fallback,
-                        MetricsRecorder metricsRecorder) {
+            String description,
+            FallbackFunction<V> fallback,
+            MetricsRecorder metricsRecorder) {
         super(delegate, description, fallback, metricsRecorder);
     }
 

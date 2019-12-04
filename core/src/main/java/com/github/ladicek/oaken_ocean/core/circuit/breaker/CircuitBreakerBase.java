@@ -1,11 +1,7 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
-import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.InvocationContext;
-import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
-import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
-import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
-import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
+import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
+import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -14,10 +10,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import static com.github.ladicek.oaken_ocean.core.util.Preconditions.check;
-import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
+import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
-public abstract class CircuitBreakerBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.InvocationContext;
+import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
+import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
+import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
+
+public abstract class CircuitBreakerBase<V, ContextType extends InvocationContext<V>>
+        implements FaultToleranceStrategy<V, ContextType> {
     static final int STATE_CLOSED = 0;
     static final int STATE_OPEN = 1;
     static final int STATE_HALF_OPEN = 2;
@@ -46,17 +48,20 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
     volatile long openStart;
 
     @SuppressWarnings("UnnecessaryThis")
-    CircuitBreakerBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables failOn, long delayInMillis,
-                              int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,
-                              MetricsRecorder metricsRecorder) {
+    CircuitBreakerBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables failOn,
+            long delayInMillis,
+            int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,
+            MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Circuit breaker delegate must be set");
         this.description = checkNotNull(description, "Circuit breaker description must be set");
         this.failOn = checkNotNull(failOn, "Set of fail-on throwables must be set");
         this.delayInMillis = check(delayInMillis, delayInMillis >= 0, "Circuit breaker delay must be >= 0");
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
-        this.failureThreshold = check((int) (failureRatio * requestVolumeThreshold), failureRatio >= 0.0 && failureRatio <= 1.0, "Circuit breaker rolling window failure ratio must be >= 0 && <= 1");
-        this.rollingWindowSize = check(requestVolumeThreshold, requestVolumeThreshold > 0, "Circuit breaker rolling window size must be > 0");
+        this.failureThreshold = check((int) (failureRatio * requestVolumeThreshold), failureRatio >= 0.0 && failureRatio <= 1.0,
+                "Circuit breaker rolling window failure ratio must be >= 0 && <= 1");
+        this.rollingWindowSize = check(requestVolumeThreshold, requestVolumeThreshold > 0,
+                "Circuit breaker rolling window size must be > 0");
 
         this.state = new AtomicReference<>(State.closed(rollingWindowSize, failureThreshold));
 
@@ -65,7 +70,8 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
 
         // mstodo: wrap this measurements in some object not to duplicate this logic
         this.metricsRecorder.circuitBreakerClosedTimeProvider(() -> getTime(STATE_CLOSED, closedStart, previousClosedTime));
-        this.metricsRecorder.circuitBreakerHalfOpenTimeProvider(() -> getTime(STATE_HALF_OPEN, halfOpenStart, previousHalfOpenTime));
+        this.metricsRecorder
+                .circuitBreakerHalfOpenTimeProvider(() -> getTime(STATE_HALF_OPEN, halfOpenStart, previousHalfOpenTime));
 
         this.metricsRecorder.circuitBreakerOpenTimeProvider(() -> getTime(STATE_OPEN, openStart, previousOpenTime));
 
@@ -73,8 +79,8 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
 
     private Long getTime(int measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
         return state.get().id == measuredState
-              ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
-              : prevMeasuredStateTime.get();
+                ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
+                : prevMeasuredStateTime.get();
     }
 
     V doApply(ContextType context) throws Exception {
@@ -114,7 +120,8 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
                 metricsRecorder.circuitBreakerSucceeded();
             }
             boolean failureThresholdReached = isFailure
-                    ? state.rollingWindow.recordFailure() : state.rollingWindow.recordSuccess();
+                    ? state.rollingWindow.recordFailure()
+                    : state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
                 long now = System.nanoTime();
 
@@ -218,11 +225,17 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
 
     public interface MetricsRecorder {
         void circuitBreakerRejected();
+
         void circuitBreakerOpenTimeProvider(Supplier<Long> supplier);
+
         void circuitBreakerHalfOpenTimeProvider(Supplier<Long> supplier);
+
         void circuitBreakerClosedTimeProvider(Supplier<Long> supplier);
+
         void circuitBreakerClosedToOpen();
+
         void circuitBreakerFailed();
+
         void circuitBreakerSucceeded();
 
         MetricsRecorder NO_OP = new MetricsRecorder() {
@@ -241,7 +254,6 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
             @Override
             public void circuitBreakerClosedTimeProvider(Supplier<Long> supplier) {
             }
-
 
             @Override
             public void circuitBreakerClosedToOpen() {

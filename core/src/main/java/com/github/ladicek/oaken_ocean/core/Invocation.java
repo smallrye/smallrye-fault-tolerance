@@ -15,7 +15,8 @@ public final class Invocation<V, ContextType extends InvocationContext<V>> imple
         return (Invocation<V, ContextType>) INSTANCE;
     }
 
-    private Invocation() {} // avoid instantiation
+    private Invocation() {
+    } // avoid instantiation
 
     @Override
     public V apply(ContextType target) throws Exception {

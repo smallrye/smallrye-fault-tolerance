@@ -1,11 +1,11 @@
 package com.github.ladicek.oaken_ocean.core.timeout;
 
-import org.junit.Before;
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TimeoutExecutionTest {
     private TimeoutExecution execution;

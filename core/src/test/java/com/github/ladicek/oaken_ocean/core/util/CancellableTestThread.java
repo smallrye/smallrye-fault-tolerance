@@ -1,11 +1,11 @@
 package com.github.ladicek.oaken_ocean.core.util;
 
-import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
+import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
 
 import java.util.concurrent.Future;
 
-import static com.github.ladicek.oaken_ocean.core.util.SneakyThrow.sneakyThrow;
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
 
 public final class CancellableTestThread<V> extends Thread {
 
@@ -16,7 +16,7 @@ public final class CancellableTestThread<V> extends Thread {
     private FutureInvocationContext<V> target;
 
     public static <V> CancellableTestThread<V> runOnTestThread(
-          FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation, FutureInvocationContext<V> target) {
+            FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation, FutureInvocationContext<V> target) {
         CancellableTestThread<V> thread = new CancellableTestThread<V>(invocation);
         thread.target = target;
         thread.start();

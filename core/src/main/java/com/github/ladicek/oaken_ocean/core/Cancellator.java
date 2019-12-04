@@ -2,6 +2,7 @@ package com.github.ladicek.oaken_ocean.core;
 
 import java.util.ArrayList;
 import java.util.List;
+
 /*
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */

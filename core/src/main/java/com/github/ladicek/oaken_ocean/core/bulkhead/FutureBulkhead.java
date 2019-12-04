@@ -1,36 +1,35 @@
 package com.github.ladicek.oaken_ocean.core.bulkhead;
 
-import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
-import com.github.ladicek.oaken_ocean.core.FutureOrFailure;
-
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
+import com.github.ladicek.oaken_ocean.core.FutureOrFailure;
+
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
 public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationContext<V>> {
 
-
     private final ThreadPoolExecutor executor;
     private final LinkedBlockingQueue<Runnable> workQueue;
 
     public FutureBulkhead(FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> delegate, String description,
-                          int size, int queueSize,
-                          MetricsRecorder recorder) {
+            int size, int queueSize,
+            MetricsRecorder recorder) {
         super(description, delegate, recorder);
         workQueue = new LinkedBlockingQueue<>(queueSize);
         executor = new ThreadPoolExecutor(size, size,
-              0L, TimeUnit.MILLISECONDS,
-              workQueue);
+                0L, TimeUnit.MILLISECONDS,
+                workQueue);
     }
 
     @Override
-    public Future<V> apply(FutureInvocationContext<V> target) throws Exception { //, Cancellator cancellator
+    public Future<V> apply(FutureInvocationContext<V> target) throws Exception {
         try {
             FutureOrFailure<V> result = new FutureOrFailure<>();
             BulkheadTask bulkheadTask = new BulkheadTask(System.nanoTime(), target, result);

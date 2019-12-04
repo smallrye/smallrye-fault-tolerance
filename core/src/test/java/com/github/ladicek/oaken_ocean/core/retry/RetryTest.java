@@ -1,22 +1,25 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
+import static com.github.ladicek.oaken_ocean.core.util.TestThread.runOnTestThread;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.Collections;
+
+import org.junit.Before;
+import org.junit.Test;
+
 import com.github.ladicek.oaken_ocean.core.stopwatch.TestStopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 import com.github.ladicek.oaken_ocean.core.util.TestException;
 import com.github.ladicek.oaken_ocean.core.util.TestThread;
 import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.Collections;
-
-import static com.github.ladicek.oaken_ocean.core.util.TestThread.runOnTestThread;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class RetryTest {
-    private static final SetOfThrowables exception = SetOfThrowables.withoutCustomThrowables(Collections.singletonList(Exception.class));
-    private static final SetOfThrowables testException = SetOfThrowables.withoutCustomThrowables(Collections.singletonList(TestException.class));
+    private static final SetOfThrowables exception = SetOfThrowables
+            .withoutCustomThrowables(Collections.singletonList(Exception.class));
+    private static final SetOfThrowables testException = SetOfThrowables
+            .withoutCustomThrowables(Collections.singletonList(TestException.class));
 
     private TestStopwatch stopwatch;
 
@@ -223,7 +226,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenRetriedException_totalDelayLessThanMaxDuration() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenRetriedException_totalDelayLessThanMaxDuration()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
@@ -238,7 +242,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenRetriedException_totalDelayEqualToMaxDuration() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenRetriedException_totalDelayEqualToMaxDuration()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
@@ -253,7 +258,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenRetriedException_totalDelayMoreThanMaxDuration() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenRetriedException_totalDelayMoreThanMaxDuration()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
@@ -268,7 +274,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenAbortingException_totalDelayLessThanMaxDuration() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenAbortingException_totalDelayLessThanMaxDuration()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
@@ -283,7 +290,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenAbortingException_totalDelayEqualToMaxDuration() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenAbortingException_totalDelayEqualToMaxDuration()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
@@ -298,7 +306,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenAbortingException_totalDelayMoreThanMaxDuration() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenAbortingException_totalDelayMoreThanMaxDuration()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.normal(startDelayBarrier, endDelayBarrier);
@@ -497,7 +506,8 @@ public class RetryTest {
     }
 
     @Test
-    public void initiallyFailing_retriedExceptionThenAbortingException_unexpectedExceptionInDelay() throws InterruptedException {
+    public void initiallyFailing_retriedExceptionThenAbortingException_unexpectedExceptionInDelay()
+            throws InterruptedException {
         Barrier startDelayBarrier = Barrier.interruptible();
         Barrier endDelayBarrier = Barrier.interruptible();
         TestDelay delay = TestDelay.exceptionThrowing(startDelayBarrier, endDelayBarrier, RuntimeException::new);

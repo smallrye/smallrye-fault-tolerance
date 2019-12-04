@@ -1,13 +1,13 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
-import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
-import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+
+import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
+import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
 
 public final class FutureTestInvocation<V> implements FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> {
     private final int initialFailuresCount;
@@ -22,8 +22,8 @@ public final class FutureTestInvocation<V> implements FaultToleranceStrategy<Fut
     }
 
     public static <V> FutureTestInvocation<V> initiallyFailing(int initialFailuresCount,
-                                                               Supplier<? extends Exception> initialFailure,
-                                                               Callable<Future<V>> result) {
+            Supplier<? extends Exception> initialFailure,
+            Callable<Future<V>> result) {
         return new FutureTestInvocation<>(initialFailuresCount, initialFailure, null, result);
     }
 
@@ -31,7 +31,8 @@ public final class FutureTestInvocation<V> implements FaultToleranceStrategy<Fut
         return new FutureTestInvocation<>(0, null, eventualFailure, null);
     }
 
-    private FutureTestInvocation(int initialFailuresCount, Supplier<? extends Exception> initialFailure, Supplier<? extends RuntimeException> eventualFailure, Callable<Future<V>> result) {
+    private FutureTestInvocation(int initialFailuresCount, Supplier<? extends Exception> initialFailure,
+            Supplier<? extends RuntimeException> eventualFailure, Callable<Future<V>> result) {
         this.initialFailuresCount = initialFailuresCount;
         this.initialFailure = initialFailure;
         this.eventualFailure = eventualFailure;
@@ -47,7 +48,7 @@ public final class FutureTestInvocation<V> implements FaultToleranceStrategy<Fut
         }
         if (eventualFailure != null) {
             // mstodo simplify?
-            return CompletableFuture.<V>supplyAsync(() -> {
+            return CompletableFuture.<V> supplyAsync(() -> {
                 throw eventualFailure.get();
             }).toCompletableFuture();
         }

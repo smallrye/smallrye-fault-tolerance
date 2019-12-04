@@ -1,13 +1,14 @@
 package com.github.ladicek.oaken_ocean.core.retry;
 
+import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
+
+import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
+
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.InvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.RunningStopwatch;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
-
-import static com.github.ladicek.oaken_ocean.core.util.Preconditions.checkNotNull;
 
 public abstract class RetryBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
     final FaultToleranceStrategy<V, ContextType> delegate;
@@ -24,9 +25,10 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
     // mstodo reattempt should not be triggered before the previous one. So we should be good
     // mstodo move to the call class if we were to separate from the context class
 
-    public RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
-                     long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,
-                     MetricsRecorder metricsRecorder) {
+    public RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn,
+            SetOfThrowables abortOn,
+            long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,
+            MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
         this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
@@ -104,8 +106,11 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
 
     public interface MetricsRecorder {
         void retrySucceededNotRetried();
+
         void retrySucceededRetried();
+
         void retryFailed();
+
         void retryRetried();
 
         MetricsRecorder NO_OP = new MetricsRecorder() {
