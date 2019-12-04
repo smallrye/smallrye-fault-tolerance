@@ -23,8 +23,9 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     private final Semaphore workSemaphore;
 
     /* mstodo test that interruption does not mess up the pool */
-    public CompletionStageBulkhead(String description,
+    public CompletionStageBulkhead(
             FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
+            String description,
             int size, int queueSize,
             MetricsRecorder recorder) {
         super(description, delegate, recorder);
@@ -43,6 +44,8 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
         }
     }
 
+    // mstodo always adding to queue seems wrong
+    // mstodo it may be that the reading threads are not fast enough to pick stuff up from queue before the task producers fill it up
     @Override
     public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) throws Exception {
         CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), context);
@@ -50,26 +53,36 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
             workQueue.add(task);
             recorder.bulkheadQueueEntered();
         } catch (IllegalStateException queueFullException) {
+            queueFullException.printStackTrace();
             recorder.bulkheadRejected();
             throw bulkheadRejected();
         }
         return task.result;
     }
 
+    // mstodo remove printlns
     public void run() {
-        try {
-            workSemaphore.acquire();
-        } catch (InterruptedException e) {
-            logger.error("Bulkhead worker interrupted, exiting", e);
+        while (true) {
+            CompletionStageBulkheadTask task = null;
+            try {
+                workSemaphore.acquire();
+                task = workQueue.take();
+            } catch (InterruptedException e) {
+                logger.error("Bulkhead worker interrupted, exiting", e);
+                return;
+            }
+            try {
+                task.execute();
+            } catch (Exception any) {
+                logger.error("Error processing bulkhead task", any);
+                workSemaphore.release();
+                task.result.completeExceptionally(any);
+            }
         }
-        try {
-            CompletionStageBulkheadTask task = workQueue.poll();
-            task.execute();
-        } catch (Exception any) {
-            logger.error("Error processing bulkhead task", any);
-        } finally {
-            workSemaphore.release();
-        }
+    }
+
+    public int getQueueSize() {
+        return workQueue.size();
     }
 
     private class CompletionStageBulkheadTask {
@@ -90,6 +103,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
             try {
                 rawResult = delegate.apply(context);
                 rawResult.whenComplete((value, error) -> {
+                    workSemaphore.release();
                     recorder.bulkheadLeft(System.nanoTime() - startTime);
                     if (error != null) {
                         result.completeExceptionally(error);

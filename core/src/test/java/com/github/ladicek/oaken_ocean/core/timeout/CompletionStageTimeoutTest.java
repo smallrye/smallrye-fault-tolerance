@@ -220,7 +220,6 @@ public class CompletionStageTimeoutTest {
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
-    // mstodo remove?
     @Test
     public void immediatelyReturning_completionStageTimedOut() throws Exception {
         Barrier barrier = Barrier.interruptible();

@@ -8,8 +8,8 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
@@ -17,46 +17,50 @@ import org.junit.Test;
 
 import com.github.ladicek.oaken_ocean.core.Cancellator;
 import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
+import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.util.FutureTestThread;
+import com.github.ladicek.oaken_ocean.core.util.TestThread;
 import com.github.ladicek.oaken_ocean.core.util.barrier.Barrier;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
-public class FutureBulkheadTest {
+public class CompletionStageBulkheadTest {
     @Test
     public void shouldLetSingleThrough() throws Exception {
-        FutureTestInvocation<String> invocation = FutureTestInvocation
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation
                 .immediatelyReturning(() -> completedFuture("shouldLetSingleThrough"));
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2, null);
-        Future<String> result = bulkhead.apply(new FutureInvocationContext<>(null, null));
-        assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
+        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2,
+                null);
+        CompletionStage<String> result = bulkhead.apply(new SimpleInvocationContext<>(null));
+        assertThat(result.toCompletableFuture().join()).isEqualTo("shouldLetSingleThrough");
     }
 
     @Test
     public void shouldLetMaxThrough() throws Exception { // max threads + max queue
         Barrier delayBarrier = Barrier.noninterruptible();
-        FutureTestInvocation<String> invocation = FutureTestInvocation.delayed(delayBarrier,
-                () -> completedFuture("shouldLetMaxThrough"));
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3, null);
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation
+                .immediatelyReturning(() -> completedFuture("shouldLetMaxThrough"));
+        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3,
+                null);
 
-        List<FutureTestThread<String>> threads = new ArrayList<>();
+        List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
-            threads.add(FutureTestThread.runOnTestThread(bulkhead, new FutureInvocationContext<>(null, null)));
+            threads.add(TestThread.runOnTestThread(bulkhead));
         }
         delayBarrier.open();
         for (int i = 0; i < 5; i++) {
-            assertThat(threads.get(i).await().get()).isEqualTo("shouldLetMaxThrough");
+            CompletionStage<String> result = threads.get(i).await();
+            assertThat(result.toCompletableFuture().join()).isEqualTo("shouldLetMaxThrough");
         }
     }
 
     @Test
     public void shouldRejectMaxPlus1() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
-        Barrier startBarrier = Barrier.noninterruptible();
 
-        FutureTestInvocation<String> invocation = FutureTestInvocation.delayed(startBarrier, delayBarrier,
+        FutureTestInvocation<String> invocation = FutureTestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
         FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3, null);
 
@@ -110,6 +114,7 @@ public class FutureBulkheadTest {
         }
     }
 
+    // mstodo some race here! sometimes hangs!
     @Test
     public void shouldLetMaxPlus1After1Failed() throws Exception {
         RuntimeException error = new RuntimeException("forced");
@@ -171,11 +176,11 @@ public class FutureBulkheadTest {
         for (int i = 0; i < 4; i++) {
             threads.add(FutureTestThread.runOnTestThread(bulkhead, new FutureInvocationContext<>(null, null)));
         }
-        invocationsStarted.await();
+        invocationsStarted.countDown();
         Cancellator cancellator = new Cancellator();
         FutureTestThread.runOnTestThread(bulkhead, new FutureInvocationContext<>(cancellator, null));
 
-        waitUntilQueueSize(bulkhead, 3, 1000);
+        //        waitUntilQueueSizeNoBiggerThan(bulkhead, 3, 1000);
 
         FutureTestThread<String> failedThread = FutureTestThread.runOnTestThread(bulkhead,
                 new FutureInvocationContext<>(null, null));
@@ -192,11 +197,12 @@ public class FutureBulkheadTest {
         }
     }
 
-    private void waitUntilQueueSize(FutureBulkhead<String> bulkhead, int size, long timeout) throws InterruptedException {
+    private <V> void waitUntilQueueSizeNoBiggerThan(CompletionStageBulkhead<V> bulkhead, int size, long timeout)
+            throws InterruptedException {
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < timeout) {
             Thread.sleep(50);
-            if (bulkhead.getQueueSize() == size) {
+            if (bulkhead.getQueueSize() <= size) {
                 return;
             }
         }
