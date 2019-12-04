@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 
+/// mstodo: merge the test invocations?
 public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
     private final int initialFailuresCount;
     private final Supplier<? extends Exception> initialFailure;
