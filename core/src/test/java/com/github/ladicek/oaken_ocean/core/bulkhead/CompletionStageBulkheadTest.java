@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
@@ -60,25 +61,32 @@ public class CompletionStageBulkheadTest {
     public void shouldRejectMaxPlus1() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
 
-        FutureTestInvocation<String> invocation = FutureTestInvocation.delayed(delayBarrier,
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3, null);
+        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3,
+                null);
 
-        List<FutureTestThread<String>> threads = new ArrayList<>();
+        List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
-            threads.add(FutureTestThread.runOnTestThread(bulkhead, new FutureInvocationContext<>(null, null)));
+            threads.add(TestThread.runOnTestThread(bulkhead));
         }
+        // to make sure all the tasks are in bulkhead:
+        waitUntilQueueSize(bulkhead, 3, 1000);
 
-        assertThatThrownBy(() -> bulkhead.apply(new FutureInvocationContext<>(null, null)))
-                .isInstanceOf(BulkheadException.class);
+        CompletionStage<String> plus1Call = bulkhead.apply(new SimpleInvocationContext<>(null));
+        assertThat(plus1Call).isCompletedExceptionally();
+        assertThatThrownBy(plus1Call.toCompletableFuture()::get)
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(BulkheadException.class);
 
         delayBarrier.open();
         for (int i = 0; i < 5; i++) {
-            assertThat(threads.get(i).await().get()).isEqualTo("shouldRejectMaxPlus1");
+            assertThat(threads.get(i).await().toCompletableFuture().get()).isEqualTo("shouldRejectMaxPlus1");
         }
     }
 
+    // mstodo start here
     @Test
     public void shouldLetMaxPlus1After1Left() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
@@ -197,16 +205,16 @@ public class CompletionStageBulkheadTest {
         }
     }
 
-    private <V> void waitUntilQueueSizeNoBiggerThan(CompletionStageBulkhead<V> bulkhead, int size, long timeout)
+    private <V> void waitUntilQueueSize(CompletionStageBulkhead<V> bulkhead, int size, long timeout)
             throws InterruptedException {
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < timeout) {
             Thread.sleep(50);
-            if (bulkhead.getQueueSize() <= size) {
+            if (bulkhead.getQueueSize() == size) {
                 return;
             }
         }
-        fail("queue not filled in in " + timeout + " [ms]");
+        fail("queue not reached size " + size + " in " + timeout + " [ms]");
 
     }
 

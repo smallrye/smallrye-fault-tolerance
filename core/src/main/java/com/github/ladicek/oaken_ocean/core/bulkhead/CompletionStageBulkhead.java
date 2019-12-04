@@ -19,8 +19,10 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     private static final Logger logger = Logger.getLogger(CompletionStageBulkhead.class);
 
     private final ThreadPoolExecutor executor;
-    private final LinkedBlockingQueue<CompletionStageBulkheadTask> workQueue;
+    private final int queueSize;
+    private final int size;
     private final Semaphore workSemaphore;
+    private final Semaphore capacitySemaphore;
 
     /* mstodo test that interruption does not mess up the pool */
     public CompletionStageBulkhead(
@@ -29,63 +31,36 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
             int size, int queueSize,
             MetricsRecorder recorder) {
         super(description, delegate, recorder);
-        workQueue = new LinkedBlockingQueue<>(queueSize);
         workSemaphore = new Semaphore(size);
+        capacitySemaphore = new Semaphore(size + queueSize);
+        this.queueSize = queueSize;
+        this.size = size;
         // mstodo do we need daemons here ?
-        // mstodo then we can ignore interruptions
-        // mstodo and this is what we prob'ly need
         executor = new ThreadPoolExecutor(size, size,
                 0L, TimeUnit.MILLISECONDS,
-                // we don't want anything added here, it should be all handled manually in the workQueue
-                // LinkedBlockingQueue doesn't support zero size
-                new LinkedBlockingQueue<>(1));
-        for (int i = 0; i < size; i++) {
-            executor.submit(this::run);
-        }
+                new LinkedBlockingQueue<>(queueSize));
     }
 
-    // mstodo always adding to queue seems wrong
-    // mstodo it may be that the reading threads are not fast enough to pick stuff up from queue before the task producers fill it up
     @Override
     public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) throws Exception {
-        CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), context);
-        try {
-            workQueue.add(task);
+        if (capacitySemaphore.tryAcquire()) {
+            CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), context);
+            executor.execute(task);
             recorder.bulkheadQueueEntered();
-        } catch (IllegalStateException queueFullException) {
-            queueFullException.printStackTrace();
+            return task.result;
+        } else {
             recorder.bulkheadRejected();
-            throw bulkheadRejected();
-        }
-        return task.result;
-    }
-
-    // mstodo remove printlns
-    public void run() {
-        while (true) {
-            CompletionStageBulkheadTask task = null;
-            try {
-                workSemaphore.acquire();
-                task = workQueue.take();
-            } catch (InterruptedException e) {
-                logger.error("Bulkhead worker interrupted, exiting", e);
-                return;
-            }
-            try {
-                task.execute();
-            } catch (Exception any) {
-                logger.error("Error processing bulkhead task", any);
-                workSemaphore.release();
-                task.result.completeExceptionally(any);
-            }
+            CompletableFuture<V> result = new CompletableFuture<>();
+            result.completeExceptionally(bulkheadRejected());
+            return result;
         }
     }
 
     public int getQueueSize() {
-        return workQueue.size();
+        return Math.min(queueSize, size + queueSize - capacitySemaphore.availablePermits());
     }
 
-    private class CompletionStageBulkheadTask {
+    private class CompletionStageBulkheadTask implements Runnable {
         private final long timeEnqueued;
         private final CompletableFuture<V> result = new CompletableFuture<>();
         private final SimpleInvocationContext<CompletionStage<V>> context;
@@ -95,7 +70,15 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
             this.context = context;
         }
 
-        public CompletionStage<V> execute() {
+        public void run() {
+            try {
+                workSemaphore.acquire();
+            } catch (InterruptedException e) {
+                logger.error("Bulkhead worker interrupted, exiting", e);
+                result.completeExceptionally(e);
+                return;
+            }
+
             CompletionStage<V> rawResult;
             long startTime = System.nanoTime();
             recorder.bulkheadQueueLeft(startTime - timeEnqueued);
@@ -103,7 +86,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
             try {
                 rawResult = delegate.apply(context);
                 rawResult.whenComplete((value, error) -> {
-                    workSemaphore.release();
+                    releaseSemaphores();
                     recorder.bulkheadLeft(System.nanoTime() - startTime);
                     if (error != null) {
                         result.completeExceptionally(error);
@@ -112,10 +95,15 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
                     }
                 });
             } catch (Exception e) {
+                releaseSemaphores();
                 recorder.bulkheadLeft(System.nanoTime() - startTime);
                 result.completeExceptionally(e);
             }
-            return result;
         }
+    }
+
+    private void releaseSemaphores() {
+        workSemaphore.release();
+        capacitySemaphore.release();
     }
 }
