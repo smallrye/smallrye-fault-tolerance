@@ -57,7 +57,7 @@ public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationC
         }
     }
 
-    public int getQueueSize() {
+    int getQueueSize() {
         return workQueue.size();
     }
 
