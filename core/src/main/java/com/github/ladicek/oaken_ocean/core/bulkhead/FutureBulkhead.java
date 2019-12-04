@@ -35,7 +35,9 @@ public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationC
             BulkheadTask bulkheadTask = new BulkheadTask(System.nanoTime(), target, result);
             // mstodo get rid of passing the result in the bulkhead task
             executor.execute(bulkheadTask);
-            target.getCancellator().addCancelAction(ignored -> workQueue.remove(bulkheadTask));
+            if (target.getCancellator() != null) {
+                target.getCancellator().addCancelAction(ignored -> workQueue.remove(bulkheadTask));
+            }
             recorder.bulkheadQueueEntered();
 
             try {
@@ -53,6 +55,10 @@ public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationC
             recorder.bulkheadRejected();
             throw bulkheadRejected();
         }
+    }
+
+    public int getQueueSize() {
+        return workQueue.size();
     }
 
     private class BulkheadTask implements Runnable {

@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
 import com.github.ladicek.oaken_ocean.core.FaultToleranceStrategy;
 import com.github.ladicek.oaken_ocean.core.FutureInvocationContext;
 
-public final class CancellableTestThread<V> extends Thread {
+public final class FutureTestThread<V> extends Thread {
 
     private final FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation;
 
@@ -15,15 +15,16 @@ public final class CancellableTestThread<V> extends Thread {
     private volatile Throwable exception;
     private FutureInvocationContext<V> target;
 
-    public static <V> CancellableTestThread<V> runOnTestThread(
-            FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation, FutureInvocationContext<V> target) {
-        CancellableTestThread<V> thread = new CancellableTestThread<V>(invocation);
+    public static <V> FutureTestThread<V> runOnTestThread(
+            FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation,
+            FutureInvocationContext<V> target) {
+        FutureTestThread<V> thread = new FutureTestThread<V>(invocation);
         thread.target = target;
         thread.start();
         return thread;
     }
 
-    private CancellableTestThread(FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation) {
+    private FutureTestThread(FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> invocation) {
         this.invocation = invocation;
     }
 
@@ -53,5 +54,9 @@ public final class CancellableTestThread<V> extends Thread {
             sneakyThrow(exception);
         }
         return result;
+    }
+
+    public boolean isDone() {
+        return result != null || exception != null;
     }
 }
