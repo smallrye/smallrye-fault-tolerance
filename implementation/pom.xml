@@ -97,9 +97,8 @@
       <artifactId>microprofile-fault-tolerance-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.github.ladicek</groupId>
-      <artifactId>oaken-ocean-core</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <groupId>io.smallrye</groupId>
+      <artifactId>smallrye-fault-tolerance-core</artifactId>
     </dependency>
 <!--    <dependency>-->
 <!--      <groupId>com.netflix.hystrix</groupId>-->

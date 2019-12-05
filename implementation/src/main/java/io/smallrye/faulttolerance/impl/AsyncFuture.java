@@ -7,9 +7,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
 
-import com.github.ladicek.oaken_ocean.core.Cancellator;
-
 import io.smallrye.faulttolerance.FaultToleranceInterceptor;
+import io.smallrye.faulttolerance.core.Cancellator;
 
 /**
  * @author Antoine Sabot-Durand
