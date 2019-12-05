@@ -35,8 +35,8 @@ public class FutureTimeout<V> extends TimeoutBase<Future<V>, FutureInvocationCon
                     if (context.getCancellator() != null) {
                         context.getCancellator().addCancelAction(
                                 interrupt -> {
-                                    result.cancel(interrupt);
                                     watch.cancel();
+                                    result.cancel(interrupt);
                                 });
                     }
 

@@ -66,7 +66,7 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
 
                 // specifying `abortOn` is only useful when it's more specific than `retryOn`;
                 // otherwise, if the exception isn't present in `retryOn`, it's always an abort
-                if (abortOn.includes(e.getClass()) || !retryOn.includes(e.getClass())) {
+                if (shouldAbortRetrying(e)) {
                     metricsRecorder.retryFailed();
                     throw e;
                 }
@@ -102,6 +102,10 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
         } else {
             throw new FaultToleranceException(description + " reached max retries or max retry duration");
         }
+    }
+
+    boolean shouldAbortRetrying(Throwable e) {
+        return abortOn.includes(e.getClass()) || !retryOn.includes(e.getClass());
     }
 
     public interface MetricsRecorder {

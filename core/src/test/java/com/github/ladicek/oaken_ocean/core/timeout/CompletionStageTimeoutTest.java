@@ -240,5 +240,6 @@ public class CompletionStageTimeoutTest {
         assertThatThrownBy(result.await().toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);
+        barrier.open();
     }
 }

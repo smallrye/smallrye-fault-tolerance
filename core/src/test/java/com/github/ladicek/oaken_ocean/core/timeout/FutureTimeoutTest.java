@@ -181,6 +181,7 @@ public class FutureTimeoutTest {
         future.cancel(false);
 
         assertThat(future.isCancelled());
+        delayBarrier.open();
     }
 
     @Test
@@ -205,6 +206,7 @@ public class FutureTimeoutTest {
 
         assertThat(future.isCancelled());
         assertThatThrownBy(future::get).isExactlyInstanceOf(InterruptedException.class);
+        delayBarrier.open();
     }
 
     @Test

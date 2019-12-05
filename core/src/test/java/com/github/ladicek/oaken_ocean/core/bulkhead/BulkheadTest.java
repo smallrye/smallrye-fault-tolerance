@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
@@ -48,7 +49,9 @@ public class BulkheadTest {
     public void shouldRejectMaxPlus1() throws Exception {
         Barrier startBarrier = Barrier.noninterruptible();
         Barrier delayBarrier = Barrier.noninterruptible();
-        TestInvocation<String> invocation = TestInvocation.delayed(startBarrier, delayBarrier, () -> "shouldRejectMaxPlus1");
+        CountDownLatch startedLatch = new CountDownLatch(5);
+        TestInvocation<String> invocation = TestInvocation.delayed(startBarrier, delayBarrier, startedLatch,
+                () -> "shouldRejectMaxPlus1");
         SyncBulkhead<String> bulkhead = new SyncBulkhead<>(invocation, "shouldRejectMaxPlus1", 5, null);
 
         List<TestThread<String>> threads = new ArrayList<>();
@@ -57,6 +60,7 @@ public class BulkheadTest {
             threads.add(TestThread.runOnTestThread(bulkhead));
         }
         startBarrier.await();
+        startedLatch.await(); // makes sure that all the threads have put their runnables into bulkhead
         assertThatThrownBy(() -> bulkhead.apply(new SimpleInvocationContext<>(() -> "")))
                 .isExactlyInstanceOf(BulkheadException.class);
         delayBarrier.open();
@@ -75,6 +79,7 @@ public class BulkheadTest {
 
         TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> {
             letOneInSemaphore.acquire();
+            // noinspection unchecked
             finishedThreads.add((TestThread<String>) Thread.currentThread());
             finishedThreadsCount.release();
             return "shouldLetMaxPlus1After1Left";
@@ -111,6 +116,7 @@ public class BulkheadTest {
 
         TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> {
             letOneInSemaphore.acquire();
+            //noinspection unchecked
             finishedThreads.add((TestThread<String>) Thread.currentThread());
             finishedThreadsCount.release();
             throw error;

@@ -46,9 +46,6 @@ public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationC
                 workQueue.remove(bulkheadTask);
                 bulkheadTask.interrupt();
                 // mstodo what to return?
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw e;
             }
             return result;
         } catch (RejectedExecutionException queueFullException) {

@@ -44,26 +44,26 @@ public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, Simpl
                 delayBetweenRetries.sleep();
             } catch (InterruptedException e) {
                 metricsRecorder.retryFailed();
-                throw e;
+                return erroneousResult(e);
             } catch (Exception e) {
                 metricsRecorder.retryFailed();
                 if (Thread.interrupted()) {
-                    throw new InterruptedException();
+                    return erroneousResult(new InterruptedException());
                 }
 
-                throw e;
+                return erroneousResult(e);
             }
         } else {
             metricsRecorder.retryFailed();
-            throw getError(latestFailure);
+            return erroneousResult(latestFailure);
         }
         if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
             if (latestFailure != null) {
                 metricsRecorder.retryFailed();
-                throw getError(latestFailure);
+                return erroneousResult(latestFailure);
             } else {
                 metricsRecorder.retryFailed();
-                throw new FaultToleranceException(description + " reached max retries or max retry duration");
+                return erroneousResult(new FaultToleranceException(description + " reached max retries or max retry duration"));
             }
         }
         try {
@@ -76,9 +76,13 @@ public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, Simpl
                             return CompletableFuture.completedFuture(result.value);
                         } else {
                             metricsRecorder.retryFailed();
-                            if (abortOn.includes(error.getClass()) || !retryOn.includes(error.getClass())) {
+                            if (shouldAbortRetrying(error)) {
                                 metricsRecorder.retryFailed();
-                                throw new CompletionException(error);
+                                if (error instanceof RuntimeException) {
+                                    throw (RuntimeException) error;
+                                } else {
+                                    throw new CompletionException(error);
+                                }
                             } else {
                                 try {
                                     return doRetry(target, attempt + 1, stopwatch, error);
@@ -91,17 +95,25 @@ public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, Simpl
                         }
                     });
         } catch (Throwable th) {
-            return doRetry(target, attempt + 1, stopwatch, th);
+            if (shouldAbortRetrying(th)) {
+                return erroneousResult(th);
+            } else {
+                return doRetry(target, attempt + 1, stopwatch, th);
+            }
         }
     }
 
-    private Exception getError(Throwable latestFailure) {
+    private CompletionStage<V> erroneousResult(Throwable latestFailure) {
+        CompletableFuture<V> result = new CompletableFuture<>();
         // TODO: TCK expects that but it seems un(der)specified in the spec
+        Exception error;
         if (latestFailure instanceof Exception) {
-            return (Exception) latestFailure;
+            error = (Exception) latestFailure;
         } else {
-            return new FaultToleranceException(latestFailure.getMessage(), latestFailure);
+            error = new FaultToleranceException(latestFailure.getMessage(), latestFailure);
         }
+        result.completeExceptionally(error);
+        return result;
     }
 
     private void recordSuccess(int attempt) {
