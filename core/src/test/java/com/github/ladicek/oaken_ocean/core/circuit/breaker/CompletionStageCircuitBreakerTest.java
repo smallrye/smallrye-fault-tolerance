@@ -117,11 +117,35 @@ public class CompletionStageCircuitBreakerTest {
     }
 
     @Test
-    public void shouldTreatCompletionStageFailureAsCBFailure() {
-        // mstodo
+    public void shouldTreatCompletionStageFailureAsCBFailure() throws Exception {
+        TestException exception = new TestException();
+
+        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
+                testException,
+                1000, 4, 0.5, 2, stopwatch, null);
+
+        assertThatThrownBy(cb.apply(contextEventuallyFailingWith(exception)).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCause(exception);
+        assertThatThrownBy(cb.apply(contextEventuallyFailingWith(exception)).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCause(exception);
+        assertThatThrownBy(cb.apply(contextEventuallyFailingWith(exception)).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCause(exception);
+        assertThatThrownBy(cb.apply(contextEventuallyFailingWith(exception)).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCause(exception);
+
+        assertThatThrownBy(cb.apply(contextEventuallyFailingWith(exception)).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(CircuitBreakerOpenException.class);
     }
 
     private SimpleInvocationContext<CompletionStage<String>> contextReturning(String value) {
         return new SimpleInvocationContext<>(() -> CompletableFuture.completedFuture(value));
+    }
+
+    private <V> SimpleInvocationContext<CompletionStage<V>> contextEventuallyFailingWith(Exception exception) {
+        return new SimpleInvocationContext<>(() -> {
+            CompletableFuture<V> result = new CompletableFuture<>();
+            result.completeExceptionally(exception);
+            return result;
+        });
     }
 }
