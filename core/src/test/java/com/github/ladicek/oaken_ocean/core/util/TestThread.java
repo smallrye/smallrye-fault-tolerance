@@ -46,4 +46,8 @@ public final class TestThread<V> extends Thread {
         }
         return result;
     }
+
+    public boolean isDone() {
+        return exception != null || result != null;
+    }
 }
