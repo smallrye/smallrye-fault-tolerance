@@ -46,7 +46,9 @@ public class FutureTimeout<V> extends TimeoutBase<Future<V>, FutureInvocationCon
                     boolean interrupted = false;
                     try {
                         Future<V> rawResult = delegate.apply(context);
-                        watch.cancel();
+                        if (watch.isRunning()) {
+                            execution.finish(watch::cancel);
+                        }
                         result.setDelegate(rawResult);
                     } catch (InterruptedException e) {
                         interrupted = true;
@@ -54,7 +56,9 @@ public class FutureTimeout<V> extends TimeoutBase<Future<V>, FutureInvocationCon
                         exception = e;
                     } finally {
                         // if the execution already timed out, this will be a noop
-                        execution.finish(watch::cancel);
+                        if (watch.isRunning()) {
+                            execution.finish(watch::cancel);
+                        }
                     }
 
                     if (Thread.interrupted()) {

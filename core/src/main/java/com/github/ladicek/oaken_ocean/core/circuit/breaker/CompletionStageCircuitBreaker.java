@@ -1,5 +1,6 @@
 package com.github.ladicek.oaken_ocean.core.circuit.breaker;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
@@ -10,9 +11,10 @@ import com.github.ladicek.oaken_ocean.core.SimpleInvocationContext;
 import com.github.ladicek.oaken_ocean.core.stopwatch.Stopwatch;
 import com.github.ladicek.oaken_ocean.core.util.SetOfThrowables;
 
-// mstodo read through to potentially simplify/reuse more from CircuitBreaker
+// mstodo read through to potentially simplify/reuse more from CircuitBreakerBase
 // mstodo or make this class totally separate
-public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<CompletionStage<V>> {
+public class CompletionStageCircuitBreaker<V>
+        extends CircuitBreakerBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
 
     public CompletionStageCircuitBreaker(
             FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
@@ -65,8 +67,15 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
                 }
             });
         } catch (Throwable e) {
-            throw onFailure(state, e);
+            CompletionException failure = onFailure(state, e);
+            return failedCompletionStage(failure);
         }
+    }
+
+    private CompletionStage<V> failedCompletionStage(Throwable failure) {
+        CompletableFuture<V> result = new CompletableFuture<>();
+        result.completeExceptionally(failure);
+        return result;
     }
 
     private CompletionException onFailure(State state, Throwable e) {
@@ -103,7 +112,7 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
-            throw new CircuitBreakerOpenException(description + " circuit breaker is open");
+            return failedCompletionStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
             long now = System.nanoTime();
 
@@ -136,7 +145,7 @@ public class CompletionStageCircuitBreaker<V> extends SyncCircuitBreaker<Complet
             metricsRecorder.circuitBreakerFailed();
             listeners.forEach(CircuitBreakerListener::failed);
             toOpen(state);
-            throw e;
+            return failedCompletionStage(e);
         }
     }
 

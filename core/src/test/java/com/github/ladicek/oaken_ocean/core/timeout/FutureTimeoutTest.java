@@ -118,7 +118,7 @@ public class FutureTimeoutTest {
         assertThatThrownBy(result::await)
                 .isExactlyInstanceOf(TimeoutException.class)
                 .hasMessage("test invocation timed out");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse(); // watcher should not be canceled if it caused the stop
     }
 
     @Test
