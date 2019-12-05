@@ -100,7 +100,7 @@
                                 </goals>
                                 <configuration>
                                     <includes>
-                                        <include>com.github.ladicek.oaken_ocean.*</include>
+                                        <param>io.smallrye.faulttolerance.core.*</param>
                                     </includes>
                                     <propertyName>jacoco.argLine</propertyName>
                                 </configuration>
@@ -132,7 +132,7 @@
                                 </goals>
                                 <configuration>
                                     <targetClasses>
-                                        <param>com.github.ladicek.oaken_ocean.*</param>
+                                        <param>io.smallrye.faulttolerance.core.*</param>
                                     </targetClasses>
                                 </configuration>
                             </execution>

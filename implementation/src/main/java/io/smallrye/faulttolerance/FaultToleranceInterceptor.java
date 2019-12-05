@@ -204,21 +204,22 @@ public class FaultToleranceInterceptor {
         // mstodo simplify!
         try {
             return strategy.apply(new SimpleInvocationContext<>(() -> {
-                CompletableFuture<Object> base = new CompletableFuture<>();
-                CompletableFuture<T> result = base
-                        .thenComposeAsync(any -> {
-                            try { // mstodo instead of this, offload similarily to the future flow?
-                                return (CompletionStage<T>) invocationContext.proceed();
-                            } catch (Exception e) {
-                                collector.failed();
-                                if (e instanceof RuntimeException) {
-                                    throw (RuntimeException) e;
-                                } else {
-                                    throw new FaultToleranceException(e);
-                                }
-                            }
-                        });
-                base.complete(null);
+                CompletableFuture<T> result = new CompletableFuture<>();
+                asyncExecutor.submit(() -> {
+                    try {
+                        ((CompletionStage<T>) invocationContext.proceed())
+                                .handle((value, error) -> {
+                                    if (error != null) {
+                                        result.completeExceptionally(error);
+                                    } else {
+                                        result.complete(value);
+                                    }
+                                    return null;
+                                });
+                    } catch (Exception any) {
+                        result.completeExceptionally(any);
+                    }
+                });
                 return result;
             })).exceptionally(e -> {
                 collector.failed();

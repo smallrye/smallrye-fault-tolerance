@@ -100,10 +100,6 @@
       <groupId>io.smallrye</groupId>
       <artifactId>smallrye-fault-tolerance-core</artifactId>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>com.netflix.hystrix</groupId>-->
-<!--      <artifactId>hystrix-core</artifactId>-->
-<!--    </dependency>-->
     <dependency>
       <groupId>javax.enterprise</groupId>
       <artifactId>cdi-api</artifactId>

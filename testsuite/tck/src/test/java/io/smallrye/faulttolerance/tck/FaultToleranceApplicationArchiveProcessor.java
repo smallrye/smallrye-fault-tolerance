@@ -15,7 +15,6 @@
  */
 package io.smallrye.faulttolerance.tck;
 
-import java.io.File;
 import java.util.logging.Logger;
 
 import org.jboss.arquillian.container.test.spi.client.deployment.ApplicationArchiveProcessor;
@@ -39,13 +38,11 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
     public void process(Archive<?> applicationArchive, TestClass testClass) {
         if (!(applicationArchive instanceof ClassContainer)) {
             LOGGER.warning(
-                    "Unable to add Hystrix-related config.properties and additional classes - not a class/resource container: "
+                    "Unable to add additional classes - not a class/resource container: "
                             + applicationArchive);
             return;
         }
         ClassContainer<?> classContainer = (ClassContainer<?>) applicationArchive;
-
-        classContainer.addAsResource(new File("src/test/resources/config.properties"));
 
         if (applicationArchive instanceof LibraryContainer) {
             JavaArchive additionalBeanArchive = ShrinkWrap.create(JavaArchive.class);

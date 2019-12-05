@@ -111,11 +111,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>com.netflix.hystrix</groupId>
-        <artifactId>hystrix-core</artifactId>
-        <version>${version.hystrix}</version>
-      </dependency>
-      <dependency>
         <groupId>io.opentracing</groupId>
         <artifactId>opentracing-api</artifactId>
         <version>${version.opentracing}</version>

@@ -58,7 +58,8 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
         this.delayInMillis = check(delayInMillis, delayInMillis >= 0, "Circuit breaker delay must be >= 0");
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
-        this.failureThreshold = check((int) (failureRatio * requestVolumeThreshold), failureRatio >= 0.0 && failureRatio <= 1.0,
+        this.failureThreshold = check((int) Math.ceil(failureRatio * requestVolumeThreshold),
+                failureRatio >= 0.0 && failureRatio <= 1.0,
                 "Circuit breaker rolling window failure ratio must be >= 0 && <= 1");
         this.rollingWindowSize = check(requestVolumeThreshold, requestVolumeThreshold > 0,
                 "Circuit breaker rolling window size must be > 0");

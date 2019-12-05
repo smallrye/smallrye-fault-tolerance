@@ -36,7 +36,6 @@ public class TestArchive {
      */
     public static JavaArchive createBase(String name) {
         return ShrinkWrap.create(JavaArchive.class, name + SUFFIX)
-                .addClass(TestHystrixConcurrencyStrategy.class)
                 .addAsServiceProvider(Extension.class, FaultToleranceExtension.class)
                 .addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml");
     }
