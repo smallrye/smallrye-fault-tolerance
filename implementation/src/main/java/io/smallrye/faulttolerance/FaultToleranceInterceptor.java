@@ -89,7 +89,7 @@ import io.smallrye.faulttolerance.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
- * mstodo: check below
+ * mstodo: update below
  * <h2>Implementation notes:</h2>
  * <p>
  * If {@link SynchronousCircuitBreaker} is used it is not possible to track the execution inside a Hystrix command because a
@@ -154,19 +154,23 @@ public class FaultToleranceInterceptor {
     // mstodo modify, let customize, etc.
     private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(100);
 
+    private final FaultToleranceOperationProvider operationProvider;
+
     @SuppressWarnings("unchecked")
     @Inject
     public FaultToleranceInterceptor(
             @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
             Config config, FallbackHandlerProvider fallbackHandlerProvider,
             @Intercepted Bean<?> interceptedBean,
-            MetricsCollectorFactory metricsCollectorFactory) {
+            MetricsCollectorFactory metricsCollectorFactory,
+            FaultToleranceOperationProvider operationProvider) {
         this.nonFallBackEnable = nonFallBackEnable;
         this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
         this.asyncTimeout = config.getOptionalValue(ASYNC_TIMEOUT_KEY, Boolean.class).orElse(false);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
+        this.operationProvider = operationProvider;
     }
 
     @AroundInvoke
@@ -174,7 +178,7 @@ public class FaultToleranceInterceptor {
         Method method = invocationContext.getMethod();
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
 
-        FaultToleranceOperation operation = FaultToleranceOperation.of(beanClass, method);
+        FaultToleranceOperation operation = operationProvider.get(beanClass, method);
         InterceptionPoint point = new InterceptionPoint(beanClass, invocationContext);
 
         MetricsCollector collector = getMetricsCollector(operation, point);

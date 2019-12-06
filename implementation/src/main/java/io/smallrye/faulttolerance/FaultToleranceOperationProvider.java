@@ -30,6 +30,8 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 public interface FaultToleranceOperationProvider {
 
     /**
+     * <b>Warning: </b> Should always return the same operation for a given (beanClass, method) pair.
+     * The results may be cached by the fault tolerance mechanism.
      *
      * @param beanClass
      * @param method
