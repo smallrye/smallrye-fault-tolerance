@@ -34,8 +34,7 @@ public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, Simpl
     public CompletionStage<V> doRetry(SimpleInvocationContext<CompletionStage<V>> target,
             int attempt,
             RunningStopwatch stopwatch,
-            Throwable latestFailure)
-            throws Exception {
+            Throwable latestFailure) {
         if (attempt == 0) {
             // do not sleep
         } else if (attempt <= maxRetries) {

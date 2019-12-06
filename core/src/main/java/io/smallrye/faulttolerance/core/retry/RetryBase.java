@@ -22,9 +22,6 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
     final Stopwatch stopwatch;
     final MetricsRecorder metricsRecorder;
 
-    // mstodo reattempt should not be triggered before the previous one. So we should be good
-    // mstodo move to the call class if we were to separate from the context class
-
     public RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn,
             SetOfThrowables abortOn,
             long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,

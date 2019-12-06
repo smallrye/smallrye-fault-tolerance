@@ -18,9 +18,6 @@ public class SyncRetry<V> extends RetryBase<V, SimpleInvocationContext<V>> {
                 metricsRecorder);
     }
 
-    // mstodo reattempt should not be triggered before the previous one. So we should be good
-    // mstodo move to the call class if we were to separate from the context class
-
     @Override
     public V apply(SimpleInvocationContext<V> context) throws Exception {
         return doApply(context);
