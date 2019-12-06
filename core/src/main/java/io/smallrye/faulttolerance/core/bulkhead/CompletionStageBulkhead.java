@@ -24,7 +24,6 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     private final Semaphore workSemaphore;
     private final Semaphore capacitySemaphore;
 
-    /* mstodo test that interruption does not mess up the pool */
     public CompletionStageBulkhead(
             FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
             String description,
@@ -35,7 +34,6 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
         capacitySemaphore = new Semaphore(size + queueSize);
         this.queueSize = queueSize;
         this.size = size;
-        // mstodo do we need daemons here ?
         executor = new ThreadPoolExecutor(size, size,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(queueSize));
@@ -65,7 +63,8 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
         private final CompletableFuture<V> result = new CompletableFuture<>();
         private final SimpleInvocationContext<CompletionStage<V>> context;
 
-        private CompletionStageBulkheadTask(long timeEnqueued, SimpleInvocationContext<CompletionStage<V>> context) {
+        private CompletionStageBulkheadTask(long timeEnqueued,
+                SimpleInvocationContext<CompletionStage<V>> context) {
             this.timeEnqueued = timeEnqueued;
             this.context = context;
         }

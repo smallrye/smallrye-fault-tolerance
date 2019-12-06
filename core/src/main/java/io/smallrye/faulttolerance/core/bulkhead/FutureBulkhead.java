@@ -33,7 +33,6 @@ public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationC
         try {
             FutureOrFailure<V> result = new FutureOrFailure<>();
             BulkheadTask bulkheadTask = new BulkheadTask(System.nanoTime(), target, result);
-            // mstodo get rid of passing the result in the bulkhead task
             executor.execute(bulkheadTask);
             if (target.getCancellator() != null) {
                 target.getCancellator().addCancelAction(ignored -> workQueue.remove(bulkheadTask));
@@ -41,11 +40,12 @@ public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationC
             recorder.bulkheadQueueEntered();
 
             try {
-                result.waitForFutureInitialization(); // mstodo: sort of kills the idea of separate thread, this thread will wait for the bulkhead thread...
+                // todo: sort of kills the idea of separate thread, this thread will wait for the bulkhead thread...
+                result.waitForFutureInitialization();
             } catch (InterruptedException e) {
                 workQueue.remove(bulkheadTask);
                 bulkheadTask.interrupt();
-                // mstodo what to return?
+                result.setFailure(e);
             }
             return result;
         } catch (RejectedExecutionException queueFullException) {

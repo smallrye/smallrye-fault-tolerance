@@ -5,16 +5,13 @@ import java.util.concurrent.Semaphore;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.SimpleInvocationContext;
 
-/**
- * This class is a one big TODO :)
- */
 public class SyncBulkhead<V> extends BulkheadBase<V, SimpleInvocationContext<V>> {
     private final Semaphore bulkheadSemaphore;
 
     public SyncBulkhead(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate, String description, int size,
             MetricsRecorder metricsRecorder) {
         super(description, delegate, metricsRecorder);
-        this.bulkheadSemaphore = new Semaphore(size);
+        bulkheadSemaphore = new Semaphore(size);
     }
 
     @Override
@@ -33,5 +30,4 @@ public class SyncBulkhead<V> extends BulkheadBase<V, SimpleInvocationContext<V>>
             throw bulkheadRejected();
         }
     }
-
 }
