@@ -13,7 +13,7 @@ public abstract class FallbackBase<V, ContextType extends InvocationContext<V>>
     final FallbackFunction<V> fallback;
     final MetricsRecorder metricsRecorder;
 
-    public FallbackBase(FaultToleranceStrategy<V, ContextType> delegate, String description, FallbackFunction<V> fallback,
+    FallbackBase(FaultToleranceStrategy<V, ContextType> delegate, String description, FallbackFunction<V> fallback,
             MetricsRecorder metricsRecorder) {
         this.delegate = delegate;
         this.description = description;

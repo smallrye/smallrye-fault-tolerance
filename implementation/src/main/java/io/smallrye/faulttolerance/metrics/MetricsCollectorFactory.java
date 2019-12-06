@@ -49,6 +49,7 @@ public class MetricsCollectorFactory {
         private volatile AtomicLong bulkheadQueueSize = new AtomicLong(0);
         private volatile AtomicLong bulkheadConcurrentExecutions = new AtomicLong(0);
 
+        @SuppressWarnings("UnnecessaryThis")
         MetricsCollectorImpl(FaultToleranceOperation operation) {
             this.metricsPrefix = MetricNames.metricsPrefix(operation.getMethod());
             this.operation = operation;

@@ -7,6 +7,7 @@ final class NaiveRollingWindow implements RollingWindow {
     private int index = 0;
     private int counter = 0;
 
+    @SuppressWarnings("UnnecessaryThis")
     NaiveRollingWindow(int size, int failureThreshold) {
         this.failures = new boolean[size];
         this.failureThreshold = failureThreshold;

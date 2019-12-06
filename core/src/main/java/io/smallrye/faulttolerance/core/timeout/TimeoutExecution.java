@@ -18,6 +18,7 @@ final class TimeoutExecution {
         this(executingThread, null, timeoutInMillis);
     }
 
+    @SuppressWarnings("UnnecessaryThis")
     TimeoutExecution(Thread executingThread, Runnable timeoutAction, long timeoutInMillis) {
         this.state = new AtomicInteger(STATE_RUNNING);
         this.executingThread = executingThread;

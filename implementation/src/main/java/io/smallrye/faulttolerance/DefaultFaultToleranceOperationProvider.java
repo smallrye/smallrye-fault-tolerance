@@ -37,7 +37,7 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
 
     @Inject
     public DefaultFaultToleranceOperationProvider(BeanManager beanManager) {
-        this.extension = beanManager.getExtension(FaultToleranceExtension.class);
+        extension = beanManager.getExtension(FaultToleranceExtension.class);
     }
 
     @Override

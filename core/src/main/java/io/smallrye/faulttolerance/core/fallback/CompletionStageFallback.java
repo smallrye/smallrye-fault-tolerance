@@ -20,7 +20,7 @@ public class CompletionStageFallback<V> extends FallbackBase<CompletionStage<V>,
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> target) throws Exception {
+    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> target) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {

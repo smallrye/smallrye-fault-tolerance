@@ -81,22 +81,6 @@ public class RetryConfig extends GenericConfig<Retry> {
         }
     }
 
-    public Class<?>[] getAbortOn() {
-        return get(ABORT_ON);
-    }
-
-    public Class<?>[] getRetryOn() {
-        return get(RETRY_ON);
-    }
-
-    public Long getJitter() {
-        return get(JITTER);
-    }
-
-    public ChronoUnit getJitterDelayUnit() {
-        return get(JITTER_DELAY_UNIT);
-    }
-
     @Override
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;

@@ -25,6 +25,7 @@ public class DefaultFallbackHandlerProvider implements FallbackHandlerProvider {
     @Override
     public <T> FallbackHandler<T> get(FaultToleranceOperation operation) {
         if (operation.hasFallback()) {
+            //noinspection Convert2Lambda
             return new FallbackHandler<T>() {
                 @Override
                 public T handle(ExecutionContext context) {

@@ -19,7 +19,7 @@ public class CompletionStageTimeout<V> extends SyncTimeout<CompletionStage<V>> {
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) throws Exception {
+    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {

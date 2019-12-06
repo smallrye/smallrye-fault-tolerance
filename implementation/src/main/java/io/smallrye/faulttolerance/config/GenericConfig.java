@@ -41,7 +41,7 @@ public abstract class GenericConfig<X extends Annotation> {
      */
     public static final String CONFIG_PARAMS_CACHE_KEY = "org_wildfly_swarm_microprofile_faulttolerance_configParamsCache";
 
-    public GenericConfig(Class<X> annotationType, Class<?> beanClass, Method method) {
+    GenericConfig(Class<X> annotationType, Class<?> beanClass, Method method) {
         this(beanClass, method, null, annotationType,
                 method.isAnnotationPresent(annotationType)
                         ? method.getAnnotation(annotationType)
@@ -49,7 +49,7 @@ public abstract class GenericConfig<X extends Annotation> {
                 method.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
-    public GenericConfig(Class<X> annotationType, AnnotatedMethod<?> annotatedMethod) {
+    GenericConfig(Class<X> annotationType, AnnotatedMethod<?> annotatedMethod) {
         this(annotatedMethod.getDeclaringType()
                 .getJavaClass(), annotatedMethod.getJavaMember(), annotatedMethod, annotationType,
                 annotatedMethod.isAnnotationPresent(annotationType) ? annotatedMethod.getAnnotation(annotationType)
@@ -58,6 +58,7 @@ public abstract class GenericConfig<X extends Annotation> {
                 annotatedMethod.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
+    @SuppressWarnings("UnnecessaryThis")
     private GenericConfig(Class<?> beanClass, Method method, AnnotatedMethod<?> annotatedMethod, Class<X> annotationType,
             X annotation, ElementType annotationSource) {
         this.beanClass = beanClass;
@@ -101,7 +102,7 @@ public abstract class GenericConfig<X extends Annotation> {
      */
     private <U> U lookup(String key, Class<U> expectedType) {
         Config config = getConfig();
-        Optional<U> value = null;
+        Optional<U> value;
         if (ElementType.METHOD.equals(annotationSource)) {
             // <classname>/<methodname>/<annotation>/<parameter>
             value = config.getOptionalValue(getConfigKeyForMethod() + key, expectedType);
@@ -114,7 +115,7 @@ public abstract class GenericConfig<X extends Annotation> {
             value = config.getOptionalValue(annotationType.getSimpleName() + "/" + key, expectedType);
         }
         // annotation values
-        return value.isPresent() ? value.get() : getConfigFromAnnotation(key);
+        return value.orElseGet(() -> getConfigFromAnnotation(key));
     }
 
     public abstract void validate();

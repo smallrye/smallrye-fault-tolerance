@@ -40,7 +40,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) throws Exception {
+    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
         if (capacitySemaphore.tryAcquire()) {
             CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), context);
             executor.execute(task);

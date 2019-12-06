@@ -10,6 +10,7 @@ final class BitsetRollingWindow implements RollingWindow {
     private int index = 0;
     private int counter = 0;
 
+    @SuppressWarnings("UnnecessaryThis")
     BitsetRollingWindow(int size, int failureThreshold) {
         this.failures = new BitSet(size);
         this.size = size;

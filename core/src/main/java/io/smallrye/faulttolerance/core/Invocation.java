@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 public final class Invocation<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
     private static final Invocation<?, ?> INSTANCE = new Invocation<>();
 
+    @SuppressWarnings("unchecked")
     public static <V, ContextType extends InvocationContext<V>> Invocation<V, ContextType> invocation() {
         return (Invocation<V, ContextType>) INSTANCE;
     }

@@ -24,4 +24,6 @@ class DefaultMethodFallbackProvider {
                 .invokeWithArguments(ctx.getParameters());
     }
 
+    private DefaultMethodFallbackProvider() {
+    }
 }

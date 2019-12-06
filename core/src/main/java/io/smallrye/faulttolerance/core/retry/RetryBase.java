@@ -22,7 +22,7 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
     final Stopwatch stopwatch;
     final MetricsRecorder metricsRecorder;
 
-    public RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn,
+    RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn,
             SetOfThrowables abortOn,
             long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,
             MetricsRecorder metricsRecorder) {

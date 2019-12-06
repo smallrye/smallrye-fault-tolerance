@@ -26,7 +26,7 @@ public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, Simpl
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) throws Exception {
+    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
         RunningStopwatch runningStopwatch = stopwatch.start();
         return doRetry(context, 0, runningStopwatch, null);
     }
