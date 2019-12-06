@@ -94,6 +94,8 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
  * @author Martin Kouba
  * @author Michal Szynkiewicz
  */
+// mstodo better control of the async invocations, gloabl limit for FT threads?
+// mstodo: execute CompletableFutures with an executor that we create ourselves?
 @Interceptor
 @FaultToleranceBinding
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
@@ -527,7 +529,7 @@ public class FaultToleranceInterceptor {
     }
 
     private MetricsCollector getMetricsCollector(FaultToleranceOperation operation,
-            InterceptionPoint point) { // mstodo clean this up
+            InterceptionPoint point) {
         return metricsCollectors
                 .computeIfAbsent(point,
                         ignored -> Optional.ofNullable(metricsCollectorFactory.createCollector(operation)))

@@ -84,11 +84,11 @@ public class FaultToleranceExtension implements Extension {
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {
         ConfigProvider.getConfig()
                 .getOptionalValue("mp.fault.tolerance.interceptor.priority", Integer.class)
-                .ifPresent(configuredInterceptorPriority ->
+                .ifPresent(configuredInterceptorPriority -> {
                     event.configureAnnotatedType()
                             .remove(ann -> ann instanceof Priority)
-                            .add(new PriorityLiteral(configuredInterceptorPriority))
-                );
+                            .add(new PriorityLiteral(configuredInterceptorPriority));
+                });
     }
 
     /**
