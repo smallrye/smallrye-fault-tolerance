@@ -11,8 +11,6 @@ import io.smallrye.faulttolerance.core.SimpleInvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-// mstodo read through to potentially simplify/reuse more from CircuitBreakerBase
-// mstodo or make this class totally separate
 public class CompletionStageCircuitBreaker<V>
         extends CircuitBreakerBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
 
@@ -48,8 +46,7 @@ public class CompletionStageCircuitBreaker<V>
         }
     }
 
-    private CompletionStage<V> inClosed(SimpleInvocationContext<CompletionStage<V>> target,
-            SyncCircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inClosed(SimpleInvocationContext<CompletionStage<V>> target, SyncCircuitBreaker.State state) {
         try {
             CompletionStage<V> result = delegate.apply(target);
 
@@ -125,8 +122,7 @@ public class CompletionStageCircuitBreaker<V>
         }
     }
 
-    private CompletionStage<V> inHalfOpen(SimpleInvocationContext<CompletionStage<V>> target, SyncCircuitBreaker.State state)
-            throws Exception {
+    private CompletionStage<V> inHalfOpen(SimpleInvocationContext<CompletionStage<V>> target, SyncCircuitBreaker.State state) {
         try {
             CompletionStage<V> result = delegate.apply(target);
             metricsRecorder.circuitBreakerSucceeded();
@@ -148,20 +144,4 @@ public class CompletionStageCircuitBreaker<V>
             return failedCompletionStage(e);
         }
     }
-
-    private void toClosed(SyncCircuitBreaker.State state) {
-        SyncCircuitBreaker.State newState = SyncCircuitBreaker.State.closed(rollingWindowSize, failureThreshold);
-        this.state.compareAndSet(state, newState);
-    }
-
-    private void toOpen(SyncCircuitBreaker.State state) {
-        SyncCircuitBreaker.State newState = SyncCircuitBreaker.State.open(stopwatch);
-        this.state.compareAndSet(state, newState);
-    }
-
-    private void toHalfOpen(SyncCircuitBreaker.State state) {
-        SyncCircuitBreaker.State newState = SyncCircuitBreaker.State.halfOpen();
-        this.state.compareAndSet(state, newState);
-    }
-
 }

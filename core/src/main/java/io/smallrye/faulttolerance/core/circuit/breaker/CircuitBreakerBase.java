@@ -176,17 +176,17 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
         }
     }
 
-    private void toClosed(State state) {
+    void toClosed(State state) {
         State newState = State.closed(rollingWindowSize, failureThreshold);
         this.state.compareAndSet(state, newState);
     }
 
-    private void toOpen(State state) {
+    void toOpen(State state) {
         State newState = State.open(stopwatch);
         this.state.compareAndSet(state, newState);
     }
 
-    private void toHalfOpen(State state) {
+    void toHalfOpen(State state) {
         State newState = State.halfOpen();
         this.state.compareAndSet(state, newState);
     }
