@@ -45,8 +45,6 @@ import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.jboss.logging.Logger;
@@ -63,6 +61,7 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.FutureInvocationContext;
 import io.smallrye.faulttolerance.core.Invocation;
 import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.bulkhead.CompletionStageBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.FutureBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SyncBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
@@ -89,17 +88,7 @@ import io.smallrye.faulttolerance.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
- * mstodo: update below
- * <h2>Implementation notes:</h2>
- * <p>
- * If {@link SynchronousCircuitBreaker} is used it is not possible to track the execution inside a Hystrix command because a
- * {@link TimeoutException} should be always counted as a failure, even if the command execution completes normally.
- * </p>
- * <p>
- * We never use {@link HystrixCommand#queue()} for async execution. Mostly to workaround various problems of
- * {@link Asynchronous} {@link SyncRetry} combination. Instead, we create a composite command and inside its run() method we
- * execute commands synchronously.
- * </p>
+ * The interceptor for fault tolerance strategies.
  *
  * @author Antoine Sabot-Durand
  * @author Martin Kouba
@@ -110,38 +99,7 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class FaultToleranceInterceptor {
 
-    /**
-     * This config property key can be used to disable synchronous circuit breaker functionality. If disabled,
-     * {@link SyncCircuitBreaker#successThreshold()} of value greater than 1 is not supported. Also the
-     * {@link SyncCircuitBreaker#failOn()} configuration is ignored.
-     * <p>
-     * Moreover, circuit breaker does not necessarily transition from CLOSED to OPEN immediately when a fault tolerance
-     * operation completes. See also
-     * <a href="https://github.com/Netflix/Hystrix/wiki/Configuration#metrics.healthSnapshot.intervalInMilliseconds">Hystrix
-     * configuration</a>
-     * </p>
-     * <p>
-     * In general, application developers are encouraged to disable this feature on high-volume circuits and in production
-     * environments.
-     * </p>
-     */
-    public static final String SYNC_CIRCUIT_BREAKER_KEY = "io_smallrye_faulttolerance_syncCircuitBreaker";
-
-    /**
-     * This config property can be used to enable timeouts for async actions (that is, {@link CompositeCommand} and
-     * can be used to make sure tests don't hang. When enabled, you should also explicitly configure the timeout using
-     * <a href="https://github.com/Netflix/Hystrix/wiki/Configuration#execution.isolation.thread.timeoutInMilliseconds">Hystrix
-     * configuration</a>.
-     */
-    public static final String ASYNC_TIMEOUT_KEY = "io_smallrye_faulttolerance_asyncTimeout";
-
     private static final Logger LOGGER = Logger.getLogger(FaultToleranceInterceptor.class);
-
-    private final Boolean nonFallBackEnable;
-
-    private final Boolean syncCircuitBreakerEnabled;
-
-    private final boolean asyncTimeout;
 
     private final FallbackHandlerProvider fallbackHandlerProvider;
 
@@ -156,17 +114,12 @@ public class FaultToleranceInterceptor {
 
     private final FaultToleranceOperationProvider operationProvider;
 
-    @SuppressWarnings("unchecked")
     @Inject
     public FaultToleranceInterceptor(
-            @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true") Boolean nonFallBackEnable,
-            Config config, FallbackHandlerProvider fallbackHandlerProvider,
+            FallbackHandlerProvider fallbackHandlerProvider,
             @Intercepted Bean<?> interceptedBean,
             MetricsCollectorFactory metricsCollectorFactory,
             FaultToleranceOperationProvider operationProvider) {
-        this.nonFallBackEnable = nonFallBackEnable;
-        this.syncCircuitBreakerEnabled = config.getOptionalValue(SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true);
-        this.asyncTimeout = config.getOptionalValue(ASYNC_TIMEOUT_KEY, Boolean.class).orElse(false);
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
@@ -202,15 +155,16 @@ public class FaultToleranceInterceptor {
             InvocationContext invocationContext,
             MetricsCollector collector,
             InterceptionPoint point) {
+        @SuppressWarnings("unchecked")
         FaultToleranceStrategy<CompletionStage<T>, SimpleInvocationContext<CompletionStage<T>>> strategy = (FaultToleranceStrategy<CompletionStage<T>, SimpleInvocationContext<CompletionStage<T>>>) strategies
                 .computeIfAbsent(point,
                         ignored -> prepareAsyncStrategy(operation, point, beanClass, invocationContext, collector));
-        // mstodo simplify!
         try {
             return strategy.apply(new SimpleInvocationContext<>(() -> {
                 CompletableFuture<T> result = new CompletableFuture<>();
                 asyncExecutor.submit(() -> {
                     try {
+                        //noinspection unchecked
                         ((CompletionStage<T>) invocationContext.proceed())
                                 .handle((value, error) -> {
                                     if (error != null) {
@@ -244,8 +198,9 @@ public class FaultToleranceInterceptor {
     }
 
     private <T> Future<T> offload(Callable<T> o, Cancellator cancellator) {
+        @SuppressWarnings("unchecked")
         Future<Future<T>> result = (Future<Future<T>>) asyncExecutor.submit(o);
-        return new AsyncFuture(result, cancellator);
+        return new AsyncFuture<>(result, cancellator);
     }
 
     @SuppressWarnings("unchecked")
@@ -276,7 +231,7 @@ public class FaultToleranceInterceptor {
                 .computeIfAbsent(point,
                         ignored -> prepareFutureStrategy(operation, point, beanClass, invocationContext, collector));
         try {
-            return strategy.apply(new FutureInvocationContext<T>(cancellator, () -> (Future<T>) invocationContext.proceed()));
+            return strategy.apply(new FutureInvocationContext<>(cancellator, () -> (Future<T>) invocationContext.proceed()));
         } catch (Exception any) {
             collector.failed();
             throw any;
@@ -291,7 +246,11 @@ public class FaultToleranceInterceptor {
                 .invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
-            throw new RuntimeException("Completion stage bulkhead not supported yet");
+            result = new CompletionStageBulkhead<>(result,
+                    "CompletionStage[" + point.name() + "]",
+                    bulkheadConfig.get(BulkheadConfig.VALUE),
+                    bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
+                    collector);
         }
 
         if (operation.hasTimeout()) {
@@ -340,7 +299,7 @@ public class FaultToleranceInterceptor {
             result = new CompletionStageFallback<>(
                     result,
                     "Fallback[" + point.name() + "]",
-                    prepareFallbackFunction(invocationContext, beanClass, method, operation),
+                    prepareFallbackFunction(point, invocationContext, beanClass, method, operation),
                     asyncExecutor,
                     collector);
         }
@@ -404,7 +363,7 @@ public class FaultToleranceInterceptor {
             result = new SyncFallback<>(
                     result,
                     "Fallback[" + point.name() + "]",
-                    prepareFallbackFunction(invocationContext, beanClass, method, operation),
+                    prepareFallbackFunction(point, invocationContext, beanClass, method, operation),
                     collector);
         }
         return result;
@@ -467,16 +426,19 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasFallback()) {
             Method method = invocationContext.getMethod();
+            FallbackFunction<Future<T>> fallbackFunction = prepareFallbackFunction(point, invocationContext, beanClass, method,
+                    operation);
             result = new FutureFallback<>(
                     result,
                     "Fallback[" + point.name() + "]",
-                    prepareFallbackFunction(invocationContext, beanClass, method, operation),
+                    fallbackFunction,
                     collector);
         }
         return result;
     }
 
     private <V> FallbackFunction<V> prepareFallbackFunction(
+            InterceptionPoint point,
             InvocationContext invocationContext,
             Class<?> beanClass,
             Method method,
@@ -505,18 +467,19 @@ public class FaultToleranceInterceptor {
 
         ExecutionContextWithInvocationContext executionContext = new ExecutionContextWithInvocationContext(invocationContext);
         FallbackFunction<V> fallback;
-        // mstodo throw an exception instead of returning null ?
         if (fallbackMethod != null) {
             fallback = whatever -> {
                 try {
                     if (fallbackMethod.isDefault()) {
                         // Workaround for default methods (used e.g. in MP Rest Client)
+                        //noinspection unchecked
                         return (V) DefaultMethodFallbackProvider.getFallback(fallbackMethod, executionContext);
                     } else {
+                        //noinspection unchecked
                         return (V) fallbackMethod.invoke(invocationContext.getTarget(), invocationContext.getParameters());
                     }
                 } catch (Throwable e) {
-                    // mstodo log failure?
+                    LOGGER.errorv(e, "Error determining fallback for {0}", point.name());
                     if (e instanceof InvocationTargetException) {
                         e = e.getCause();
                     }
@@ -529,16 +492,13 @@ public class FaultToleranceInterceptor {
         } else {
             FallbackHandler<V> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
-                fallback = new FallbackFunction<V>() {
-                    @Override
-                    public V call(Throwable failure) throws Exception {
-                        executionContext.setFailure(failure);
-                        return fallbackHandler.handle(executionContext);
-                    }
+                fallback = failure -> {
+                    executionContext.setFailure(failure);
+                    return fallbackHandler.handle(executionContext);
                 };
             } else {
-                // mstodo error message
-                throw new IllegalStateException("Fallback defined but failed to determine the handler or method");
+                throw new IllegalStateException(
+                        "Fallback defined but failed to determine the handler or method to fallback to");
             }
         }
 
@@ -579,7 +539,7 @@ public class FaultToleranceInterceptor {
     private final Map<InterceptionPoint, FaultToleranceStrategy<?, ?>> strategies = new ConcurrentHashMap<>();
     private final Map<InterceptionPoint, Optional<MetricsCollector>> metricsCollectors = new ConcurrentHashMap<>();
 
-    private static class InterceptionPoint { // mstodo pull out?
+    private static class InterceptionPoint {
         private final String name;
         private final Class<?> beanClass;
         private final Method method;

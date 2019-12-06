@@ -27,8 +27,6 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 import org.jboss.logging.Logger;
 
-import io.smallrye.faulttolerance.FaultToleranceInterceptor;
-
 /**
  * @author Antoine Sabot-Durand
  */
@@ -76,11 +74,6 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
         if (successThreshold < 1) {
             throw new FaultToleranceDefinitionException(
                     INVALID_CIRCUIT_BREAKER_ON + getMethodInfo() + " : successThreshold shouldn't be lower than 1");
-        }
-        if (!getConfig().getOptionalValue(FaultToleranceInterceptor.SYNC_CIRCUIT_BREAKER_KEY, Boolean.class).orElse(true)
-                && successThreshold > 1) {
-            LOGGER.warnf("Synchronous circuit breaker disabled - successThreshold of value greater than 1 is not supported: "
-                    + getMethodInfo());
         }
     }
 

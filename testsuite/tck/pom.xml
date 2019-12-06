@@ -28,7 +28,6 @@
           </dependenciesToScan>
           <systemPropertyVariables>
             <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
-            <io_smallrye_faulttolerance_asyncTimeout>true</io_smallrye_faulttolerance_asyncTimeout>
           </systemPropertyVariables>
         </configuration>
       </plugin>
