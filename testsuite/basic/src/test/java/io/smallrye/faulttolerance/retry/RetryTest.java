@@ -99,7 +99,7 @@ public class RetryTest {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
         Callable<String> call = () -> retryTestBean.callWithRetryOnBulkhead();
         List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
-        List<String> results = collectResultsAsummingFailures(futures, 0);
+        List<String> results = collectResultsAssumingFailures(futures, 0);
 
         assertEquals("There were " + results.size() + " results instead of 3", 3, results.size());
         assertTrue("first call failed and was expected to be successful", results.contains("call0"));
@@ -113,7 +113,7 @@ public class RetryTest {
         Callable<String> call = () -> retryTestBean.callWithNoRetryOnBulkhead();
         List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
 
-        List<String> results = collectResultsAsummingFailures(futures, 1);
+        List<String> results = collectResultsAssumingFailures(futures, 1);
         assertEquals(2, results.size());
         assertTrue("first call failed and was expected to be successful", results.contains("call0"));
         assertTrue("second call failed and was expected to be successful", results.contains("call1"));
@@ -125,7 +125,7 @@ public class RetryTest {
         Callable<String> call = () -> retryTestBean.callWithFallbackAndNoRetryOnBulkhead();
         List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
 
-        List<String> results = collectResultsAsummingFailures(futures, 0);
+        List<String> results = collectResultsAssumingFailures(futures, 0);
         assertEquals(3, results.size());
         assertTrue("first call failed and was expected to be successful", results.contains("call0"));
         assertTrue("second call failed and was expected to be successful", results.contains("call1"));
@@ -133,7 +133,7 @@ public class RetryTest {
                 results.stream().anyMatch(t -> t.startsWith("fallback")));
     }
 
-    private List<String> collectResultsAsummingFailures(List<Future<String>> futures, int expectedFailureCount) {
+    private List<String> collectResultsAssumingFailures(List<Future<String>> futures, int expectedFailureCount) {
         int failureCount = 0;
         List<String> resultList = new ArrayList<>();
         for (Future<String> future : futures) {
