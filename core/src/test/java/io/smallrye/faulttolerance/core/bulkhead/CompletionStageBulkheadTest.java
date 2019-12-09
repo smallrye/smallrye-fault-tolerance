@@ -12,7 +12,10 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.Test;
@@ -27,11 +30,10 @@ import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 // TODO: do we need test threads here?
 public class CompletionStageBulkheadTest {
     @Test
-    public void shouldLetSingleThrough() throws Exception {
+    public void shouldLetSingleThrough() {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(
                 () -> completedFuture("shouldLetSingleThrough"));
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2,
-                null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldLetSingleThrough", 2, 2);
         CompletionStage<String> result = bulkhead.apply(new SimpleInvocationContext<>(null));
         assertThat(result.toCompletableFuture().join()).isEqualTo("shouldLetSingleThrough");
     }
@@ -41,8 +43,7 @@ public class CompletionStageBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
                 .immediatelyReturning(() -> completedFuture("shouldLetMaxThrough"));
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3,
-                null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldLetSingleThrough", 2, 3);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
@@ -62,8 +63,7 @@ public class CompletionStageBulkheadTest {
 
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3,
-                null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldRejectMaxPlus1", 2, 3);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
@@ -96,9 +96,7 @@ public class CompletionStageBulkheadTest {
                     letOneInSemaphore.acquire();
                     return CompletableFuture.completedFuture("shouldLetMaxPlus1After1Left");
                 });
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 2,
-                3,
-                null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldLetMaxPlus1After1Left", 2, 3);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
@@ -132,9 +130,7 @@ public class CompletionStageBulkheadTest {
                     letOneInSemaphore.acquire();
                     throw error;
                 });
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetMaxPlus1After1Failed", 2,
-                3,
-                null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldLetMaxPlus1After1Failed", 2, 3);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
@@ -173,9 +169,7 @@ public class CompletionStageBulkheadTest {
                         throw error;
                     });
                 });
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldLetMaxPlus1After1Failed", 2,
-                3,
-                null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldLetMaxPlus1After1Failed", 2, 3);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
 
@@ -216,8 +210,7 @@ public class CompletionStageBulkheadTest {
                     return "shouldNotStartNextIfCSInProgress";
                 }));
 
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(invocation, "shouldNotStartNextIfCSInProgress",
-                1, 1, null);
+        CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldNotStartNextIfCSInProgress", 1, 1);
 
         TestThread<CompletionStage<String>> firstThread = TestThread.runOnTestThread(bulkhead);
 
@@ -234,6 +227,14 @@ public class CompletionStageBulkheadTest {
         assertThat(secondThread.await().toCompletableFuture().get()).isEqualTo("shouldNotStartNextIfCSInProgress");
 
         assertThat(bulkhead.getQueueSize()).isEqualTo(0);
+    }
+
+    private <V> CompletionStageBulkhead<V> bulkhead(TestInvocation<CompletionStage<V>> invocation, String name, int size,
+                                                    int queueSize) {
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 0, TimeUnit.MILLISECONDS,
+              new LinkedBlockingQueue<>(queueSize));
+
+        return new CompletionStageBulkhead<>(invocation, name, executor, size, queueSize, null);
     }
 
     private <V> void waitUntilQueueSize(CompletionStageBulkhead<V> bulkhead, int size, long timeout)

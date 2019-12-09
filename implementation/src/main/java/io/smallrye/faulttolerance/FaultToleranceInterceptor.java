@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Priority;
@@ -110,22 +111,31 @@ public class FaultToleranceInterceptor {
     private final MetricsCollectorFactory metricsCollectorFactory;
 
     // mstodo make more flexible, figure out if that's okay!
-    private final ScheduledExecutorService timeoutExecutor = Executors.newScheduledThreadPool(5);
-    // mstodo modify, let customize, etc.
-    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(100);
+    private final ScheduledExecutorService timeoutExecutor = timeoutExecutorService();
 
+    // mstodo modify, let customize, etc.
+
+    private final ExecutorService asyncExecutor;
     private final FaultToleranceOperationProvider operationProvider;
+    private final ExecutorContainer executorContainer;
 
     @Inject
     public FaultToleranceInterceptor(
             FallbackHandlerProvider fallbackHandlerProvider,
             @Intercepted Bean<?> interceptedBean,
             MetricsCollectorFactory metricsCollectorFactory,
-            FaultToleranceOperationProvider operationProvider) {
+            FaultToleranceOperationProvider operationProvider,
+            ExecutorContainer executorContainer) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
         this.operationProvider = operationProvider;
+        this.executorContainer = executorContainer;
+        asyncExecutor = executorContainer.getGlobalExecutor();
+    }
+
+    private ScheduledExecutorService timeoutExecutorService() {
+        return Executors.newScheduledThreadPool(5); // mstodo customizable size
     }
 
     @AroundInvoke
@@ -248,10 +258,12 @@ public class FaultToleranceInterceptor {
                 .invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
+            Integer size = bulkheadConfig.get(BulkheadConfig.VALUE);
+            Integer queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             result = new CompletionStageBulkhead<>(result,
                     "CompletionStage[" + point.name() + "]",
-                    bulkheadConfig.get(BulkheadConfig.VALUE),
-                    bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
+                    executorContainer.getAdHocExecutor(size, queueSize, new LinkedBlockingQueue<>(queueSize)), size,
+                    queueSize,
                     collector);
         }
 
@@ -378,10 +390,14 @@ public class FaultToleranceInterceptor {
         FaultToleranceStrategy<Future<T>, FutureInvocationContext<T>> result = Invocation.invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
+            int size = bulkheadConfig.get(BulkheadConfig.VALUE);
+            int queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
+            LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(queueSize);
+            ExecutorService executor = executorContainer.getAdHocExecutor(size, queueSize, queue);
             result = new FutureBulkhead<>(result,
                     "Bulkhead[" + point.name() + "]",
-                    bulkheadConfig.get(BulkheadConfig.VALUE),
-                    bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE),
+                    executor,
+                    queue,
                     collector);
         }
 

@@ -1,10 +1,9 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.FutureInvocationContext;
@@ -15,17 +14,17 @@ import io.smallrye.faulttolerance.core.FutureOrFailure;
  */
 public class FutureBulkhead<V> extends BulkheadBase<Future<V>, FutureInvocationContext<V>> {
 
-    private final ThreadPoolExecutor executor;
-    private final LinkedBlockingQueue<Runnable> workQueue;
+    private final ExecutorService executor;
+    private final BlockingQueue<Runnable> workQueue;
 
-    public FutureBulkhead(FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> delegate, String description,
-            int size, int queueSize,
+    public FutureBulkhead(FaultToleranceStrategy<Future<V>, FutureInvocationContext<V>> delegate,
+            String description,
+            ExecutorService executor,
+            BlockingQueue<Runnable> workQueue,
             MetricsRecorder recorder) {
         super(description, delegate, recorder);
-        workQueue = new LinkedBlockingQueue<>(queueSize);
-        executor = new ThreadPoolExecutor(size, size,
-                0L, TimeUnit.MILLISECONDS,
-                workQueue);
+        this.workQueue = workQueue;
+        this.executor = executor;
     }
 
     @Override

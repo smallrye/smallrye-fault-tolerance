@@ -14,6 +14,7 @@
   <modules>
     <module>basic</module>
     <module>tck</module>
+    <module>contextpropagation</module>
   </modules>
 
   <build>

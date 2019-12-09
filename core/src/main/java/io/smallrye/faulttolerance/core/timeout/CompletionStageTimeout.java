@@ -18,6 +18,7 @@ public class CompletionStageTimeout<V> extends SyncTimeout<CompletionStage<V>> {
         this.executor = executor;
     }
 
+    // mstodo the offloading does not seem necessary, we could just kill the completion stage on timeout, I think
     @Override
     public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
         CompletableFuture<V> result = new CompletableFuture<>();

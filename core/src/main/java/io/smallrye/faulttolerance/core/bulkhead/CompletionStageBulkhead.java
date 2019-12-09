@@ -2,10 +2,8 @@ package io.smallrye.faulttolerance.core.bulkhead;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
 
@@ -18,7 +16,7 @@ import io.smallrye.faulttolerance.core.SimpleInvocationContext;
 public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
     private static final Logger logger = Logger.getLogger(CompletionStageBulkhead.class);
 
-    private final ThreadPoolExecutor executor;
+    private final ExecutorService executor;
     private final int queueSize;
     private final int size;
     private final Semaphore workSemaphore;
@@ -27,16 +25,14 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     public CompletionStageBulkhead(
             FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
             String description,
-            int size, int queueSize,
+            ExecutorService executor, int size, int queueSize,
             MetricsRecorder recorder) {
         super(description, delegate, recorder);
         workSemaphore = new Semaphore(size);
         capacitySemaphore = new Semaphore(size + queueSize);
         this.queueSize = queueSize;
         this.size = size;
-        executor = new ThreadPoolExecutor(size, size,
-                0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(queueSize));
+        this.executor = executor;
     }
 
     @Override

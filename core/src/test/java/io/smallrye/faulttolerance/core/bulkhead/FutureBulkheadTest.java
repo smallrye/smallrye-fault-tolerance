@@ -7,10 +7,15 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.Test;
@@ -28,7 +33,9 @@ public class FutureBulkheadTest {
     public void shouldLetSingleThrough() throws Exception {
         FutureTestInvocation<String> invocation = FutureTestInvocation
                 .immediatelyReturning(() -> completedFuture("shouldLetSingleThrough"));
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2, null);
+        BlockingQueue<Runnable> queue = queue(2);
+        ExecutorService executor = executor(2, queue);
+        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetSingleThrough", executor, queue, null);
         Future<String> result = bulkhead.apply(new FutureInvocationContext<>(null, null));
         assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
     }
@@ -38,7 +45,9 @@ public class FutureBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         FutureTestInvocation<String> invocation = FutureTestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldLetMaxThrough"));
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3, null);
+        BlockingQueue<Runnable> queue = queue(3);
+        ExecutorService executor = executor(2, queue);
+        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetSingleThrough", executor, queue, null);
 
         List<FutureTestThread<String>> threads = new ArrayList<>();
 
@@ -58,7 +67,9 @@ public class FutureBulkheadTest {
 
         FutureTestInvocation<String> invocation = FutureTestInvocation.delayed(startBarrier, delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3, null);
+        BlockingQueue<Runnable> queue = queue(3);
+        ExecutorService executor = executor(2, queue);
+        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldRejectMaxPlus1", executor, queue, null);
 
         List<FutureTestThread<String>> threads = new ArrayList<>();
 
@@ -87,7 +98,10 @@ public class FutureBulkheadTest {
             return CompletableFuture.completedFuture("shouldLetMaxPlus1After1Left");
         });
 
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 2, 3, null);
+        BlockingQueue<Runnable> queue = queue(3);
+        ExecutorService executor = executor(2, queue);
+        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor, queue,
+                null);
 
         List<FutureTestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -123,7 +137,10 @@ public class FutureBulkheadTest {
             throw error;
         });
 
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 2, 3, null);
+        BlockingQueue<Runnable> queue = queue(3);
+        ExecutorService executor = executor(2, queue);
+        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor, queue,
+                null);
 
         List<FutureTestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -164,7 +181,10 @@ public class FutureBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Canceled");
         });
 
-        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled", 2, 3, null);
+        BlockingQueue<Runnable> queue = queue(3);
+        ExecutorService executor = executor(2, queue);
+        FutureBulkhead<String> bulkhead = new FutureBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled", executor, queue,
+                null);
 
         List<FutureTestThread<String>> threads = new ArrayList<>();
 
@@ -217,5 +237,13 @@ public class FutureBulkheadTest {
         }
         fail("No thread finished in " + timeout + " ms");
         return null;
+    }
+
+    private ThreadPoolExecutor executor(int size, BlockingQueue<Runnable> queue) {
+        return new ThreadPoolExecutor(size, size, 0, TimeUnit.MILLISECONDS, queue);
+    }
+
+    private LinkedBlockingQueue<Runnable> queue(int capacity) {
+        return new LinkedBlockingQueue<>(capacity);
     }
 }
