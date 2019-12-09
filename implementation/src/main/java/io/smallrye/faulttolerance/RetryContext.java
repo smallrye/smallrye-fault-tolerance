@@ -39,6 +39,8 @@ public class RetryContext {
 
     private final long delay;
 
+    private boolean hasBeenRetried;
+
     RetryContext(RetryConfig config) {
         this.config = config;
         this.start = System.nanoTime();
@@ -61,7 +63,10 @@ public class RetryContext {
         // Check the exception type
         if (shouldRetryOn(throwable)) {
             shouldRetry.set(null);
-            remainingAttempts.decrementAndGet();
+            if (remainingAttempts.get() != -1) {
+                remainingAttempts.decrementAndGet();
+            }
+            hasBeenRetried = true;
             return delayIfNeeded();
         } else {
             if (throwable instanceof Error) {
@@ -76,7 +81,7 @@ public class RetryContext {
     }
 
     boolean shouldRetry() {
-        return remainingAttempts.get() > 0;
+        return (remainingAttempts.get() == -1) || remainingAttempts.get() > 0;
     }
 
     public boolean isLastAttempt() {
@@ -130,11 +135,11 @@ public class RetryContext {
 
     @Override
     public String toString() {
-        return "RetryContext [remainingAttempts=" + remainingAttempts + ", start=" + start + "]";
+        return "RetryContext [remainingAttempts=" + remainingAttempts + ", hasBeenRetried=" + hasBeenRetried + ", start=" + start + "]";
     }
 
     public boolean hasBeenRetried() {
-        return remainingAttempts.get() < (config.<Integer> get(RetryConfig.MAX_RETRIES));
+        return hasBeenRetried;
     }
 
     public void cancel() {
