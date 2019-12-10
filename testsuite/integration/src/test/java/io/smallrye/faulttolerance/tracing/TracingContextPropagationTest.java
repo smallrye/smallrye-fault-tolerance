@@ -18,10 +18,12 @@ package io.smallrye.faulttolerance.tracing;
 import static org.junit.Assert.assertEquals;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -41,6 +43,11 @@ public class TracingContextPropagationTest {
                 .addPackage(TracingContextPropagationTest.class.getPackage());
     }
 
+    @Before
+    public void cleanUp() {
+        Service.mockTracer.reset();
+    }
+
     @Test
     public void testCircuitBreakerOpens(Service service) {
         try (Scope scope = Service.mockTracer.buildSpan("parent").startActive(true)) {
@@ -56,6 +63,23 @@ public class TracingContextPropagationTest {
         assertEquals("foo", mockSpans.get(0).operationName());
         assertEquals("foo", mockSpans.get(1).operationName());
         assertEquals("foo", mockSpans.get(2).operationName());
+        assertEquals("parent", mockSpans.get(3).operationName());
+    }
+
+    @Test
+    public void testAsyncCircuitBreakerOpens(Service service) throws ExecutionException, InterruptedException {
+        try (Scope scope = Service.mockTracer.buildSpan("parent").startActive(true)) {
+            assertEquals("fallback", service.asyncFoo().toCompletableFuture().get());
+        }
+
+        List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
+        assertEquals(4, mockSpans.size());
+        for (MockSpan mockSpan : mockSpans) {
+            assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
+        }
+        assertEquals("asyncFoo", mockSpans.get(0).operationName());
+        assertEquals("asyncFoo", mockSpans.get(1).operationName());
+        assertEquals("asyncFoo", mockSpans.get(2).operationName());
         assertEquals("parent", mockSpans.get(3).operationName());
     }
 }

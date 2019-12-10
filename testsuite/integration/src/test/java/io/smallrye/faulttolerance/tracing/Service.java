@@ -15,6 +15,10 @@
  */
 package io.smallrye.faulttolerance.tracing;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+
+import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
@@ -41,7 +45,20 @@ public class Service {
         throw new RuntimeException();
     }
 
+    @Fallback(fallbackMethod = "asyncFallback")
+    @Timeout(value = 200L)
+    @Retry(delay = 100L, maxRetries = 2)
+    @Asynchronous
+    public CompletionStage<String> asyncFoo() {
+        mockTracer.buildSpan("asyncFoo").start().finish();
+        throw new RuntimeException();
+    }
+
     public String fallback() {
         return "fallback";
+    }
+
+    public CompletionStage<String> asyncFallback() {
+        return CompletableFuture.completedFuture("fallback");
     }
 }

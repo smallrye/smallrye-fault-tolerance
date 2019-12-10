@@ -68,6 +68,7 @@
     <module>core</module>
     <module>implementation</module>
     <module>context-propagation</module>
+    <module>tracing-propagation</module> <!--TODO: this should live in the opentracing project-->
     <module>docs</module>
     <module>testsuite</module>
   </modules>
@@ -168,6 +169,13 @@
       <dependency>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-context-propagation</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+
+      <dependency>
+        <groupId>io.smallrye</groupId>
+        <artifactId>smallrye-fault-tolerance-tracing-propagation</artifactId>
         <version>${project.version}</version>
       </dependency>
 
