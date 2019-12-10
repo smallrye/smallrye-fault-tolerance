@@ -17,7 +17,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
 @Singleton
-public class ExecutorContainer { // mstodo name; it's more than a container
+public class ExecutorProvider { // mstodo name; it's more than a container
     // mstodo documment
     @Inject
     @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100")

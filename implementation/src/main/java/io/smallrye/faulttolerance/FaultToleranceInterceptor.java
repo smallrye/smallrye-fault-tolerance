@@ -111,7 +111,7 @@ public class FaultToleranceInterceptor {
 
     private final ExecutorService asyncExecutor;
     private final FaultToleranceOperationProvider operationProvider;
-    private final ExecutorContainer executorContainer;
+    private final ExecutorProvider executorProvider;
 
     @Inject
     public FaultToleranceInterceptor(
@@ -119,14 +119,14 @@ public class FaultToleranceInterceptor {
             @Intercepted Bean<?> interceptedBean,
             MetricsCollectorFactory metricsCollectorFactory,
             FaultToleranceOperationProvider operationProvider,
-            ExecutorContainer executorContainer) {
+            ExecutorProvider executorProvider) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
         this.operationProvider = operationProvider;
-        this.executorContainer = executorContainer;
-        asyncExecutor = executorContainer.getGlobalExecutor();
-        timeoutExecutor = executorContainer.getTimeoutExecutor();
+        this.executorProvider = executorProvider;
+        asyncExecutor = executorProvider.getGlobalExecutor();
+        timeoutExecutor = executorProvider.getTimeoutExecutor();
     }
 
     @AroundInvoke
@@ -253,7 +253,7 @@ public class FaultToleranceInterceptor {
             Integer queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             result = new CompletionStageBulkhead<>(result,
                     "CompletionStage[" + point.name() + "]",
-                    executorContainer.getAdHocExecutor(size, queueSize, new LinkedBlockingQueue<>(queueSize)), size,
+                    executorProvider.getAdHocExecutor(size, queueSize, new LinkedBlockingQueue<>(queueSize)), size,
                     queueSize,
                     collector);
         }
@@ -384,7 +384,7 @@ public class FaultToleranceInterceptor {
             int size = bulkheadConfig.get(BulkheadConfig.VALUE);
             int queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(queueSize);
-            ExecutorService executor = executorContainer.getAdHocExecutor(size, queueSize, queue);
+            ExecutorService executor = executorProvider.getAdHocExecutor(size, queueSize, queue);
             result = new FutureBulkhead<>(result,
                     "Bulkhead[" + point.name() + "]",
                     executor,
