@@ -14,11 +14,13 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
+ * Provider of thread pools for timeouts and asynchronous invocations
+ *
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
 @Singleton
 public class ExecutorProvider {
-    // mstodo documment
+
     @Inject
     @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100")
     private Integer size;

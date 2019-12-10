@@ -69,7 +69,7 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
         this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
         this.closedStart = System.nanoTime();
 
-        // mstodo: wrap this measurements in some object not to duplicate this logic
+        // todo: wrap this measurements in some object not to duplicate this logic
         this.metricsRecorder.circuitBreakerClosedTimeProvider(() -> getTime(STATE_CLOSED, closedStart, previousClosedTime));
         this.metricsRecorder
                 .circuitBreakerHalfOpenTimeProvider(() -> getTime(STATE_HALF_OPEN, halfOpenStart, previousHalfOpenTime));

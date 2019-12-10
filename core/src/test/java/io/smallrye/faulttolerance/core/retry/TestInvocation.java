@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.SimpleInvocationContext;
 
-/// mstodo: merge the test invocations?
+/// todo: merge the test invocations?
 public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
     private final int initialFailuresCount;
     private final Supplier<? extends Exception> initialFailure;

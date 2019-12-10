@@ -18,7 +18,7 @@ public final class FutureTestInvocation<V> implements FaultToleranceStrategy<Fut
     private final AtomicInteger invocationCounter = new AtomicInteger(0);
 
     public static <V> FutureTestInvocation<V> immediatelyReturning(Callable<Future<V>> result) {
-        return new FutureTestInvocation<V>(0, null, null, result);
+        return new FutureTestInvocation<>(0, null, null, result);
     }
 
     public static <V> FutureTestInvocation<V> initiallyFailing(int initialFailuresCount,
@@ -47,7 +47,6 @@ public final class FutureTestInvocation<V> implements FaultToleranceStrategy<Fut
             throw initialFailure.get();
         }
         if (eventualFailure != null) {
-            // mstodo simplify?
             return CompletableFuture.<V> supplyAsync(() -> {
                 throw eventualFailure.get();
             }).toCompletableFuture();
