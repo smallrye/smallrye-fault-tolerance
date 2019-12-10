@@ -33,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -95,8 +94,6 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
  * @author Martin Kouba
  * @author Michal Szynkiewicz
  */
-// mstodo better control of the async invocations, gloabl limit for FT threads?
-// mstodo: execute CompletableFutures with an executor that we create ourselves?
 @Interceptor
 @FaultToleranceBinding
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
@@ -110,10 +107,7 @@ public class FaultToleranceInterceptor {
 
     private final MetricsCollectorFactory metricsCollectorFactory;
 
-    // mstodo make more flexible, figure out if that's okay!
-    private final ScheduledExecutorService timeoutExecutor = timeoutExecutorService();
-
-    // mstodo modify, let customize, etc.
+    private final ScheduledExecutorService timeoutExecutor;
 
     private final ExecutorService asyncExecutor;
     private final FaultToleranceOperationProvider operationProvider;
@@ -132,10 +126,7 @@ public class FaultToleranceInterceptor {
         this.operationProvider = operationProvider;
         this.executorContainer = executorContainer;
         asyncExecutor = executorContainer.getGlobalExecutor();
-    }
-
-    private ScheduledExecutorService timeoutExecutorService() {
-        return Executors.newScheduledThreadPool(5); // mstodo customizable size
+        timeoutExecutor = executorContainer.getTimeoutExecutor();
     }
 
     @AroundInvoke
@@ -272,7 +263,7 @@ public class FaultToleranceInterceptor {
             result = new CompletionStageTimeout<>(result, "Timeout[" + point.name() + "]",
                     timeoutMs,
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    asyncExecutor, // mstodo make it configurable!
+                    asyncExecutor,
                     collector);
         }
 

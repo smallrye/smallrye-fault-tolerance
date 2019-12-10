@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -19,19 +20,25 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class ExecutorContainer { // mstodo name; it's more than a container
     // mstodo documment
     @Inject
-    @ConfigProperty(name = "io.smallrye.faulttolerance.maxAsyncThreads", defaultValue = "100")
+    @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100")
     private Integer size;
     @Inject
-    @ConfigProperty(name = "io.smallrye.faulttolerance.maxAsyncThreadsWorkQueue")
+    @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolQueueSize")
     private Optional<Integer> queueSize;
+    @Inject
+    @ConfigProperty(name = "io.smallrye.faulttolerance.timeoutExecutorThreads", defaultValue = "5")
+    private Integer timeoutExecutorSize;
 
-    private ExecutorService executorService;
+    private ExecutorService globalExecutor;
+    private ScheduledExecutorService timeoutExecutor;
+
     private ExecutorFactory executorFactory;
 
     @PostConstruct
     public void setUp() {
         executorFactory = executorProvider();
-        executorService = executorFactory.getGlobalExecutorService(size, queueSize.orElse(size));
+        globalExecutor = executorFactory.createExecutorService(size, queueSize.orElse(size));
+        timeoutExecutor = executorFactory.createTimeoutExecutor(timeoutExecutorSize);
     }
 
     public ExecutorService getAdHocExecutor(int size, int queueSize, BlockingQueue<Runnable> queue) {
@@ -54,6 +61,10 @@ public class ExecutorContainer { // mstodo name; it's more than a container
     }
 
     public ExecutorService getGlobalExecutor() {
-        return executorService;
+        return globalExecutor;
+    }
+
+    public ScheduledExecutorService getTimeoutExecutor() {
+        return timeoutExecutor;
     }
 }

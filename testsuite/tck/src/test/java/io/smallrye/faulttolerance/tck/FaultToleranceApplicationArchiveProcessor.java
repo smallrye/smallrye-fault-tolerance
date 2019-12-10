@@ -39,7 +39,7 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
 
     private static final Logger LOGGER = Logger.getLogger(FaultToleranceApplicationArchiveProcessor.class.getName());
 
-    private static final String MAX_THREADS_OVERRIDE = "io.smallrye.faulttolerance.maxAsyncThreads=1000";
+    private static final String MAX_THREADS_OVERRIDE = "io.smallrye.faulttolerance.globalThreadPoolSize=1000";
     private static final String MP_CONFIG_PATH = "/WEB-INF/classes/META-INF/microprofile-config.properties";
 
     @Override

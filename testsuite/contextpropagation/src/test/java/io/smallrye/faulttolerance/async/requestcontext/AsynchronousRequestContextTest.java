@@ -25,9 +25,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.smallrye.faulttolerance.ExecutorFactory;
 import io.smallrye.faulttolerance.TestArchive;
-import io.smallrye.faulttolerance.propagation.ContextPropagationExecutorFactory;
 
 /**
  *
@@ -39,7 +37,6 @@ public class AsynchronousRequestContextTest {
     @Deployment
     public static JavaArchive createTestArchive() {
         return TestArchive.createBase(AsynchronousRequestContextTest.class)
-                .addAsServiceProvider(ExecutorFactory.class, ContextPropagationExecutorFactory.class)
                 .addPackage(AsynchronousRequestContextTest.class.getPackage());
     }
 

@@ -230,9 +230,9 @@ public class CompletionStageBulkheadTest {
     }
 
     private <V> CompletionStageBulkhead<V> bulkhead(TestInvocation<CompletionStage<V>> invocation, String name, int size,
-                                                    int queueSize) {
+            int queueSize) {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 0, TimeUnit.MILLISECONDS,
-              new LinkedBlockingQueue<>(queueSize));
+                new LinkedBlockingQueue<>(queueSize));
 
         return new CompletionStageBulkhead<>(invocation, name, executor, size, queueSize, null);
     }
