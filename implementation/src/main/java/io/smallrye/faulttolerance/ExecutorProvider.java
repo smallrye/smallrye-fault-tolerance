@@ -24,14 +24,17 @@ public class ExecutorProvider {
     @Inject
     @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100")
     private Integer size;
+
     @Inject
     @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolQueueSize")
     private Optional<Integer> queueSize;
+
     @Inject
     @ConfigProperty(name = "io.smallrye.faulttolerance.timeoutExecutorThreads", defaultValue = "5")
     private Integer timeoutExecutorSize;
 
     private ExecutorService globalExecutor;
+
     private ScheduledExecutorService timeoutExecutor;
 
     private ExecutorFactory executorFactory;
@@ -47,6 +50,14 @@ public class ExecutorProvider {
         return executorFactory.createExecutorService(size, queueSize, queue);
     }
 
+    public ExecutorService getGlobalExecutor() {
+        return globalExecutor;
+    }
+
+    public ScheduledExecutorService getTimeoutExecutor() {
+        return timeoutExecutor;
+    }
+
     private static ExecutorFactory executorProvider() {
         ServiceLoader<ExecutorFactory> loader = ServiceLoader.load(ExecutorFactory.class);
 
@@ -60,13 +71,5 @@ public class ExecutorProvider {
             }
         }
         return maxPriorityProvider;
-    }
-
-    public ExecutorService getGlobalExecutor() {
-        return globalExecutor;
-    }
-
-    public ScheduledExecutorService getTimeoutExecutor() {
-        return timeoutExecutor;
     }
 }

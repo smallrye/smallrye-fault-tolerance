@@ -21,7 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
@@ -57,11 +57,11 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldReturnRightAway() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
-        assertThat(timeout.apply(new SimpleInvocationContext<>(() -> {
+        assertThat(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(200);
             return completedStage("foobar");
         })).toCompletableFuture().get()).isEqualTo("foobar");
@@ -72,11 +72,11 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateMethodError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
-        assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
+        assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(200);
             throw new TestException();
         })).toCompletableFuture()::get)
@@ -89,11 +89,11 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateCompletionStageError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
                 "completion stage timeout", 1000, watcher, taskExecutor, null);
 
-        assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
+        assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(200);
             return failedStage(new TestException());
         })).toCompletableFuture()::get)
@@ -106,11 +106,11 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldTimeOut() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> timeout = new CompletionStageTimeout<>(
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
                 "completion stage timeout", 500, watcher, taskExecutor, null);
 
-        assertThatThrownBy(timeout.apply(new SimpleInvocationContext<>(() -> {
+        assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(1000);
             return completedStage("foobar");
         })).toCompletableFuture()::get)

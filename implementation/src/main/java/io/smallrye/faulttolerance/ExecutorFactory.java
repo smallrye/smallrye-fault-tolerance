@@ -16,6 +16,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public interface ExecutorFactory {
     /**
      * create an executor service of the given size and with the given queue size
+     * 
      * @param size amount of threads in the pool
      * @param queueSize the size of the waiting queue
      * @return executor service
@@ -34,6 +35,7 @@ public interface ExecutorFactory {
 
     /**
      * create a scheduled executor service for handling timeouts
+     * 
      * @param size the amount of threads in the pool
      * @return scheduled executor service
      */
@@ -42,6 +44,7 @@ public interface ExecutorFactory {
     /**
      * priority of this factory.
      * If multiple factories are registered, the one with the highest priority is selected;
+     * 
      * @return priority
      */
     int priority();

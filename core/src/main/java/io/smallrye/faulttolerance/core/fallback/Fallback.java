@@ -1,19 +1,16 @@
 package io.smallrye.faulttolerance.core.fallback;
 
-import java.util.concurrent.Callable;
-
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
-public abstract class FallbackBase<V, ContextType extends InvocationContext<V>>
-        implements FaultToleranceStrategy<V, ContextType> {
-    final FaultToleranceStrategy<V, ContextType> delegate;
+public class Fallback<V> implements FaultToleranceStrategy<V> {
+    final FaultToleranceStrategy<V> delegate;
     final String description;
 
     final FallbackFunction<V> fallback;
     final MetricsRecorder metricsRecorder;
 
-    FallbackBase(FaultToleranceStrategy<V, ContextType> delegate, String description, FallbackFunction<V> fallback,
+    public Fallback(FaultToleranceStrategy<V> delegate, String description, FallbackFunction<V> fallback,
             MetricsRecorder metricsRecorder) {
         this.delegate = delegate;
         this.description = description;
@@ -21,10 +18,11 @@ public abstract class FallbackBase<V, ContextType extends InvocationContext<V>>
         this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
-    V doApply(Callable<V> c) throws Exception {
+    @Override
+    public V apply(InvocationContext<V> ctx) throws Exception {
         Throwable failure;
         try {
-            return c.call();
+            return delegate.apply(ctx);
         } catch (Exception e) {
             failure = e;
         }

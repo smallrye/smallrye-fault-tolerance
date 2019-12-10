@@ -7,14 +7,14 @@ import java.util.concurrent.CompletionStage;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
+public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     public CompletionStageRetry(
-            FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
+            FaultToleranceStrategy<CompletionStage<V>> delegate,
             String description,
             SetOfThrowables retryOn,
             SetOfThrowables abortOn,
@@ -26,12 +26,12 @@ public class CompletionStageRetry<V> extends RetryBase<CompletionStage<V>, Simpl
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
+    public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
         RunningStopwatch runningStopwatch = stopwatch.start();
-        return doRetry(context, 0, runningStopwatch, null);
+        return doRetry(ctx, 0, runningStopwatch, null);
     }
 
-    public CompletionStage<V> doRetry(SimpleInvocationContext<CompletionStage<V>> target,
+    public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> target,
             int attempt,
             RunningStopwatch stopwatch,
             Throwable latestFailure) {

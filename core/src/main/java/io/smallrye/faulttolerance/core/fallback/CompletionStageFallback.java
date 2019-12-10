@@ -5,14 +5,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 
-public class CompletionStageFallback<V> extends FallbackBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
+public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
     private final Executor executor;
 
-    public CompletionStageFallback(
-            FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
-            String description,
+    public CompletionStageFallback(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             FallbackFunction<CompletionStage<V>> fallback, Executor executor,
             MetricsRecorder metricsRecorder) {
         super(delegate, description, fallback, metricsRecorder);
@@ -20,13 +18,13 @@ public class CompletionStageFallback<V> extends FallbackBase<CompletionStage<V>,
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> target) {
+    public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {
             CompletionStage<V> originalResult;
             try {
-                originalResult = delegate.apply(target);
+                originalResult = delegate.apply(ctx);
             } catch (Exception e) {
                 CompletableFuture<V> failure = new CompletableFuture<>();
                 failure.completeExceptionally(e);

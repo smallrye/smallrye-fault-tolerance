@@ -3,26 +3,26 @@ package io.smallrye.faulttolerance.core.bulkhead;
 import java.util.concurrent.Semaphore;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 
-public class SyncBulkhead<V> extends BulkheadBase<V, SimpleInvocationContext<V>> {
-    private final Semaphore bulkheadSemaphore;
+public class SemaphoreBulkhead<V> extends BulkheadBase<V> {
+    private final Semaphore semaphore;
 
-    public SyncBulkhead(FaultToleranceStrategy<V, SimpleInvocationContext<V>> delegate, String description, int size,
+    public SemaphoreBulkhead(FaultToleranceStrategy<V> delegate, String description, int size,
             MetricsRecorder metricsRecorder) {
         super(description, delegate, metricsRecorder);
-        bulkheadSemaphore = new Semaphore(size);
+        semaphore = new Semaphore(size);
     }
 
     @Override
-    public V apply(SimpleInvocationContext<V> target) throws Exception {
-        if (bulkheadSemaphore.tryAcquire()) {
+    public V apply(InvocationContext<V> ctx) throws Exception {
+        if (semaphore.tryAcquire()) {
             recorder.bulkheadEntered();
             long startTime = System.nanoTime();
             try {
-                return delegate.apply(target);
+                return delegate.apply(ctx);
             } finally {
-                bulkheadSemaphore.release();
+                semaphore.release();
                 recorder.bulkheadLeft(System.nanoTime() - startTime);
             }
         } else {

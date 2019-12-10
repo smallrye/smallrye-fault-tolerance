@@ -13,8 +13,8 @@
 
     <artifactId>smallrye-fault-tolerance-core</artifactId>
 
-    <name>SmallRye Fault Tolerance: Core</name>
-    <description>SmallRye Fault Tolerance: Core</description>
+    <name>SmallRye: MicroProfile Fault Tolerance - Core</name>
+    <description>SmallRye: MicroProfile Fault Tolerance - Core</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

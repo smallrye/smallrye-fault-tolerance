@@ -7,15 +7,14 @@ import java.util.concurrent.CompletionStage;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-public class CompletionStageCircuitBreaker<V>
-        extends CircuitBreakerBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
+public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionStage<V>> {
 
     public CompletionStageCircuitBreaker(
-            FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
+            FaultToleranceStrategy<CompletionStage<V>> delegate,
             String description,
             SetOfThrowables failOn,
             long delayInMillis,
@@ -29,24 +28,24 @@ public class CompletionStageCircuitBreaker<V>
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> target) throws Exception {
+    public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) throws Exception {
         // this is the only place where `state` can be dereferenced!
         // it must be passed through as a parameter to all the state methods,
         // so that they don't see the circuit breaker moving to a different state under them
-        SyncCircuitBreaker.State currentState = state.get();
+        CircuitBreaker.State currentState = state.get();
         switch (currentState.id) {
             case STATE_CLOSED:
-                return inClosed(target, currentState);
+                return inClosed(ctx, currentState);
             case STATE_OPEN:
-                return inOpen(target, currentState);
+                return inOpen(ctx, currentState);
             case STATE_HALF_OPEN:
-                return inHalfOpen(target, currentState);
+                return inHalfOpen(ctx, currentState);
             default:
                 throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
         }
     }
 
-    private CompletionStage<V> inClosed(SimpleInvocationContext<CompletionStage<V>> target, SyncCircuitBreaker.State state) {
+    private CompletionStage<V> inClosed(InvocationContext<CompletionStage<V>> target, CircuitBreaker.State state) {
         try {
             CompletionStage<V> result = delegate.apply(target);
 
@@ -104,8 +103,8 @@ public class CompletionStageCircuitBreaker<V>
         }
     }
 
-    private CompletionStage<V> inOpen(SimpleInvocationContext<CompletionStage<V>> target,
-            SyncCircuitBreaker.State state) throws Exception {
+    private CompletionStage<V> inOpen(InvocationContext<CompletionStage<V>> target,
+            CircuitBreaker.State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
@@ -122,7 +121,7 @@ public class CompletionStageCircuitBreaker<V>
         }
     }
 
-    private CompletionStage<V> inHalfOpen(SimpleInvocationContext<CompletionStage<V>> target, SyncCircuitBreaker.State state) {
+    private CompletionStage<V> inHalfOpen(InvocationContext<CompletionStage<V>> target, CircuitBreaker.State state) {
         try {
             CompletionStage<V> result = delegate.apply(target);
             metricsRecorder.circuitBreakerSucceeded();

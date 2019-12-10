@@ -18,13 +18,12 @@ import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-public abstract class CircuitBreakerBase<V, ContextType extends InvocationContext<V>>
-        implements FaultToleranceStrategy<V, ContextType> {
+public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     static final int STATE_CLOSED = 0;
     static final int STATE_OPEN = 1;
     static final int STATE_HALF_OPEN = 2;
 
-    final FaultToleranceStrategy<V, ContextType> delegate;
+    final FaultToleranceStrategy<V> delegate;
     final String description;
 
     final SetOfThrowables failOn;
@@ -48,10 +47,9 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
     volatile long openStart;
 
     @SuppressWarnings("UnnecessaryThis")
-    CircuitBreakerBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables failOn,
-            long delayInMillis,
-            int requestVolumeThreshold, double failureRatio, int successThreshold, Stopwatch stopwatch,
-            MetricsRecorder metricsRecorder) {
+    public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn,
+            long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
+            Stopwatch stopwatch, MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Circuit breaker delegate must be set");
         this.description = checkNotNull(description, "Circuit breaker description must be set");
         this.failOn = checkNotNull(failOn, "Set of fail-on throwables must be set");
@@ -84,24 +82,25 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
                 : prevMeasuredStateTime.get();
     }
 
-    V doApply(ContextType context) throws Exception {
+    @Override
+    public V apply(InvocationContext<V> ctx) throws Exception {
         // this is the only place where `state` can be dereferenced!
         // it must be passed through as a parameter to all the state methods,
         // so that they don't see the circuit breaker moving to a different state under them
         State state = this.state.get();
         switch (state.id) {
             case STATE_CLOSED:
-                return inClosed(context, state);
+                return inClosed(ctx, state);
             case STATE_OPEN:
-                return inOpen(context, state);
+                return inOpen(ctx, state);
             case STATE_HALF_OPEN:
-                return inHalfOpen(context, state);
+                return inHalfOpen(ctx, state);
             default:
                 throw new AssertionError("Invalid circuit breaker state: " + state.id);
         }
     }
 
-    private V inClosed(ContextType context, State state) throws Exception {
+    private V inClosed(InvocationContext<V> context, State state) throws Exception {
         try {
             V result = delegate.apply(context);
             metricsRecorder.circuitBreakerSucceeded();
@@ -136,7 +135,7 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
         }
     }
 
-    private V inOpen(ContextType context, State state) throws Exception {
+    private V inOpen(InvocationContext<V> context, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
@@ -149,11 +148,11 @@ public abstract class CircuitBreakerBase<V, ContextType extends InvocationContex
 
             toHalfOpen(state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return doApply(context);
+            return apply(context);
         }
     }
 
-    private V inHalfOpen(ContextType context, State state) throws Exception {
+    private V inHalfOpen(InvocationContext<V> context, State state) throws Exception {
         try {
             V result = delegate.apply(context);
             metricsRecorder.circuitBreakerSucceeded();

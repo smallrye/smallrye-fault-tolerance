@@ -12,7 +12,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.Before;
 import org.junit.Test;
 
-import io.smallrye.faulttolerance.core.FutureInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
@@ -29,90 +29,92 @@ public class FutureCircuitBreakerTest {
 
     @Test
     public void test1() throws Exception {
-        FutureCircuitBreaker<String> cb = new FutureCircuitBreaker<>(invocation(), "test invocation", testException,
+        CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(),
+                "test invocation", testException,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar1"))).get()).isEqualTo("foobar1");
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar2"))).get()).isEqualTo("foobar2");
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> {
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar1"))).get()).isEqualTo("foobar1");
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar2"))).get()).isEqualTo("foobar2");
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> {
             throw new RuntimeException();
         }))).isExactlyInstanceOf(RuntimeException.class); // treated as success
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar3"))).get()).isEqualTo("foobar3");
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar4"))).get()).isEqualTo("foobar4");
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar5"))).get()).isEqualTo("foobar5");
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, TestException::<Future<String>> doThrow)))
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar3"))).get()).isEqualTo("foobar3");
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar4"))).get()).isEqualTo("foobar4");
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar5"))).get()).isEqualTo("foobar5");
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar6"))).get()).isEqualTo("foobar6");
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, TestException::<Future<String>> doThrow)))
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar6"))).get()).isEqualTo("foobar6");
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
         // circuit breaker is open
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
         stopwatch.setCurrentValue(1500);
-        Future<String> foobar7 = cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar7")));
+        Future<String> foobar7 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar7")));
         assertThat(foobar7.get()).isEqualTo("foobar7");
 
         // circuit breaker is half-open
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, TestException::<Future<String>> doThrow)))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
         // circuit breaker is open
         stopwatch.setCurrentValue(0);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
         stopwatch.setCurrentValue(1500);
-        Future<String> foobar8 = cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar8")));
+        Future<String> foobar8 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar8")));
         assertThat(foobar8.get()).isEqualTo("foobar8");
         // circuit breaker is half-open
-        Future<String> foobar9 = cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar9")));
+        Future<String> foobar9 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar9")));
         assertThat(foobar9.get()).isEqualTo("foobar9");
         // circuit breaker is closed
-        Future<String> foobar10 = cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar10")));
+        Future<String> foobar10 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar10")));
         assertThat(foobar10.get()).isEqualTo("foobar10");
     }
 
     @Test
     public void test2() throws Exception {
-        FutureCircuitBreaker<String> cb = new FutureCircuitBreaker<>(invocation(), "test invocation", testException,
+        CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(),
+                "test invocation", testException,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
-        Future<String> foobar1 = cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar1")));
+        Future<String> foobar1 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar1")));
         assertThat(foobar1.get()).isEqualTo("foobar1");
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, TestException::<Future<String>> doThrow)))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, TestException::<Future<String>> doThrow)))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
-        Future<String> foobar2 = cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar2")));
+        Future<String> foobar2 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar2")));
         assertThat(foobar2.get()).isEqualTo("foobar2");
         // circuit breaker is open
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThatThrownBy(() -> cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("ignored"))))
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> completedFuture("ignored"))))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
         stopwatch.setCurrentValue(1500);
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar3"))).get()).isEqualTo("foobar3");
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar3"))).get()).isEqualTo("foobar3");
         // circuit breaker is half-open
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar4"))).get()).isEqualTo("foobar4");
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar4"))).get()).isEqualTo("foobar4");
         // circuit breaker is closed
-        assertThat(cb.apply(new FutureInvocationContext<>(null, () -> completedFuture("foobar5"))).get()).isEqualTo("foobar5");
+        assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar5"))).get()).isEqualTo("foobar5");
     }
 }

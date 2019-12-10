@@ -5,13 +5,13 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 
-public class CompletionStageTimeout<V> extends SyncTimeout<CompletionStage<V>> {
+public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
     private final Executor executor;
 
     public CompletionStageTimeout(
-            FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
+            FaultToleranceStrategy<CompletionStage<V>> delegate,
             String description, long timeoutInMillis,
             TimeoutWatcher watcher, Executor executor, MetricsRecorder metricsRecorder) {
         super(delegate, description, timeoutInMillis, watcher, metricsRecorder);
@@ -20,7 +20,7 @@ public class CompletionStageTimeout<V> extends SyncTimeout<CompletionStage<V>> {
 
     // mstodo the offloading does not seem necessary, we could just kill the completion stage on timeout, I think
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
+    public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         executor.execute(() -> {
@@ -30,7 +30,7 @@ public class CompletionStageTimeout<V> extends SyncTimeout<CompletionStage<V>> {
 
             CompletionStage<V> originalResult;
             try {
-                originalResult = delegate.apply(context);
+                originalResult = delegate.apply(ctx);
             } catch (Exception e) {
                 // this comes first, so that when the future is completed, the timeout watcher is already cancelled
                 // (this isn't exactly needed, but makes tests easier to write)

@@ -10,8 +10,8 @@ import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-public abstract class RetryBase<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
-    final FaultToleranceStrategy<V, ContextType> delegate;
+public class Retry<V> implements FaultToleranceStrategy<V> {
+    final FaultToleranceStrategy<V> delegate;
     final String description;
 
     final SetOfThrowables retryOn;
@@ -22,10 +22,9 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
     final Stopwatch stopwatch;
     final MetricsRecorder metricsRecorder;
 
-    RetryBase(FaultToleranceStrategy<V, ContextType> delegate, String description, SetOfThrowables retryOn,
-            SetOfThrowables abortOn,
-            long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch,
-            MetricsRecorder metricsRecorder) {
+    public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn,
+            SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries,
+            Stopwatch stopwatch, MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
         this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
@@ -37,7 +36,8 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
         this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
-    V doApply(ContextType context) throws Exception {
+    @Override
+    public V apply(InvocationContext<V> ctx) throws Exception {
         long counter = 0;
         RunningStopwatch runningStopwatch = stopwatch.start();
         Throwable lastFailure = null;
@@ -46,7 +46,7 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
                 metricsRecorder.retryRetried();
             }
             try {
-                V result = delegate.apply(context);
+                V result = delegate.apply(ctx);
                 if (counter == 0) {
                     metricsRecorder.retrySucceededNotRetried();
                 } else {
@@ -90,7 +90,6 @@ public abstract class RetryBase<V, ContextType extends InvocationContext<V>> imp
 
         metricsRecorder.retryFailed();
         if (lastFailure != null) {
-
             if (lastFailure instanceof Exception) {
                 throw (Exception) lastFailure;
             } else {

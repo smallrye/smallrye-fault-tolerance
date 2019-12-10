@@ -8,12 +8,12 @@ import java.util.concurrent.Semaphore;
 import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
-public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> {
+public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>> {
     private static final Logger logger = Logger.getLogger(CompletionStageBulkhead.class);
 
     private final ExecutorService executor;
@@ -23,7 +23,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     private final Semaphore capacitySemaphore;
 
     public CompletionStageBulkhead(
-            FaultToleranceStrategy<CompletionStage<V>, SimpleInvocationContext<CompletionStage<V>>> delegate,
+            FaultToleranceStrategy<CompletionStage<V>> delegate,
             String description,
             ExecutorService executor, int size, int queueSize,
             MetricsRecorder recorder) {
@@ -36,9 +36,9 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     }
 
     @Override
-    public CompletionStage<V> apply(SimpleInvocationContext<CompletionStage<V>> context) {
+    public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
         if (capacitySemaphore.tryAcquire()) {
-            CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), context);
+            CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), ctx);
             executor.execute(task);
             recorder.bulkheadQueueEntered();
             return task.result;
@@ -57,10 +57,10 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>,
     private class CompletionStageBulkheadTask implements Runnable {
         private final long timeEnqueued;
         private final CompletableFuture<V> result = new CompletableFuture<>();
-        private final SimpleInvocationContext<CompletionStage<V>> context;
+        private final InvocationContext<CompletionStage<V>> context;
 
         private CompletionStageBulkheadTask(long timeEnqueued,
-                SimpleInvocationContext<CompletionStage<V>> context) {
+                InvocationContext<CompletionStage<V>> context) {
             this.timeEnqueued = timeEnqueued;
             this.context = context;
         }

@@ -3,18 +3,16 @@ package io.smallrye.faulttolerance.core.bulkhead;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
-public abstract class BulkheadBase<V, ContextType extends InvocationContext<V>>
-        implements FaultToleranceStrategy<V, ContextType> {
+public abstract class BulkheadBase<V> implements FaultToleranceStrategy<V> {
     private final String description;
-    final FaultToleranceStrategy<V, ContextType> delegate;
-    final SyncBulkhead.MetricsRecorder recorder;
+    final FaultToleranceStrategy<V> delegate;
+    final MetricsRecorder recorder;
 
-    BulkheadBase(String description, FaultToleranceStrategy<V, ContextType> delegate, MetricsRecorder recorder) {
+    BulkheadBase(String description, FaultToleranceStrategy<V> delegate, MetricsRecorder recorder) {
         this.description = description;
         this.delegate = delegate;
         this.recorder = recorder == null ? MetricsRecorder.NOOP : recorder;

@@ -34,7 +34,7 @@ public class MetricsCollectorFactory {
         if (metricsEnabled) {
             return new MetricsCollectorImpl(operation);
         } else {
-            return null;
+            return MetricsCollector.NOOP;
         }
     }
 

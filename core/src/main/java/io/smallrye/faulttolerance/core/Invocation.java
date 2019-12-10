@@ -8,19 +8,19 @@ import java.util.concurrent.Callable;
  * <p>
  * There's only one instance of this class, accessible using {@link #invocation()}.
  */
-public final class Invocation<V, ContextType extends InvocationContext<V>> implements FaultToleranceStrategy<V, ContextType> {
-    private static final Invocation<?, ?> INSTANCE = new Invocation<>();
+public final class Invocation<V> implements FaultToleranceStrategy<V> {
+    private static final Invocation<?> INSTANCE = new Invocation<>();
 
     @SuppressWarnings("unchecked")
-    public static <V, ContextType extends InvocationContext<V>> Invocation<V, ContextType> invocation() {
-        return (Invocation<V, ContextType>) INSTANCE;
+    public static <V> Invocation<V> invocation() {
+        return (Invocation<V>) INSTANCE;
     }
 
     private Invocation() {
     } // avoid instantiation
 
     @Override
-    public V apply(ContextType target) throws Exception {
-        return target.getDelegate().call();
+    public V apply(InvocationContext<V> ctx) throws Exception {
+        return ctx.call();
     }
 }

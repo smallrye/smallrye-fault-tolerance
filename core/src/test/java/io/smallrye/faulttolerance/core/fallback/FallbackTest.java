@@ -7,7 +7,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
@@ -16,7 +15,7 @@ public class FallbackTest {
     @Test
     public void immediatelyReturning_valueThenValue() throws Exception {
         TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "foobar");
-        TestThread<String> result = runOnTestThread(new SyncFallback<>(invocation, "test invocation", e -> "fallback", null));
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> "fallback", null));
         assertThat(result.await()).isEqualTo("foobar");
     }
 
@@ -24,21 +23,21 @@ public class FallbackTest {
     public void immediatelyReturning_valueThenException() throws Exception {
         TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "foobar");
         TestThread<String> result = runOnTestThread(
-                new SyncFallback<>(invocation, "test invocation", e -> TestException.doThrow(), null));
+                new Fallback<>(invocation, "test invocation", e -> TestException.doThrow(), null));
         assertThat(result.await()).isEqualTo("foobar");
     }
 
     @Test
     public void immediatelyReturning_exceptionThenValue() throws Exception {
         TestInvocation<String> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
-        TestThread<String> result = runOnTestThread(new SyncFallback<>(invocation, "test invocation", e -> "fallback", null));
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> "fallback", null));
         assertThat(result.await()).isEqualTo("fallback");
     }
 
     @Test
     public void immediatelyReturning_exceptionThenException() {
         TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
-        TestThread<Void> result = runOnTestThread(new SyncFallback<>(invocation, "test invocation", e -> {
+        TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> {
             throw new RuntimeException();
         }, null));
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
@@ -53,7 +52,7 @@ public class FallbackTest {
         Barrier endBarrier = Barrier.interruptible();
         TestInvocation<String> invocation = TestInvocation.waitingOnBarrier(startBarrier, endBarrier, () -> "foobar");
         TestThread<String> executingThread = runOnTestThread(
-                new SyncFallback<>(invocation, "test invocation", e -> "fallback", null));
+                new Fallback<>(invocation, "test invocation", e -> "fallback", null));
         startBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
@@ -69,7 +68,7 @@ public class FallbackTest {
             endBarrier.await();
             return "fallback";
         };
-        TestThread<String> executingThread = runOnTestThread(new SyncFallback<>(invocation, "test invocation", fallback, null));
+        TestThread<String> executingThread = runOnTestThread(new Fallback<>(invocation, "test invocation", fallback, null));
         startBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
@@ -77,22 +76,22 @@ public class FallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_value() throws Exception {
-        FaultToleranceStrategy<String, SimpleInvocationContext<String>> invocation = (ignored) -> {
+        FaultToleranceStrategy<String> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             return "foobar";
         };
-        TestThread<String> result = runOnTestThread(new SyncFallback<>(invocation, "test invocation", e -> "fallback", null));
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> "fallback", null));
         assertThat(result.await()).isEqualTo("foobar");
     }
 
     @Test
     public void selfInterruptedInInvocation_exception() {
-        FaultToleranceStrategy<String, SimpleInvocationContext<String>> invocation = (ignored) -> {
+        FaultToleranceStrategy<String> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };
         TestThread<String> executingThread = runOnTestThread(
-                new SyncFallback<>(invocation, "test invocation", e -> "fallback", null));
+                new Fallback<>(invocation, "test invocation", e -> "fallback", null));
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
     }
 
@@ -103,7 +102,7 @@ public class FallbackTest {
             Thread.currentThread().interrupt();
             return "fallback";
         };
-        TestThread<String> result = runOnTestThread(new SyncFallback<>(invocation, "test invocation", fallback, null));
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation", fallback, null));
         assertThat(result.await()).isEqualTo("fallback");
     }
 
@@ -114,7 +113,7 @@ public class FallbackTest {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };
-        TestThread<String> executingThread = runOnTestThread(new SyncFallback<>(invocation, "test invocation", fallback, null));
+        TestThread<String> executingThread = runOnTestThread(new Fallback<>(invocation, "test invocation", fallback, null));
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(RuntimeException.class);
     }
 }

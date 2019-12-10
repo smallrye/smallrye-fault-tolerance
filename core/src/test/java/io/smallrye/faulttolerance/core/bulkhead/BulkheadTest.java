@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
+import static io.smallrye.faulttolerance.core.util.TestThread.runOnTestThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.Semaphore;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.Test;
 
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
@@ -23,7 +24,7 @@ public class BulkheadTest {
     @Test
     public void shouldLetSingleThrough() throws Exception {
         TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "shouldLetSingleThrough");
-        SyncBulkhead<String> bulkhead = new SyncBulkhead<>(invocation, "shouldLetSingleThrough", 2, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetSingleThrough", 2, null);
         String result = bulkhead.apply(null);
         assertThat(result).isEqualTo("shouldLetSingleThrough");
     }
@@ -32,12 +33,12 @@ public class BulkheadTest {
     public void shouldLetMaxThrough() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
         TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> "shouldLetMaxThrough");
-        SyncBulkhead<String> bulkhead = new SyncBulkhead<>(invocation, "shouldLetMaxThrough", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxThrough", 5, null);
 
         List<TestThread<String>> threads = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
-            threads.add(TestThread.runOnTestThread(bulkhead));
+            threads.add(runOnTestThread(bulkhead));
         }
         delayBarrier.open();
         for (int i = 0; i < 5; i++) {
@@ -52,16 +53,16 @@ public class BulkheadTest {
         CountDownLatch startedLatch = new CountDownLatch(5);
         TestInvocation<String> invocation = TestInvocation.delayed(startBarrier, delayBarrier, startedLatch,
                 () -> "shouldRejectMaxPlus1");
-        SyncBulkhead<String> bulkhead = new SyncBulkhead<>(invocation, "shouldRejectMaxPlus1", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldRejectMaxPlus1", 5, null);
 
         List<TestThread<String>> threads = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
-            threads.add(TestThread.runOnTestThread(bulkhead));
+            threads.add(runOnTestThread(bulkhead));
         }
         startBarrier.await();
         startedLatch.await(); // makes sure that all the threads have put their runnables into bulkhead
-        assertThatThrownBy(() -> bulkhead.apply(new SimpleInvocationContext<>(() -> "")))
+        assertThatThrownBy(() -> bulkhead.apply(new InvocationContext<>(() -> "")))
                 .isExactlyInstanceOf(BulkheadException.class);
         delayBarrier.open();
 
@@ -85,18 +86,17 @@ public class BulkheadTest {
             return "shouldLetMaxPlus1After1Left";
         });
 
-        SyncBulkhead<String> bulkhead = new SyncBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5, null);
 
-        List<TestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            threads.add(TestThread.runOnTestThread(bulkhead));
+            runOnTestThread(bulkhead);
         }
 
         delayBarrier.open();
         finishedThreadsCount.acquire();
         assertThat(finishedThreads.get(0).await()).isEqualTo("shouldLetMaxPlus1After1Left");
 
-        threads.add(TestThread.runOnTestThread(bulkhead));
+        runOnTestThread(bulkhead);
 
         letOneInSemaphore.release(5);
         for (int i = 1; i < 6; i++) {
@@ -122,18 +122,17 @@ public class BulkheadTest {
             throw error;
         });
 
-        SyncBulkhead<String> bulkhead = new SyncBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5, null);
 
-        List<TestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            threads.add(TestThread.runOnTestThread(bulkhead));
+            runOnTestThread(bulkhead);
         }
 
         delayBarrier.open();
         finishedThreadsCount.acquire();
         assertThatThrownBy(finishedThreads.get(0)::await).isEqualTo(error);
 
-        threads.add(TestThread.runOnTestThread(bulkhead));
+        runOnTestThread(bulkhead);
 
         letOneInSemaphore.release(5);
         for (int i = 1; i < 6; i++) {
@@ -141,5 +140,4 @@ public class BulkheadTest {
             assertThatThrownBy(finishedThreads.get(0)::await).isEqualTo(error);
         }
     }
-
 }

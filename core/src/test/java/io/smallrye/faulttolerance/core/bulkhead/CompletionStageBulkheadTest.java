@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.Test;
 
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
@@ -34,7 +34,7 @@ public class CompletionStageBulkheadTest {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(
                 () -> completedFuture("shouldLetSingleThrough"));
         CompletionStageBulkhead<String> bulkhead = bulkhead(invocation, "shouldLetSingleThrough", 2, 2);
-        CompletionStage<String> result = bulkhead.apply(new SimpleInvocationContext<>(null));
+        CompletionStage<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().join()).isEqualTo("shouldLetSingleThrough");
     }
 
@@ -73,7 +73,7 @@ public class CompletionStageBulkheadTest {
         // to make sure all the tasks are in bulkhead:
         waitUntilQueueSize(bulkhead, 3, 1000);
 
-        CompletionStage<String> plus1Call = bulkhead.apply(new SimpleInvocationContext<>(null));
+        CompletionStage<String> plus1Call = bulkhead.apply(new InvocationContext<>(null));
         assertThat(plus1Call).isCompletedExceptionally();
         assertThatThrownBy(plus1Call.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)

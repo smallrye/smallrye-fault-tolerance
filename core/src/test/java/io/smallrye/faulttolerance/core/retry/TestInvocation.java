@@ -5,10 +5,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 
-/// todo: merge the test invocations?
-public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
+public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     private final int initialFailuresCount;
     private final Supplier<? extends Exception> initialFailure;
     private final Callable<V> result;
@@ -31,7 +30,7 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V, Simple
     }
 
     @Override
-    public V apply(SimpleInvocationContext<V> target) throws Exception {
+    public V apply(InvocationContext<V> ctx) throws Exception {
         int invocations = invocationCounter.incrementAndGet();
 
         if (initialFailuresCount > 0 && invocations <= initialFailuresCount) {

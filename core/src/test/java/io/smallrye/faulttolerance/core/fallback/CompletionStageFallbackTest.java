@@ -13,7 +13,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestExecutor;
 import io.smallrye.faulttolerance.core.util.TestThread;
@@ -176,8 +175,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_value() throws Exception {
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> invocation = (
-                ignored) -> {
+        FaultToleranceStrategy<CompletionStage<String>> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             return completedStage("foobar");
         };
@@ -188,8 +186,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_directException() throws Exception {
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> invocation = (
-                ignored) -> {
+        FaultToleranceStrategy<CompletionStage<String>> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };
@@ -202,8 +199,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void selfInterruptedInInvocation_completionStageException() throws Exception {
-        FaultToleranceStrategy<CompletionStage<String>, SimpleInvocationContext<CompletionStage<String>>> invocation = (
-                ignored) -> {
+        FaultToleranceStrategy<CompletionStage<String>> invocation = (ignored) -> {
             Thread.currentThread().interrupt();
             return failedStage(new RuntimeException());
         };

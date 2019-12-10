@@ -3,10 +3,10 @@ package io.smallrye.faulttolerance.core.timeout;
 import java.util.concurrent.Callable;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.SimpleInvocationContext;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
-public final class TestInvocation<V> implements FaultToleranceStrategy<V, SimpleInvocationContext<V>> {
+public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     private final Barrier startBarrier;
     private final Barrier delayBarrier;
     private final Callable<V> result;
@@ -30,7 +30,7 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V, Simple
     }
 
     @Override
-    public V apply(SimpleInvocationContext<V> target) throws Exception {
+    public V apply(InvocationContext<V> ctx) throws Exception {
         if (startBarrier != null) {
             startBarrier.open();
         }
