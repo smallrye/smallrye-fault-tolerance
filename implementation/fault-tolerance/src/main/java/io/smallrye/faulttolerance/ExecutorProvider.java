@@ -1,6 +1,8 @@
 package io.smallrye.faulttolerance;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.BlockingQueue;
@@ -8,6 +10,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.PostConstruct;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.BeforeDestroyed;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -39,15 +44,25 @@ public class ExecutorProvider {
 
     private ExecutorFactory executorFactory;
 
+    private final List<ExecutorService> allExecutors = new ArrayList<>();
+
     @PostConstruct
     public void setUp() {
         executorFactory = executorProvider();
         globalExecutor = executorFactory.createExecutorService(size, queueSize.orElse(size));
         timeoutExecutor = executorFactory.createTimeoutExecutor(timeoutExecutorSize);
+        allExecutors.add(globalExecutor);
+        allExecutors.add(timeoutExecutor);
+    }
+
+    void tearDown(@Observes @BeforeDestroyed(ApplicationScoped.class) Object ignored) {
+        allExecutors.forEach(ExecutorService::shutdown);
     }
 
     public ExecutorService getAdHocExecutor(int size, int queueSize, BlockingQueue<Runnable> queue) {
-        return executorFactory.createExecutorService(size, queueSize, queue);
+        ExecutorService executor = executorFactory.createExecutorService(size, queueSize, queue);
+        allExecutors.add(executor);
+        return executor;
     }
 
     public ExecutorService getGlobalExecutor() {
