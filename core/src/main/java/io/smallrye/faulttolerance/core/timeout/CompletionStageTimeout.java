@@ -25,7 +25,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
 
         executor.execute(() -> {
             TimeoutExecution timeoutExecution = new TimeoutExecution(Thread.currentThread(),
-                    () -> result.completeExceptionally(timeoutException()), timeoutInMillis);
+                    () -> result.completeExceptionally(timeoutException(description)), timeoutInMillis);
             TimeoutWatch watch = watcher.schedule(timeoutExecution);
 
             CompletionStage<V> originalResult;
@@ -36,7 +36,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
                 // (this isn't exactly needed, but makes tests easier to write)
                 timeoutExecution.finish(watch::cancel);
                 if (!result.isDone()) {
-                    result.completeExceptionally(timeoutExecution.hasTimedOut() ? timeoutException() : e);
+                    result.completeExceptionally(timeoutExecution.hasTimedOut() ? timeoutException(description) : e);
                 }
                 return;
             }
@@ -53,7 +53,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
                 timeoutExecution.finish(watch::cancel);
 
                 if (timeoutExecution.hasTimedOut()) {
-                    result.completeExceptionally(timeoutException());
+                    result.completeExceptionally(timeoutException(description));
                 } else if (exception != null) {
                     result.completeExceptionally(exception);
                 } else {

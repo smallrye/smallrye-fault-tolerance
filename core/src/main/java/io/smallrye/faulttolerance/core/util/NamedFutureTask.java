@@ -4,7 +4,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
 public class NamedFutureTask<T> extends FutureTask<T> {
-    private final String name;
+    protected final String name;
 
     public NamedFutureTask(String name, Callable<T> callable) {
         super(callable);

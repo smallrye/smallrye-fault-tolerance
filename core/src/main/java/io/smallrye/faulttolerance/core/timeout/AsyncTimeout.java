@@ -1,13 +1,12 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import static io.smallrye.faulttolerance.core.timeout.Timeout.timeoutException;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-
-import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
@@ -17,19 +16,18 @@ import io.smallrye.faulttolerance.core.util.NamedFutureTask;
  * The next strategy in the chain must be {@link Timeout}.
  * They communicate using {@link InvocationContext.Event#TIMEOUT}.
  */
-// TODO needs test
 public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
-    private final FaultToleranceStrategy<Future<V>> delegate;
+    private final Timeout<Future<V>> delegate;
     private final Executor executor;
 
-    public AsyncTimeout(FaultToleranceStrategy<Future<V>> delegate, Executor executor) {
+    public AsyncTimeout(Timeout<Future<V>> delegate, Executor executor) {
         this.delegate = delegate;
         this.executor = checkNotNull(executor, "Executor must be set");
     }
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
-        AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>("AsyncTimeout", () -> delegate.apply(ctx));
+        AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>(delegate.description, () -> delegate.apply(ctx));
         ctx.registerEventHandler(InvocationContext.Event.TIMEOUT, task::timedOut);
         executor.execute(task);
         try {
@@ -40,6 +38,7 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
     }
 
     // TODO
+    @SuppressWarnings("unchecked")
     private static <E extends Throwable> Exception sneakyThrow(Throwable e) throws E {
         throw (E) e;
     }
@@ -51,7 +50,7 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
         }
 
         public void timedOut() {
-            super.setException(new TimeoutException()); // TODO exception message?
+            super.setException(timeoutException(name)); // TODO exception message?
         }
     }
 }

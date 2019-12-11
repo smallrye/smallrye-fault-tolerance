@@ -36,9 +36,7 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                     recorder.bulkheadLeft(System.nanoTime() - startTime);
                 }
             });
-            ctx.registerEventHandler(InvocationContext.Event.CANCEL, () -> {
-                queue.remove(task);
-            });
+            ctx.registerEventHandler(InvocationContext.Event.CANCEL, () -> queue.remove(task));
             executor.execute(task);
             recorder.bulkheadQueueEntered();
 
@@ -62,6 +60,7 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
     }
 
     // TODO
+    @SuppressWarnings("unchecked")
     private static <E extends Throwable> Exception sneakyThrow(Throwable e) throws E {
         throw (E) e;
     }

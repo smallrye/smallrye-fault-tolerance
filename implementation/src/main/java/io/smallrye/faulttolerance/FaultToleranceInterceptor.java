@@ -265,7 +265,7 @@ public class FaultToleranceInterceptor {
                     "Retry[" + point.name() + "]",
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
-                    (int) retryConf.get(RetryConfig.MAX_RETRIES),
+                    retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
                     new SystemStopwatch(),
@@ -329,7 +329,7 @@ public class FaultToleranceInterceptor {
                     "Retry[" + point.name() + "]",
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
-                    (int) retryConf.get(RetryConfig.MAX_RETRIES),
+                    retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
                     new SystemStopwatch(),
@@ -368,11 +368,11 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            result = new Timeout<>(result, "Timeout[" + point.name() + "]",
+            Timeout<Future<T>> timeout = new Timeout<>(result, "Timeout[" + point.name() + "]",
                     timeoutMs,
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
                     collector);
-            result = new AsyncTimeout<>(result, asyncExecutor);
+            result = new AsyncTimeout<>(timeout, asyncExecutor);
         }
 
         if (operation.hasCircuitBreaker()) {
@@ -400,7 +400,7 @@ public class FaultToleranceInterceptor {
                     "Retry[" + point.name() + "]",
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
-                    (int) retryConf.get(RetryConfig.MAX_RETRIES),
+                    retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
                     new SystemStopwatch(),

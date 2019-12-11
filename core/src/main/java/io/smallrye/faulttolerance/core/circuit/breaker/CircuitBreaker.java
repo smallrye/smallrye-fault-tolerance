@@ -39,11 +39,11 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     final MetricsRecorder metricsRecorder;
 
-    AtomicLong previousHalfOpenTime = new AtomicLong();
+    final AtomicLong previousHalfOpenTime = new AtomicLong();
     volatile long halfOpenStart;
-    AtomicLong previousClosedTime = new AtomicLong();
+    final AtomicLong previousClosedTime = new AtomicLong();
     volatile long closedStart;
-    AtomicLong previousOpenTime = new AtomicLong();
+    final AtomicLong previousOpenTime = new AtomicLong();
     volatile long openStart;
 
     @SuppressWarnings("UnnecessaryThis")
@@ -191,7 +191,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     }
 
     static final class State {
-        int id;
+        final int id;
         RollingWindow rollingWindow; // only consulted in CLOSED
         RunningStopwatch runningStopwatch; // only consulted in OPEN
         AtomicInteger consecutiveSuccesses; // only consulted in HALF_OPEN

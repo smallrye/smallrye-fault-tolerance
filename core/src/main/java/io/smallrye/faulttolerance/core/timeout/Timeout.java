@@ -59,7 +59,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         long end = System.nanoTime();
         if (execution.hasTimedOut()) {
             metricsRecorder.timeoutTimedOut(end - start);
-            throw timeoutException();
+            throw timeoutException(description);
         }
 
         if (exception != null) {
@@ -72,7 +72,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         return result;
     }
 
-    TimeoutException timeoutException() {
+    static TimeoutException timeoutException(String description) {
         return new TimeoutException(description + " timed out");
     }
 
