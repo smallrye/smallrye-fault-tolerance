@@ -28,13 +28,22 @@ import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
+ * @author Radoslav Husar
  */
 @Dependent
 public class RetryTestBean {
 
-    private Object bulkheadControl = new Object();
-
     private AtomicInteger attempt = new AtomicInteger();
+
+    @Retry(maxRetries = -1, retryOn = NullPointerException.class, abortOn = IllegalArgumentException.class)
+    public void callWithUnlimitedRetries() {
+        int attempt = this.attempt.getAndIncrement();
+        if (attempt < 5) {
+            throw new NullPointerException();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
 
     @Retry(maxDuration = 500L, maxRetries = 2)
     @Fallback(fallbackMethod = "fallback")
