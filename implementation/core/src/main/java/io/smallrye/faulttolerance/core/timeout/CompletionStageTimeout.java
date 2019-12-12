@@ -18,7 +18,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         this.executor = executor;
     }
 
-    // mstodo the offloading does not seem necessary, we could just kill the completion stage on timeout, I think
+    // todo the offloading does not seem necessary, we could just kill the completion stage on timeout, I think
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();

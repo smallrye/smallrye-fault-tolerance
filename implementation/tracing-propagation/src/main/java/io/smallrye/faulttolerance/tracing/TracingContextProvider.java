@@ -2,6 +2,7 @@ package io.smallrye.faulttolerance.tracing;
 
 import java.util.Map;
 
+import org.eclipse.microprofile.context.spi.ThreadContextController;
 import org.eclipse.microprofile.context.spi.ThreadContextProvider;
 import org.eclipse.microprofile.context.spi.ThreadContextSnapshot;
 
@@ -15,6 +16,10 @@ import io.opentracing.util.GlobalTracer;
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
 public class TracingContextProvider implements ThreadContextProvider {
+
+    private static final ThreadContextController DO_NOTHING = () -> {
+    };
+
     @Override
     public ThreadContextSnapshot currentContext(Map<String, String> props) {
         Tracer tracer = GlobalTracer.get();
@@ -28,7 +33,7 @@ public class TracingContextProvider implements ThreadContextProvider {
                 return propagated::close;
             };
         }
-        return null;
+        return () -> DO_NOTHING;
     }
 
     @Override
@@ -41,6 +46,7 @@ public class TracingContextProvider implements ThreadContextProvider {
                 activeScope.close();
             }
             return () -> {
+                // TODO: we should bring back the span here
             };
         };
     }

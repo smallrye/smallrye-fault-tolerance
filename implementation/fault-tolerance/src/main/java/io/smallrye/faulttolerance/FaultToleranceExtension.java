@@ -47,6 +47,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
 /**
@@ -81,6 +82,7 @@ public class FaultToleranceExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
                 DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
     }
 
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {

@@ -25,11 +25,8 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -77,6 +74,8 @@ import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.ScheduledExecutorTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.internal.InterceptionPoint;
+import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 
@@ -108,18 +107,22 @@ public class FaultToleranceInterceptor {
 
     private final ExecutorProvider executorProvider;
 
+    private final StrategyCache cache;
+
     @Inject
     public FaultToleranceInterceptor(
             FallbackHandlerProvider fallbackHandlerProvider,
             @Intercepted Bean<?> interceptedBean,
             MetricsCollectorFactory metricsCollectorFactory,
             FaultToleranceOperationProvider operationProvider,
+            StrategyCache cache,
             ExecutorProvider executorProvider) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
         this.operationProvider = operationProvider;
         this.executorProvider = executorProvider;
+        this.cache = cache;
         asyncExecutor = executorProvider.getGlobalExecutor();
         timeoutExecutor = executorProvider.getTimeoutExecutor();
     }
@@ -149,9 +152,8 @@ public class FaultToleranceInterceptor {
             MetricsCollector collector,
             InterceptionPoint point) {
         @SuppressWarnings("unchecked")
-        FaultToleranceStrategy<CompletionStage<T>> strategy = (FaultToleranceStrategy<CompletionStage<T>>) strategies
-                .computeIfAbsent(point,
-                        ignored -> prepareAsyncStrategy(operation, point, beanClass, invocationContext, collector));
+        FaultToleranceStrategy<CompletionStage<T>> strategy = cache.getStrategy(point,
+                ignored -> prepareAsyncStrategy(operation, point, beanClass, invocationContext, collector));
         try {
             collector.invoked();
             return strategy.apply(new io.smallrye.faulttolerance.core.InvocationContext<>(() -> {
@@ -197,7 +199,7 @@ public class FaultToleranceInterceptor {
             InvocationContext invocationContext,
             MetricsCollector collector,
             InterceptionPoint point) throws Exception {
-        FaultToleranceStrategy<T> strategy = (FaultToleranceStrategy<T>) strategies.computeIfAbsent(point,
+        FaultToleranceStrategy<T> strategy = cache.getStrategy(point,
                 ignored -> prepareSyncStrategy(operation, point, beanClass, invocationContext, collector));
         return strategy.apply(new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (T) invocationContext.proceed()));
@@ -209,7 +211,7 @@ public class FaultToleranceInterceptor {
             InvocationContext invocationContext,
             MetricsCollector collector,
             InterceptionPoint point) throws Exception {
-        FaultToleranceStrategy<Future<T>> strategy = (FaultToleranceStrategy<Future<T>>) strategies.computeIfAbsent(point,
+        FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point,
                 ignored -> prepareFutureStrategy(operation, point, beanClass, invocationContext, collector));
         return strategy.apply(new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (Future<T>) invocationContext.proceed()));
@@ -425,7 +427,8 @@ public class FaultToleranceInterceptor {
             Class<?> beanClass, Method method, FaultToleranceOperation operation) {
         FallbackConfig fallbackConfig = operation.getFallback();
         Method fallbackMethod;
-        if (!fallbackConfig.get(FallbackConfig.VALUE).equals(org.eclipse.microprofile.faulttolerance.Fallback.DEFAULT.class)) {
+        if (!fallbackConfig.get(FallbackConfig.VALUE)
+                .equals(org.eclipse.microprofile.faulttolerance.Fallback.DEFAULT.class)) {
             fallbackMethod = null;
         } else {
             String fallbackMethodName = fallbackConfig.get(FallbackConfig.FALLBACK_METHOD);
@@ -507,44 +510,7 @@ public class FaultToleranceInterceptor {
     }
 
     private MetricsCollector getMetricsCollector(FaultToleranceOperation operation, InterceptionPoint point) {
-        return metricsCollectors.computeIfAbsent(point, ignored -> metricsCollectorFactory.createCollector(operation));
-    }
-
-    // mstodo with this we have bean-scoped FT strategies, they should probably be global
-    // mstodo the problem is fallback
-    private final Map<InterceptionPoint, FaultToleranceStrategy<?>> strategies = new ConcurrentHashMap<>();
-    private final Map<InterceptionPoint, MetricsCollector> metricsCollectors = new ConcurrentHashMap<>();
-
-    private static class InterceptionPoint {
-        private final String name;
-        private final Class<?> beanClass;
-        private final Method method;
-
-        InterceptionPoint(Class<?> beanClass, InvocationContext invocationContext) {
-            this.beanClass = beanClass;
-            method = invocationContext.getMethod();
-            name = beanClass.getName() + "#" + method.getName();
-        }
-
-        public String name() {
-            return name;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (o == null || getClass() != o.getClass())
-                return false;
-            InterceptionPoint that = (InterceptionPoint) o;
-            return beanClass.equals(that.beanClass) &&
-                    method.equals(that.method);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(beanClass, method);
-        }
+        return cache.getMetrics(point, ignored -> metricsCollectorFactory.createCollector(operation));
     }
 
 }
