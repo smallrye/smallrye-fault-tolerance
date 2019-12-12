@@ -10,7 +10,7 @@ public class SetOfThrowables {
     public static final SetOfThrowables ALL = new SetOfThrowables(Collections.singleton(Throwable.class));
 
     /**
-     * Returns a set of throwables without any additional constraints.
+     * @return a set of throwables without any additional constraints.
      */
     public static SetOfThrowables create(List<Class<? extends Throwable>> classes) {
         Set<Class<? extends Throwable>> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -19,8 +19,8 @@ public class SetOfThrowables {
     }
 
     /**
-     * Returns a set of throwables that never includes any types that are not assignable to {@link Exception}
-     * or {@link Error}. This only makes sense for {@link org.eclipse.microprofile.faulttolerance.Retry Retry}.
+     * @return set of throwables that never includes any types that are not assignable to {@link Exception}
+     *         or {@link Error}. This only makes sense for {@link org.eclipse.microprofile.faulttolerance.Retry Retry}.
      */
     public static SetOfThrowables withoutCustomThrowables(List<Class<? extends Throwable>> classes) {
         Set<Class<? extends Throwable>> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -39,8 +39,8 @@ public class SetOfThrowables {
     }
 
     /**
-     * Returns whether {@code searchedFor} is a subtype of (at least) one of the types in this set.
-     * Note that subtyping is a reflexive relation, so a type is always a subtype of itself.
+     * @return whether {@code searchedFor} is a subtype of (at least) one of the types in this set.
+     *         Note that subtyping is a reflexive relation, so a type is always a subtype of itself.
      */
     public boolean includes(Class<? extends Throwable> searchedFor) {
         for (Class<? extends Throwable> clazz : classes) {

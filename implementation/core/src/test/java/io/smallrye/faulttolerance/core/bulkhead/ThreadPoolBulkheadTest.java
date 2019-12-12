@@ -187,10 +187,13 @@ public class ThreadPoolBulkheadTest {
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 4; i++) {
             threads.add(runOnTestThread(bulkhead));
         }
+        // to make sure the fifth added is enqueued, wait until two are started
         invocationsStarted.await();
+
+        threads.add(runOnTestThread(bulkhead));
 
         waitUntilQueueSize(bulkhead, 3, 1000);
 
