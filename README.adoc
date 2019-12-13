@@ -34,8 +34,6 @@ and, additionally, the following options:
 
 - `io.smallrye.faulttolerance.globalThreadPoolSize`, the amount of threads used by the the fault
 tolerance mechanisms. This does not include bulkhead thread pools. Defaults to `100`
-- `io.smallrye.faulttolerance.globalThreadPoolQueueSize`, size of the waiting queue for the pool above.
-Defaults to the thread pool size
 - `io.smallrye.faulttolerance.timeoutExecutorThreads`, the size of the thread pool used for scheduling timeouts.
 Defaults to `5`
 

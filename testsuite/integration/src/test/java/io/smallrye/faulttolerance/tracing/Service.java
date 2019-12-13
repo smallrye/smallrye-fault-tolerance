@@ -59,6 +59,6 @@ public class Service {
     }
 
     public CompletionStage<String> asyncFallback() {
-        return CompletableFuture.completedFuture("fallback");
+        return CompletableFuture.completedFuture("asyncFallback");
     }
 }

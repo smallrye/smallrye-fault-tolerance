@@ -50,7 +50,7 @@ public class TracingContextPropagationTest {
 
     @Test
     public void testCircuitBreakerOpens(Service service) {
-        try (Scope scope = Service.mockTracer.buildSpan("parent").startActive(true)) {
+        try (Scope ignored = Service.mockTracer.buildSpan("parent").startActive(true)) {
             assertEquals("fallback", service.foo());
         }
 
@@ -68,8 +68,8 @@ public class TracingContextPropagationTest {
 
     @Test
     public void testAsyncCircuitBreakerOpens(Service service) throws ExecutionException, InterruptedException {
-        try (Scope scope = Service.mockTracer.buildSpan("parent").startActive(true)) {
-            assertEquals("fallback", service.asyncFoo().toCompletableFuture().get());
+        try (Scope ignored = Service.mockTracer.buildSpan("parent").startActive(true)) {
+            assertEquals("asyncFallback", service.asyncFoo().toCompletableFuture().get());
         }
 
         List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();

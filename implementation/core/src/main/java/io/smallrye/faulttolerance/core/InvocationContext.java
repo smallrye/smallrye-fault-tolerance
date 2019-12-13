@@ -35,6 +35,7 @@ public final class InvocationContext<V> implements Callable<V> {
     }
 
     public void fireEvent(Event event) {
-        eventHandlers.getOrDefault(event, Collections.emptySet()).forEach(Runnable::run);
+        eventHandlers.getOrDefault(event, Collections.emptySet())
+                .forEach(Runnable::run);
     }
 }

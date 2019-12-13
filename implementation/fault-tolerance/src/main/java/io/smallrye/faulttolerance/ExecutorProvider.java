@@ -3,7 +3,6 @@ package io.smallrye.faulttolerance;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -31,10 +30,6 @@ public class ExecutorProvider {
     private Integer size;
 
     @Inject
-    @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolQueueSize")
-    private Optional<Integer> queueSize;
-
-    @Inject
     @ConfigProperty(name = "io.smallrye.faulttolerance.timeoutExecutorThreads", defaultValue = "5")
     private Integer timeoutExecutorSize;
 
@@ -49,7 +44,10 @@ public class ExecutorProvider {
     @PostConstruct
     public void setUp() {
         executorFactory = executorProvider();
-        globalExecutor = executorFactory.createExecutorService(size, queueSize.orElse(size));
+        // global executor cannot use queue, it could lead to e.g. thread that runs the future
+        // waiting for the thread that waits for the future to be finished
+        globalExecutor = executorFactory.createExecutorService(size, 0);
+
         timeoutExecutor = executorFactory.createTimeoutExecutor(timeoutExecutorSize);
         allExecutors.add(globalExecutor);
         allExecutors.add(timeoutExecutor);
