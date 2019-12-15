@@ -28,7 +28,8 @@ import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class RealWorldCompletionStageTimeoutTest {
-    private static final Percentage tolerance = withPercentage(10);
+
+    private static final Percentage tolerance = withPercentage(30);
 
     private ScheduledExecutorService executor;
     private ScheduledExecutorTimeoutWatcher watcher;

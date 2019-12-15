@@ -111,7 +111,7 @@ public class ThreadPoolBulkheadTest {
         delayBarrier.open();
         finishedThreadsCount.acquire();
 
-        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 100L);
+        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 1000L);
         assertThat(finishedThread.await().get()).isEqualTo("shouldLetMaxPlus1After1Left");
         threads.remove(finishedThread);
 
@@ -150,7 +150,7 @@ public class ThreadPoolBulkheadTest {
         letOneInSemaphore.release();
         finishedThreadsCount.acquire();
 
-        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 100L);
+        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 1000L);
         assertThatThrownBy(finishedThread::await).isEqualTo(error);
         threads.remove(finishedThread);
 

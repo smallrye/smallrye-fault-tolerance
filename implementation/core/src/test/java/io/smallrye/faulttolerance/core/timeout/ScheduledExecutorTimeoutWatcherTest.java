@@ -32,7 +32,7 @@ public class ScheduledExecutorTimeoutWatcherTest {
         AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
         Thread thread = run(wasInterrupted);
-        TimeoutExecution execution = new TimeoutExecution(thread, 50L);
+        TimeoutExecution execution = new TimeoutExecution(thread, 100L);
         TimeoutWatch watch = watcher.schedule(execution);
 
         assertThat(execution.isRunning()).isTrue();
@@ -52,7 +52,7 @@ public class ScheduledExecutorTimeoutWatcherTest {
         AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
         Thread thread = run(wasInterrupted);
-        TimeoutExecution execution = new TimeoutExecution(thread, 200L);
+        TimeoutExecution execution = new TimeoutExecution(thread, 300L);
         TimeoutWatch watch = watcher.schedule(execution);
 
         assertThat(execution.isRunning()).isTrue();
@@ -71,7 +71,7 @@ public class ScheduledExecutorTimeoutWatcherTest {
     private Thread run(AtomicBoolean interruptionFlag) {
         Thread thread = new Thread(() -> {
             try {
-                Thread.sleep(100L);
+                Thread.sleep(200L);
             } catch (InterruptedException e) {
                 interruptionFlag.set(true);
             }
