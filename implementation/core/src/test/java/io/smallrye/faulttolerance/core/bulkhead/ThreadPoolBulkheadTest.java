@@ -75,6 +75,7 @@ public class ThreadPoolBulkheadTest {
         for (int i = 0; i < 5; i++) {
             threads.add(runOnTestThread(bulkhead));
         }
+        waitUntilQueueSize(bulkhead, 3, 500);
 
         assertThatThrownBy(() -> bulkhead.apply(new InvocationContext<>(null)))
                 .isInstanceOf(BulkheadException.class);
@@ -213,15 +214,15 @@ public class ThreadPoolBulkheadTest {
         }
     }
 
-    private void waitUntilQueueSize(ThreadPoolBulkhead<String> bulkhead, int size, long timeout) throws InterruptedException {
+    private void waitUntilQueueSize(ThreadPoolBulkhead<String> bulkhead, int size, long timeoutMs) throws InterruptedException {
         long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < timeout) {
+        while (System.currentTimeMillis() - start < timeoutMs) {
             Thread.sleep(50);
             if (bulkhead.getQueueSize() == size) {
                 return;
             }
         }
-        fail("queue not filled in in " + timeout + " [ms]");
+        fail("queue not filled in in " + timeoutMs + " [ms]");
 
     }
 
