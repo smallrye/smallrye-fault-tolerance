@@ -5,8 +5,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.microprofile.context.ManagedExecutor;
 
@@ -33,7 +35,8 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
         queueSize = Math.max(1, queueSize);
 
         SmallRyeManagedExecutor.Builder builder = (SmallRyeManagedExecutor.Builder) ManagedExecutor.builder();
-        ExecutorService executorService = new ThreadPoolExecutor(1, size, 10 * 60, TimeUnit.SECONDS, taskQueue);
+        ExecutorService executorService = new ThreadPoolExecutor(1, size, 10 * 60, TimeUnit.SECONDS, taskQueue,
+                new PropagatingFactory());
         return builder.maxAsync(size).maxQueued(queueSize).withExecutorService(executorService).build();
     }
 
@@ -45,5 +48,17 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
     @Override
     public int priority() {
         return 100;
+    }
+
+    private static class PropagatingFactory implements ThreadFactory {
+        private static final AtomicInteger poolId = new AtomicInteger(0);
+        private final AtomicInteger threadId = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r);
+            thread.setName("context-propagating-pool-" + poolId.getAndIncrement() + "-thread-" + threadId.getAndIncrement());
+            return thread;
+        }
     }
 }
