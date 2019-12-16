@@ -43,6 +43,9 @@ public class ExecutorProvider {
 
     @PostConstruct
     public void setUp() {
+        if (size < 5) {
+            throw new IllegalArgumentException("Please set the global thread pool size for a value larger than 5. ");
+        }
         executorFactory = executorProvider();
         // global executor cannot use queue, it could lead to e.g. thread that runs the future
         // waiting for the thread that waits for the future to be finished

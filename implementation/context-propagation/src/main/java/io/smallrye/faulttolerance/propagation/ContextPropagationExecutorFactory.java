@@ -33,7 +33,7 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
         queueSize = Math.max(1, queueSize);
 
         SmallRyeManagedExecutor.Builder builder = (SmallRyeManagedExecutor.Builder) ManagedExecutor.builder();
-        ExecutorService executorService = new ThreadPoolExecutor(1, size, 10*60, TimeUnit.SECONDS, taskQueue);
+        ExecutorService executorService = new ThreadPoolExecutor(1, size, 10 * 60, TimeUnit.SECONDS, taskQueue);
         return builder.maxAsync(size).maxQueued(queueSize).withExecutorService(executorService).build();
     }
 
