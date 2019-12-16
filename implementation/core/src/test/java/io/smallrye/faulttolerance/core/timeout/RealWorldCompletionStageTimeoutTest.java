@@ -29,7 +29,9 @@ import io.smallrye.faulttolerance.core.util.TestException;
 
 public class RealWorldCompletionStageTimeoutTest {
 
-    private static final Percentage tolerance = withPercentage(30);
+    private static final Percentage tolerance = withPercentage(25);
+    private static final int SLEEP_TIME = System.getProperty("slowMachine") != null ? 1000 : 300;
+    private static final int TIMEOUT = System.getProperty("slowMachine") != null ? 2000 : 1000;
 
     private ScheduledExecutorService executor;
     private ScheduledExecutorTimeoutWatcher watcher;
@@ -60,13 +62,13 @@ public class RealWorldCompletionStageTimeoutTest {
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
-                "completion stage timeout", 1000, watcher, taskExecutor, null);
+                "completion stage timeout", TIMEOUT, watcher, taskExecutor, null);
 
         assertThat(timeout.apply(new InvocationContext<>(() -> {
-            Thread.sleep(200);
+            Thread.sleep(SLEEP_TIME);
             return completedStage("foobar");
         })).toCompletableFuture().get()).isEqualTo("foobar");
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(SLEEP_TIME, tolerance);
     }
 
     @Test
@@ -75,15 +77,15 @@ public class RealWorldCompletionStageTimeoutTest {
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
-                "completion stage timeout", 1000, watcher, taskExecutor, null);
+                "completion stage timeout", TIMEOUT, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
-            Thread.sleep(200);
+            Thread.sleep(SLEEP_TIME);
             throw new TestException();
         })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(SLEEP_TIME, tolerance);
     }
 
     @Test
@@ -92,15 +94,15 @@ public class RealWorldCompletionStageTimeoutTest {
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
-                "completion stage timeout", 1000, watcher, taskExecutor, null);
+                "completion stage timeout", TIMEOUT, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
-            Thread.sleep(200);
+            Thread.sleep(SLEEP_TIME);
             return failedStage(new TestException());
         })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(200, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(SLEEP_TIME, tolerance);
     }
 
     @Test
@@ -109,14 +111,14 @@ public class RealWorldCompletionStageTimeoutTest {
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
                 invocation(),
-                "completion stage timeout", 500, watcher, taskExecutor, null);
+                "completion stage timeout", SLEEP_TIME, watcher, taskExecutor, null);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
-            Thread.sleep(1000);
+            Thread.sleep(TIMEOUT);
             return completedStage("foobar");
         })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);
-        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(500, tolerance);
+        assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(SLEEP_TIME, tolerance);
     }
 }
