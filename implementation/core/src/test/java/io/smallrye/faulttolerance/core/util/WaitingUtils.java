@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.util;
 
-import java.util.function.Supplier;
-
 import static org.junit.Assert.fail;
+
+import java.util.function.Supplier;
 
 /**
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com

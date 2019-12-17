@@ -29,8 +29,12 @@ public class TracingContextProvider implements ThreadContextProvider {
         if (activeScope != null) {
             Span span = activeScope.span();
             return () -> {
+                System.out.println("activating the propagated state in " + Thread.currentThread());
                 Scope propagated = scopeManager.activate(span, false);
-                return propagated::close;
+                return () -> {
+                    System.out.println("closing the propagated state in " + Thread.currentThread());
+                    propagated.close();
+                };
             };
         }
         return () -> DO_NOTHING;

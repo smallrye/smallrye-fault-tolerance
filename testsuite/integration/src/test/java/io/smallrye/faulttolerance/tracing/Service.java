@@ -46,7 +46,7 @@ public class Service {
     }
 
     @Fallback(fallbackMethod = "asyncFallback")
-    @Timeout(value = 200L)
+    @Timeout(value = 500)
     @Retry(delay = 100L, maxRetries = 2)
     @Asynchronous
     public CompletionStage<String> asyncFoo() {

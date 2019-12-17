@@ -2,13 +2,11 @@ package io.smallrye.faulttolerance.core.timeout;
 
 import static io.smallrye.faulttolerance.core.util.WaitingUtils.assertThatWithin;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import org.junit.After;
 import org.junit.Before;
