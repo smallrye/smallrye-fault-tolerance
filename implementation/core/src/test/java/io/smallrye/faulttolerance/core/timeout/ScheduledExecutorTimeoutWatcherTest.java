@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import static io.smallrye.faulttolerance.core.util.WaitingUtils.assertThatWithin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
@@ -69,21 +70,6 @@ public class ScheduledExecutorTimeoutWatcherTest {
         assertThat(execution.hasFinished()).isTrue();
         assertThat(execution.hasTimedOut()).isFalse();
         assertThatWithin(100, "watch not running", () -> !watch.isRunning());
-    }
-
-    private static void assertThatWithin(int timeoutMs, String message, Supplier<Boolean> test) {
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Interrupted waiting for " + message);
-            }
-            if (test.get()) {
-                return;
-            }
-        }
-        fail(message + " not satisfied in " + timeoutMs + "ms");
     }
 
     private Thread run(AtomicBoolean interruptionFlag) {
