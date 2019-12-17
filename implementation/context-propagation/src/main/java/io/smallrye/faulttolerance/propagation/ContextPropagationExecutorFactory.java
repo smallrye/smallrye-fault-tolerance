@@ -51,13 +51,14 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
     }
 
     private static class PropagatingFactory implements ThreadFactory {
-        private static final AtomicInteger poolId = new AtomicInteger(0);
+        private static final AtomicInteger poolIds = new AtomicInteger(0);
         private final AtomicInteger threadId = new AtomicInteger(0);
+        private final int poolId = poolIds.getAndIncrement();
 
         @Override
         public Thread newThread(Runnable r) {
             Thread thread = new Thread(r);
-            thread.setName("context-propagating-pool-" + poolId.getAndIncrement() + "-thread-" + threadId.getAndIncrement());
+            thread.setName("context-propagating-pool-" + poolId  + "-thread-" + threadId.getAndIncrement());
             return thread;
         }
     }
