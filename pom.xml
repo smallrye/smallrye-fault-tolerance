@@ -40,7 +40,7 @@
     <version.mp-fault-tolerance>2.0.2</version.mp-fault-tolerance>
     <version.microprofile-config-api>1.3</version.microprofile-config-api>
     <version.microprofile-metrics-api>2.2.1</version.microprofile-metrics-api>
-    <version.slf4j-simple>1.7.29</version.slf4j-simple>
+    <version.slf4j-simple>1.7.30</version.slf4j-simple>
     <!-- smallrye-config is purely used for testing -->
     <version.smallrye-config>1.5.0</version.smallrye-config>
     <!-- smallrye-metrics is purely used for testing -->
