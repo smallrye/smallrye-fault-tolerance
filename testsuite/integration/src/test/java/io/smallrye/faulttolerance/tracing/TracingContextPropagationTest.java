@@ -58,7 +58,6 @@ public class TracingContextPropagationTest {
         assertEquals(4, mockSpans.size());
         //test spans are part of the same trace
         for (MockSpan mockSpan : mockSpans) {
-            System.out.println("Sync test traceId: " + mockSpan.context().traceId());
             assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
         }
         assertEquals("foo", mockSpans.get(0).operationName());
@@ -76,7 +75,6 @@ public class TracingContextPropagationTest {
         List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
         assertEquals(4, mockSpans.size());
         for (MockSpan mockSpan : mockSpans) {
-            System.out.println("Async test traceId: " + mockSpan.context().traceId());
             assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
         }
         assertEquals("asyncFoo", mockSpans.get(0).operationName());

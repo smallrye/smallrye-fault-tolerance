@@ -50,7 +50,6 @@ public class Service {
     @Retry(delay = 100L, maxRetries = 2)
     @Asynchronous
     public CompletionStage<String> asyncFoo() {
-        System.out.println(Thread.currentThread().getName());
         mockTracer.buildSpan("asyncFoo").start().finish();
         throw new RuntimeException();
     }
