@@ -18,20 +18,19 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
 
     private final ExecutorService executor;
     private final int queueSize;
-    private final int size;
     private final Semaphore workSemaphore;
     private final Semaphore capacitySemaphore;
 
     public CompletionStageBulkhead(
             FaultToleranceStrategy<CompletionStage<V>> delegate,
             String description,
-            ExecutorService executor, int size, int queueSize,
+            ExecutorService executor,
+            int size, int queueSize,
             MetricsRecorder recorder) {
         super(description, delegate, recorder);
         workSemaphore = new Semaphore(size);
         capacitySemaphore = new Semaphore(size + queueSize);
         this.queueSize = queueSize;
-        this.size = size;
         this.executor = executor;
     }
 
@@ -51,7 +50,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
     }
 
     public int getQueueSize() {
-        return Math.min(queueSize, size + queueSize - capacitySemaphore.availablePermits());
+        return Math.max(0, queueSize - capacitySemaphore.availablePermits());
     }
 
     private class CompletionStageBulkheadTask implements Runnable {

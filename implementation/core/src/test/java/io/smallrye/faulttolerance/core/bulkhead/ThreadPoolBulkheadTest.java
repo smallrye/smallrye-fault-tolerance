@@ -25,13 +25,13 @@ import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
 public class ThreadPoolBulkheadTest {
+    private final ExecutorService executor = executor(4, queue(4));
+
     @Test
     public void shouldLetSingleThrough() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation
                 .immediatelyReturning(() -> completedFuture("shouldLetSingleThrough"));
-        BlockingQueue<Runnable> queue = queue(2);
-        ExecutorService executor = executor(2, queue);
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, queue,
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 2,
                 null);
         Future<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
@@ -42,9 +42,7 @@ public class ThreadPoolBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldLetMaxThrough"));
-        BlockingQueue<Runnable> queue = queue(3);
-        ExecutorService executor = executor(2, queue);
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, queue,
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 3,
                 null);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -65,9 +63,7 @@ public class ThreadPoolBulkheadTest {
 
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(startBarrier, delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
-        BlockingQueue<Runnable> queue = queue(3);
-        ExecutorService executor = executor(2, queue);
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", executor, queue,
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", executor, 2, 3,
                 null);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -98,10 +94,8 @@ public class ThreadPoolBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Left");
         });
 
-        BlockingQueue<Runnable> queue = queue(3);
-        ExecutorService executor = executor(2, queue);
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor,
-                queue, null);
+                2, 3, null);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -137,10 +131,8 @@ public class ThreadPoolBulkheadTest {
             throw error;
         });
 
-        BlockingQueue<Runnable> queue = queue(3);
-        ExecutorService executor = executor(2, queue);
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor,
-                queue, null);
+                2, 3, null);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -181,10 +173,8 @@ public class ThreadPoolBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Canceled");
         });
 
-        BlockingQueue<Runnable> queue = queue(3);
-        ExecutorService executor = executor(2, queue);
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled", executor,
-                queue, null);
+                2, 3, null);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -222,7 +212,7 @@ public class ThreadPoolBulkheadTest {
                 return;
             }
         }
-        fail("queue not filled in in " + timeoutMs + " [ms]");
+        fail("queue not filled in in " + timeoutMs + " [ms], queue size: " + bulkhead.getQueueSize());
 
     }
 

@@ -232,7 +232,7 @@ public class CompletionStageBulkheadTest {
     private <V> CompletionStageBulkhead<V> bulkhead(TestInvocation<CompletionStage<V>> invocation, String name, int size,
             int queueSize) {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 0, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(queueSize));
+                new LinkedBlockingQueue<>());
 
         return new CompletionStageBulkhead<>(invocation, name, executor, size, queueSize, null);
     }
@@ -260,7 +260,6 @@ public class CompletionStageBulkheadTest {
                 }
             }
         }
-        fail("No thread finished in " + timeout + " ms");
-        return null;
+        throw new AssertionError("No thread finished in " + timeout + " ms");
     }
 }

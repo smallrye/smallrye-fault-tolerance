@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -49,7 +48,7 @@ public class ExecutorProvider {
         executorFactory = executorProvider();
         // global executor cannot use queue, it could lead to e.g. thread that runs the future
         // waiting for the thread that waits for the future to be finished
-        globalExecutor = executorFactory.createExecutorService(size, 0);
+        globalExecutor = executorFactory.createCoreExecutor(size);
 
         timeoutExecutor = executorFactory.createTimeoutExecutor(timeoutExecutorSize);
         allExecutors.add(globalExecutor);
@@ -60,8 +59,8 @@ public class ExecutorProvider {
         allExecutors.forEach(ExecutorService::shutdown);
     }
 
-    public ExecutorService getAdHocExecutor(int size, int queueSize, BlockingQueue<Runnable> queue) {
-        ExecutorService executor = executorFactory.createExecutorService(size, queueSize, queue);
+    public ExecutorService createAdHocExecutor(int size) {
+        ExecutorService executor = executorFactory.createExecutor(size, size);
         allExecutors.add(executor);
         return executor;
     }

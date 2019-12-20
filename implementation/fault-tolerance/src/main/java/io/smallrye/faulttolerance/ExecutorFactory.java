@@ -1,6 +1,5 @@
 package io.smallrye.faulttolerance;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -15,23 +14,23 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public interface ExecutorFactory {
     /**
-     * create an executor service of the given size and with the given queue size
+     * Create an executor service of the given size
+     * This executor may have a small core pool size and, if possible, should not be queued
      * 
      * @param size amount of threads in the pool
-     * @param queueSize the size of the waiting queue
      * @return executor service
      */
-    ExecutorService createExecutorService(int size, int queueSize);
+    ExecutorService createCoreExecutor(int size);
 
     /**
-     * similar to {@link #createExecutorService(int, int)} but taking a the waiting queue as parameter.
+     * similar to {@link #createCoreExecutor(int)} but creating an executor with unlimited (or large) queue size
+     * with defined core pool size
      *
+     * @param coreSize amount of threads in the pool's core
      * @param size amount of threads in the pool
-     * @param queueSize the size of the waiting queue
-     * @param taskQueue the waiting queue. The queue size is guaranteed to be equal to {@code queueSize}
      * @return executor service
      */
-    ExecutorService createExecutorService(int size, int queueSize, BlockingQueue<Runnable> taskQueue);
+    ExecutorService createExecutor(int coreSize, int size);
 
     /**
      * create a scheduled executor service for handling timeouts

@@ -29,7 +29,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Priority;
@@ -151,7 +150,6 @@ public class FaultToleranceInterceptor {
             InvocationContext invocationContext,
             MetricsCollector collector,
             InterceptionPoint point) {
-        @SuppressWarnings("unchecked")
         FaultToleranceStrategy<CompletionStage<T>> strategy = cache.getStrategy(point,
                 ignored -> prepareAsyncStrategy(operation, point, beanClass, invocationContext, collector));
         try {
@@ -228,7 +226,7 @@ public class FaultToleranceInterceptor {
             Integer queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             result = new CompletionStageBulkhead<>(result,
                     "CompletionStage[" + point.name() + "]",
-                    executorProvider.getAdHocExecutor(size, queueSize, new LinkedBlockingQueue<>(queueSize)), size,
+                    executorProvider.createAdHocExecutor(size), size,
                     queueSize,
                     collector);
         }
@@ -362,10 +360,9 @@ public class FaultToleranceInterceptor {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             int size = bulkheadConfig.get(BulkheadConfig.VALUE);
             int queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
-            LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(queueSize);
-            ExecutorService executor = executorProvider.getAdHocExecutor(size, queueSize, queue);
+            ExecutorService executor = executorProvider.createAdHocExecutor(size);
             result = new ThreadPoolBulkhead<>(result, "Bulkhead[" + point.name() + "]",
-                    executor, queue, collector);
+                    executor, size, queueSize, collector);
         }
 
         if (operation.hasTimeout()) {
