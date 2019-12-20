@@ -14,7 +14,7 @@ import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 /**
  * The implementation intentionally doesn't leverage an executor with
  * a limited queue but limits the task intake with Semaphore
- * <br/>
+ * <br>
  * Proper removal from executor's queue is not possible for MicroProfile Context Propagation.
  * Also, the cost of removal from a linked queue is large, and the current solution should
  * should perform much better.

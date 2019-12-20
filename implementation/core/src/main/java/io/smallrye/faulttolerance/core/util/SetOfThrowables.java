@@ -10,6 +10,7 @@ public class SetOfThrowables {
     public static final SetOfThrowables ALL = new SetOfThrowables(Collections.singleton(Throwable.class));
 
     /**
+     * @param classes classes to include
      * @return a set of throwables without any additional constraints.
      */
     public static SetOfThrowables create(List<Class<? extends Throwable>> classes) {
@@ -19,6 +20,7 @@ public class SetOfThrowables {
     }
 
     /**
+     * @param classes classes to include
      * @return set of throwables that never includes any types that are not assignable to {@link Exception}
      *         or {@link Error}. This only makes sense for {@link org.eclipse.microprofile.faulttolerance.Retry Retry}.
      */
@@ -39,6 +41,7 @@ public class SetOfThrowables {
     }
 
     /**
+     * @param searchedFor a class to check
      * @return whether {@code searchedFor} is a subtype of (at least) one of the types in this set.
      *         Note that subtyping is a reflexive relation, so a type is always a subtype of itself.
      */
