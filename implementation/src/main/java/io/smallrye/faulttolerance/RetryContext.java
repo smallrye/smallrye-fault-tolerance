@@ -135,7 +135,8 @@ public class RetryContext {
 
     @Override
     public String toString() {
-        return "RetryContext [remainingAttempts=" + remainingAttempts + ", hasBeenRetried=" + hasBeenRetried + ", start=" + start + "]";
+        return "RetryContext [remainingAttempts=" + remainingAttempts + ", hasBeenRetried=" + hasBeenRetried + ", start="
+                + start + "]";
     }
 
     public boolean hasBeenRetried() {

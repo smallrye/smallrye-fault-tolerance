@@ -18,6 +18,7 @@ import org.jboss.logging.Logger;
 
 import com.netflix.hystrix.HystrixCircuitBreaker;
 import com.netflix.hystrix.HystrixCommandMetrics;
+import com.netflix.hystrix.HystrixEventType;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolMetrics;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
@@ -120,7 +121,9 @@ public class MetricsCollectorFactory {
         public void afterSuccess(SimpleCommand command) {
             runSafely(() -> {
                 if (retryContext != null) {
-                    if (retryContext.hasBeenRetried()) {
+                    if (command.isResponseFromFallback()) {
+                        counterInc(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL);
+                    } else if (retryContext.hasBeenRetried()) {
                         counterInc(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_RETRIED_TOTAL);
                     } else {
                         counterInc(metricsPrefix + MetricNames.RETRY_CALLS_SUCCEEDED_NOT_RETRIED_TOTAL);
@@ -170,14 +173,9 @@ public class MetricsCollectorFactory {
                     isCircuitBreakerOpenBeforeExceptionProcessing = command.getCircuitBreaker().isOpen();
                 }
 
-                if (e.getFallbackException() != null && (retryContext == null || retryContext.isLastAttempt())) {
-                    counterInc(metricsPrefix + MetricNames.FALLBACK_CALLS_TOTAL);
-                }
-
                 if (retryContext != null) {
-                    if (retryContext.isLastAttempt()) {
+                    if (retryContext.isLastAttempt() && !operation.hasFallback()) {
                         counterInc(metricsPrefix + MetricNames.RETRY_CALLS_FAILED_TOTAL);
-                        counterInc(metricsPrefix + MetricNames.INVOCATIONS_FAILED_TOTAL);
                     }
                 } else {
                     counterInc(metricsPrefix + MetricNames.INVOCATIONS_FAILED_TOTAL);
@@ -216,8 +214,14 @@ public class MetricsCollectorFactory {
                 if (start != 0 && operation.hasTimeout()) {
                     histogramUpdate(metricsPrefix + MetricNames.TIMEOUT_EXECUTION_DURATION, System.nanoTime() - start);
                 }
-                if (command.isResponseFromFallback()) {
+                if (command.getEventCounts().contains(HystrixEventType.FALLBACK_SUCCESS)
+                        || command.getEventCounts().contains(HystrixEventType.FALLBACK_FAILURE)) {
                     counterInc(metricsPrefix + MetricNames.FALLBACK_CALLS_TOTAL);
+                }
+                if (retryContext != null) {
+                    if (command.isFailedExecution() && !command.isResponseFromFallback()) {
+                        counterInc(metricsPrefix + MetricNames.INVOCATIONS_FAILED_TOTAL);
+                    }
                 }
             });
         }
