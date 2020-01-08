@@ -266,38 +266,43 @@ public class HystrixCommandInterceptor {
                 metadata.poolKey);
         metricsCollector.init(syncCircuitBreaker);
 
-        while (true) {
-            if (retryContext != null) {
-                LOGGER.debugf("Executing %s with %s", metadata.operation, retryContext);
-            }
+        SimpleCommand lastCommand = null;
 
-            SimpleCommand command = commandFactory.apply(metadata.getFallback(ctx));
+        try {
+            while (true) {
+                if (retryContext != null) {
+                    LOGGER.debugf("Executing %s with %s", metadata.operation, retryContext);
+                }
 
-            metricsCollector.beforeExecute(command);
+                SimpleCommand command = commandFactory.apply(metadata.getFallback(ctx));
+                lastCommand = command;
 
-            try {
-                Object res = command.execute();
-                if (syncCircuitBreaker != null) {
-                    if (command.isFailedExecution() && syncCircuitBreaker.failsOn(command.getFailedExecutionException())) {
-                        // this branch is probably never taken...
-                        syncCircuitBreaker.executionFailed();
-                    } else {
-                        syncCircuitBreaker.executionSucceeded();
+                metricsCollector.beforeExecute(command);
+
+                try {
+                    Object res = command.execute();
+                    if (syncCircuitBreaker != null) {
+                        if (command.isFailedExecution() && syncCircuitBreaker.failsOn(command.getFailedExecutionException())) {
+                            // this branch is probably never taken...
+                            syncCircuitBreaker.executionFailed();
+                        } else {
+                            syncCircuitBreaker.executionSucceeded();
+                        }
+                    }
+                    metricsCollector.afterSuccess(command);
+                    return res;
+                } catch (HystrixRuntimeException e) {
+                    metricsCollector.onError(command, e);
+                    Exception res = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(),
+                            syncCircuitBreaker);
+                    metricsCollector.onProcessedError(command, res);
+                    if (res != null) {
+                        throw res;
                     }
                 }
-                metricsCollector.afterSuccess(command);
-                return res;
-            } catch (HystrixRuntimeException e) {
-                metricsCollector.onError(command, e);
-                Exception res = processHystrixRuntimeException(e, retryContext, metadata.operation.getMethod(),
-                        syncCircuitBreaker);
-                metricsCollector.onProcessedError(command, res);
-                if (res != null) {
-                    throw res;
-                }
-            } finally {
-                metricsCollector.afterExecute(command);
             }
+        } finally {
+            metricsCollector.afterExecute(lastCommand);
         }
     }
 
