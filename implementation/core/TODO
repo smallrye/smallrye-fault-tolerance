@@ -1,8 +1,0 @@
-@Async:
-- https://github.com/eclipse/microprofile-fault-tolerance/issues/291
-- https://github.com/eclipse/microprofile-fault-tolerance/issues/362
-- https://github.com/eclipse/microprofile-fault-tolerance/issues/368
-- https://github.com/eclipse/microprofile-fault-tolerance/pull/333
-
-exception handling in @Retry (retryOn vs. abortOn):
-- https://github.com/eclipse/microprofile-fault-tolerance/issues/418

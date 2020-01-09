@@ -29,6 +29,8 @@ import io.smallrye.faulttolerance.core.util.TestException;
 
 public class RealWorldCompletionStageTimeoutTest {
 
+    // TODO if we really need something like `slowMachine` (which we shouldn't in pure unit tests),
+    //  then it should be a multiplier that affects all values, not a simple boolean with yet another hardcoded value
     private static final Percentage tolerance = withPercentage(25);
     private static final int SLEEP_TIME = System.getProperty("slowMachine") != null ? 1000 : 300;
     private static final int TIMEOUT = System.getProperty("slowMachine") != null ? 2000 : 1000;
