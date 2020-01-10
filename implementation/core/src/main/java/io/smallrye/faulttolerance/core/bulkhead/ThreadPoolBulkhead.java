@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.async.CancellationEvent;
 import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 
 /**
@@ -52,7 +53,7 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                     recorder.bulkheadLeft(System.nanoTime() - startTime);
                 }
             });
-            ctx.registerEventHandler(InvocationContext.Event.CANCEL, task::cancel);
+            ctx.registerEventHandler(CancellationEvent.class, ignored -> task.cancel());
             executor.execute(task);
             recorder.bulkheadQueueEntered();
 

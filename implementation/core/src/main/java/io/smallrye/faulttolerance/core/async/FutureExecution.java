@@ -30,7 +30,7 @@ public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
         return new Future<V>() {
             @Override
             public boolean cancel(boolean mayInterruptIfRunning) {
-                ctx.fireEvent(InvocationContext.Event.CANCEL);
+                ctx.fireEvent(CancellationEvent.INSTANCE);
                 return task.cancel(mayInterruptIfRunning);
             }
 

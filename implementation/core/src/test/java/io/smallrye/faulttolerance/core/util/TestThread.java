@@ -18,6 +18,7 @@ public final class TestThread<V> extends Thread {
     }
 
     private TestThread(FaultToleranceStrategy<V> invocation) {
+        super("TestThread");
         this.invocation = invocation;
     }
 

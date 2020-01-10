@@ -367,11 +367,11 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            Timeout<Future<T>> timeout = new Timeout<>(result, "Timeout[" + point.name() + "]",
+            result = new Timeout<>(result, "Timeout[" + point.name() + "]",
                     timeoutMs,
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
                     collector);
-            result = new AsyncTimeout<>(timeout, asyncExecutor);
+            result = new AsyncTimeout<>(result, asyncExecutor);
         }
 
         if (operation.hasCircuitBreaker()) {

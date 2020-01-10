@@ -27,8 +27,8 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
-        TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(),
-                () -> ctx.fireEvent(InvocationContext.Event.TIMEOUT), timeoutInMillis);
+        TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis,
+                () -> ctx.fireEvent(new TimeoutEvent(() -> timeoutException(description))));
         TimeoutWatch watch = watcher.schedule(execution);
         long start = System.nanoTime();
 

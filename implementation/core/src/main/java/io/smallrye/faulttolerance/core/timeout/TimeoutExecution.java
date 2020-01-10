@@ -15,11 +15,11 @@ final class TimeoutExecution {
     private final long timeoutInMillis;
 
     TimeoutExecution(Thread executingThread, long timeoutInMillis) {
-        this(executingThread, null, timeoutInMillis);
+        this(executingThread, timeoutInMillis, null);
     }
 
     @SuppressWarnings("UnnecessaryThis")
-    TimeoutExecution(Thread executingThread, Runnable timeoutAction, long timeoutInMillis) {
+    TimeoutExecution(Thread executingThread, long timeoutInMillis, Runnable timeoutAction) {
         this.state = new AtomicInteger(STATE_RUNNING);
         this.executingThread = executingThread;
         this.timeoutInMillis = timeoutInMillis;

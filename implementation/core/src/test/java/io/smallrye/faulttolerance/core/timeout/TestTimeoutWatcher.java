@@ -36,7 +36,7 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
                     // this is expected in case the watched code doesn't timeout (and so the watch is cancelled)
                     // see also the return value of this method
                 }
-            });
+            }, "TestTimeoutWatcher thread");
             thread.start();
             return new TimeoutWatch() {
                 @Override
