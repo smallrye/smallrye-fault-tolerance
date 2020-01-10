@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>smallrye-fault-tolerance-tck</artifactId>
-  <name>SmallRye: MicroProfile Fault Tolerance - TCK</name>
+  <name>SmallRye Fault Tolerance: TCK</name>
 
   <build>
     <plugins>

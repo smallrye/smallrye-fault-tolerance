@@ -8,7 +8,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
-  <name>SmallRye: MicroProfile Fault Tolerance - Test Suite Parent</name>
+  <name>SmallRye Fault Tolerance: Test Suite Parent</name>
   <packaging>pom</packaging>
 
   <modules>

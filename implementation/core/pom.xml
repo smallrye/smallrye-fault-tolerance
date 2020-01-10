@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- this project is a continuation of Oaken Ocean originally stored here: https://github.com/Ladicek/oaken-ocean/ -->
+<!--
+ ~  Copyright 2017 Red Hat, Inc.
+ ~
+ ~  Licensed under the Apache License, Version 2.0 (the "License");
+ ~  you may not use this file except in compliance with the License.
+ ~  You may obtain a copy of the License at
+ ~
+ ~    http://www.apache.org/licenses/LICENSE-2.0
+ ~
+ ~  Unless required by applicable law or agreed to in writing, software
+ ~  distributed under the License is distributed on an "AS IS" BASIS,
+ ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ ~  See the License for the specific language governing permissions and
+ ~  limitations under the License.
+ -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -7,15 +21,14 @@
 
     <parent>
         <groupId>io.smallrye</groupId>
-        <artifactId>smallrye-fault-tolerance-parent</artifactId>
+        <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
         <version>4.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-core</artifactId>
 
-    <name>SmallRye: MicroProfile Fault Tolerance - Core</name>
-    <description>SmallRye: MicroProfile Fault Tolerance - Core</description>
+    <name>SmallRye Fault Tolerance: Core</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -23,7 +36,6 @@
 
         <version.java>1.8</version.java>
 
-        <version.org.apache.maven.plugins.maven-compiler-plugin>3.6.1</version.org.apache.maven.plugins.maven-compiler-plugin>
         <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
         <version.org.jacoco.jacoco-maven-plugin>0.8.2</version.org.jacoco.jacoco-maven-plugin>
         <version.org.pitest.pitest-maven>1.4.9</version.org.pitest.pitest-maven>
@@ -53,29 +65,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${version.org.apache.maven.plugins.maven-compiler-plugin}</version>
-                    <configuration>
-                        <source>${version.java}</source>
-                        <target>${version.java}</target>
-                        <testSource>${version.java}</testSource>
-                        <testTarget>${version.java}</testTarget>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${version.org.apache.maven.plugins.maven-surefire-plugin}</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 
     <profiles>
         <profile>
