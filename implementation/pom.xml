@@ -101,20 +101,27 @@
       <artifactId>hystrix-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.enterprise</groupId>
-      <artifactId>cdi-api</artifactId>
+      <groupId>jakarta.enterprise</groupId>
+      <artifactId>jakarta.enterprise.cdi-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.interceptor</groupId>
-      <artifactId>javax.interceptor-api</artifactId>
+      <groupId>jakarta.interceptor</groupId>
+      <artifactId>jakarta.interceptor-api</artifactId>
+      <exclusions>
+        <!-- https://github.com/eclipse-ee4j/interceptor-api/issues/31 -->
+        <exclusion>
+          <groupId>jakarta.ejb</groupId>
+          <artifactId>jakarta.ejb-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>javax.enterprise.concurrent</groupId>
-      <artifactId>javax.enterprise.concurrent-api</artifactId>
+      <groupId>jakarta.enterprise.concurrent</groupId>
+      <artifactId>jakarta.enterprise.concurrent-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jboss.logging</groupId>
