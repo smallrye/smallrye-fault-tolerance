@@ -15,18 +15,22 @@
  */
 package io.smallrye.faulttolerance.tck;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.logging.Logger;
 
 import org.jboss.arquillian.container.test.spi.client.deployment.ApplicationArchiveProcessor;
 import org.jboss.arquillian.test.spi.TestClass;
 import org.jboss.shrinkwrap.api.Archive;
+import org.jboss.shrinkwrap.api.Node;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.asset.EmptyAsset;
+import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.container.ClassContainer;
 import org.jboss.shrinkwrap.api.container.LibraryContainer;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
+import org.jboss.shrinkwrap.impl.base.io.IOUtil;
 
 /**
  *
@@ -36,27 +40,24 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
 
     private static final Logger LOGGER = Logger.getLogger(FaultToleranceApplicationArchiveProcessor.class.getName());
 
+    private static final String MAX_THREADS_OVERRIDE = "io.smallrye.faulttolerance.globalThreadPoolSize=1000";
+    private static final String MP_CONFIG_PATH = "/WEB-INF/classes/META-INF/microprofile-config.properties";
+
     @Override
     public void process(Archive<?> applicationArchive, TestClass testClass) {
         if (!(applicationArchive instanceof ClassContainer)) {
             LOGGER.warning(
-                    "Unable to add Hystrix-related config.properties and additional classes - not a class/resource container: "
+                    "Unable to add additional classes - not a class/resource container: "
                             + applicationArchive);
             return;
         }
         ClassContainer<?> classContainer = (ClassContainer<?>) applicationArchive;
-        // add CommandListener implementation that activates request context around FT operations if needed
-        classContainer.addClass(RequestContextCommandListener.class);
-
-        classContainer.addAsResource(new File("src/test/resources/config.properties"));
 
         if (applicationArchive instanceof LibraryContainer) {
             JavaArchive additionalBeanArchive = ShrinkWrap.create(JavaArchive.class);
-            additionalBeanArchive.addClass(HystrixCommandSemaphoreCleanup.class);
             additionalBeanArchive.addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml");
             ((LibraryContainer<?>) applicationArchive).addAsLibrary(additionalBeanArchive);
         } else {
-            classContainer.addClass(HystrixCommandSemaphoreCleanup.class);
             classContainer.addAsResource(EmptyAsset.INSTANCE, "META-INF/beans.xml");
         }
 
@@ -73,6 +74,27 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
                     "WEB-INF/classes/META-INF/microprofile-config.properties");
         }
 
+        String config;
+        if (!applicationArchive.contains(MP_CONFIG_PATH)) {
+            config = MAX_THREADS_OVERRIDE;
+        } else {
+            ByteArrayOutputStream output = readCurrentConfig(applicationArchive);
+            applicationArchive.delete(MP_CONFIG_PATH);
+            config = output.toString() + "\n" + MAX_THREADS_OVERRIDE;
+        }
+        classContainer.addAsResource(new StringAsset(config), MP_CONFIG_PATH);
+
         LOGGER.info("Added additional resources to " + applicationArchive.toString(true));
+    }
+
+    private ByteArrayOutputStream readCurrentConfig(Archive<?> appArchive) {
+        try {
+            Node node = appArchive.get(MP_CONFIG_PATH);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            IOUtil.copy(node.getAsset().openStream(), outputStream);
+            return outputStream;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to prepare microprofile-config.properties");
+        }
     }
 }

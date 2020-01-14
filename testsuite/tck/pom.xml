@@ -5,11 +5,11 @@
   <parent>
     <groupId>io.smallrye</groupId>
     <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
-    <version>2.1.6-SNAPSHOT</version>
+    <version>4.0.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>smallrye-fault-tolerance-tck</artifactId>
-  <name>SmallRye: MicroProfile Fault Tolerance - TCK</name>
+  <name>SmallRye Fault Tolerance: TCK</name>
 
   <build>
     <plugins>
@@ -28,7 +28,6 @@
           </dependenciesToScan>
           <systemPropertyVariables>
             <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
-            <io_smallrye_faulttolerance_asyncTimeout>true</io_smallrye_faulttolerance_asyncTimeout>
           </systemPropertyVariables>
         </configuration>
       </plugin>

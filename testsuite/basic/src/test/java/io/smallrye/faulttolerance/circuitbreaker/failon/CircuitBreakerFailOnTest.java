@@ -16,7 +16,6 @@
 package io.smallrye.faulttolerance.circuitbreaker.failon;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -42,11 +41,7 @@ public class CircuitBreakerFailOnTest {
     public void testCircuitBreakerOpens(PingService pingService) throws InterruptedException {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
-            try {
-                pingService.ping();
-                fail("Fallback should not be used");
-            } catch (IllegalStateException expected) {
-            }
+            pingService.ping();
         }
         // Circuit should never be open - failOn and failure do not match
         assertEquals(loop, pingService.getPingCounter().get());

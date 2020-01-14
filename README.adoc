@@ -4,34 +4,54 @@ image:https://semaphoreci.com/api/v1/smallrye/smallrye-fault-tolerance/branches/
 image:https://sonarcloud.io/api/project_badges/measure?project=smallrye_smallrye-fault-tolerance&metric=alert_status["Quality Gate Status", link="https://sonarcloud.io/dashboard?id=smallrye_smallrye-fault-tolerance"]
 image:https://img.shields.io/github/license/thorntail/thorntail.svg["License", link="http://www.apache.org/licenses/LICENSE-2.0"]
 
-= SmallRye Fault Tolerance
+== SmallRye Fault Tolerance
 
 SmallRye Fault Tolerance is an implementation of {microprofile-fault-tolerance}[Eclipse MicroProfile Fault Tolerance].
 
-The implementation depends on the xref:_hystrix[Hystrix fraction], which is added transitively into your application.
+=== Integration
 
-== Bulkhead fallback rejection
+==== Thread pools
+A vendor may want to provide custom executor services for the fault tolerant executions.
+This can be achieved by creating a custom `io.smallrye.faulttolerance.ExecutorFactory` and
+registering it via `ServiceLoader`.
 
-If you use the semaphore-style `@Bulkhead` pattern with a `@Fallback` logic to limit the number of concurrent requests, the invocation may still result in a `BulkheadException` if the maximum concurrent limit for the `HystrixCommand.getFallback()` method is reached.
-To avoid that, set the `swarm.hystrix.command.default.fallback.isolation.semaphore.maxConcurrentRequests` property to increase the limit.
+If multiple factories are discovered, the one with the *highest* priority is used.
 
+==== Context Propagation
+`smallrye-fault-tolerance-context-propagation` provides an integration with MicroProfile Context Propagation.
+It is done by providing a custom `ExecutorFactory`, namely `ContextPropagationExecutorFactory`.
 
-== Instructions
+Please note that if you override the executor factory with a custom one and would like the context propagation
+to be enabled, you have to make sure your executor factory creates the executor services in the right way.
+
+==== Open Tracing
+SmallRye Fault Tolerance enables trace propagation to the asynchronous invocations via MicroProfile
+Context Propagation. To enable it, add `smallrye-fault-tolerance-tracing-propagation` to your project
+
+=== Configuration
+SmallRye Fault Tolerance supports all the configuration options of MicroProfile Fault Tolerance
+and, additionally, the following options:
+
+- `io.smallrye.faulttolerance.globalThreadPoolSize`, the amount of threads used by the the fault
+tolerance mechanisms. This does not include bulkhead thread pools. Defaults to `100`
+- `io.smallrye.faulttolerance.timeoutExecutorThreads`, the size of the thread pool used for scheduling timeouts.
+Defaults to `5`
+
+=== Instructions
 
 Compile and install this project:
-
 [source,bash]
 ----
 mvn clean install
 ----
 
-=== Project structure
+==== Project structure
 
 * link:implementation[] - Implementation of the Eclipse MicroProfile Fault Tolerance API.
 * link:tck[] - Test suite to run the implementation against the Eclipse MicroProfile Fault Tolerance TCK.
 * link:docs[] - Project documentation.
 
-=== Links
+==== Links
 
 * http://github.com/smallrye/smallrye-fault-tolerance/[Project Homepage]
 * {microprofile-fault-tolerance}[Eclipse MicroProfile Fault Tolerance]

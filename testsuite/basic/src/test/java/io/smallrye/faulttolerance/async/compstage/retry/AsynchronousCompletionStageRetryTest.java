@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -50,7 +51,8 @@ public class AsynchronousCompletionStageRetryTest {
     public void testAsyncRetryMethodThrows(AsyncHelloService helloService) throws IOException, InterruptedException {
         AsyncHelloService.COUNTER.set(0);
         try {
-            helloService.retry(AsyncHelloService.Result.FAILURE).toCompletableFuture().get();
+            CompletableFuture<String> result = helloService.retry(AsyncHelloService.Result.FAILURE).toCompletableFuture();
+            result.get();
             fail();
         } catch (ExecutionException expected) {
             assertTrue(expected.getCause() instanceof IOException);

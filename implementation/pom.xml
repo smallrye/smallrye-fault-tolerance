@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <!--
  ~  Copyright 2017 Red Hat, Inc.
  ~
@@ -14,169 +13,24 @@
  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  ~  See the License for the specific language governing permissions and
  ~  limitations under the License.
-  -->
-
+ -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>smallrye-fault-tolerance-parent</artifactId>
+        <groupId>io.smallrye</groupId>
+        <version>4.0.0-SNAPSHOT</version>
+    </parent>
 
-  <parent>
-    <groupId>io.smallrye</groupId>
-    <artifactId>smallrye-fault-tolerance-parent</artifactId>
-    <version>2.1.6-SNAPSHOT</version>
-  </parent>
+    <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
+    <name>SmallRye Fault Tolerance: Implementation Parent</name>
+    <packaging>pom</packaging>
 
-  <artifactId>smallrye-fault-tolerance</artifactId>
+    <modules>
+        <module>core</module>
+        <module>fault-tolerance</module>
+        <module>context-propagation</module>
+        <module>tracing-propagation</module>
+    </modules>
 
-  <name>SmallRye: MicroProfile Fault Tolerance - Implementation</name>
-
-  <properties>
-    <java9.sourceDirectory>${project.basedir}/src/main/java9</java9.sourceDirectory>
-    <java9.build.outputDirectory>${project.build.directory}/classes-java9</java9.build.outputDirectory>
-  </properties>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>compile-java9</id>
-            <phase>compile</phase>
-            <configuration>
-              <tasks>
-                <property name="compile_classpath" refid="maven.compile.classpath" />
-                <mkdir dir="${java9.build.outputDirectory}" />
-                <javac fork="true" executable="${env.JAVA_HOME}/bin/javac" srcdir="${java9.sourceDirectory}" destdir="${java9.build.outputDirectory}" classpath="${compile_classpath}" includeantruntime="false" />
-              </tasks>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy-resources</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.outputDirectory}/META-INF/versions/9</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${java9.build.outputDirectory}</directory>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Multi-Release>true</Multi-Release>
-            </manifestEntries>
-          </archive>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.eclipse.microprofile.fault-tolerance</groupId>
-      <artifactId>microprofile-fault-tolerance-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.netflix.hystrix</groupId>
-      <artifactId>hystrix-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.enterprise</groupId>
-      <artifactId>jakarta.enterprise.cdi-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.interceptor</groupId>
-      <artifactId>jakarta.interceptor-api</artifactId>
-      <exclusions>
-        <!-- https://github.com/eclipse-ee4j/interceptor-api/issues/31 -->
-        <exclusion>
-          <groupId>jakarta.ejb</groupId>
-          <artifactId>jakarta.ejb-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.enterprise.concurrent</groupId>
-      <artifactId>jakarta.enterprise.concurrent-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.annotation</groupId>
-      <artifactId>jakarta.annotation-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.microprofile.config</groupId>
-      <artifactId>microprofile-config-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.microprofile.metrics</groupId>
-      <artifactId>microprofile-metrics-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing</groupId>
-      <artifactId>opentracing-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>io.opentracing</groupId>
-      <artifactId>opentracing-util</artifactId>
-      <optional>true</optional>
-    </dependency>
-
-    <!-- Test dependencies -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.smallrye.config</groupId>
-      <artifactId>smallrye-config</artifactId>
-    </dependency>
-
-  </dependencies>
-
-  <profiles>
-    <profile>
-      <id>coverage</id>
-      <properties>
-        <argLine>@{jacocoArgLine}</argLine>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <configuration>
-              <excludes>
-                <exclude>META-INF/versions/9/io/smallrye/faulttolerance/DefaultMethodFallbackProvider.class</exclude>
-              </excludes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
