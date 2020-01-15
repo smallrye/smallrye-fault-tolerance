@@ -71,7 +71,6 @@ public class FaultToleranceExtension implements Extension {
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
 
-        // Add AnnotatedType for HystrixCommandInterceptor
         // It seems that fraction deployment module cannot be picked up as a CDI bean archive - see also SWARM-1725
         bbd.addAnnotatedType(bm.createAnnotatedType(FaultToleranceInterceptor.class),
                 FaultToleranceInterceptor.class.getName());
