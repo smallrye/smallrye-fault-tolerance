@@ -31,7 +31,6 @@
   <url>http://smallrye.io</url>
 
   <properties>
-    <version.hystrix>1.5.12</version.hystrix>
     <version.hdrHistogram>2.1.9</version.hdrHistogram>
     <version.jakarta.enterprise.concurrent-api>1.1.2</version.jakarta.enterprise.concurrent-api>
     <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
