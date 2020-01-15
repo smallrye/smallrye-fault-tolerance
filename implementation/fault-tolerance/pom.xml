@@ -21,7 +21,6 @@
     <groupId>io.smallrye</groupId>
     <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
     <version>4.0.0-SNAPSHOT</version>
-    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <artifactId>smallrye-fault-tolerance</artifactId>
@@ -100,20 +99,27 @@
       <artifactId>smallrye-fault-tolerance-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.enterprise</groupId>
-      <artifactId>cdi-api</artifactId>
+      <groupId>jakarta.enterprise</groupId>
+      <artifactId>jakarta.enterprise.cdi-api</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.el</groupId>
+          <artifactId>jakarta.el-api</artifactId>
+        </exclusion>
+        <!-- https://github.com/eclipse-ee4j/interceptor-api/issues/31 -->
+        <exclusion>
+          <groupId>jakarta.ejb</groupId>
+          <artifactId>jakarta.ejb-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>javax.interceptor</groupId>
-      <artifactId>javax.interceptor-api</artifactId>
+      <groupId>jakarta.enterprise.concurrent</groupId>
+      <artifactId>jakarta.enterprise.concurrent-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.enterprise.concurrent</groupId>
-      <artifactId>javax.enterprise.concurrent-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jboss.logging</groupId>

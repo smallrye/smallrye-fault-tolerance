@@ -29,13 +29,6 @@
     <dependency>
       <groupId>io.smallrye</groupId>
       <artifactId>smallrye-fault-tolerance</artifactId>
-      <exclusions>
-        <!-- https://github.com/eclipse-ee4j/interceptor-api/issues/31 -->
-        <exclusion>
-          <groupId>jakarta.ejb</groupId>
-          <artifactId>jakarta.ejb-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jboss.weld</groupId>
