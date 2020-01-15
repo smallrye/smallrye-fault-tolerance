@@ -46,8 +46,8 @@ public class MetricsCollectorFactory {
         private final String metricsPrefix;
         private final FaultToleranceOperation operation;
 
-        private volatile AtomicLong bulkheadQueueSize = new AtomicLong(0);
-        private volatile AtomicLong bulkheadConcurrentExecutions = new AtomicLong(0);
+        private final AtomicLong bulkheadQueueSize = new AtomicLong(0);
+        private final AtomicLong bulkheadConcurrentExecutions = new AtomicLong(0);
 
         @SuppressWarnings("UnnecessaryThis")
         MetricsCollectorImpl(FaultToleranceOperation operation) {
