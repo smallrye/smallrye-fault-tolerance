@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Priority;
+import javax.enterprise.context.control.RequestContextController;
 import javax.enterprise.inject.Intercepted;
 import javax.enterprise.inject.spi.Bean;
 import javax.inject.Inject;
@@ -74,6 +75,7 @@ import io.smallrye.faulttolerance.core.timeout.ScheduledExecutorTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
+import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
@@ -108,6 +110,8 @@ public class FaultToleranceInterceptor {
 
     private final StrategyCache cache;
 
+    private final RequestContextController requestContextController;
+
     @Inject
     public FaultToleranceInterceptor(
             FallbackHandlerProvider fallbackHandlerProvider,
@@ -115,6 +119,7 @@ public class FaultToleranceInterceptor {
             MetricsCollectorFactory metricsCollectorFactory,
             FaultToleranceOperationProvider operationProvider,
             StrategyCache cache,
+            RequestContextController requestContextController,
             ExecutorProvider executorProvider) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
@@ -122,6 +127,7 @@ public class FaultToleranceInterceptor {
         this.operationProvider = operationProvider;
         this.executorProvider = executorProvider;
         this.cache = cache;
+        this.requestContextController = requestContextController;
         asyncExecutor = executorProvider.getGlobalExecutor();
         timeoutExecutor = executorProvider.getTimeoutExecutor();
     }
@@ -158,6 +164,10 @@ public class FaultToleranceInterceptor {
                 CompletableFuture<T> result = new CompletableFuture<>();
                 asyncExecutor.submit(() -> {
                     try {
+                        // the requestContextController.activate/deactivate pair here is the minimum
+                        // to pass TCK; for anything serious, Context Propagation is required!
+                        // TODO does this code work together with Context Propagation?
+                        requestContextController.activate();
                         //noinspection unchecked
                         ((CompletionStage<T>) invocationContext.proceed())
                                 .handle((value, error) -> {
@@ -170,6 +180,8 @@ public class FaultToleranceInterceptor {
                                 });
                     } catch (Exception any) {
                         result.completeExceptionally(any);
+                    } finally {
+                        requestContextController.deactivate();
                     }
                 });
                 return result;
@@ -244,6 +256,7 @@ public class FaultToleranceInterceptor {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
             result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
+                    getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
                     cbConfig.get(CircuitBreakerConfig.DELAY),
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
@@ -263,8 +276,8 @@ public class FaultToleranceInterceptor {
 
             result = new CompletionStageRetry<>(result,
                     "Retry[" + point.name() + "]",
-                    getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
-                    getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
+                    getSetOfThrowables(retryConf, RetryConfig.RETRY_ON),
+                    getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
@@ -273,14 +286,18 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasFallback()) {
+            FallbackConfig fallbackConf = operation.getFallback();
             Method method = invocationContext.getMethod();
             result = new CompletionStageFallback<>(
                     result,
                     "Fallback[" + point.name() + "]",
                     prepareFallbackFunction(point, invocationContext, beanClass, method, operation),
+                    getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
+                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
                     asyncExecutor,
                     collector);
         }
+
         return result;
     }
 
@@ -308,6 +325,7 @@ public class FaultToleranceInterceptor {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
+                    getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
                     cbConfig.get(CircuitBreakerConfig.DELAY),
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
@@ -327,8 +345,8 @@ public class FaultToleranceInterceptor {
 
             result = new Retry<>(result,
                     "Retry[" + point.name() + "]",
-                    getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
-                    getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
+                    getSetOfThrowables(retryConf, RetryConfig.RETRY_ON),
+                    getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
@@ -337,11 +355,14 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasFallback()) {
+            FallbackConfig fallbackConf = operation.getFallback();
             Method method = invocationContext.getMethod();
             result = new Fallback<>(
                     result,
                     "Fallback[" + point.name() + "]",
                     prepareFallbackFunction(point, invocationContext, beanClass, method, operation),
+                    getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
+                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
                     collector);
         }
 
@@ -355,6 +376,8 @@ public class FaultToleranceInterceptor {
             Class<?> beanClass,
             InvocationContext invocationContext, MetricsCollector collector) {
         FaultToleranceStrategy<Future<T>> result = Invocation.invocation();
+
+        result = new RequestScopeActivator<>(result, requestContextController);
 
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
@@ -378,6 +401,7 @@ public class FaultToleranceInterceptor {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
+                    getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
                     cbConfig.get(CircuitBreakerConfig.DELAY),
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
@@ -397,8 +421,8 @@ public class FaultToleranceInterceptor {
 
             result = new Retry<>(result,
                     "Retry[" + point.name() + "]",
-                    getSetOfThrowablesForRetry(retryConf, RetryConfig.RETRY_ON),
-                    getSetOfThrowablesForRetry(retryConf, RetryConfig.ABORT_ON),
+                    getSetOfThrowables(retryConf, RetryConfig.RETRY_ON),
+                    getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
@@ -407,10 +431,16 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasFallback()) {
+            FallbackConfig fallbackConf = operation.getFallback();
             Method method = invocationContext.getMethod();
             FallbackFunction<Future<T>> fallbackFunction = prepareFallbackFunction(point, invocationContext, beanClass, method,
                     operation);
-            result = new Fallback<>(result, "Fallback[" + point.name() + "]", fallbackFunction, collector);
+            result = new Fallback<>(result,
+                    "Fallback[" + point.name() + "]",
+                    fallbackFunction,
+                    getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
+                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
+                    collector);
         }
 
         result = new GeneralMetricsRecorder<>(result, collector);
@@ -492,11 +522,6 @@ public class FaultToleranceInterceptor {
     }
 
     private SetOfThrowables getSetOfThrowables(GenericConfig<?> config, String configKey) {
-        List<Class<? extends Throwable>> throwableClassList = toListOfThrowables(config, configKey);
-        return SetOfThrowables.create(throwableClassList);
-    }
-
-    private SetOfThrowables getSetOfThrowablesForRetry(GenericConfig<?> config, String configKey) {
         List<Class<? extends Throwable>> throwableClassList = toListOfThrowables(config, configKey);
         return SetOfThrowables.create(throwableClassList);
     }

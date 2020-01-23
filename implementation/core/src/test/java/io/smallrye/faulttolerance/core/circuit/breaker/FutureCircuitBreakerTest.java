@@ -30,7 +30,7 @@ public class FutureCircuitBreakerTest {
     @Test
     public void test1() throws Exception {
         CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(),
-                "test invocation", testException,
+                "test invocation", testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
@@ -87,7 +87,7 @@ public class FutureCircuitBreakerTest {
     @Test
     public void test2() throws Exception {
         CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(),
-                "test invocation", testException,
+                "test invocation", testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed

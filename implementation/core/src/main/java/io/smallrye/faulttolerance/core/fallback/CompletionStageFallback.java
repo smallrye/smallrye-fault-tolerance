@@ -6,14 +6,15 @@ import java.util.concurrent.Executor;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
     private final Executor executor;
 
     public CompletionStageFallback(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            FallbackFunction<CompletionStage<V>> fallback, Executor executor,
-            MetricsRecorder metricsRecorder) {
-        super(delegate, description, fallback, metricsRecorder);
+            FallbackFunction<CompletionStage<V>> fallback, SetOfThrowables applyOn, SetOfThrowables skipOn,
+            Executor executor, MetricsRecorder metricsRecorder) {
+        super(delegate, description, fallback, applyOn, skipOn, metricsRecorder);
         this.executor = executor;
     }
 
@@ -40,6 +41,10 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
                 if (exception instanceof InterruptedException || Thread.interrupted()) {
                     result.completeExceptionally(new InterruptedException());
                     return;
+                }
+
+                if (shouldSkipFallback(exception)) {
+                    result.completeExceptionally(exception);
                 }
 
                 try {

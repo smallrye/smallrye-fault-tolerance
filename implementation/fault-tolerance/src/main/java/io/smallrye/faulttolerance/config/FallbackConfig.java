@@ -38,6 +38,10 @@ public class FallbackConfig extends GenericConfig<Fallback> {
 
     public static final String FALLBACK_METHOD = "fallbackMethod";
 
+    public static final String APPLY_ON = "applyOn";
+
+    public static final String SKIP_ON = "skipOn";
+
     public FallbackConfig(Class<?> beanClass, Method method) {
         super(Fallback.class, beanClass, method);
     }
@@ -106,6 +110,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
         Map<String, Class<?>> keys = new HashMap<>();
         keys.put(VALUE, Class.class);
         keys.put(FALLBACK_METHOD, String.class);
+        keys.put(APPLY_ON, Class[].class);
+        keys.put(SKIP_ON, Class[].class);
         return Collections.unmodifiableMap(keys);
     }
 

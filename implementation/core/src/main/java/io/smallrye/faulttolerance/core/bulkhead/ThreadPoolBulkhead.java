@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -74,12 +76,6 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
     // only for testing
     int getQueueSize() {
         return Math.max(0, queueSize - capacitySemaphore.availablePermits());
-    }
-
-    // TODO
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> Exception sneakyThrow(Throwable e) throws E {
-        throw (E) e;
     }
 
     private class BulkheadTask extends NamedFutureTask<Future<V>> {

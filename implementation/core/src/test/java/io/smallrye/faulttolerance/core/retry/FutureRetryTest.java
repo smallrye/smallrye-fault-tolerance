@@ -22,10 +22,8 @@ import io.smallrye.faulttolerance.core.util.barrier.Barrier;
  * Tests a subset of {@link RetryTest} because the underlying logic is the same.
  */
 public class FutureRetryTest {
-    private static final SetOfThrowables exception = SetOfThrowables
-            .withoutCustomThrowables(Collections.singletonList(Exception.class));
-    private static final SetOfThrowables testException = SetOfThrowables
-            .withoutCustomThrowables(Collections.singletonList(TestException.class));
+    private static final SetOfThrowables exception = SetOfThrowables.create(Collections.singletonList(Exception.class));
+    private static final SetOfThrowables testException = SetOfThrowables.create(Collections.singletonList(TestException.class));
 
     private TestStopwatch stopwatch;
 

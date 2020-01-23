@@ -27,6 +27,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     final String description;
 
     final SetOfThrowables failOn;
+    final SetOfThrowables skipOn;
     final long delayInMillis;
     final int rollingWindowSize;
     final int failureThreshold;
@@ -48,11 +49,12 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     @SuppressWarnings("UnnecessaryThis")
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn,
-            long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
-            Stopwatch stopwatch, MetricsRecorder metricsRecorder) {
+            SetOfThrowables skipOn, long delayInMillis, int requestVolumeThreshold, double failureRatio,
+            int successThreshold, Stopwatch stopwatch, MetricsRecorder metricsRecorder) {
         this.delegate = checkNotNull(delegate, "Circuit breaker delegate must be set");
         this.description = checkNotNull(description, "Circuit breaker description must be set");
         this.failOn = checkNotNull(failOn, "Set of fail-on throwables must be set");
+        this.skipOn = checkNotNull(skipOn, "Set of skip-on throwables must be set");
         this.delayInMillis = check(delayInMillis, delayInMillis >= 0, "Circuit breaker delay must be >= 0");
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
@@ -100,6 +102,10 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
+    boolean isConsideredSuccess(Throwable e) {
+        return skipOn.includes(e.getClass()) || !failOn.includes(e.getClass());
+    }
+
     private V inClosed(InvocationContext<V> context, State state) throws Exception {
         try {
             V result = delegate.apply(context);
@@ -111,7 +117,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
         } catch (Throwable e) {
-            boolean isFailure = failOn.includes(e.getClass());
+            boolean isFailure = !isConsideredSuccess(e);
             if (isFailure) {
                 listeners.forEach(CircuitBreakerListener::failed);
                 metricsRecorder.circuitBreakerFailed();

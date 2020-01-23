@@ -35,7 +35,7 @@ public class CompletionStageCircuitBreakerTest {
     @Test
     public void test1() throws Exception {
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
-                testException,
+                testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
@@ -87,7 +87,7 @@ public class CompletionStageCircuitBreakerTest {
     @Test
     public void test2() throws Exception {
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
-                testException,
+                testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         // circuit breaker is closed
@@ -121,7 +121,7 @@ public class CompletionStageCircuitBreakerTest {
         TestException exception = new TestException();
 
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
-                testException,
+                testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch, null);
 
         assertThatThrownBy(cb.apply(eventuallyFailingWith(exception)).toCompletableFuture()::get)

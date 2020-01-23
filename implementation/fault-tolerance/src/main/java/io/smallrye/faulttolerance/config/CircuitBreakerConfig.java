@@ -38,6 +38,8 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
 
     public static final String FAIL_ON = "failOn";
 
+    public static final String SKIP_ON = "skipOn";
+
     public static final String FAILURE_RATIO = "failureRatio";
 
     public static final String REQUEST_VOLUME_THRESHOLD = "requestVolumeThreshold";
@@ -91,6 +93,7 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
         keys.put(DELAY, Long.class);
         keys.put(DELAY_UNIT, ChronoUnit.class);
         keys.put(FAIL_ON, Class[].class);
+        keys.put(SKIP_ON, Class[].class);
         keys.put(FAILURE_RATIO, Double.class);
         keys.put(REQUEST_VOLUME_THRESHOLD, Integer.class);
         keys.put(SUCCESS_THRESHOLD, Integer.class);
