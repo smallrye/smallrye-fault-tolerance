@@ -75,6 +75,7 @@ import io.smallrye.faulttolerance.core.timeout.ScheduledExecutorTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
+import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MetricsCollector;
@@ -119,7 +120,6 @@ public class FaultToleranceInterceptor {
             MetricsCollectorFactory metricsCollectorFactory,
             FaultToleranceOperationProvider operationProvider,
             StrategyCache cache,
-            RequestContextController requestContextController,
             ExecutorProvider executorProvider) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
@@ -127,9 +127,9 @@ public class FaultToleranceInterceptor {
         this.operationProvider = operationProvider;
         this.executorProvider = executorProvider;
         this.cache = cache;
-        this.requestContextController = requestContextController;
         asyncExecutor = executorProvider.getGlobalExecutor();
         timeoutExecutor = executorProvider.getTimeoutExecutor();
+        requestContextController = RequestContextControllerProvider.load().get();
     }
 
     @AroundInvoke
@@ -165,8 +165,7 @@ public class FaultToleranceInterceptor {
                 asyncExecutor.submit(() -> {
                     try {
                         // the requestContextController.activate/deactivate pair here is the minimum
-                        // to pass TCK; for anything serious, Context Propagation is required!
-                        // TODO does this code work together with Context Propagation?
+                        // to pass TCK; for anything serious, Context Propagation is required
                         requestContextController.activate();
                         //noinspection unchecked
                         ((CompletionStage<T>) invocationContext.proceed())
