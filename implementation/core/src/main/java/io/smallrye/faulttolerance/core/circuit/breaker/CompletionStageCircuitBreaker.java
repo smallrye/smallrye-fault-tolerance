@@ -17,14 +17,15 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             FaultToleranceStrategy<CompletionStage<V>> delegate,
             String description,
             SetOfThrowables failOn,
+            SetOfThrowables skipOn,
             long delayInMillis,
             int requestVolumeThreshold,
             double failureRatio,
             int successThreshold,
             Stopwatch stopwatch,
             MetricsRecorder metricsRecorder) {
-        super(delegate, description, failOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold, stopwatch,
-                metricsRecorder);
+        super(delegate, description, failOn, skipOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold,
+                stopwatch, metricsRecorder);
     }
 
     @Override
@@ -75,7 +76,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
     }
 
     private CompletionException onFailure(State state, Throwable e) {
-        boolean isFailure = failOn.includes(e.getClass());
+        boolean isFailure = !isConsideredSuccess(e);
         if (isFailure) {
             listeners.forEach(CircuitBreakerListener::failed);
             metricsRecorder.circuitBreakerFailed();

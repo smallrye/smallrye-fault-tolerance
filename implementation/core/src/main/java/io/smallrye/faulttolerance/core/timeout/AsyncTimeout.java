@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.timeout;
 
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -41,12 +42,6 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
         } catch (ExecutionException e) {
             throw sneakyThrow(e.getCause());
         }
-    }
-
-    // TODO
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> Exception sneakyThrow(Throwable e) throws E {
-        throw (E) e;
     }
 
     // only to expose `setException`, which is `protected` in `FutureTask`

@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>smallrye-fault-tolerance-parent</artifactId>
-  <version>4.0.1-SNAPSHOT</version>
+  <version>4.1.0-SNAPSHOT</version>
 
   <packaging>pom</packaging>
   <name>SmallRye Fault Tolerance: Parent</name>
@@ -34,7 +34,7 @@
     <version.hdrHistogram>2.1.9</version.hdrHistogram>
     <version.jakarta.enterprise.concurrent-api>1.1.2</version.jakarta.enterprise.concurrent-api>
     <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
-    <version.mp-fault-tolerance>2.0.3</version.mp-fault-tolerance>
+    <version.mp-fault-tolerance>2.1</version.mp-fault-tolerance>
     <version.microprofile-config-api>1.4</version.microprofile-config-api>
     <version.microprofile-metrics-api>2.2.1</version.microprofile-metrics-api>
     <version.slf4j-simple>1.7.30</version.slf4j-simple>

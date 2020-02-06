@@ -18,12 +18,13 @@ import io.smallrye.faulttolerance.core.util.SetOfThrowables;
  */
 final class Strategies {
     static Fallback<String> fallback(FaultToleranceStrategy<String> delegate) {
-        return new Fallback<>(delegate, "fallback", e -> "fallback after " + e.getClass().getSimpleName(), null);
+        return new Fallback<>(delegate, "fallback", e -> "fallback after " + e.getClass().getSimpleName(),
+                SetOfThrowables.ALL, SetOfThrowables.EMPTY, null);
     }
 
     static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {
         return new Retry<>(delegate, "retry",
-                SetOfThrowables.withoutCustomThrowables(Collections.singletonList(Exception.class)),
+                SetOfThrowables.create(Collections.singletonList(Exception.class)),
                 SetOfThrowables.EMPTY, 10, 0, Delay.NONE, new TestStopwatch(), null);
     }
 
@@ -34,7 +35,7 @@ final class Strategies {
     static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, int delayInMillis,
             CircuitBreakerListener listener) {
         CircuitBreaker<V> result = new CircuitBreaker<>(delegate, "circuit breaker",
-                SetOfThrowables.ALL, delayInMillis, 5, 0.2, 3,
+                SetOfThrowables.ALL, SetOfThrowables.EMPTY, delayInMillis, 5, 0.2, 3,
                 new TestStopwatch(), null);
         result.addListener(listener);
         return result;

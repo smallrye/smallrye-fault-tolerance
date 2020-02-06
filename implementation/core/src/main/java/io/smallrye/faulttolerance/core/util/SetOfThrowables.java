@@ -19,21 +19,6 @@ public class SetOfThrowables {
         return new SetOfThrowables(set);
     }
 
-    /**
-     * @param classes classes to include
-     * @return set of throwables that never includes any types that are not assignable to {@link Exception}
-     *         or {@link Error}. This only makes sense for {@link org.eclipse.microprofile.faulttolerance.Retry Retry}.
-     */
-    public static SetOfThrowables withoutCustomThrowables(List<Class<? extends Throwable>> classes) {
-        Set<Class<? extends Throwable>> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
-        for (Class<? extends Throwable> clazz : classes) {
-            if (Exception.class.isAssignableFrom(clazz) || Error.class.isAssignableFrom(clazz)) {
-                set.add(clazz);
-            }
-        }
-        return new SetOfThrowables(set);
-    }
-
     private final Set<Class<? extends Throwable>> classes;
 
     private SetOfThrowables(Set<Class<? extends Throwable>> classes) {

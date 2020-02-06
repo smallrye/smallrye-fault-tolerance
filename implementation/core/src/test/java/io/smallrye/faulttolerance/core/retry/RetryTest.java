@@ -16,10 +16,8 @@ import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
 public class RetryTest {
-    private static final SetOfThrowables exception = SetOfThrowables
-            .withoutCustomThrowables(Collections.singletonList(Exception.class));
-    private static final SetOfThrowables testException = SetOfThrowables
-            .withoutCustomThrowables(Collections.singletonList(TestException.class));
+    private static final SetOfThrowables exception = SetOfThrowables.create(Collections.singletonList(Exception.class));
+    private static final SetOfThrowables testException = SetOfThrowables.create(Collections.singletonList(TestException.class));
 
     private TestStopwatch stopwatch;
 
