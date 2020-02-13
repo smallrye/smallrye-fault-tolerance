@@ -19,7 +19,7 @@
     <parent>
         <artifactId>smallrye-fault-tolerance-parent</artifactId>
         <groupId>io.smallrye</groupId>
-        <version>4.1.0</version>
+        <version>4.1.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
