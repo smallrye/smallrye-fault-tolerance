@@ -13,7 +13,6 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 
-// TODO needs test
 public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
     private final FaultToleranceStrategy<Future<V>> delegate;
     private final Executor executor;
@@ -51,7 +50,8 @@ public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
 
             @Override
             public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-                return task.get().get(timeout, unit);
+                // at worst, the timeout here could possibly be 2x the requested value
+                return task.get(timeout, unit).get(timeout, unit);
             }
         };
     }
