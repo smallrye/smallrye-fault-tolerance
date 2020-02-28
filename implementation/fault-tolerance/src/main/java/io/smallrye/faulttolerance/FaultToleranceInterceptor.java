@@ -247,10 +247,11 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
+            long delayInMillis = getTimeInMs(cbConfig, CircuitBreakerConfig.DELAY, CircuitBreakerConfig.DELAY_UNIT);
             result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
-                    cbConfig.get(CircuitBreakerConfig.DELAY),
+                    delayInMillis,
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
@@ -314,10 +315,11 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
+            long delayInMillis = getTimeInMs(cbConfig, CircuitBreakerConfig.DELAY, CircuitBreakerConfig.DELAY_UNIT);
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
-                    cbConfig.get(CircuitBreakerConfig.DELAY),
+                    delayInMillis,
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
@@ -387,10 +389,11 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
+            long delayInMillis = getTimeInMs(cbConfig, CircuitBreakerConfig.DELAY, CircuitBreakerConfig.DELAY_UNIT);
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
-                    cbConfig.get(CircuitBreakerConfig.DELAY),
+                    delayInMillis,
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
