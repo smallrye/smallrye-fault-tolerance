@@ -20,7 +20,20 @@ public final class InvocationContext<V> implements Callable<V> {
         return delegate.call();
     }
 
+    // arbitrary contextual data
+
+    private final ConcurrentMap<Class<?>, Object> data = new ConcurrentHashMap<>();
+
+    public <T> void set(Class<T> clazz, T object) {
+        data.put(clazz, object);
+    }
+
+    public <T> T get(Class<T> clazz) {
+        return clazz.cast(data.get(clazz));
+    }
+
     // out-of-band communication between fault tolerance strategies in a single chain
+    // (only makes sense if different strategies in the chain run on different threads)
 
     private final ConcurrentMap<Class<? extends InvocationContextEvent>, Collection<Consumer<? extends InvocationContextEvent>>> eventHandlers = new ConcurrentHashMap<>();
 

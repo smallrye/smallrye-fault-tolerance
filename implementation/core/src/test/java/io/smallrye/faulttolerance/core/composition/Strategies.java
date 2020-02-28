@@ -18,7 +18,7 @@ import io.smallrye.faulttolerance.core.util.SetOfThrowables;
  */
 final class Strategies {
     static Fallback<String> fallback(FaultToleranceStrategy<String> delegate) {
-        return new Fallback<>(delegate, "fallback", e -> "fallback after " + e.getClass().getSimpleName(),
+        return new Fallback<>(delegate, "fallback", ctx -> "fallback after " + ctx.failure.getClass().getSimpleName(),
                 SetOfThrowables.ALL, SetOfThrowables.EMPTY, null);
     }
 

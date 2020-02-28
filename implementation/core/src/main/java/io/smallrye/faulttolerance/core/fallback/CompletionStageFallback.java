@@ -49,7 +49,8 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
 
                 try {
                     metricsRecorder.fallbackCalled();
-                    fallback.call(exception).whenComplete((fallbackValue, fallbackException) -> {
+                    FallbackContext<CompletionStage<V>> fallbackContext = new FallbackContext<>(exception, ctx);
+                    fallback.call(fallbackContext).whenComplete((fallbackValue, fallbackException) -> {
                         if (fallbackValue != null) {
                             result.complete(fallbackValue);
                         } else {
