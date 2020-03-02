@@ -16,6 +16,8 @@
 
 package io.smallrye.faulttolerance;
 
+import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 import static java.util.Arrays.asList;
 
 import java.lang.reflect.InvocationTargetException;
@@ -166,13 +168,7 @@ public class FaultToleranceInterceptor {
                                 // to pass TCK; for anything serious, Context Propagation is required
                                 requestContextController.activate();
                                 //noinspection unchecked
-                                ((CompletionStage<T>) invocationContext.proceed()).whenComplete((value, error) -> {
-                                    if (error != null) {
-                                        result.completeExceptionally(error);
-                                    } else {
-                                        result.complete(value);
-                                    }
-                                });
+                                propagateCompletion(((CompletionStage<T>) invocationContext.proceed()), result);
                             } catch (Exception any) {
                                 result.completeExceptionally(any);
                             } finally {
@@ -184,19 +180,11 @@ public class FaultToleranceInterceptor {
             ctx.set(InvocationContext.class, invocationContext);
             return strategy.apply(ctx).exceptionally(e -> {
                 collector.failed();
-                if (e instanceof RuntimeException) {
-                    throw (RuntimeException) e;
-                } else {
-                    throw new FaultToleranceException(e);
-                }
+                throw sneakyThrow(e);
             });
         } catch (Exception e) {
             collector.failed();
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            } else {
-                throw new FaultToleranceException(e);
-            }
+            throw sneakyThrow(e);
         }
     }
 
@@ -287,7 +275,6 @@ public class FaultToleranceInterceptor {
                     prepareFallbackFunction(point, operation),
                     getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
                     getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
-                    asyncExecutor,
                     collector);
         }
 

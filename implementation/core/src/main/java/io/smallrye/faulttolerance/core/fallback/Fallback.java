@@ -40,7 +40,7 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
         }
 
         if (shouldSkipFallback(failure)) {
-            sneakyThrow(failure);
+            throw sneakyThrow(failure);
         }
 
         metricsRecorder.fallbackCalled();

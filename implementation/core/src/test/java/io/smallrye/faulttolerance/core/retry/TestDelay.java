@@ -44,7 +44,7 @@ public class TestDelay implements Delay {
         }
 
         if (exception != null) {
-            sneakyThrow(exception.get());
+            throw sneakyThrow(exception.get());
         }
     }
 }
