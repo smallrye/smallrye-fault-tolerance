@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.async.compstage.complex;
+package io.smallrye.faulttolerance.async.compstage.retry.circuit.breaker.fallback;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 

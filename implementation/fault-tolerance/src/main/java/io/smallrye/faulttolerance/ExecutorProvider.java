@@ -6,11 +6,10 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.BeforeDestroyed;
-import javax.enterprise.event.Observes;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -55,8 +54,19 @@ public class ExecutorProvider {
         allExecutors.add(timeoutExecutor);
     }
 
-    void tearDown(@Observes @BeforeDestroyed(ApplicationScoped.class) Object ignored) {
-        allExecutors.forEach(ExecutorService::shutdown);
+    @PreDestroy
+    public void tearDown() {
+        allExecutors.forEach(ExecutorService::shutdownNow);
+
+        for (ExecutorService executor : allExecutors) {
+            try {
+                executor.awaitTermination(1, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {
+                // no need to do anything, we're shutting down anyway
+                // just set the interruption flag to be a good citizen
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     public ExecutorService createAdHocExecutor(int size) {

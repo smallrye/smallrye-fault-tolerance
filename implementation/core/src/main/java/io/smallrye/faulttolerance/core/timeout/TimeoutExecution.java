@@ -9,7 +9,9 @@ final class TimeoutExecution {
 
     private final AtomicInteger state;
 
+    // can be null, if no thread shall be interrupted upon timeout
     private final Thread executingThread;
+    // can be null, if no action shall be performed upon timeout
     private final Runnable timeoutAction;
 
     private final long timeoutInMillis;
@@ -50,7 +52,9 @@ final class TimeoutExecution {
 
     void timeoutAndInterrupt() {
         if (state.compareAndSet(STATE_RUNNING, STATE_TIMED_OUT)) {
-            executingThread.interrupt();
+            if (executingThread != null) {
+                executingThread.interrupt();
+            }
             if (timeoutAction != null) {
                 timeoutAction.run();
             }

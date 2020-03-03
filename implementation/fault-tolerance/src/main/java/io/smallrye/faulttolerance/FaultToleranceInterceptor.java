@@ -229,7 +229,6 @@ public class FaultToleranceInterceptor {
             result = new CompletionStageTimeout<>(result, "Timeout[" + point.name() + "]",
                     timeoutMs,
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    asyncExecutor,
                     collector);
         }
 

@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.async.compstage.complex;
+package io.smallrye.faulttolerance.async.compstage.retry.circuit.breaker.fallback;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
@@ -88,7 +88,7 @@ public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
                     String response = invocation.call(finalI).toCompletableFuture().get();
                     seenResponses.add(response);
                 } catch (Exception e) {
-                    violations.add("Unexpected exception: " + e.getMessage());
+                    violations.add("Unexpected exception: " + e);
                 }
             });
         }
