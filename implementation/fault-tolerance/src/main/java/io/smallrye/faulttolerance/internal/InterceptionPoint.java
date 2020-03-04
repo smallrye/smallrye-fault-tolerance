@@ -5,9 +5,6 @@ import java.util.Objects;
 
 import javax.interceptor.InvocationContext;
 
-/**
- * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- */
 public class InterceptionPoint {
     private final String name;
     private final Class<?> beanClass;
@@ -21,6 +18,14 @@ public class InterceptionPoint {
 
     public String name() {
         return name;
+    }
+
+    public Class<?> beanClass() {
+        return beanClass;
+    }
+
+    public Method method() {
+        return method;
     }
 
     @Override

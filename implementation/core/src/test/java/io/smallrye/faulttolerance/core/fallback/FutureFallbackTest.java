@@ -56,7 +56,7 @@ public class FutureFallbackTest {
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
     }
 
-    private Future<String> fallback(Throwable e) {
+    private Future<String> fallback(FallbackContext ctx) {
         return completedFuture("fallback");
     }
 }

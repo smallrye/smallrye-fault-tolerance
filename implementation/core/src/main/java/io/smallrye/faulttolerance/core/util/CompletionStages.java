@@ -20,4 +20,14 @@ public class CompletionStages {
         result.completeExceptionally(exception);
         return result;
     }
+
+    public static <T> void propagateCompletion(CompletionStage<T> from, CompletableFuture<T> to) {
+        from.whenComplete((value, exception) -> {
+            if (exception == null) {
+                to.complete(value);
+            } else {
+                to.completeExceptionally(exception);
+            }
+        });
+    }
 }

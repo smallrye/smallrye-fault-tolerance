@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.retry;
 
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
@@ -61,8 +62,6 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                     throw new InterruptedException();
                 }
 
-                // specifying `abortOn` is only useful when it's more specific than `retryOn`;
-                // otherwise, if the exception isn't present in `retryOn`, it's always an abort
                 if (shouldAbortRetrying(e)) {
                     metricsRecorder.retryFailed();
                     throw e;
@@ -90,17 +89,16 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
         metricsRecorder.retryFailed();
         if (lastFailure != null) {
-            if (lastFailure instanceof Exception) {
-                throw (Exception) lastFailure;
-            } else {
-                throw new FaultToleranceException(lastFailure.getMessage(), lastFailure);
-            }
+            throw sneakyThrow(lastFailure);
         } else {
+            // this branch should never be taken
             throw new FaultToleranceException(description + " reached max retries or max retry duration");
         }
     }
 
     boolean shouldAbortRetrying(Throwable e) {
+        // specifying `abortOn` is only useful when it's more specific than `retryOn`;
+        // otherwise, if the exception isn't present in `retryOn`, it's always an abort
         return abortOn.includes(e.getClass()) || !retryOn.includes(e.getClass());
     }
 

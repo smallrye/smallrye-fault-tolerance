@@ -1,7 +1,8 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
+import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
@@ -48,11 +49,12 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inClosed(InvocationContext<CompletionStage<V>> target, CircuitBreaker.State state) {
         try {
-            CompletionStage<V> result = delegate.apply(target);
+            CompletableFuture<V> result = new CompletableFuture<>();
 
-            return result.handle((val, error) -> {
+            delegate.apply(target).whenComplete((value, error) -> {
                 if (error != null) {
-                    throw onFailure(state, error);
+                    onFailure(state, error);
+                    result.completeExceptionally(error);
                 } else {
                     metricsRecorder.circuitBreakerSucceeded();
                     boolean failureThresholdReached = state.rollingWindow.recordSuccess();
@@ -60,22 +62,18 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
                         toOpen(state);
                     }
                     listeners.forEach(CircuitBreakerListener::succeeded);
-                    return val;
+                    result.complete(value);
                 }
             });
+
+            return result;
         } catch (Throwable e) {
-            CompletionException failure = onFailure(state, e);
-            return failedCompletionStage(failure);
+            onFailure(state, e);
+            return failedStage(e);
         }
     }
 
-    private CompletionStage<V> failedCompletionStage(Throwable failure) {
-        CompletableFuture<V> result = new CompletableFuture<>();
-        result.completeExceptionally(failure);
-        return result;
-    }
-
-    private CompletionException onFailure(State state, Throwable e) {
+    private void onFailure(State state, Throwable e) {
         boolean isFailure = !isConsideredSuccess(e);
         if (isFailure) {
             listeners.forEach(CircuitBreakerListener::failed);
@@ -96,12 +94,6 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
             toOpen(state);
         }
-
-        if (e instanceof CompletionException) {
-            return (CompletionException) e;
-        } else {
-            return new CompletionException(e);
-        }
     }
 
     private CompletionStage<V> inOpen(InvocationContext<CompletionStage<V>> target,
@@ -109,7 +101,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
-            return failedCompletionStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
+            return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
             long now = System.nanoTime();
 
@@ -124,24 +116,36 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inHalfOpen(InvocationContext<CompletionStage<V>> target, CircuitBreaker.State state) {
         try {
-            CompletionStage<V> result = delegate.apply(target);
-            metricsRecorder.circuitBreakerSucceeded();
+            CompletableFuture<V> result = new CompletableFuture<>();
 
-            int successes = state.consecutiveSuccesses.incrementAndGet();
-            if (successes >= successThreshold) {
-                long now = System.nanoTime();
-                closedStart = now;
-                previousHalfOpenTime.addAndGet(now - halfOpenStart);
+            delegate.apply(target).whenComplete((value, error) -> {
+                if (error != null) {
+                    metricsRecorder.circuitBreakerFailed();
+                    listeners.forEach(CircuitBreakerListener::failed);
+                    toOpen(state);
+                    result.completeExceptionally(error);
+                } else {
+                    metricsRecorder.circuitBreakerSucceeded();
 
-                toClosed(state);
-            }
-            listeners.forEach(CircuitBreakerListener::succeeded);
+                    int successes = state.consecutiveSuccesses.incrementAndGet();
+                    if (successes >= successThreshold) {
+                        long now = System.nanoTime();
+                        closedStart = now;
+                        previousHalfOpenTime.addAndGet(now - halfOpenStart);
+
+                        toClosed(state);
+                    }
+                    listeners.forEach(CircuitBreakerListener::succeeded);
+                    result.complete(value);
+                }
+            });
+
             return result;
         } catch (Throwable e) {
             metricsRecorder.circuitBreakerFailed();
             listeners.forEach(CircuitBreakerListener::failed);
             toOpen(state);
-            return failedCompletionStage(e);
+            return failedStage(e);
         }
     }
 }

@@ -1,7 +1,9 @@
 package io.smallrye.faulttolerance.core.retry;
 
+import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
+
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -31,10 +33,8 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
         return doRetry(ctx, 0, runningStopwatch, null);
     }
 
-    public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> target,
-            int attempt,
-            RunningStopwatch stopwatch,
-            Throwable latestFailure) {
+    public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> target, int attempt,
+            RunningStopwatch stopwatch, Throwable latestFailure) {
         if (attempt == 0) {
             // do not sleep
         } else if (attempt <= maxRetries) {
@@ -43,93 +43,57 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                 delayBetweenRetries.sleep();
             } catch (InterruptedException e) {
                 metricsRecorder.retryFailed();
-                return erroneousResult(e);
+                return failedStage(e);
             } catch (Exception e) {
                 metricsRecorder.retryFailed();
                 if (Thread.interrupted()) {
-                    return erroneousResult(new InterruptedException());
+                    return failedStage(new InterruptedException());
                 }
 
-                return erroneousResult(e);
+                return failedStage(e);
             }
         } else {
             metricsRecorder.retryFailed();
-            return erroneousResult(latestFailure);
+            return failedStage(latestFailure);
         }
         if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
             if (latestFailure != null) {
                 metricsRecorder.retryFailed();
-                return erroneousResult(latestFailure);
+                return failedStage(latestFailure);
             } else {
                 metricsRecorder.retryFailed();
-                return erroneousResult(new FaultToleranceException(description + " reached max retries or max retry duration"));
+                return failedStage(new FaultToleranceException(description + " reached max retries or max retry duration"));
             }
         }
         try {
-            return delegate.apply(target)
-                    .handle(DelegateResultCarrier::new)
-                    .thenCompose(result -> {
-                        Throwable error = result.error;
-                        if (error == null) {
-                            recordSuccess(attempt);
-                            return CompletableFuture.completedFuture(result.value);
-                        } else {
-                            metricsRecorder.retryFailed();
-                            if (shouldAbortRetrying(error)) {
-                                metricsRecorder.retryFailed();
-                                if (error instanceof RuntimeException) {
-                                    throw (RuntimeException) error;
-                                } else {
-                                    throw new CompletionException(error);
-                                }
-                            } else {
-                                try {
-                                    return doRetry(target, attempt + 1, stopwatch, error);
-                                } catch (CompletionException ce) {
-                                    throw ce;
-                                } catch (Exception any) {
-                                    throw new CompletionException(any);
-                                }
-                            }
-                        }
-                    });
-        } catch (Throwable th) {
-            if (shouldAbortRetrying(th)) {
-                return erroneousResult(th);
+            CompletableFuture<V> result = new CompletableFuture<>();
+
+            delegate.apply(target).whenComplete((value, exception) -> {
+                if (exception == null) {
+                    if (attempt == 0) {
+                        metricsRecorder.retrySucceededNotRetried();
+                    } else {
+                        metricsRecorder.retrySucceededRetried();
+                    }
+                    result.complete(value);
+                } else {
+                    metricsRecorder.retryFailed();
+                    if (shouldAbortRetrying(exception)) {
+                        metricsRecorder.retryFailed();
+                        result.completeExceptionally(exception);
+                    } else {
+                        propagateCompletion(doRetry(target, attempt + 1, stopwatch, exception), result);
+                    }
+                }
+            });
+
+            return result;
+        } catch (Throwable e) {
+            if (shouldAbortRetrying(e)) {
+                return failedStage(e);
             } else {
-                return doRetry(target, attempt + 1, stopwatch, th);
+                return doRetry(target, attempt + 1, stopwatch, e);
             }
-        }
-    }
-
-    private CompletionStage<V> erroneousResult(Throwable latestFailure) {
-        CompletableFuture<V> result = new CompletableFuture<>();
-        // TODO: TCK expects that but it seems un(der)specified in the spec
-        Exception error;
-        if (latestFailure instanceof Exception) {
-            error = (Exception) latestFailure;
-        } else {
-            error = new FaultToleranceException(latestFailure.getMessage(), latestFailure);
-        }
-        result.completeExceptionally(error);
-        return result;
-    }
-
-    private void recordSuccess(int attempt) {
-        if (attempt == 0) {
-            metricsRecorder.retrySucceededNotRetried();
-        } else {
-            metricsRecorder.retrySucceededRetried();
-        }
-    }
-
-    private class DelegateResultCarrier {
-        final V value;
-        final Throwable error;
-
-        private DelegateResultCarrier(V value, Throwable error) {
-            this.value = value;
-            this.error = error;
         }
     }
 }

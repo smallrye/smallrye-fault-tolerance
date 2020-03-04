@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
+import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -36,6 +38,8 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        // TODO we shouldn't put tasks into the executor if they immediately block on workSemaphore,
+        //  they should be put into some queue
         if (capacitySemaphore.tryAcquire()) {
             CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), ctx);
             executor.execute(task);
@@ -43,13 +47,12 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             return task.result;
         } else {
             recorder.bulkheadRejected();
-            CompletableFuture<V> result = new CompletableFuture<>();
-            result.completeExceptionally(bulkheadRejected());
-            return result;
+            return failedStage(bulkheadRejected());
         }
     }
 
-    public int getQueueSize() {
+    // only for tests
+    int getQueueSize() {
         return Math.max(0, queueSize - capacitySemaphore.availablePermits());
     }
 
@@ -68,7 +71,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             try {
                 workSemaphore.acquire();
             } catch (InterruptedException e) {
-                logger.error("Bulkhead worker interrupted, exiting", e);
+                // among other occasions, this also happens during shutdown
                 result.completeExceptionally(e);
                 return;
             }

@@ -43,7 +43,7 @@ public final class TestThread<V> extends Thread {
         }
 
         if (exception != null) {
-            sneakyThrow(exception);
+            throw sneakyThrow(exception);
         }
         return result;
     }
