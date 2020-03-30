@@ -42,7 +42,8 @@ public class RealWorldCompletionStageTimeoutTest {
 
     private ScheduledExecutorService executor;
     private ScheduledExecutorTimeoutWatcher watcher;
-    private ExecutorService taskExecutor;
+
+    private ExecutorService timeoutActionExecutor;
 
     private Stopwatch stopwatch = new SystemStopwatch();
 
@@ -51,25 +52,24 @@ public class RealWorldCompletionStageTimeoutTest {
         executor = Executors.newSingleThreadScheduledExecutor();
         watcher = new ScheduledExecutorTimeoutWatcher(executor);
 
-        taskExecutor = Executors.newSingleThreadExecutor();
+        timeoutActionExecutor = Executors.newSingleThreadExecutor();
     }
 
     @After
     public void tearDown() throws InterruptedException {
         executor.shutdownNow();
-        taskExecutor.shutdownNow();
+        timeoutActionExecutor.shutdownNow();
 
         executor.awaitTermination(1, TimeUnit.SECONDS);
-        taskExecutor.awaitTermination(1, TimeUnit.SECONDS);
+        timeoutActionExecutor.awaitTermination(1, TimeUnit.SECONDS);
     }
 
     @Test
     public void shouldReturnRightAway() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
-                invocation(),
-                "completion stage timeout", TIMEOUT, watcher, null);
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor, null);
 
         assertThat(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -82,9 +82,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateMethodError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
-                invocation(),
-                "completion stage timeout", TIMEOUT, watcher, null);
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor, null);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -99,9 +98,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldPropagateCompletionStageError() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
-                invocation(),
-                "completion stage timeout", TIMEOUT, watcher, null);
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor, null);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -116,9 +114,8 @@ public class RealWorldCompletionStageTimeoutTest {
     public void shouldTimeOut() throws Exception {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(
-                invocation(),
-                "completion stage timeout", SLEEP_TIME, watcher, null, true);
+        FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
+                "completion stage timeout", SLEEP_TIME, watcher, timeoutActionExecutor, null, true);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(TIMEOUT);
