@@ -5,6 +5,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.microprofile.context.ManagedExecutor;
+import org.eclipse.microprofile.context.ThreadContext;
 
 import io.smallrye.context.SmallRyeManagedExecutor;
 import io.smallrye.faulttolerance.ExecutorFactory;
@@ -27,7 +28,9 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
 
     @Override
     public ScheduledExecutorService createTimeoutExecutor(int size) {
-        return Executors.newScheduledThreadPool(size);
+        ThreadContext threadContext = ThreadContext.builder().build();
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(size);
+        return new ContextPropagatingScheduledExecutorService(threadContext, executor);
     }
 
     @Override
