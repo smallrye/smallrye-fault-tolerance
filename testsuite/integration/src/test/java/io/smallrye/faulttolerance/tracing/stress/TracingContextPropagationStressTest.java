@@ -69,10 +69,15 @@ public class TracingContextPropagationStressTest {
         for (MockSpan mockSpan : spans) {
             assertEquals(spans.get(0).context().traceId(), mockSpan.context().traceId());
         }
-        assertEquals("hello", spans.get(0).operationName());
-        assertEquals("hello", spans.get(1).operationName());
-        assertEquals("hello", spans.get(2).operationName());
-        assertEquals("fallback", spans.get(3).operationName());
-        assertEquals("parent", spans.get(4).operationName());
+
+        // if timeout occurs, subsequent retries/fallback can be interleaved with the execution that timed out,
+        // resulting in varying span order
+        assertEquals(3, countSpansWithOperationName(spans, "hello"));
+        assertEquals(1, countSpansWithOperationName(spans, "fallback"));
+        assertEquals(1, countSpansWithOperationName(spans, "parent"));
+    }
+
+    private long countSpansWithOperationName(List<MockSpan> spans, String operationName) {
+        return spans.stream().filter(span -> span.operationName().equals(operationName)).count();
     }
 }
