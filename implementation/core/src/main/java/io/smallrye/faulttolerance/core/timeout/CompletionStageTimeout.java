@@ -46,23 +46,23 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         Thread threadToInterrupt = interruptCurrentThread ? Thread.currentThread() : null;
         TimeoutExecution timeoutExecution = new TimeoutExecution(threadToInterrupt, timeoutInMillis, () -> {
             if (completedWithTimeout.compareAndSet(false, true)) {
-                long end = System.nanoTime();
-                metricsRecorder.timeoutTimedOut(end - start);
-
                 // completing the `result` means dependent stages (such as subsequent retry attempts, or fallback)
                 // run immediately on the "current" thread
-                // if we completed the `result` on the timeout watcher thread, it would mean arbitrary code
-                // could execute on the timeout watcher thread, which is wrong
+                // therefore, we run all the custom code here on the original executor, so that we don't exhaust
+                // the timeout watcher thread pool
                 originalExecutor.submit(() -> {
+                    long end = System.nanoTime();
+                    metricsRecorder.timeoutTimedOut(end - start);
+
+                    CompletionStage<V> runningTask = runningTaskRef.get();
+                    if (runningTask != null) {
+                        // we pass `null` to the `TimeoutExecution` because we can't know in advance which thread to interrupt
+                        // here, we compensate for that by interruptibly-cancelling the running task, if there's one
+                        runningTask.toCompletableFuture().cancel(true);
+                    }
+
                     result.completeExceptionally(timeoutException(description));
                 });
-            }
-
-            CompletionStage<V> runningTask = runningTaskRef.get();
-            if (runningTask != null) {
-                // we pass `null` to the `TimeoutExecution` because we can't know in advance which thread to interrupt
-                // here, we compensate for that by interruptibly-cancelling the running task, if there's one
-                runningTask.toCompletableFuture().cancel(true);
             }
         });
         TimeoutWatch watch = watcher.schedule(timeoutExecution);
