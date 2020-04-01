@@ -13,7 +13,7 @@
 
   <modules>
     <module>basic</module>
-    <module>tck</module>
+<!--    <module>tck</module>-->
     <module>integration</module>
   </modules>
 

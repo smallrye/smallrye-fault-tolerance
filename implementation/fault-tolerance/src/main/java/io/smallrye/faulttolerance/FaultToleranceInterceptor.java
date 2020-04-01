@@ -42,6 +42,7 @@ import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 
+import io.smallrye.faulttolerance.core.util.Tracer;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.jboss.logging.Logger;
@@ -163,6 +164,8 @@ public class FaultToleranceInterceptor {
                     () -> {
                         CompletableFuture<T> result = new CompletableFuture<>();
                         asyncExecutor.submit(() -> {
+                            System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^ " + Thread.currentThread().getName() + " running guarded method");
+
                             try {
                                 // the requestContextController.activate/deactivate pair here is the minimum
                                 // to pass TCK; for anything serious, Context Propagation is required
@@ -222,6 +225,7 @@ public class FaultToleranceInterceptor {
                     executorProvider.createAdHocExecutor(size), size,
                     queueSize,
                     collector);
+            result = new Tracer<>(result);
         }
 
         if (operation.hasTimeout()) {
@@ -231,6 +235,7 @@ public class FaultToleranceInterceptor {
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
                     asyncExecutor,
                     collector);
+            result = new Tracer<>(result);
         }
 
         if (operation.hasCircuitBreaker()) {
@@ -245,6 +250,7 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch(),
                     collector);
+            result = new Tracer<>(result);
         }
 
         if (operation.hasRetry()) {
@@ -265,6 +271,7 @@ public class FaultToleranceInterceptor {
                     new ThreadSleepDelay(delayMs, jitter),
                     new SystemStopwatch(),
                     collector);
+            result = new Tracer<>(result);
         }
 
         if (operation.hasFallback()) {
@@ -276,6 +283,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
                     getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
                     collector);
+            result = new Tracer<>(result);
         }
 
         return result;

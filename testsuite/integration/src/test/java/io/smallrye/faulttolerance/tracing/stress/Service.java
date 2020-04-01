@@ -19,6 +19,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletionStage;
 
+import io.opentracing.mock.MockSpan;
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
@@ -28,7 +29,13 @@ import io.opentracing.mock.MockTracer;
 import io.opentracing.util.GlobalTracer;
 
 public class Service {
-    public static MockTracer tracer = new MockTracer();
+    public static MockTracer tracer = new MockTracer() {
+        @Override
+        protected void onSpanFinished(MockSpan mockSpan) {
+            super.onSpanFinished(mockSpan);
+            System.out.println("!!!!!!!!!!!!!!!!!! " + Thread.currentThread().getName() + " finished " + mockSpan);
+        }
+    };
 
     static {
         GlobalTracer.register(tracer);

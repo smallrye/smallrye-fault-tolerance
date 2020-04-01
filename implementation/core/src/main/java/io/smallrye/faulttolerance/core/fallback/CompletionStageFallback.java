@@ -29,6 +29,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
         }
 
         originalResult.whenComplete((value, exception) -> {
+            System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$ " + Thread.currentThread().getName() + " fallback logic");
             if (value != null) {
                 result.complete(value);
                 return;

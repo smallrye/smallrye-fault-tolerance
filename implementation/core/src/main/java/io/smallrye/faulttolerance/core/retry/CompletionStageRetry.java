@@ -35,6 +35,8 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
     public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> target, int attempt,
             RunningStopwatch stopwatch, Throwable latestFailure) {
+        System.out.println("*************************** " + Thread.currentThread().getName() + " retry attempt " + attempt);
+
         if (attempt == 0) {
             // do not sleep
         } else if (attempt <= maxRetries) {

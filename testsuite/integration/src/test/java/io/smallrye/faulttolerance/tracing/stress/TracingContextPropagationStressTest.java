@@ -50,7 +50,8 @@ public class TracingContextPropagationStressTest {
     @Test
     public void test(Service service) throws ExecutionException, InterruptedException {
         // 100 iterations so that the test doesn't run way too long
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
+            System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + i);
             Service.tracer.reset();
             doTest(service);
         }
@@ -69,10 +70,17 @@ public class TracingContextPropagationStressTest {
         for (MockSpan mockSpan : spans) {
             assertEquals(spans.get(0).context().traceId(), mockSpan.context().traceId());
         }
-        assertEquals("hello", spans.get(0).operationName());
-        assertEquals("hello", spans.get(1).operationName());
-        assertEquals("hello", spans.get(2).operationName());
-        assertEquals("fallback", spans.get(3).operationName());
-        assertEquals("parent", spans.get(4).operationName());
+        try {
+            assertEquals("hello", spans.get(0).operationName());
+            assertEquals("hello", spans.get(1).operationName());
+            assertEquals("hello", spans.get(2).operationName());
+            assertEquals("fallback", spans.get(3).operationName());
+            assertEquals("parent", spans.get(4).operationName());
+        } catch (Throwable e) {
+            for (MockSpan span : spans) {
+                System.out.println("?????????? " + span);
+            }
+            throw e;
+        }
     }
 }

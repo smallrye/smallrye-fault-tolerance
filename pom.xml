@@ -63,7 +63,7 @@
 
   <modules>
     <module>implementation</module>
-    <module>docs</module>
+<!--    <module>docs</module>-->
     <module>testsuite</module>
   </modules>
 

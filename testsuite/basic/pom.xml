@@ -25,6 +25,10 @@
   <artifactId>smallrye-fault-tolerance-testsuite-basic</artifactId>
   <name>SmallRye Fault Tolerance: Basic Test Suite</name>
 
+  <properties>
+    <skipTests>true</skipTests>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.smallrye</groupId>

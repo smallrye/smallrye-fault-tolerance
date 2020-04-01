@@ -46,23 +46,26 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         Thread threadToInterrupt = interruptCurrentThread ? Thread.currentThread() : null;
         TimeoutExecution timeoutExecution = new TimeoutExecution(threadToInterrupt, timeoutInMillis, () -> {
             if (completedWithTimeout.compareAndSet(false, true)) {
-                long end = System.nanoTime();
-                metricsRecorder.timeoutTimedOut(end - start);
+                System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%% " + Thread.currentThread().getName() + " timeout from watcher thread");
 
                 // completing the `result` means dependent stages (such as subsequent retry attempts, or fallback)
                 // run immediately on the "current" thread
                 // if we completed the `result` on the timeout watcher thread, it would mean arbitrary code
                 // could execute on the timeout watcher thread, which is wrong
                 originalExecutor.submit(() -> {
+                    long end = System.nanoTime();
+                    metricsRecorder.timeoutTimedOut(end - start);
+
+                    CompletionStage<V> runningTask = runningTaskRef.get();
+                    if (runningTask != null) {
+                        // we pass `null` to the `TimeoutExecution` because we can't know in advance which thread to interrupt
+                        // here, we compensate for that by interruptibly-cancelling the running task, if there's one
+                        runningTask.toCompletableFuture().cancel(true);
+                    }
+
+                    System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%% " + Thread.currentThread().getName() + " timeout completing on original executor");
                     result.completeExceptionally(timeoutException(description));
                 });
-            }
-
-            CompletionStage<V> runningTask = runningTaskRef.get();
-            if (runningTask != null) {
-                // we pass `null` to the `TimeoutExecution` because we can't know in advance which thread to interrupt
-                // here, we compensate for that by interruptibly-cancelling the running task, if there's one
-                runningTask.toCompletableFuture().cancel(true);
             }
         });
         TimeoutWatch watch = watcher.schedule(timeoutExecution);
@@ -88,13 +91,16 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
 
             if (timeoutExecution.hasTimedOut()) {
                 if (completedWithTimeout.compareAndSet(false, true)) {
+                    System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%% " + Thread.currentThread().getName() + " timeout from async executor thread, completing on this thread");
                     metricsRecorder.timeoutTimedOut(end - start);
                     result.completeExceptionally(timeoutException(description));
                 }
             } else if (exception != null) {
+                System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%% " + Thread.currentThread().getName() + " failed without timeout");
                 metricsRecorder.timeoutFailed(end - start);
                 result.completeExceptionally(exception);
             } else {
+                System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%% " + Thread.currentThread().getName() + " succeeded without timeout");
                 metricsRecorder.timeoutSucceeded(end - start);
                 result.complete(value);
             }

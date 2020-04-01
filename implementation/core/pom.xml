@@ -39,6 +39,8 @@
 
         <!--suppress CheckTagEmptyBody -->
         <jacoco.argLine /> <!-- will be set by the JaCoCo Maven plugin when active -->
+
+        <skipTests>true</skipTests>
     </properties>
 
     <dependencies>
