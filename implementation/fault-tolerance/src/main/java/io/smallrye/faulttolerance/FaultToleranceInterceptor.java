@@ -144,8 +144,12 @@ public class FaultToleranceInterceptor {
 
         MetricsCollector collector = getMetricsCollector(operation, point);
 
-        if (operation.isAsync() && operation.returnsCompletionStage()) {
-            return properAsyncFlow(operation, invocationContext, collector, point);
+        if (operation.returnsCompletionStage()) {
+            if (operation.isAsync()) {
+                return properAsyncFlow(operation, invocationContext, collector, point);
+            } else {
+                return experimentalAsyncFlow(operation, invocationContext, collector, point);
+            }
         } else if (operation.isAsync()) {
             return futureFlow(operation, invocationContext, collector, point);
         } else {
@@ -175,6 +179,34 @@ public class FaultToleranceInterceptor {
                                 requestContextController.deactivate();
                             }
                         });
+                        return result;
+                    });
+            ctx.set(InvocationContext.class, invocationContext);
+            return strategy.apply(ctx).exceptionally(e -> {
+                collector.failed();
+                throw sneakyThrow(e);
+            });
+        } catch (Exception e) {
+            collector.failed();
+            throw sneakyThrow(e);
+        }
+    }
+
+    private <T> CompletionStage<T> experimentalAsyncFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
+            MetricsCollector collector, InterceptionPoint point) {
+
+        FaultToleranceStrategy<CompletionStage<T>> strategy = cache.getStrategy(point,
+                ignored -> prepareAsyncStrategy(operation, point, collector));
+        try {
+            collector.invoked();
+            io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
+                    () -> {
+                        CompletableFuture<T> result = new CompletableFuture<>();
+                        try {
+                            propagateCompletion((CompletionStage<T>) invocationContext.proceed(), result);
+                        } catch (Exception e) {
+                            result.completeExceptionally(e);
+                        }
                         return result;
                     });
             ctx.set(InvocationContext.class, invocationContext);
