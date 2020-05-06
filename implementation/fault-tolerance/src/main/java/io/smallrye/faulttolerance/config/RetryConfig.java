@@ -16,6 +16,7 @@
 package io.smallrye.faulttolerance.config;
 
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,7 +72,8 @@ public class RetryConfig extends GenericConfig<Retry> {
             throw new FaultToleranceDefinitionException(
                     INVALID_RETRY_ON + getMethodInfo() + " : maxDuration shouldn't be lower than 0");
         }
-        if (get(MAX_DURATION, Long.class) <= get(DELAY, Long.class)) {
+        if (Duration.of(get(MAX_DURATION, Long.class), get(DURATION_UNIT, ChronoUnit.class)).toMillis() <= Duration
+                .of(get(DELAY, Long.class), get(DELAY_UNIT, ChronoUnit.class)).toMillis()) {
             throw new FaultToleranceDefinitionException(
                     INVALID_RETRY_ON + getMethodInfo() + " : maxDuration should be greater than delay");
         }
