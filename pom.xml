@@ -44,7 +44,7 @@
     <version.smallrye-context-propagation>1.0.12</version.smallrye-context-propagation>
     <version.opentracing>0.31.0</version.opentracing>
 
-    <version.org.assertj.assertj-core>3.16.0</version.org.assertj.assertj-core>
+    <version.org.assertj.assertj-core>3.16.1</version.org.assertj.assertj-core>
     <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
   </properties>
 
