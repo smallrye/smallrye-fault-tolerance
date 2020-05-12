@@ -16,8 +16,8 @@
 
 package io.smallrye.faulttolerance;
 
+import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
-import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 import static java.util.Arrays.asList;
 
 import java.lang.reflect.InvocationTargetException;
@@ -55,6 +55,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.config.GenericConfig;
 import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.config.TimeoutConfig;
+import io.smallrye.faulttolerance.core.CompletionStageGeneralMetricsRecorder;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.GeneralMetricsRecorder;
 import io.smallrye.faulttolerance.core.Invocation;
@@ -165,7 +166,6 @@ public class FaultToleranceInterceptor {
         FaultToleranceStrategy<CompletionStage<T>> strategy = cache.getStrategy(point,
                 ignored -> prepareAsyncStrategy(operation, point, collector));
         try {
-            collector.invoked();
             io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
                     () -> {
                         CompletableFuture<T> result = new CompletableFuture<>();
@@ -185,13 +185,9 @@ public class FaultToleranceInterceptor {
                         return result;
                     });
             ctx.set(InvocationContext.class, invocationContext);
-            return strategy.apply(ctx).exceptionally(e -> {
-                collector.failed();
-                throw sneakyThrow(e);
-            });
+            return strategy.apply(ctx);
         } catch (Exception e) {
-            collector.failed();
-            throw sneakyThrow(e);
+            return failedStage(e);
         }
     }
 
@@ -285,6 +281,8 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
                     collector);
         }
+
+        result = new CompletionStageGeneralMetricsRecorder<>(result, collector);
 
         return result;
     }

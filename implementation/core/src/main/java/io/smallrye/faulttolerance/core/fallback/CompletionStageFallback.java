@@ -29,7 +29,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
         }
 
         originalResult.whenComplete((value, exception) -> {
-            if (value != null) {
+            if (exception == null) {
                 result.complete(value);
                 return;
             }
