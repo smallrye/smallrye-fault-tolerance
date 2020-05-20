@@ -1,0 +1,4 @@
+name: SmallRye Fault Tolerance
+release:
+  current-version: 4.2.1-SNAPSHOT
+  next-version: 4.2.2-SNAPSHOT

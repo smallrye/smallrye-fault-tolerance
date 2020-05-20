@@ -1,8 +1,11 @@
 :microprofile-fault-tolerance: https://github.com/eclipse/microprofile-fault-tolerance/
+:ci: https://github.com/smallrye/smallrye-fault-tolerance/actions?query=workflow%3A%22SmallRye+Build%22
+:sonar: https://sonarcloud.io/dashboard?id=smallrye_smallrye-fault-tolerance
 
-image:https://semaphoreci.com/api/v1/smallrye/smallrye-fault-tolerance/branches/master/badge.svg["Semaphore CI", link="https://semaphoreci.com/smallrye/smallrye-fault-tolerance"]
-image:https://sonarcloud.io/api/project_badges/measure?project=smallrye_smallrye-fault-tolerance&metric=alert_status["Quality Gate Status", link="https://sonarcloud.io/dashboard?id=smallrye_smallrye-fault-tolerance"]
-image:https://img.shields.io/github/license/thorntail/thorntail.svg["License", link="http://www.apache.org/licenses/LICENSE-2.0"]
+image:https://github.com/smallrye/smallrye-fault-tolerance/workflows/SmallRye%20Build/badge.svg?branch=master[link={ci}]
+image:https://sonarcloud.io/api/project_badges/measure?project=smallrye_smallrye-fault-tolerance&metric=alert_status["Quality Gate Status", link={sonar}]
+image:https://img.shields.io/github/license/smallrye/smallrye-fault-tolerance.svg["License", link="http://www.apache.org/licenses/LICENSE-2.0"]
+image:https://img.shields.io/maven-central/v/io.smallrye/smallrye-fault-tolerance?color=green[]
 
 == SmallRye Fault Tolerance
 
