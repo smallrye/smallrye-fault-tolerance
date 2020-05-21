@@ -8,25 +8,24 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 public class SemaphoreBulkhead<V> extends BulkheadBase<V> {
     private final Semaphore semaphore;
 
-    public SemaphoreBulkhead(FaultToleranceStrategy<V> delegate, String description, int size,
-            MetricsRecorder metricsRecorder) {
-        super(description, delegate, metricsRecorder);
+    public SemaphoreBulkhead(FaultToleranceStrategy<V> delegate, String description, int size) {
+        super(description, delegate);
         semaphore = new Semaphore(size);
     }
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
         if (semaphore.tryAcquire()) {
-            recorder.bulkheadEntered();
-            long startTime = System.nanoTime();
+            ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
+            ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
             try {
                 return delegate.apply(ctx);
             } finally {
                 semaphore.release();
-                recorder.bulkheadLeft(System.nanoTime() - startTime);
+                ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
             }
         } else {
-            recorder.bulkheadRejected();
+            ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             throw bulkheadRejected();
         }
     }

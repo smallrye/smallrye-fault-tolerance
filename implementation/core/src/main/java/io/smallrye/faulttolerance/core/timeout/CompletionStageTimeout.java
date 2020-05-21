@@ -20,17 +20,16 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
     private final boolean interruptCurrentThread;
 
     public CompletionStageTimeout(FaultToleranceStrategy<CompletionStage<V>> delegate, String description, long timeoutInMillis,
-            TimeoutWatcher watcher, ExecutorService originalExecutor, MetricsRecorder metricsRecorder) {
-        super(delegate, description, timeoutInMillis, watcher, metricsRecorder);
+            TimeoutWatcher watcher, ExecutorService originalExecutor) {
+        super(delegate, description, timeoutInMillis, watcher);
         this.originalExecutor = checkNotNull(originalExecutor, "original executor must be set");
         this.interruptCurrentThread = false;
     }
 
     // only for tests
     CompletionStageTimeout(FaultToleranceStrategy<CompletionStage<V>> delegate, String description, long timeoutInMillis,
-            TimeoutWatcher watcher, ExecutorService originalExecutor, MetricsRecorder metricsRecorder,
-            boolean interruptCurrentThread) {
-        super(delegate, description, timeoutInMillis, watcher, metricsRecorder);
+            TimeoutWatcher watcher, ExecutorService originalExecutor, boolean interruptCurrentThread) {
+        super(delegate, description, timeoutInMillis, watcher);
         this.originalExecutor = originalExecutor;
         this.interruptCurrentThread = interruptCurrentThread;
     }
@@ -39,7 +38,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
-        long start = System.nanoTime();
+        ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
         AtomicBoolean completedWithTimeout = new AtomicBoolean(false);
         AtomicReference<CompletionStage<V>> runningTaskRef = new AtomicReference<>();
@@ -51,8 +50,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
                 // therefore, we run all the custom code here on the original executor, so that we don't exhaust
                 // the timeout watcher thread pool
                 originalExecutor.submit(() -> {
-                    long end = System.nanoTime();
-                    metricsRecorder.timeoutTimedOut(end - start);
+                    ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
 
                     CompletionStage<V> runningTask = runningTaskRef.get();
                     if (runningTask != null) {
@@ -84,18 +82,16 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
             // (this isn't exactly needed, but makes tests easier to write)
             timeoutExecution.finish(watch::cancel);
 
-            long end = System.nanoTime();
-
             if (timeoutExecution.hasTimedOut()) {
                 if (completedWithTimeout.compareAndSet(false, true)) {
-                    metricsRecorder.timeoutTimedOut(end - start);
+                    ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
                     result.completeExceptionally(timeoutException(description));
                 }
             } else if (exception != null) {
-                metricsRecorder.timeoutFailed(end - start);
+                ctx.fireEvent(TimeoutEvents.Finished.NORMALLY);
                 result.completeExceptionally(exception);
             } else {
-                metricsRecorder.timeoutSucceeded(end - start);
+                ctx.fireEvent(TimeoutEvents.Finished.NORMALLY);
                 result.complete(value);
             }
         });

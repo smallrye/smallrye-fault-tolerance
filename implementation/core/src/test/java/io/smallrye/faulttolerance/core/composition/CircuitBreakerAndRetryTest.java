@@ -11,6 +11,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerListener;
 import io.smallrye.faulttolerance.core.retry.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestException;
@@ -27,7 +28,7 @@ public class CircuitBreakerAndRetryTest {
                         TestInvocation.initiallyFailing(2, TestException::new, () -> "foobar"),
                         recorder));
 
-        assertThat(operation.apply(null)).isEqualTo("foobar");
+        assertThat(operation.apply(new InvocationContext<>(() -> "ignored"))).isEqualTo("foobar");
         assertThat(recorder.failureCount.get()).isEqualTo(2);
         assertThat(recorder.successCount.get()).isEqualTo(1);
     }
@@ -45,7 +46,7 @@ public class CircuitBreakerAndRetryTest {
                         TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
                         recorder));
 
-        assertThat(operation.apply(null)).isEqualTo("foobar");
+        assertThat(operation.apply(new InvocationContext<>(() -> "ignored"))).isEqualTo("foobar");
         assertThat(recorder.failureCount.get()).isEqualTo(5);
         assertThat(recorder.successCount.get()).isEqualTo(1);
     }
@@ -63,7 +64,8 @@ public class CircuitBreakerAndRetryTest {
                         TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
                         100, recorder));
 
-        assertThatThrownBy(() -> operation.apply(null)).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThatThrownBy(() -> operation.apply(new InvocationContext<>(() -> "ignored")))
+                .isExactlyInstanceOf(CircuitBreakerOpenException.class);
         assertThat(recorder.failureCount.get()).isEqualTo(5);
         assertThat(recorder.rejectedCount.get()).isEqualTo(6);
         assertThat(recorder.successCount.get()).isEqualTo(0);

@@ -16,16 +16,17 @@ public class InterceptionPoint {
         name = beanClass.getName() + "#" + method.getName();
     }
 
-    public String name() {
-        return name;
-    }
-
     public Class<?> beanClass() {
         return beanClass;
     }
 
     public Method method() {
         return method;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 
     @Override

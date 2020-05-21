@@ -50,7 +50,7 @@ public class FutureTimeoutTest {
     public void failOnLackOfExecutor() {
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> completedFuture("foobar"));
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
-                timeoutWatcher, null);
+                timeoutWatcher);
         assertThatThrownBy(() -> new AsyncTimeout<>(timeout, null))
                 .isExactlyInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Executor must be set");
@@ -78,7 +78,7 @@ public class FutureTimeoutTest {
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
                 () -> completedFuture("foobar"));
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
-                timeoutWatcher, null);
+                timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
         invocationDelayBarrier.open();
 
@@ -95,7 +95,7 @@ public class FutureTimeoutTest {
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
                 () -> completedFuture("foobar"));
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
-                timeoutWatcher, null);
+                timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
         watcherTimeoutElapsedBarrier.open();
         watcherExecutionInterruptedBarrier.await();
@@ -114,7 +114,7 @@ public class FutureTimeoutTest {
                 () -> completedFuture("foobar"));
 
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
-                timeoutWatcher, null);
+                timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
         watcherTimeoutElapsedBarrier.open();
         watcherExecutionInterruptedBarrier.await();
@@ -136,7 +136,7 @@ public class FutureTimeoutTest {
                 () -> completedFuture("foobar"));
 
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
-                timeoutWatcher, null);
+                timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
 
         invocationStartBarrier.await();
@@ -247,7 +247,7 @@ public class FutureTimeoutTest {
     private TestThread<Future<String>> runAsyncTimeoutImmediately(Callable<Future<String>> action) {
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(action);
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
-                timeoutWatcher, null);
+                timeoutWatcher);
         return runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
     }
 }

@@ -31,8 +31,7 @@ public class ThreadPoolBulkheadTest {
     public void shouldLetSingleThrough() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation
                 .immediatelyReturning(() -> completedFuture("shouldLetSingleThrough"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 2,
-                null);
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 2);
         Future<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
     }
@@ -42,8 +41,7 @@ public class ThreadPoolBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldLetMaxThrough"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 3,
-                null);
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -63,8 +61,7 @@ public class ThreadPoolBulkheadTest {
 
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(startBarrier, delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", executor, 2, 3,
-                null);
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", executor, 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -95,7 +92,7 @@ public class ThreadPoolBulkheadTest {
         });
 
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor,
-                2, 3, null);
+                2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -132,7 +129,7 @@ public class ThreadPoolBulkheadTest {
         });
 
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor,
-                2, 3, null);
+                2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -174,7 +171,7 @@ public class ThreadPoolBulkheadTest {
         });
 
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled", executor,
-                2, 3, null);
+                2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 

@@ -36,7 +36,7 @@ public class CompletionStageCircuitBreakerTest {
     public void test1() throws Exception {
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
                 testException, SetOfThrowables.EMPTY,
-                1000, 4, 0.5, 2, stopwatch, null);
+                1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
         assertThat(cb.apply(returning("foobar1")).toCompletableFuture().get()).isEqualTo("foobar1");
@@ -88,7 +88,7 @@ public class CompletionStageCircuitBreakerTest {
     public void test2() throws Exception {
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
                 testException, SetOfThrowables.EMPTY,
-                1000, 4, 0.5, 2, stopwatch, null);
+                1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
         assertThat(cb.apply(returning("foobar1")).toCompletableFuture().get()).isEqualTo("foobar1");
@@ -122,7 +122,7 @@ public class CompletionStageCircuitBreakerTest {
 
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
                 testException, SetOfThrowables.EMPTY,
-                1000, 4, 0.5, 2, stopwatch, null);
+                1000, 4, 0.5, 2, stopwatch);
 
         assertThatThrownBy(cb.apply(eventuallyFailingWith(exception)).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCause(exception);

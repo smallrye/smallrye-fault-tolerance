@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.retry;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -11,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 
+import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
@@ -29,9 +31,9 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldNotRetryOnSuccess",
                 SetOfThrowables.ALL, SetOfThrowables.EMPTY,
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldNotRetryOnSuccess");
         assertThat(invocationCount).hasValue(1);
     }
@@ -50,9 +52,9 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldPropagateAbortOnError",
                 SetOfThrowables.ALL, SetOfThrowables.create(Collections.singletonList(RuntimeException.class)),
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get).isInstanceOf(ExecutionException.class)
                 .hasCause(error);
         assertThat(invocationCount).hasValue(1);
@@ -70,9 +72,9 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldPropagateAbortOnErrorInCSCreation",
                 SetOfThrowables.ALL, SetOfThrowables.create(Collections.singletonList(RuntimeException.class)),
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get).isInstanceOf(ExecutionException.class)
                 .hasCause(error);
         assertThat(invocationCount).hasValue(1);
@@ -89,14 +91,14 @@ public class CompletionStageRetryTest {
                     if (prevInvoCnt == 0) {
                         throw error;
                     } else {
-                        return CompletableFuture.completedFuture("shouldRetryOnce");
+                        return completedFuture("shouldRetryOnce");
                     }
                 });
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryOnce",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldRetryOnce");
         assertThat(invocationCount).hasValue(2);
     }
@@ -119,9 +121,9 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryOnceOnCsFailure",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldRetryOnceOnCsFailure");
         assertThat(invocationCount).hasValue(2);
     }
@@ -144,9 +146,9 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryMaxTimesAndSucceed",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldRetryMaxTimesAndSucceed");
         assertThat(invocationCount).hasValue(4);
     }
@@ -163,9 +165,9 @@ public class CompletionStageRetryTest {
                 }));
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryMaxTimesAndSucceed",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
-                3, 1000L, TestDelay.NONE, new TestStopwatch(), null);
+                3, 1000L, TestDelay.NONE, new TestStopwatch());
 
-        CompletionStage<String> result = retry.apply(null);
+        CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get).isInstanceOf(ExecutionException.class)
                 .hasCause(error);
         assertThat(invocationCount).hasValue(4);
