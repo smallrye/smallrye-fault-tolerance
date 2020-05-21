@@ -45,7 +45,6 @@ import javax.interceptor.InvocationContext;
 
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
-import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerStateChanged;
 import io.smallrye.faulttolerance.config.BulkheadConfig;
@@ -55,9 +54,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.config.GenericConfig;
 import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.config.TimeoutConfig;
-import io.smallrye.faulttolerance.core.CompletionStageGeneralMetricsRecorder;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.GeneralMetricsRecorder;
 import io.smallrye.faulttolerance.core.Invocation;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageBulkhead;
@@ -68,6 +65,9 @@ import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBre
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
+import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.Jitter;
 import io.smallrye.faulttolerance.core.retry.RandomJitter;
@@ -84,8 +84,7 @@ import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
-import io.smallrye.faulttolerance.metrics.MetricsCollector;
-import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
+import io.smallrye.faulttolerance.metrics.MetricsProvider;
 
 /**
  * The interceptor for fault tolerance strategies.
@@ -99,13 +98,11 @@ import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class FaultToleranceInterceptor {
 
-    private static final Logger LOGGER = Logger.getLogger(FaultToleranceInterceptor.class);
-
     private final FallbackHandlerProvider fallbackHandlerProvider;
 
     private final Bean<?> interceptedBean;
 
-    private final MetricsCollectorFactory metricsCollectorFactory;
+    private final MetricsProvider metricsProvider;
 
     private final ScheduledExecutorService timeoutExecutor;
 
@@ -125,14 +122,14 @@ public class FaultToleranceInterceptor {
     public FaultToleranceInterceptor(
             FallbackHandlerProvider fallbackHandlerProvider,
             @Intercepted Bean<?> interceptedBean,
-            MetricsCollectorFactory metricsCollectorFactory,
+            MetricsProvider metricsProvider,
             FaultToleranceOperationProvider operationProvider,
             StrategyCache cache,
             ExecutorProvider executorProvider,
             Event<CircuitBreakerStateChanged> cbStateEvent) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
-        this.metricsCollectorFactory = metricsCollectorFactory;
+        this.metricsProvider = metricsProvider;
         this.operationProvider = operationProvider;
         this.executorProvider = executorProvider;
         this.cache = cache;
@@ -150,21 +147,19 @@ public class FaultToleranceInterceptor {
 
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
-        MetricsCollector collector = getMetricsCollector(operation, point);
-
         if (operation.isAsync() && operation.returnsCompletionStage()) {
-            return properAsyncFlow(operation, invocationContext, collector, point);
+            return properAsyncFlow(operation, invocationContext, point);
         } else if (operation.isAsync()) {
-            return futureFlow(operation, invocationContext, collector, point);
+            return futureFlow(operation, invocationContext, point);
         } else {
-            return syncFlow(operation, invocationContext, collector, point);
+            return syncFlow(operation, invocationContext, point);
         }
     }
 
     private <T> CompletionStage<T> properAsyncFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
-            MetricsCollector collector, InterceptionPoint point) {
+            InterceptionPoint point) {
         FaultToleranceStrategy<CompletionStage<T>> strategy = cache.getStrategy(point,
-                ignored -> prepareAsyncStrategy(operation, point, collector));
+                ignored -> prepareAsyncStrategy(operation, point));
         try {
             io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
                     () -> {
@@ -192,10 +187,9 @@ public class FaultToleranceInterceptor {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T syncFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
-            MetricsCollector collector, InterceptionPoint point) throws Exception {
-        FaultToleranceStrategy<T> strategy = cache.getStrategy(point,
-                ignored -> prepareSyncStrategy(operation, point, collector));
+    private <T> T syncFlow(FaultToleranceOperation operation, InvocationContext invocationContext, InterceptionPoint point)
+            throws Exception {
+        FaultToleranceStrategy<T> strategy = cache.getStrategy(point, ignored -> prepareSyncStrategy(operation, point));
         io.smallrye.faulttolerance.core.InvocationContext<T> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (T) invocationContext.proceed());
         ctx.set(InvocationContext.class, invocationContext);
@@ -204,9 +198,9 @@ public class FaultToleranceInterceptor {
 
     @SuppressWarnings("unchecked")
     private <T> Future<T> futureFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
-            MetricsCollector collector, InterceptionPoint point) throws Exception {
+            InterceptionPoint point) throws Exception {
         FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point,
-                ignored -> prepareFutureStrategy(operation, point, collector));
+                ignored -> prepareFutureStrategy(operation, point));
         io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (Future<T>) invocationContext.proceed());
         ctx.set(InvocationContext.class, invocationContext);
@@ -214,40 +208,37 @@ public class FaultToleranceInterceptor {
     }
 
     private <T> FaultToleranceStrategy<CompletionStage<T>> prepareAsyncStrategy(FaultToleranceOperation operation,
-            InterceptionPoint point, MetricsCollector collector) {
+            InterceptionPoint point) {
         FaultToleranceStrategy<CompletionStage<T>> result = Invocation.invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             Integer size = bulkheadConfig.get(BulkheadConfig.VALUE);
             Integer queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             result = new CompletionStageBulkhead<>(result,
-                    "CompletionStage[" + point.name() + "]",
+                    "CompletionStage[" + point + "]",
                     executorProvider.createAdHocExecutor(size), size,
-                    queueSize,
-                    collector);
+                    queueSize);
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            result = new CompletionStageTimeout<>(result, "Timeout[" + point.name() + "]",
+            result = new CompletionStageTimeout<>(result, "Timeout[" + point + "]",
                     timeoutMs,
                     new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    asyncExecutor,
-                    collector);
+                    asyncExecutor);
         }
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
             long delayInMillis = getTimeInMs(cbConfig, CircuitBreakerConfig.DELAY, CircuitBreakerConfig.DELAY_UNIT);
-            result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
+            result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
                     delayInMillis,
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
-                    new SystemStopwatch(),
-                    collector);
+                    new SystemStopwatch());
             result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
         }
 
@@ -261,63 +252,59 @@ public class FaultToleranceInterceptor {
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             result = new CompletionStageRetry<>(result,
-                    "Retry[" + point.name() + "]",
+                    "Retry[" + point + "]",
                     getSetOfThrowables(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
-                    new SystemStopwatch(),
-                    collector);
+                    new SystemStopwatch());
         }
 
         if (operation.hasFallback()) {
             FallbackConfig fallbackConf = operation.getFallback();
             result = new CompletionStageFallback<>(
                     result,
-                    "Fallback[" + point.name() + "]",
+                    "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
                     getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
-                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
-                    collector);
+                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON));
         }
 
-        result = new CompletionStageGeneralMetricsRecorder<>(result, collector);
+        if (metricsProvider.isEnabled()) {
+            result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(operation, point));
+        }
 
         return result;
     }
 
-    private <T> FaultToleranceStrategy<T> prepareSyncStrategy(FaultToleranceOperation operation, InterceptionPoint point,
-            MetricsCollector collector) {
+    private <T> FaultToleranceStrategy<T> prepareSyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
         FaultToleranceStrategy<T> result = Invocation.invocation();
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             result = new SemaphoreBulkhead<>(result,
-                    "Bulkhead[" + point.name() + "]",
-                    bulkheadConfig.get(BulkheadConfig.VALUE),
-                    collector);
+                    "Bulkhead[" + point + "]",
+                    bulkheadConfig.get(BulkheadConfig.VALUE));
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            result = new Timeout<>(result, "Timeout[" + point.name() + "]",
+            result = new Timeout<>(result, "Timeout[" + point + "]",
                     timeoutMs,
-                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    collector);
+                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor));
         }
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
             long delayInMillis = getTimeInMs(cbConfig, CircuitBreakerConfig.DELAY, CircuitBreakerConfig.DELAY_UNIT);
-            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
+            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
                     delayInMillis,
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
-                    new SystemStopwatch(),
-                    collector);
+                    new SystemStopwatch());
             result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
         }
 
@@ -331,34 +318,34 @@ public class FaultToleranceInterceptor {
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             result = new Retry<>(result,
-                    "Retry[" + point.name() + "]",
+                    "Retry[" + point + "]",
                     getSetOfThrowables(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
-                    new SystemStopwatch(),
-                    collector);
+                    new SystemStopwatch());
         }
 
         if (operation.hasFallback()) {
             FallbackConfig fallbackConf = operation.getFallback();
             result = new Fallback<>(
                     result,
-                    "Fallback[" + point.name() + "]",
+                    "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
                     getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
-                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
-                    collector);
+                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON));
         }
 
-        result = new GeneralMetricsRecorder<>(result, collector);
+        if (metricsProvider.isEnabled()) {
+            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false);
+        }
 
         return result;
     }
 
     private <T> FaultToleranceStrategy<Future<T>> prepareFutureStrategy(FaultToleranceOperation operation,
-            InterceptionPoint point, MetricsCollector collector) {
+            InterceptionPoint point) {
         FaultToleranceStrategy<Future<T>> result = Invocation.invocation();
 
         result = new RequestScopeActivator<>(result, requestContextController);
@@ -368,31 +355,29 @@ public class FaultToleranceInterceptor {
             int size = bulkheadConfig.get(BulkheadConfig.VALUE);
             int queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             ExecutorService executor = executorProvider.createAdHocExecutor(size);
-            result = new ThreadPoolBulkhead<>(result, "Bulkhead[" + point.name() + "]",
-                    executor, size, queueSize, collector);
+            result = new ThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
+                    executor, size, queueSize);
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
-            result = new Timeout<>(result, "Timeout[" + point.name() + "]",
+            result = new Timeout<>(result, "Timeout[" + point + "]",
                     timeoutMs,
-                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    collector);
+                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor));
             result = new AsyncTimeout<>(result, asyncExecutor);
         }
 
         if (operation.hasCircuitBreaker()) {
             CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
             long delayInMillis = getTimeInMs(cbConfig, CircuitBreakerConfig.DELAY, CircuitBreakerConfig.DELAY_UNIT);
-            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point.name() + "]",
+            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.FAIL_ON),
                     getSetOfThrowables(cbConfig, CircuitBreakerConfig.SKIP_ON),
                     delayInMillis,
                     cbConfig.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD),
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
-                    new SystemStopwatch(),
-                    collector);
+                    new SystemStopwatch());
             result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
         }
 
@@ -406,27 +391,27 @@ public class FaultToleranceInterceptor {
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             result = new Retry<>(result,
-                    "Retry[" + point.name() + "]",
+                    "Retry[" + point + "]",
                     getSetOfThrowables(retryConf, RetryConfig.RETRY_ON),
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
                     new ThreadSleepDelay(delayMs, jitter),
-                    new SystemStopwatch(),
-                    collector);
+                    new SystemStopwatch());
         }
 
         if (operation.hasFallback()) {
             FallbackConfig fallbackConf = operation.getFallback();
             result = new Fallback<>(result,
-                    "Fallback[" + point.name() + "]",
+                    "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
                     getSetOfThrowables(fallbackConf, FallbackConfig.APPLY_ON),
-                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON),
-                    collector);
+                    getSetOfThrowables(fallbackConf, FallbackConfig.SKIP_ON));
         }
 
-        result = new GeneralMetricsRecorder<>(result, collector);
+        if (metricsProvider.isEnabled()) {
+            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), true);
+        }
 
         result = new FutureExecution<>(result, asyncExecutor);
 
@@ -492,7 +477,7 @@ public class FaultToleranceInterceptor {
                     return fallbackHandler.handle(executionContext);
                 };
             } else {
-                throw new FaultToleranceException("Could not obtain fallback handler for " + point.name());
+                throw new FaultToleranceException("Could not obtain fallback handler for " + point);
             }
         }
     }
@@ -513,8 +498,7 @@ public class FaultToleranceInterceptor {
         return throwableClasses == null ? Collections.emptyList() : asList(throwableClasses);
     }
 
-    private MetricsCollector getMetricsCollector(FaultToleranceOperation operation, InterceptionPoint point) {
-        return cache.getMetrics(point, ignored -> metricsCollectorFactory.createCollector(operation));
+    private MetricsRecorder getMetricsRecorder(FaultToleranceOperation operation, InterceptionPoint point) {
+        return cache.getMetrics(point, ignored -> metricsProvider.create(operation));
     }
-
 }

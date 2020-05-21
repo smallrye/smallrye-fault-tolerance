@@ -1,23 +1,21 @@
-package io.smallrye.faulttolerance.core;
+package io.smallrye.faulttolerance.core.metrics;
 
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-// TODO better name?
-public class CompletionStageGeneralMetricsRecorder<V> implements FaultToleranceStrategy<CompletionStage<V>> {
-    private final FaultToleranceStrategy<CompletionStage<V>> delegate;
-    private final GeneralMetrics metrics;
+import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
+import io.smallrye.faulttolerance.core.InvocationContext;
 
-    public CompletionStageGeneralMetricsRecorder(FaultToleranceStrategy<CompletionStage<V>> delegate, GeneralMetrics metrics) {
-        this.delegate = delegate;
-        this.metrics = metrics;
+public class CompletionStageMetricsCollector<V> extends MetricsCollector<CompletionStage<V>> {
+    public CompletionStageMetricsCollector(FaultToleranceStrategy<CompletionStage<V>> delegate, MetricsRecorder metrics) {
+        super(delegate, metrics, true);
     }
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
-        metrics.invoked();
+        registerMetrics(ctx);
 
         CompletableFuture<V> result = new CompletableFuture<>();
 
@@ -30,9 +28,10 @@ public class CompletionStageGeneralMetricsRecorder<V> implements FaultToleranceS
 
         originalResult.whenComplete((value, exception) -> {
             if (exception == null) {
+                ctx.fireEvent(GeneralMetricsEvents.ExecutionFinished.VALUE_RETURNED);
                 result.complete(value);
             } else {
-                metrics.failed();
+                ctx.fireEvent(GeneralMetricsEvents.ExecutionFinished.EXCEPTION_THROWN);
                 result.completeExceptionally(exception);
             }
         });
