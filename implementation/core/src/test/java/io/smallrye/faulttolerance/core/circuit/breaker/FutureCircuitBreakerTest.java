@@ -31,7 +31,7 @@ public class FutureCircuitBreakerTest {
     public void test1() throws Exception {
         CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(),
                 "test invocation", testException, SetOfThrowables.EMPTY,
-                1000, 4, 0.5, 2, stopwatch, null);
+                1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
         assertThat(cb.apply(new InvocationContext<>(() -> completedFuture("foobar1"))).get()).isEqualTo("foobar1");
@@ -88,7 +88,7 @@ public class FutureCircuitBreakerTest {
     public void test2() throws Exception {
         CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(),
                 "test invocation", testException, SetOfThrowables.EMPTY,
-                1000, 4, 0.5, 2, stopwatch, null);
+                1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
         Future<String> foobar1 = cb.apply(new InvocationContext<>(() -> completedFuture("foobar1")));

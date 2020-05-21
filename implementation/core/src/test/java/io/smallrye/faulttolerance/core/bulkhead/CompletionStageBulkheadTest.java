@@ -234,7 +234,7 @@ public class CompletionStageBulkheadTest {
         ThreadPoolExecutor executor = new ThreadPoolExecutor(size, size, 0, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>());
 
-        return new CompletionStageBulkhead<>(invocation, name, executor, size, queueSize, null);
+        return new CompletionStageBulkhead<>(invocation, name, executor, size, queueSize);
     }
 
     private <V> void waitUntilQueueSize(CompletionStageBulkhead<V> bulkhead, int size, long timeout)

@@ -14,7 +14,7 @@ import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 
 /**
  * The next strategy in the chain must be {@link Timeout}, and it is invoked on an extra thread.
- * Communication then happens using {@link TimeoutEvent}.
+ * Communication then happens using {@link TimeoutEvents.AsyncTimedOut}.
  * <p>
  * Note that the {@code TimeoutException} thrown from this strategy might come from two places:
  * the {@code Timeout} strategy throwing, or {@code AsyncTimeoutTask#timedOut} setting an exception
@@ -35,7 +35,7 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
         AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>("AsyncTimeout", () -> delegate.apply(ctx));
-        ctx.registerEventHandler(TimeoutEvent.class, task::timedOut);
+        ctx.registerEventHandler(TimeoutEvents.AsyncTimedOut.class, task::timedOut);
         executor.execute(task);
         try {
             return task.get();
@@ -50,7 +50,7 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
             super(name, callable);
         }
 
-        public void timedOut(TimeoutEvent event) {
+        public void timedOut(TimeoutEvents.AsyncTimedOut event) {
             super.setException(event.timeoutException());
         }
     }

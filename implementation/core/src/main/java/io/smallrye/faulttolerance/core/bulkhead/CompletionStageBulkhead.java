@@ -7,29 +7,18 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 
-import org.jboss.logging.Logger;
-
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
-/**
- * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- */
 public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>> {
-    private static final Logger logger = Logger.getLogger(CompletionStageBulkhead.class);
-
     private final ExecutorService executor;
     private final int queueSize;
     private final Semaphore workSemaphore;
     private final Semaphore capacitySemaphore;
 
-    public CompletionStageBulkhead(
-            FaultToleranceStrategy<CompletionStage<V>> delegate,
-            String description,
-            ExecutorService executor,
-            int size, int queueSize,
-            MetricsRecorder recorder) {
-        super(description, delegate, recorder);
+    public CompletionStageBulkhead(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
+            ExecutorService executor, int size, int queueSize) {
+        super(description, delegate);
         workSemaphore = new Semaphore(size);
         capacitySemaphore = new Semaphore(size + queueSize);
         this.queueSize = queueSize;
@@ -41,12 +30,13 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
         // TODO we shouldn't put tasks into the executor if they immediately block on workSemaphore,
         //  they should be put into some queue
         if (capacitySemaphore.tryAcquire()) {
-            CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(System.nanoTime(), ctx);
+            ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
+            ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
+            CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(ctx);
             executor.execute(task);
-            recorder.bulkheadQueueEntered();
             return task.result;
         } else {
-            recorder.bulkheadRejected();
+            ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             return failedStage(bulkheadRejected());
         }
     }
@@ -57,14 +47,11 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
     }
 
     private class CompletionStageBulkheadTask implements Runnable {
-        private final long timeEnqueued;
         private final CompletableFuture<V> result = new CompletableFuture<>();
-        private final InvocationContext<CompletionStage<V>> context;
+        private final InvocationContext<CompletionStage<V>> ctx;
 
-        private CompletionStageBulkheadTask(long timeEnqueued,
-                InvocationContext<CompletionStage<V>> context) {
-            this.timeEnqueued = timeEnqueued;
-            this.context = context;
+        private CompletionStageBulkheadTask(InvocationContext<CompletionStage<V>> ctx) {
+            this.ctx = ctx;
         }
 
         public void run() {
@@ -72,19 +59,20 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
                 workSemaphore.acquire();
             } catch (InterruptedException e) {
                 // among other occasions, this also happens during shutdown
+                capacitySemaphore.release();
+                ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
                 result.completeExceptionally(e);
                 return;
             }
 
             CompletionStage<V> rawResult;
-            long startTime = System.nanoTime();
-            recorder.bulkheadQueueLeft(startTime - timeEnqueued);
-            recorder.bulkheadEntered();
+            ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
+            ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
             try {
-                rawResult = delegate.apply(context);
+                rawResult = delegate.apply(ctx);
                 rawResult.whenComplete((value, error) -> {
                     releaseSemaphores();
-                    recorder.bulkheadLeft(System.nanoTime() - startTime);
+                    ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
                     if (error != null) {
                         result.completeExceptionally(error);
                     } else {
@@ -93,7 +81,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
                 });
             } catch (Exception e) {
                 releaseSemaphores();
-                recorder.bulkheadLeft(System.nanoTime() - startTime);
+                ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
                 result.completeExceptionally(e);
             }
         }

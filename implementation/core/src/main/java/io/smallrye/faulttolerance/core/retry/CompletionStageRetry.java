@@ -15,16 +15,10 @@ import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
-    public CompletionStageRetry(
-            FaultToleranceStrategy<CompletionStage<V>> delegate,
-            String description,
-            SetOfThrowables retryOn,
-            SetOfThrowables abortOn,
-            long maxRetries, long maxTotalDurationInMillis,
-            Delay delayBetweenRetries, Stopwatch stopwatch,
-            MetricsRecorder metricsRecorder) {
-        super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, delayBetweenRetries, stopwatch,
-                metricsRecorder);
+    public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
+            SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
+            Delay delayBetweenRetries, Stopwatch stopwatch) {
+        super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, delayBetweenRetries, stopwatch);
     }
 
     @Override
@@ -33,20 +27,20 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
         return doRetry(ctx, 0, runningStopwatch, null);
     }
 
-    public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> target, int attempt,
+    public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> ctx, int attempt,
             RunningStopwatch stopwatch, Throwable latestFailure) {
         if (attempt == 0) {
             // do not sleep
         } else if (attempt <= maxRetries) {
-            metricsRecorder.retryRetried();
+            ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
             try {
                 delayBetweenRetries.sleep();
             } catch (InterruptedException e) {
-                metricsRecorder.retryFailed();
+                ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 return failedStage(e);
             } catch (Exception e) {
-                metricsRecorder.retryFailed();
+                ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 if (Thread.interrupted()) {
                     return failedStage(new InterruptedException());
                 }
@@ -54,36 +48,36 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                 return failedStage(e);
             }
         } else {
-            metricsRecorder.retryFailed();
-            return failedStage(latestFailure);
-        }
-        if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
+            ctx.fireEvent(RetryEvents.Finished.MAX_RETRIES_REACHED);
             if (latestFailure != null) {
-                metricsRecorder.retryFailed();
                 return failedStage(latestFailure);
             } else {
-                metricsRecorder.retryFailed();
-                return failedStage(new FaultToleranceException(description + " reached max retries or max retry duration"));
+                return failedStage(new FaultToleranceException(description + " reached max retries"));
             }
         }
+
+        if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
+            ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
+            if (latestFailure != null) {
+                return failedStage(latestFailure);
+            } else {
+                return failedStage(new FaultToleranceException(description + " reached max retry duration"));
+            }
+        }
+
         try {
             CompletableFuture<V> result = new CompletableFuture<>();
 
-            delegate.apply(target).whenComplete((value, exception) -> {
+            delegate.apply(ctx).whenComplete((value, exception) -> {
                 if (exception == null) {
-                    if (attempt == 0) {
-                        metricsRecorder.retrySucceededNotRetried();
-                    } else {
-                        metricsRecorder.retrySucceededRetried();
-                    }
+                    ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
                     result.complete(value);
                 } else {
-                    metricsRecorder.retryFailed();
                     if (shouldAbortRetrying(exception)) {
-                        metricsRecorder.retryFailed();
+                        ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                         result.completeExceptionally(exception);
                     } else {
-                        propagateCompletion(doRetry(target, attempt + 1, stopwatch, exception), result);
+                        propagateCompletion(doRetry(ctx, attempt + 1, stopwatch, exception), result);
                     }
                 }
             });
@@ -91,9 +85,10 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
             return result;
         } catch (Throwable e) {
             if (shouldAbortRetrying(e)) {
+                ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 return failedStage(e);
             } else {
-                return doRetry(target, attempt + 1, stopwatch, e);
+                return doRetry(ctx, attempt + 1, stopwatch, e);
             }
         }
     }
