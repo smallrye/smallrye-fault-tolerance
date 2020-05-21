@@ -9,15 +9,35 @@ public class CircuitBreakerEvents {
         HALF_OPEN,
     }
 
-    public static class StateTransition implements InvocationContextEvent {
-        public static final StateTransition TO_CLOSED = new StateTransition(State.CLOSED);
-        public static final StateTransition TO_OPEN = new StateTransition(State.OPEN);
-        public static final StateTransition TO_HALF_OPEN = new StateTransition(State.HALF_OPEN);
+    public enum Result {
+        SUCCESS,
+        FAILURE,
+        PREVENTED,
+    }
+
+    public enum StateTransition implements InvocationContextEvent {
+        TO_CLOSED(State.CLOSED),
+        TO_OPEN(State.OPEN),
+        TO_HALF_OPEN(State.HALF_OPEN),
+        ;
 
         public final State targetState;
 
-        private StateTransition(State targetState) {
+        StateTransition(State targetState) {
             this.targetState = targetState;
+        }
+    }
+
+    public enum Finished implements InvocationContextEvent {
+        SUCCESS(Result.SUCCESS),
+        FAILURE(Result.FAILURE),
+        PREVENTED(Result.PREVENTED),
+        ;
+
+        public final Result result;
+
+        Finished(Result result) {
+            this.result = result;
         }
     }
 }

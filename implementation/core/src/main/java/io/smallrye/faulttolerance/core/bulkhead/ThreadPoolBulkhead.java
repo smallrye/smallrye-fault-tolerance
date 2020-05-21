@@ -29,13 +29,9 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
     private final Semaphore capacitySemaphore;
     private final int queueSize;
 
-    public ThreadPoolBulkhead(
-            FaultToleranceStrategy<Future<V>> delegate,
-            String description,
-            ExecutorService executor,
-            int size, int queueSize,
-            MetricsRecorder recorder) {
-        super(description, delegate, recorder);
+    public ThreadPoolBulkhead(FaultToleranceStrategy<Future<V>> delegate, String description, ExecutorService executor,
+            int size, int queueSize) {
+        super(description, delegate);
         capacitySemaphore = new Semaphore(size + queueSize);
         this.queueSize = queueSize;
         this.executor = executor;
@@ -43,21 +39,20 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
-        long timeEnqueued = System.nanoTime();
         if (capacitySemaphore.tryAcquire()) {
+            ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
             BulkheadTask task = new BulkheadTask("ThreadPoolBulkhead", () -> {
-                long startTime = System.nanoTime();
-                recorder.bulkheadQueueLeft(startTime - timeEnqueued);
-                recorder.bulkheadEntered();
+                ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
+                ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
                 try {
                     return delegate.apply(ctx);
                 } finally {
-                    recorder.bulkheadLeft(System.nanoTime() - startTime);
+                    ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
                 }
             });
             ctx.registerEventHandler(CancellationEvent.class, ignored -> task.cancel());
+            ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
             executor.execute(task);
-            recorder.bulkheadQueueEntered();
 
             try {
                 return task.get();
@@ -68,7 +63,7 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                 throw sneakyThrow(e.getCause());
             }
         } else {
-            recorder.bulkheadRejected();
+            ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             throw bulkheadRejected();
         }
     }
@@ -79,9 +74,11 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
     }
 
     private class BulkheadTask extends NamedFutureTask<Future<V>> {
-        private static final int WAITING = 0, RUNNING = 1, CANCELING = 2;
+        private static final int WAITING = 0;
+        private static final int RUNNING = 1;
+        private static final int CANCELLED = 2;
 
-        private AtomicInteger state = new AtomicInteger(WAITING);
+        private final AtomicInteger state = new AtomicInteger(WAITING);
 
         public BulkheadTask(String name, Callable<Future<V>> callable) {
             super(name, callable);
@@ -99,7 +96,7 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
         }
 
         public void cancel() {
-            if (state.compareAndSet(WAITING, CANCELING)) {
+            if (state.compareAndSet(WAITING, CANCELLED)) {
                 capacitySemaphore.release();
             }
         }

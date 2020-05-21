@@ -33,7 +33,6 @@ public final class InvocationContext<V> implements Callable<V> {
     }
 
     // out-of-band communication between fault tolerance strategies in a single chain
-    // (only makes sense if different strategies in the chain run on different threads)
 
     private final ConcurrentMap<Class<? extends InvocationContextEvent>, Collection<Consumer<? extends InvocationContextEvent>>> eventHandlers = new ConcurrentHashMap<>();
 

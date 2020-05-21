@@ -18,6 +18,8 @@ package io.smallrye.faulttolerance.fallback.retry.metrics;
 import static org.junit.Assert.assertEquals;
 
 import org.eclipse.microprofile.metrics.MetricRegistry;
+import org.eclipse.microprofile.metrics.Tag;
+import org.eclipse.microprofile.metrics.annotation.RegistryType;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
@@ -35,32 +37,23 @@ public class FallbackRetryMetricsTest {
     }
 
     @Test
-    public void test(MyService service, MetricRegistry metrics) {
+    public void test(MyService service, @RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) {
         String result = service.hello();
         assertEquals("fallback", result);
 
-        assertEquals(1, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.invocations.total")
-                .getCount());
-        assertEquals(0, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.invocations.failed.total")
-                .getCount());
-
-        assertEquals(1, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.fallback.calls.total")
+        assertEquals(1, metrics.counter("ft.invocations.total",
+                new Tag("method", "io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello"),
+                new Tag("result", "valueReturned"),
+                new Tag("fallback", "applied"))
                 .getCount());
 
-        assertEquals(3, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.retry.retries.total")
+        assertEquals(3, metrics.counter("ft.retry.retries.total",
+                new Tag("method", "io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello"))
                 .getCount());
-        assertEquals(1, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.retry.callsFailed.total")
-                .getCount());
-        assertEquals(0, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.retry.callsSucceededRetried.total")
-                .getCount());
-        assertEquals(0, metrics.counter(
-                "ft.io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello.retry.callsSucceededNotRetried.total")
+        assertEquals(1, metrics.counter("ft.retry.calls.total",
+                new Tag("method", "io.smallrye.faulttolerance.fallback.retry.metrics.MyService.hello"),
+                new Tag("retried", "true"),
+                new Tag("retryResult", "maxRetriesReached"))
                 .getCount());
     }
 }

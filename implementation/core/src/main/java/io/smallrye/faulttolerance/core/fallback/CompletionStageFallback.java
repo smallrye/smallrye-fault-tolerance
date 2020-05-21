@@ -12,13 +12,14 @@ import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
     public CompletionStageFallback(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            FallbackFunction<CompletionStage<V>> fallback, SetOfThrowables applyOn, SetOfThrowables skipOn,
-            MetricsRecorder metricsRecorder) {
-        super(delegate, description, fallback, applyOn, skipOn, metricsRecorder);
+            FallbackFunction<CompletionStage<V>> fallback, SetOfThrowables applyOn, SetOfThrowables skipOn) {
+        super(delegate, description, fallback, applyOn, skipOn);
     }
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        ctx.fireEvent(FallbackEvents.Defined.INSTANCE);
+
         CompletableFuture<V> result = new CompletableFuture<>();
 
         CompletionStage<V> originalResult;
@@ -45,7 +46,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
             }
 
             try {
-                metricsRecorder.fallbackCalled();
+                ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
                 FallbackContext<CompletionStage<V>> fallbackContext = new FallbackContext<>(exception, ctx);
                 propagateCompletion(fallback.call(fallbackContext), result);
             } catch (Exception e) {

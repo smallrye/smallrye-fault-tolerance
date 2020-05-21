@@ -69,7 +69,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor, null);
+                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor);
 
         assertThat(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -83,7 +83,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor, null);
+                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -99,7 +99,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor, null);
+                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -115,7 +115,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", SLEEP_TIME, watcher, timeoutActionExecutor, null, true);
+                "completion stage timeout", SLEEP_TIME, watcher, timeoutActionExecutor, true);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(TIMEOUT);
