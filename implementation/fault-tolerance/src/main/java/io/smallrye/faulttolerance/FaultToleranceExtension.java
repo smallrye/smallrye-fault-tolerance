@@ -54,7 +54,7 @@ import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
-import io.smallrye.faulttolerance.metrics.MetricsCollectorFactory;
+import io.smallrye.faulttolerance.metrics.MetricsProvider;
 
 /**
  * @author Antoine Sabot-Durand
@@ -87,7 +87,7 @@ public class FaultToleranceExtension implements Extension {
                 ExecutorProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
                 DefaultFaultToleranceOperationProvider.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(MetricsCollectorFactory.class), MetricsCollectorFactory.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(MetricsProvider.class), MetricsProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
     }
 

@@ -21,7 +21,7 @@ public class FutureFallbackTest {
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(
                 () -> failedFuture(forcedException));
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY, null));
+                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         Future<String> future = result.await();
         assertThatThrownBy(future::get).hasCause(forcedException);
     }
@@ -33,7 +33,7 @@ public class FutureFallbackTest {
             throw forcedException;
         });
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY, null));
+                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         Future<String> await = result.await();
         assertThat(await.get()).isEqualTo("fallback");
     }
@@ -42,7 +42,7 @@ public class FutureFallbackTest {
     public void shouldSucceed() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> completedFuture("invocation"));
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY, null));
+                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         Future<String> future = result.await();
         assertThat(future.get()).isEqualTo("invocation");
     }
@@ -52,7 +52,7 @@ public class FutureFallbackTest {
         TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> {
             throw new RuntimeException();
-        }, SetOfThrowables.ALL, SetOfThrowables.EMPTY, null));
+        }, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
     }
 
