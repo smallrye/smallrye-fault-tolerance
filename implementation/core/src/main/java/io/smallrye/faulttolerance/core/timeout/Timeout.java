@@ -14,23 +14,20 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
 
     final long timeoutInMillis;
     final TimeoutWatcher watcher;
-    final MetricsRecorder metricsRecorder;
 
-    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis,
-            TimeoutWatcher watcher, MetricsRecorder metricsRecorder) {
+    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher) {
         this.delegate = checkNotNull(delegate, "Timeout delegate must be set");
         this.description = checkNotNull(description, "Timeout description must be set");
         this.timeoutInMillis = check(timeoutInMillis, timeoutInMillis > 0, "Timeout must be > 0");
         this.watcher = checkNotNull(watcher, "Timeout watcher must be set");
-        this.metricsRecorder = metricsRecorder == null ? MetricsRecorder.NO_OP : metricsRecorder;
     }
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
         TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis,
-                () -> ctx.fireEvent(new TimeoutEvent(() -> timeoutException(description))));
+                () -> ctx.fireEvent(new TimeoutEvents.AsyncTimedOut(() -> timeoutException(description))));
         TimeoutWatch watch = watcher.schedule(execution);
-        long start = System.nanoTime();
+        ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
         V result = null;
         Exception exception = null;
@@ -56,45 +53,21 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
             exception = new InterruptedException();
         }
 
-        long end = System.nanoTime();
         if (execution.hasTimedOut()) {
-            metricsRecorder.timeoutTimedOut(end - start);
+            ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
             throw timeoutException(description);
         }
 
+        ctx.fireEvent(TimeoutEvents.Finished.NORMALLY);
+
         if (exception != null) {
-            metricsRecorder.timeoutFailed(end - start);
             throw exception;
         }
-
-        metricsRecorder.timeoutSucceeded(end - start);
 
         return result;
     }
 
     static TimeoutException timeoutException(String description) {
         return new TimeoutException(description + " timed out");
-    }
-
-    public interface MetricsRecorder {
-        void timeoutSucceeded(long time);
-
-        void timeoutTimedOut(long time);
-
-        void timeoutFailed(long time);
-
-        MetricsRecorder NO_OP = new MetricsRecorder() {
-            @Override
-            public void timeoutSucceeded(long time) {
-            }
-
-            @Override
-            public void timeoutTimedOut(long time) {
-            }
-
-            @Override
-            public void timeoutFailed(long time) {
-            }
-        };
     }
 }

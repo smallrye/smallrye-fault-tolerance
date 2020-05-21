@@ -24,8 +24,8 @@ public class BulkheadTest {
     @Test
     public void shouldLetSingleThrough() throws Exception {
         TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "shouldLetSingleThrough");
-        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetSingleThrough", 2, null);
-        String result = bulkhead.apply(null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetSingleThrough", 2);
+        String result = bulkhead.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("shouldLetSingleThrough");
     }
 
@@ -33,7 +33,7 @@ public class BulkheadTest {
     public void shouldLetMaxThrough() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
         TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> "shouldLetMaxThrough");
-        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxThrough", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxThrough", 5);
 
         List<TestThread<String>> threads = new ArrayList<>();
 
@@ -53,7 +53,7 @@ public class BulkheadTest {
         CountDownLatch startedLatch = new CountDownLatch(5);
         TestInvocation<String> invocation = TestInvocation.delayed(startBarrier, delayBarrier, startedLatch,
                 () -> "shouldRejectMaxPlus1");
-        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldRejectMaxPlus1", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldRejectMaxPlus1", 5);
 
         List<TestThread<String>> threads = new ArrayList<>();
 
@@ -86,7 +86,7 @@ public class BulkheadTest {
             return "shouldLetMaxPlus1After1Left";
         });
 
-        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5);
 
         for (int i = 0; i < 5; i++) {
             runOnTestThread(bulkhead);
@@ -122,7 +122,7 @@ public class BulkheadTest {
             throw error;
         });
 
-        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5, null);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", 5);
 
         for (int i = 0; i < 5; i++) {
             runOnTestThread(bulkhead);

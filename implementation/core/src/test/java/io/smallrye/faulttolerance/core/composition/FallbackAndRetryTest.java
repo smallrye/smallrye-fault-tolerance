@@ -43,6 +43,6 @@ public class FallbackAndRetryTest {
                                 },
                                 () -> String.format("success after %d failures", failures.get()))));
 
-        assertThat(operation.apply(null)).isEqualTo("success after 3 failures");
+        assertThat(operation.apply(new InvocationContext<>(() -> "unreachable"))).isEqualTo("success after 3 failures");
     }
 }
