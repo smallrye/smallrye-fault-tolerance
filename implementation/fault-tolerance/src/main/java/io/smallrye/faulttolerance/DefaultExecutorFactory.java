@@ -5,6 +5,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -17,17 +18,26 @@ public class DefaultExecutorFactory implements ExecutorFactory {
 
     @Override
     public ExecutorService createCoreExecutor(int size) {
-        return new ThreadPoolExecutor(1, size, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new SynchronousQueue<>());
+        return new ThreadPoolExecutor(1, size, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory());
     }
 
     @Override
     public ExecutorService createExecutor(int coreSize, int size) {
-        return new ThreadPoolExecutor(coreSize, size, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+        return new ThreadPoolExecutor(coreSize, size, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                threadFactory());
     }
 
     @Override
     public ScheduledExecutorService createTimeoutExecutor(int size) {
-        return Executors.newScheduledThreadPool(size);
+        return Executors.newScheduledThreadPool(size, threadFactory());
+    }
+
+    /**
+     * Can be overridden in a subclass to provide a different {@link ThreadFactory}.
+     * Useful e.g. in a Jakarta EE container, where the threads must be managed.
+     */
+    protected ThreadFactory threadFactory() {
+        return Executors.defaultThreadFactory();
     }
 
     @Override
