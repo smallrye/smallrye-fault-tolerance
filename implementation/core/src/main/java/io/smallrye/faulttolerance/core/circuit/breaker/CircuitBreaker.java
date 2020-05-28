@@ -106,13 +106,13 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         return skipOn.includes(e.getClass()) || !failOn.includes(e.getClass());
     }
 
-    private V inClosed(InvocationContext<V> context, State state) throws Exception {
+    private V inClosed(InvocationContext<V> ctx, State state) throws Exception {
         try {
-            V result = delegate.apply(context);
+            V result = delegate.apply(ctx);
             metricsRecorder.circuitBreakerSucceeded();
             boolean failureThresholdReached = state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
-                toOpen(state);
+                toOpen(state, ctx);
             }
             listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
@@ -135,13 +135,13 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
                 previousClosedTime.addAndGet(now - closedStart);
                 metricsRecorder.circuitBreakerClosedToOpen();
 
-                toOpen(state);
+                toOpen(state, ctx);
             }
             throw e;
         }
     }
 
-    private V inOpen(InvocationContext<V> context, State state) throws Exception {
+    private V inOpen(InvocationContext<V> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             metricsRecorder.circuitBreakerRejected();
             listeners.forEach(CircuitBreakerListener::rejected);
@@ -152,15 +152,15 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             halfOpenStart = now;
             previousOpenTime.addAndGet(now - openStart);
 
-            toHalfOpen(state);
+            toHalfOpen(state, ctx);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return apply(context);
+            return apply(ctx);
         }
     }
 
-    private V inHalfOpen(InvocationContext<V> context, State state) throws Exception {
+    private V inHalfOpen(InvocationContext<V> ctx, State state) throws Exception {
         try {
-            V result = delegate.apply(context);
+            V result = delegate.apply(ctx);
             metricsRecorder.circuitBreakerSucceeded();
 
             int successes = state.consecutiveSuccesses.incrementAndGet();
@@ -169,31 +169,43 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
                 closedStart = now;
                 previousHalfOpenTime.addAndGet(now - halfOpenStart);
 
-                toClosed(state);
+                toClosed(state, ctx);
             }
             listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
         } catch (Throwable e) {
             metricsRecorder.circuitBreakerFailed();
             listeners.forEach(CircuitBreakerListener::failed);
-            toOpen(state);
+            toOpen(state, ctx);
             throw e;
         }
     }
 
-    void toClosed(State state) {
+    void toClosed(State state, InvocationContext<V> ctx) {
         State newState = State.closed(rollingWindowSize, failureThreshold);
-        this.state.compareAndSet(state, newState);
+        boolean moved = this.state.compareAndSet(state, newState);
+
+        if (moved) {
+            ctx.fireEvent(CircuitBreakerEvents.StateTransition.TO_CLOSED);
+        }
     }
 
-    void toOpen(State state) {
+    void toOpen(State state, InvocationContext<V> ctx) {
         State newState = State.open(stopwatch);
-        this.state.compareAndSet(state, newState);
+        boolean moved = this.state.compareAndSet(state, newState);
+
+        if (moved) {
+            ctx.fireEvent(CircuitBreakerEvents.StateTransition.TO_OPEN);
+        }
     }
 
-    void toHalfOpen(State state) {
+    void toHalfOpen(State state, InvocationContext<V> ctx) {
         State newState = State.halfOpen();
-        this.state.compareAndSet(state, newState);
+        boolean moved = this.state.compareAndSet(state, newState);
+
+        if (moved) {
+            ctx.fireEvent(CircuitBreakerEvents.StateTransition.TO_HALF_OPEN);
+        }
     }
 
     static final class State {
