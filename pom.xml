@@ -31,6 +31,7 @@
   <url>http://smallrye.io</url>
 
   <properties>
+    <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
     <version.jakarta.enterprise.concurrent-api>1.1.2</version.jakarta.enterprise.concurrent-api>
     <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
     <version.mp-fault-tolerance>2.1.1</version.mp-fault-tolerance>
@@ -42,6 +43,7 @@
     <!-- smallrye-metrics is purely used for testing -->
     <version.smallrye-metrics>2.4.2</version.smallrye-metrics>
     <version.smallrye-context-propagation>1.0.13</version.smallrye-context-propagation>
+    <version.smallrye-common>1.0.2</version.smallrye-common>
     <version.opentracing>0.31.0</version.opentracing>
 
     <version.org.assertj.assertj-core>3.16.1</version.org.assertj.assertj-core>
@@ -61,6 +63,7 @@
   </scm>
 
   <modules>
+    <module>api</module>
     <module>implementation</module>
     <module>docs</module>
     <module>testsuite</module>
@@ -73,6 +76,22 @@
         <artifactId>jakarta.interceptor-api</artifactId>
         <version>${version.jakarta.interceptor-api}</version>
         <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.enterprise</groupId>
+        <artifactId>jakarta.enterprise.cdi-api</artifactId>
+        <version>${version.jakarta.enterprise.cdi.api}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>jakarta.el</groupId>
+            <artifactId>jakarta.el-api</artifactId>
+          </exclusion>
+          <!-- https://github.com/eclipse-ee4j/interceptor-api/issues/31 -->
+          <exclusion>
+            <groupId>jakarta.ejb</groupId>
+            <artifactId>jakarta.ejb-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>jakarta.enterprise.concurrent</groupId>
@@ -105,6 +124,16 @@
         <artifactId>microprofile-fault-tolerance-tck</artifactId>
         <version>${version.mp-fault-tolerance}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.smallrye</groupId>
+        <artifactId>smallrye-context-propagation</artifactId>
+        <version>${version.smallrye-context-propagation}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.smallrye.common</groupId>
+        <artifactId>smallrye-common-annotation</artifactId>
+        <version>${version.smallrye-common}</version>
       </dependency>
       <dependency>
         <groupId>io.opentracing</groupId>
@@ -142,11 +171,6 @@
       </dependency>
       <dependency>
         <groupId>io.smallrye</groupId>
-        <artifactId>smallrye-context-propagation</artifactId>
-        <version>${version.smallrye-context-propagation}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.smallrye</groupId>
         <artifactId>smallrye-context-propagation-cdi</artifactId>
         <version>${version.smallrye-context-propagation}</version>
         <scope>test</scope>
@@ -159,6 +183,12 @@
       </dependency>
 
       <!-- Dependencies provided by the project -->
+      <dependency>
+        <groupId>io.smallrye</groupId>
+        <artifactId>smallrye-fault-tolerance-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance</artifactId>

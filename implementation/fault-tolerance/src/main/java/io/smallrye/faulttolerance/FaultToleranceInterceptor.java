@@ -35,6 +35,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.control.RequestContextController;
+import javax.enterprise.event.Event;
 import javax.enterprise.inject.Intercepted;
 import javax.enterprise.inject.spi.Bean;
 import javax.inject.Inject;
@@ -46,6 +47,7 @@ import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 import org.jboss.logging.Logger;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerStateChanged;
 import io.smallrye.faulttolerance.config.BulkheadConfig;
 import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 import io.smallrye.faulttolerance.config.FallbackConfig;
@@ -76,6 +78,7 @@ import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.ScheduledExecutorTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.internal.CircuitBreakerStateObserver;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
@@ -115,6 +118,8 @@ public class FaultToleranceInterceptor {
 
     private final RequestContextController requestContextController;
 
+    private final Event<CircuitBreakerStateChanged> cbStateEvent;
+
     @Inject
     public FaultToleranceInterceptor(
             FallbackHandlerProvider fallbackHandlerProvider,
@@ -122,13 +127,15 @@ public class FaultToleranceInterceptor {
             MetricsCollectorFactory metricsCollectorFactory,
             FaultToleranceOperationProvider operationProvider,
             StrategyCache cache,
-            ExecutorProvider executorProvider) {
+            ExecutorProvider executorProvider,
+            Event<CircuitBreakerStateChanged> cbStateEvent) {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.interceptedBean = interceptedBean;
         this.metricsCollectorFactory = metricsCollectorFactory;
         this.operationProvider = operationProvider;
         this.executorProvider = executorProvider;
         this.cache = cache;
+        this.cbStateEvent = cbStateEvent;
         asyncExecutor = executorProvider.getGlobalExecutor();
         timeoutExecutor = executorProvider.getTimeoutExecutor();
         requestContextController = RequestContextControllerProvider.load().get();
@@ -245,6 +252,7 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch(),
                     collector);
+            result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
         }
 
         if (operation.hasRetry()) {
@@ -312,6 +320,7 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch(),
                     collector);
+            result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
         }
 
         if (operation.hasRetry()) {
@@ -386,6 +395,7 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch(),
                     collector);
+            result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
         }
 
         if (operation.hasRetry()) {
