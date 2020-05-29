@@ -213,9 +213,16 @@
             </attributes>
           </configuration>
         </plugin>
+        <!-- Fixes maven build warnings by making maven-resources-plugin version explicit,
+          since it is not managed by smallrye parent pom -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
       </plugins>
     </pluginManagement>
-    <!-- TODO - to remve once these changes are in the Parent POM -->
+    <!-- TODO - to remove once these changes are in the Parent POM -->
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
