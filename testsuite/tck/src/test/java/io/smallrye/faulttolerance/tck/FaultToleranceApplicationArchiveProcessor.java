@@ -29,11 +29,9 @@ import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.container.ClassContainer;
 import org.jboss.shrinkwrap.api.container.LibraryContainer;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.jboss.shrinkwrap.impl.base.io.IOUtil;
 
 /**
- *
  * @author Martin Kouba
  */
 public class FaultToleranceApplicationArchiveProcessor implements ApplicationArchiveProcessor {
@@ -63,15 +61,6 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
 
         if (!applicationArchive.contains("META-INF/beans.xml")) {
             applicationArchive.add(EmptyAsset.INSTANCE, "META-INF/beans.xml");
-        }
-
-        if (applicationArchive instanceof WebArchive
-                && applicationArchive.contains("META-INF/microprofile-config.properties")
-                && !applicationArchive.contains("WEB-INF/classes/META-INF/microprofile-config.properties")) {
-            // workaround for https://github.com/eclipse/microprofile-fault-tolerance/pull/495
-            // this entire `if` should be removed when that PR is merged and MP FT released
-            applicationArchive.move("META-INF/microprofile-config.properties",
-                    "WEB-INF/classes/META-INF/microprofile-config.properties");
         }
 
         String config;
