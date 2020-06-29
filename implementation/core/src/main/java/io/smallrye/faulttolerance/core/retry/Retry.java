@@ -45,7 +45,36 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
             if (counter > 0) {
                 metricsRecorder.retryRetried();
+
+                try {
+                    delayBetweenRetries.sleep();
+                } catch (InterruptedException e) {
+                    metricsRecorder.retryFailed();
+                    throw e;
+                } catch (Exception e) {
+                    metricsRecorder.retryFailed();
+                    if (Thread.interrupted()) {
+                        throw new InterruptedException();
+                    }
+
+                    throw e;
+                }
+
+                // Previously, we called `delayBetweenRetries.sleep()` _after_ `delegate.apply()`
+                // in a single iteration of the loop and had no additional check (it would happen
+                // immediately as part of the loop condition). This has one issue: we would sleep
+                // after the last retry iteration (per `maxRetries`), which is a waste of resources.
+                // Currently, we call `delayBetweenRetries.sleep()` _before_ `delegate.apply()`
+                // in a single iteration of the loop. This means we might call `delegate.apply()`
+                // after sleeping, even though the time budget (per `maxTotalDurationInMillis`)
+                // is possibly already empty. This would probably be OK per the spec (the TCK
+                // doesn't care), but it would change our own existing behavior (as codified by
+                // `RetryTest`). Hence this second explicit check.
+                if (runningStopwatch.elapsedTimeInMillis() >= maxTotalDurationInMillis) {
+                    break;
+                }
             }
+
             try {
                 V result = delegate.apply(ctx);
                 if (counter == 0) {
@@ -68,20 +97,6 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 }
 
                 lastFailure = e;
-            }
-
-            try {
-                delayBetweenRetries.sleep();
-            } catch (InterruptedException e) {
-                metricsRecorder.retryFailed();
-                throw e;
-            } catch (Exception e) {
-                metricsRecorder.retryFailed();
-                if (Thread.interrupted()) {
-                    throw new InterruptedException();
-                }
-
-                throw e;
             }
 
             counter++;
