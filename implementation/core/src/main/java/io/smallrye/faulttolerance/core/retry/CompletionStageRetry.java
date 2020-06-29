@@ -39,6 +39,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
             // do not sleep
         } else if (attempt <= maxRetries) {
             metricsRecorder.retryRetried();
+
             try {
                 delayBetweenRetries.sleep();
             } catch (InterruptedException e) {
