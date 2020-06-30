@@ -42,25 +42,24 @@ public abstract class GenericConfig<X extends Annotation> {
     public static final String CONFIG_PARAMS_CACHE_KEY = "org_wildfly_swarm_microprofile_faulttolerance_configParamsCache";
 
     GenericConfig(Class<X> annotationType, Class<?> beanClass, Method method) {
-        this(beanClass, method, null, annotationType,
-                method.isAnnotationPresent(annotationType)
+        this(beanClass, method, null,
+                annotationType, method.isAnnotationPresent(annotationType)
                         ? method.getAnnotation(annotationType)
                         : getAnnotationFromClass(annotationType, beanClass),
                 method.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
     GenericConfig(Class<X> annotationType, AnnotatedMethod<?> annotatedMethod) {
-        this(annotatedMethod.getDeclaringType()
-                .getJavaClass(), annotatedMethod.getJavaMember(), annotatedMethod, annotationType,
-                annotatedMethod.isAnnotationPresent(annotationType) ? annotatedMethod.getAnnotation(annotationType)
-                        : annotatedMethod.getDeclaringType()
-                                .getAnnotation(annotationType),
+        this(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(), annotatedMethod,
+                annotationType, annotatedMethod.isAnnotationPresent(annotationType)
+                        ? annotatedMethod.getAnnotation(annotationType)
+                        : annotatedMethod.getDeclaringType().getAnnotation(annotationType),
                 annotatedMethod.isAnnotationPresent(annotationType) ? ElementType.METHOD : ElementType.TYPE);
     }
 
     @SuppressWarnings("UnnecessaryThis")
-    private GenericConfig(Class<?> beanClass, Method method, AnnotatedMethod<?> annotatedMethod, Class<X> annotationType,
-            X annotation, ElementType annotationSource) {
+    private GenericConfig(Class<?> beanClass, Method method, AnnotatedMethod<?> annotatedMethod,
+            Class<X> annotationType, X annotation, ElementType annotationSource) {
         this.beanClass = beanClass;
         this.method = method;
         this.annotatedMethod = annotatedMethod;

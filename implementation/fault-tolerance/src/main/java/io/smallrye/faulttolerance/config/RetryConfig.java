@@ -72,8 +72,9 @@ public class RetryConfig extends GenericConfig<Retry> {
             throw new FaultToleranceDefinitionException(
                     INVALID_RETRY_ON + getMethodInfo() + " : maxDuration shouldn't be lower than 0");
         }
-        if (Duration.of(get(MAX_DURATION, Long.class), get(DURATION_UNIT, ChronoUnit.class)).toMillis() <= Duration
-                .of(get(DELAY, Long.class), get(DELAY_UNIT, ChronoUnit.class)).toMillis()) {
+        long maxDuration = Duration.of(get(MAX_DURATION, Long.class), get(DURATION_UNIT, ChronoUnit.class)).toMillis();
+        long delay = Duration.of(get(DELAY, Long.class), get(DELAY_UNIT, ChronoUnit.class)).toMillis();
+        if (maxDuration <= delay) {
             throw new FaultToleranceDefinitionException(
                     INVALID_RETRY_ON + getMethodInfo() + " : maxDuration should be greater than delay");
         }

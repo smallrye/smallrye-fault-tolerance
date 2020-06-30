@@ -54,8 +54,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
     public void validate() {
         if (!"".equals(get(FALLBACK_METHOD))) {
             if (!Fallback.DEFAULT.class.equals(get(VALUE))) {
-                throw new FaultToleranceDefinitionException(
-                        "Fallback configuration can't contain an handler class and method at the same time");
+                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + getMethodInfo()
+                        + " : fallback handler class and fallback method can't be specified both at the same time");
             }
             Method fallbackMethod;
             try {
@@ -65,19 +65,17 @@ public class FallbackConfig extends GenericConfig<Fallback> {
                         get(FALLBACK_METHOD),
                         method.getGenericParameterTypes());
             } catch (PrivilegedActionException e) {
-                throw new FaultToleranceDefinitionException("Fallback method " + get(FALLBACK_METHOD)
-                        + " with same parameters as " + method.getName() + " not found", e);
+                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + getMethodInfo()
+                        + " : can't find fallback method " + get(FALLBACK_METHOD) + " with same parameters as the method", e);
             }
             if (fallbackMethod == null) {
-                throw new FaultToleranceDefinitionException(
-                        "Fallback method " + get(FALLBACK_METHOD) + " with same parameters as " + method.getName()
-                                + " not found");
+                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + getMethodInfo()
+                        + " : can't find fallback method " + get(FALLBACK_METHOD) + " with same parameters as the method");
             }
             if (!method.getReturnType().equals(void.class)
                     && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
-                throw new FaultToleranceDefinitionException(
-                        "Fallback method " + get(FALLBACK_METHOD) + " must have a return type assignable to "
-                                + method.getName());
+                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + getMethodInfo() + " : fallback method "
+                        + get(FALLBACK_METHOD) + " must have a return type assignable to method's return type");
             }
         }
         if (!Fallback.DEFAULT.class.equals(get(VALUE))) {
@@ -93,8 +91,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
                 }
             }
             if (fallbackType == null || !method.getGenericReturnType().equals(fallbackType)) {
-                throw new FaultToleranceDefinitionException(
-                        "Fallback handler type [" + fallbackType + "] is not the same as the method return type: " + method);
+                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + getMethodInfo()
+                        + " : fallback handler's type " + fallbackType + " is not the same as method's return type");
             }
         }
     }
@@ -103,6 +101,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }
+
+    private static final String INVALID_FALLBACK_ON = "Invalid @Fallback on ";
 
     private static Map<String, Class<?>> keys2Type = initKeys();
 

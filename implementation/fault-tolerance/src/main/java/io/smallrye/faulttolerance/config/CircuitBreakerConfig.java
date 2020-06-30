@@ -84,7 +84,7 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
         return keys2Type;
     }
 
-    private static final String INVALID_CIRCUIT_BREAKER_ON = "Invalid CircuitBreaker on ";
+    private static final String INVALID_CIRCUIT_BREAKER_ON = "Invalid @CircuitBreaker on ";
 
     private static Map<String, Class<?>> keys2Type = initKeys();
 

@@ -47,7 +47,7 @@ public class TimeoutConfig extends GenericConfig<Timeout> {
     public void validate() {
         if (get(VALUE, Long.class) < 0) {
             throw new FaultToleranceDefinitionException(
-                    "Invalid @Timeout on " + getMethodInfo() + " : value shouldn't be lower than 0");
+                    INVALID_TIMEOUT_ON + getMethodInfo() + " : value shouldn't be lower than 0");
         }
     }
 
@@ -55,6 +55,8 @@ public class TimeoutConfig extends GenericConfig<Timeout> {
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }
+
+    private static final String INVALID_TIMEOUT_ON = "Invalid @Timeout on ";
 
     private static Map<String, Class<?>> keys2Type = initKeys();
 
