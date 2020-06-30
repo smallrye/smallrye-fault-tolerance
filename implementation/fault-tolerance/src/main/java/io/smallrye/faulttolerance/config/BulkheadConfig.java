@@ -46,11 +46,11 @@ public class BulkheadConfig extends GenericConfig<Bulkhead> {
     public void validate() {
         if (get(VALUE, Integer.class) < 0) {
             throw new FaultToleranceDefinitionException(
-                    "Invalid Bulkhead on " + getMethodInfo() + " : value shouldn't be lower than 0");
+                    INVALID_BULKHEAD_ON + getMethodInfo() + " : value shouldn't be lower than 0");
         }
         if (get(WAITING_TASK_QUEUE, Integer.class) < 1) {
             throw new FaultToleranceDefinitionException(
-                    "Invalid Bulkhead on " + getMethodInfo() + " : waitingTaskQueue shouldn't be lower than 1");
+                    INVALID_BULKHEAD_ON + getMethodInfo() + " : waitingTaskQueue shouldn't be lower than 1");
         }
     }
 
@@ -58,6 +58,8 @@ public class BulkheadConfig extends GenericConfig<Bulkhead> {
     protected Map<String, Class<?>> getKeysToType() {
         return keys2Type;
     }
+
+    private static final String INVALID_BULKHEAD_ON = "Invalid @Bulkhead on ";
 
     private static Map<String, Class<?>> keys2Type = initKeys();
 
