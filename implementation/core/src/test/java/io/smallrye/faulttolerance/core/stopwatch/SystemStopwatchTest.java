@@ -7,7 +7,7 @@ import org.assertj.core.data.Percentage;
 import org.junit.Test;
 
 public class SystemStopwatchTest {
-    private static final Percentage tolerance = withPercentage(10);
+    private static final Percentage tolerance = withPercentage(25);
 
     private Stopwatch stopwatch = new SystemStopwatch();
 

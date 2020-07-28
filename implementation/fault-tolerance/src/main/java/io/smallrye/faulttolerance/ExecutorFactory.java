@@ -5,10 +5,11 @@ import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * A factory that creates the executor services/thread pools used by SmallRye Fault Tolerance for asynchronous
- * invocations and helper threads, such as timeouts
+ * invocations and thread pool style bulkheads.
  *
  * To create a custom one, implement this class and register it using ServiceLoade, i.e. by adding a
  * {@code META-INF/services/io.smallrye.faulttolerance.ExecutorFactory} with its fully qualified name inside.
+ * Pay attention to the {@code priority} method, too.
  * 
  * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
  */
@@ -33,18 +34,17 @@ public interface ExecutorFactory {
     ExecutorService createExecutor(int coreSize, int size);
 
     /**
-     * create a scheduled executor service for handling timeouts
-     * 
-     * @param size the amount of threads in the pool
-     * @return scheduled executor service
+     * @deprecated this is no longer used
      */
-    ScheduledExecutorService createTimeoutExecutor(int size);
+    @Deprecated
+    default ScheduledExecutorService createTimeoutExecutor(int size) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
-     * priority of this factory.
-     * If multiple factories are registered, the one with the highest priority is selected;
-     * 
-     * @return priority
+     * Priority of this factory.
+     * If multiple factories are registered, the one with the highest priority is used.
+     * If multiple factories have the same priority, which one is used is undefined.
      */
     int priority();
 }
