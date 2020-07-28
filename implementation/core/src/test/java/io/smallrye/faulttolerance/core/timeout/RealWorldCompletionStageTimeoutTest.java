@@ -11,7 +11,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.data.Percentage;
@@ -25,6 +24,7 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
+import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class RealWorldCompletionStageTimeoutTest {
@@ -40,28 +40,24 @@ public class RealWorldCompletionStageTimeoutTest {
     private static final int SLEEP_TIME = System.getProperty("slowMachine") != null ? 1000 : 300;
     private static final int TIMEOUT = System.getProperty("slowMachine") != null ? 2000 : 1000;
 
-    private ScheduledExecutorService executor;
-    private ScheduledExecutorTimeoutWatcher watcher;
-
-    private ExecutorService timeoutActionExecutor;
+    private ExecutorService executor;
+    private Timer timer;
+    private TimerTimeoutWatcher watcher;
 
     private Stopwatch stopwatch = new SystemStopwatch();
 
     @Before
     public void setUp() {
-        executor = Executors.newSingleThreadScheduledExecutor();
-        watcher = new ScheduledExecutorTimeoutWatcher(executor);
-
-        timeoutActionExecutor = Executors.newSingleThreadExecutor();
+        executor = Executors.newSingleThreadExecutor();
+        timer = new Timer(executor);
+        watcher = new TimerTimeoutWatcher(timer);
     }
 
     @After
     public void tearDown() throws InterruptedException {
+        timer.shutdown();
         executor.shutdownNow();
-        timeoutActionExecutor.shutdownNow();
-
         executor.awaitTermination(1, TimeUnit.SECONDS);
-        timeoutActionExecutor.awaitTermination(1, TimeUnit.SECONDS);
     }
 
     @Test
@@ -69,7 +65,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor);
+                "completion stage timeout", TIMEOUT, watcher);
 
         assertThat(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -83,7 +79,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor);
+                "completion stage timeout", TIMEOUT, watcher);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -99,7 +95,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", TIMEOUT, watcher, timeoutActionExecutor);
+                "completion stage timeout", TIMEOUT, watcher);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
@@ -115,7 +111,7 @@ public class RealWorldCompletionStageTimeoutTest {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
         FaultToleranceStrategy<CompletionStage<String>> timeout = new CompletionStageTimeout<>(invocation(),
-                "completion stage timeout", SLEEP_TIME, watcher, timeoutActionExecutor, true);
+                "completion stage timeout", SLEEP_TIME, watcher, true);
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(TIMEOUT);
