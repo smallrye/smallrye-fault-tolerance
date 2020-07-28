@@ -1,0 +1,95 @@
+package io.smallrye.faulttolerance.core.util;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.byLessThan;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import io.smallrye.faulttolerance.core.timer.Timer;
+
+public class TimerStressTest {
+    private static final int ITERATIONS = 100;
+    private static final int TASKS_PER_ITERATION = 100;
+    private static final long DELAY_INCREMENT = 50;
+
+    // shouldn't be too big, otherwise context switching cost will start to dominate
+    private static final int POOL_SIZE = TASKS_PER_ITERATION + 10;
+
+    private ExecutorService executor;
+    private Timer timer;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        executor = Executors.newFixedThreadPool(POOL_SIZE);
+        timer = new Timer(executor);
+
+        // precreate all threads in the pool
+        // if we didn't do this, the first few iterations would be dominated
+        // by the cost of creating threads
+        CountDownLatch startLatch = new CountDownLatch(POOL_SIZE);
+        CountDownLatch endLatch = new CountDownLatch(1);
+        for (int i = 0; i < POOL_SIZE; i++) {
+            executor.submit(() -> {
+                startLatch.countDown();
+                try {
+                    endLatch.await();
+                } catch (InterruptedException ignored) {
+                }
+            });
+        }
+        startLatch.await();
+        endLatch.countDown();
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        timer.shutdown();
+        executor.shutdownNow();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void stressTest() throws InterruptedException {
+        // this test assumes that ConcurrentHashMap scales better than the Timer
+        ConcurrentMap<String, Long> deltas = new ConcurrentHashMap<>();
+
+        long delay = 0;
+        for (int i = 0; i < ITERATIONS; i++) {
+            delay += DELAY_INCREMENT;
+
+            for (int j = 0; j < TASKS_PER_ITERATION; j++) {
+                String taskId = i + "_" + j;
+
+                long desiredTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delay);
+                timer.schedule(delay, () -> {
+                    long now = System.nanoTime();
+                    long delta = TimeUnit.NANOSECONDS.toMillis(now - desiredTime);
+                    deltas.put(taskId, delta);
+                });
+            }
+        }
+
+        Thread.sleep(delay + DELAY_INCREMENT);
+
+        assertThat(deltas).hasSize(ITERATIONS * TASKS_PER_ITERATION);
+
+        for (Map.Entry<String, Long> entry : deltas.entrySet()) {
+            String id = entry.getKey();
+            Long delta = entry.getValue();
+
+            assertThat(delta)
+                    .as("task " + id + " has delta " + delta)
+                    .isCloseTo(0L, byLessThan(DELAY_INCREMENT));
+        }
+    }
+}

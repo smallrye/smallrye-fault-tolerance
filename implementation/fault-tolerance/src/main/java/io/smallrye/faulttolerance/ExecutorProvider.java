@@ -1,61 +1,55 @@
 package io.smallrye.faulttolerance;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import io.smallrye.faulttolerance.core.timer.Timer;
+
 /**
- * Provider of thread pools for timeouts and asynchronous invocations
- *
- * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
+ * Provider of thread pools for bulkheads and asynchronous invocations
  */
 @Singleton
 public class ExecutorProvider {
-
-    @Inject
-    @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100")
-    private Integer size;
-
-    @Inject
-    @ConfigProperty(name = "io.smallrye.faulttolerance.timeoutExecutorThreads", defaultValue = "5")
-    private Integer timeoutExecutorSize;
-
-    private ExecutorService globalExecutor;
-
-    private ScheduledExecutorService timeoutExecutor;
-
-    private ExecutorFactory executorFactory;
-
     private final List<ExecutorService> allExecutors = new ArrayList<>();
 
-    @PostConstruct
-    public void setUp() {
-        if (size < 5) {
-            throw new IllegalArgumentException("Please set the global thread pool size for a value larger than 5. ");
-        }
-        executorFactory = executorProvider();
-        // global executor cannot use queue, it could lead to e.g. thread that runs the future
-        // waiting for the thread that waits for the future to be finished
-        globalExecutor = executorFactory.createCoreExecutor(size);
+    private final ExecutorFactory executorFactory;
 
-        timeoutExecutor = executorFactory.createTimeoutExecutor(timeoutExecutorSize);
-        allExecutors.add(globalExecutor);
-        allExecutors.add(timeoutExecutor);
+    private final ExecutorService mainExecutor;
+
+    private final Timer timer;
+
+    @Inject
+    public ExecutorProvider(
+            @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100") Integer mainExecutorSize) {
+        if (mainExecutorSize < 5) {
+            throw new IllegalArgumentException("The main thread pool size must be >= 5.");
+        }
+
+        this.executorFactory = executorFactory();
+        this.mainExecutor = executorFactory.createCoreExecutor(mainExecutorSize);
+        allExecutors.add(mainExecutor);
+        this.timer = new Timer(mainExecutor);
     }
 
     @PreDestroy
     public void tearDown() {
+        try {
+            timer.shutdown();
+        } catch (InterruptedException e) {
+            // no need to do anything, we're shutting down anyway
+            // just set the interruption flag to be a good citizen
+            Thread.currentThread().interrupt();
+        }
+
         allExecutors.forEach(ExecutorService::shutdownNow);
 
         for (ExecutorService executor : allExecutors) {
@@ -75,26 +69,23 @@ public class ExecutorProvider {
         return executor;
     }
 
-    public ExecutorService getGlobalExecutor() {
-        return globalExecutor;
+    public ExecutorService getMainExecutor() {
+        return mainExecutor;
     }
 
-    public ScheduledExecutorService getTimeoutExecutor() {
-        return timeoutExecutor;
+    public Timer getTimer() {
+        return timer;
     }
 
-    private static ExecutorFactory executorProvider() {
-        ServiceLoader<ExecutorFactory> loader = ServiceLoader.load(ExecutorFactory.class);
+    private static ExecutorFactory executorFactory() {
+        ExecutorFactory maxPriority = new DefaultExecutorFactory();
 
-        Iterator<ExecutorFactory> iterator = loader.iterator();
-
-        ExecutorFactory maxPriorityProvider = new DefaultExecutorFactory();
-        while (iterator.hasNext()) {
-            ExecutorFactory next = iterator.next();
-            if (next.priority() > maxPriorityProvider.priority()) {
-                maxPriorityProvider = next;
+        for (ExecutorFactory factory : ServiceLoader.load(ExecutorFactory.class)) {
+            if (factory.priority() > maxPriority.priority()) {
+                maxPriority = factory;
             }
         }
-        return maxPriorityProvider;
+
+        return maxPriority;
     }
 }
