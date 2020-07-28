@@ -3,7 +3,6 @@ package io.smallrye.faulttolerance;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -25,11 +24,6 @@ public class DefaultExecutorFactory implements ExecutorFactory {
     public ExecutorService createExecutor(int coreSize, int size) {
         return new ThreadPoolExecutor(coreSize, size, KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
                 threadFactory());
-    }
-
-    @Override
-    public ScheduledExecutorService createTimeoutExecutor(int size) {
-        return Executors.newScheduledThreadPool(size, threadFactory());
     }
 
     /**
