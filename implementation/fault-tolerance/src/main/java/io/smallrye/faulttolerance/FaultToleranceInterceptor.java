@@ -31,7 +31,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.control.RequestContextController;
@@ -76,8 +75,9 @@ import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
-import io.smallrye.faulttolerance.core.timeout.ScheduledExecutorTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
+import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
+import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.CircuitBreakerStateObserver;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
@@ -104,7 +104,7 @@ public class FaultToleranceInterceptor {
 
     private final MetricsProvider metricsProvider;
 
-    private final ScheduledExecutorService timeoutExecutor;
+    private final Timer timer;
 
     private final ExecutorService asyncExecutor;
 
@@ -134,8 +134,8 @@ public class FaultToleranceInterceptor {
         this.executorProvider = executorProvider;
         this.cache = cache;
         this.cbStateEvent = cbStateEvent;
-        asyncExecutor = executorProvider.getGlobalExecutor();
-        timeoutExecutor = executorProvider.getTimeoutExecutor();
+        asyncExecutor = executorProvider.getMainExecutor();
+        timer = executorProvider.getTimer();
         requestContextController = RequestContextControllerProvider.load().get();
     }
 
@@ -224,8 +224,7 @@ public class FaultToleranceInterceptor {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
             result = new CompletionStageTimeout<>(result, "Timeout[" + point + "]",
                     timeoutMs,
-                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor),
-                    asyncExecutor);
+                    new TimerTimeoutWatcher(timer));
         }
 
         if (operation.hasCircuitBreaker()) {
@@ -291,7 +290,7 @@ public class FaultToleranceInterceptor {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
             result = new Timeout<>(result, "Timeout[" + point + "]",
                     timeoutMs,
-                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor));
+                    new TimerTimeoutWatcher(timer));
         }
 
         if (operation.hasCircuitBreaker()) {
@@ -363,7 +362,7 @@ public class FaultToleranceInterceptor {
             long timeoutMs = getTimeInMs(operation.getTimeout(), TimeoutConfig.VALUE, TimeoutConfig.UNIT);
             result = new Timeout<>(result, "Timeout[" + point + "]",
                     timeoutMs,
-                    new ScheduledExecutorTimeoutWatcher(timeoutExecutor));
+                    new TimerTimeoutWatcher(timer));
             result = new AsyncTimeout<>(result, asyncExecutor);
         }
 
