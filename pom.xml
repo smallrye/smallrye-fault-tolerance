@@ -43,7 +43,7 @@
     <!-- smallrye-metrics is purely used for testing -->
     <version.smallrye-metrics>2.4.2</version.smallrye-metrics>
     <version.smallrye-context-propagation>1.0.15</version.smallrye-context-propagation>
-    <version.smallrye-common>1.1.0</version.smallrye-common>
+    <version.smallrye-common>1.2.0</version.smallrye-common>
     <version.opentracing>0.31.0</version.opentracing>
 
     <version.org.assertj.assertj-core>3.16.1</version.org.assertj.assertj-core>
