@@ -16,10 +16,16 @@
 
 package io.smallrye.faulttolerance;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.HashSet;
+import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -63,7 +69,8 @@ public class FaultToleranceExtension implements Extension {
     private final ConcurrentMap<String, FaultToleranceOperation> faultToleranceOperations = new ConcurrentHashMap<>();
 
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
-        LOGGER.info("MicroProfile: Fault Tolerance activated");
+        LOGGER.infof("MicroProfile: Fault Tolerance activated (SmallRye Fault Tolerance version: %s)",
+                getImplementationVersion().orElse("unknown"));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Retry.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Timeout.class)));
@@ -123,6 +130,26 @@ public class FaultToleranceExtension implements Extension {
 
     FaultToleranceOperation getFaultToleranceOperation(Class<?> beanClass, Method method) {
         return faultToleranceOperations.get(getCacheKey(beanClass, method));
+    }
+
+    private static Optional<String> getImplementationVersion() {
+        return AccessController.doPrivileged(new PrivilegedAction<Optional<String>>() {
+            @Override
+            public Optional<String> run() {
+                Properties properties = new Properties();
+                try {
+                    InputStream resource = this.getClass().getClassLoader()
+                            .getResourceAsStream("smallrye-fault-tolerance.properties");
+                    if (resource != null) {
+                        properties.load(resource);
+                        return Optional.ofNullable(properties.getProperty("version"));
+                    }
+                } catch (IOException e) {
+                    LOGGER.debug("Unable to detect SmallRye Fault Tolerance version");
+                }
+                return Optional.empty();
+            }
+        });
     }
 
     public static class FTInterceptorBindingAnnotatedType<T extends Annotation> implements AnnotatedType<T> {
