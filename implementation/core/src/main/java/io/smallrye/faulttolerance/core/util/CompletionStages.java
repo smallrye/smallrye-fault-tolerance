@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.util;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -26,8 +27,16 @@ public class CompletionStages {
             if (exception == null) {
                 to.complete(value);
             } else {
-                to.completeExceptionally(exception);
+                to.completeExceptionally(unwrap(exception));
             }
         });
+    }
+
+    private static Throwable unwrap(Throwable exception) {
+        while (exception instanceof CompletionException) {
+            exception = exception.getCause();
+        }
+
+        return exception;
     }
 }
