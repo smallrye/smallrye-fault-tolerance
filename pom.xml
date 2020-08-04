@@ -34,7 +34,7 @@
     <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
     <version.jakarta.enterprise.concurrent-api>1.1.2</version.jakarta.enterprise.concurrent-api>
     <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
-    <version.mp-fault-tolerance>3.0-SNAPSHOT</version.mp-fault-tolerance>
+    <version.mp-fault-tolerance>3.0-RC1</version.mp-fault-tolerance>
     <version.microprofile-config-api>1.4</version.microprofile-config-api>
     <version.microprofile-metrics-api>2.3.2</version.microprofile-metrics-api>
     <version.slf4j-simple>1.7.30</version.slf4j-simple>
