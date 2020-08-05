@@ -2,6 +2,7 @@ package io.smallrye.faulttolerance;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +20,8 @@ import io.smallrye.faulttolerance.core.timer.Timer;
  */
 @Singleton
 public class ExecutorProvider {
+    private static final int DEFAULT_MAIN_THREAD_P0OL_SIZE = 100;
+
     private final List<ExecutorService> allExecutors = new ArrayList<>();
 
     private final ExecutorFactory executorFactory;
@@ -29,7 +32,11 @@ public class ExecutorProvider {
 
     @Inject
     public ExecutorProvider(
-            @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize", defaultValue = "100") Integer mainExecutorSize) {
+            @ConfigProperty(name = "io.smallrye.faulttolerance.mainThreadPoolSize") OptionalInt mainThreadPoolSize,
+            @ConfigProperty(name = "io.smallrye.faulttolerance.globalThreadPoolSize") OptionalInt globalThreadPoolSize) {
+
+        int mainExecutorSize = mainThreadPoolSize.orElse(globalThreadPoolSize.orElse(DEFAULT_MAIN_THREAD_P0OL_SIZE));
+
         if (mainExecutorSize < 5) {
             throw new IllegalArgumentException("The main thread pool size must be >= 5.");
         }
