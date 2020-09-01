@@ -4,7 +4,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import org.eclipse.microprofile.context.ManagedExecutor;
 import org.eclipse.microprofile.context.ThreadContext;
 
 import io.smallrye.context.SmallRyeManagedExecutor;
@@ -17,13 +16,12 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
 
     @Override
     public ExecutorService createCoreExecutor(int size) {
-        return ManagedExecutor.builder().maxAsync(size).build();
+        return SmallRyeManagedExecutor.builder().withExecutorService(null).maxAsync(size).build();
     }
 
     @Override
     public ExecutorService createExecutor(int coreSize, int size) {
-        SmallRyeManagedExecutor.Builder builder = (SmallRyeManagedExecutor.Builder) ManagedExecutor.builder();
-        return builder.maxAsync(size).build();
+        return SmallRyeManagedExecutor.builder().withExecutorService(null).maxAsync(size).build();
     }
 
     @Override
