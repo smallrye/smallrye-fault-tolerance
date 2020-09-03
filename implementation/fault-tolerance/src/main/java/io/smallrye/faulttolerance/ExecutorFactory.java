@@ -24,14 +24,12 @@ public interface ExecutorFactory {
     ExecutorService createCoreExecutor(int size);
 
     /**
-     * similar to {@link #createCoreExecutor(int)} but creating an executor with unlimited (or large) queue size
-     * with defined core pool size
-     *
-     * @param coreSize amount of threads in the pool's core
-     * @param size amount of threads in the pool
-     * @return executor service
+     * @deprecated this is no longer used
      */
-    ExecutorService createExecutor(int coreSize, int size);
+    @Deprecated
+    default ExecutorService createExecutor(int coreSize, int size) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * @deprecated this is no longer used

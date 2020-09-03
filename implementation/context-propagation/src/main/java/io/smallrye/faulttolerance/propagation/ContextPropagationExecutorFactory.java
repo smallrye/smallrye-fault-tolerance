@@ -13,11 +13,6 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
     }
 
     @Override
-    public ExecutorService createExecutor(int coreSize, int size) {
-        return ManagedExecutor.builder().maxAsync(size).build();
-    }
-
-    @Override
     public int priority() {
         return 100;
     }
