@@ -13,7 +13,7 @@ public abstract class BulkheadBase<V> implements FaultToleranceStrategy<V> {
         this.delegate = delegate;
     }
 
-    BulkheadException bulkheadRejected() {
+    final BulkheadException bulkheadRejected() {
         return new BulkheadException(description + " rejected from bulkhead");
     }
 }
