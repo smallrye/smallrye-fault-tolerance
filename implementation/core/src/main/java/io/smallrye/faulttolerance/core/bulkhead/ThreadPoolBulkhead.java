@@ -2,7 +2,9 @@ package io.smallrye.faulttolerance.core.bulkhead;
 
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
+import java.util.Deque;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -14,34 +16,31 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CancellationEvent;
 import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 
-/**
- * The implementation intentionally doesn't leverage an executor with
- * a limited queue but limits the task intake with Semaphore
- * <br>
- * Proper removal from executor's queue is not possible for MicroProfile Context Propagation.
- * Also, the cost of removal from a linked queue is large, and the current solution should
- * should perform much better.
- *
- * @param <V> type of the Future result
- */
 public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
     private final ExecutorService executor;
+    private final Deque<FutureBulkheadTask> queue;
     private final Semaphore capacitySemaphore;
-    private final int queueSize;
+    private final Semaphore workSemaphore;
 
-    public ThreadPoolBulkhead(FaultToleranceStrategy<Future<V>> delegate, String description, ExecutorService executor,
-            int size, int queueSize) {
+    public ThreadPoolBulkhead(FaultToleranceStrategy<Future<V>> delegate, String description,
+            ExecutorService executor, int size, int queueSize) {
         super(description, delegate);
-        capacitySemaphore = new Semaphore(size + queueSize);
-        this.queueSize = queueSize;
         this.executor = executor;
+        this.queue = new ConcurrentLinkedDeque<>();
+        this.capacitySemaphore = new Semaphore(size + queueSize);
+        this.workSemaphore = new Semaphore(size);
     }
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
         if (capacitySemaphore.tryAcquire()) {
             ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
-            BulkheadTask task = new BulkheadTask("ThreadPoolBulkhead", () -> {
+            ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
+
+            // the lambda here should really be created in the FutureBulkheadTask constructor,
+            // so that ThreadPoolBulkhead is symmetric with CompletionStageBulkhead,
+            // but that leads to a bytecode verification error on my OpenJDK 8
+            FutureBulkheadTask task = new FutureBulkheadTask(() -> {
                 ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
                 ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
                 try {
@@ -50,10 +49,19 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                     ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
                 }
             });
-            ctx.registerEventHandler(CancellationEvent.class, ignored -> task.cancel());
-            ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
-            executor.execute(task);
 
+            ctx.registerEventHandler(CancellationEvent.class, ignored -> task.cancel());
+
+            if (workSemaphore.tryAcquire()) {
+                if (task.markRunning()) {
+                    executor.execute(task);
+                } else {
+                    // cancelled, no need to do anything
+                    workSemaphore.release();
+                }
+            } else {
+                queue.addLast(task);
+            }
             try {
                 return task.get();
             } catch (InterruptedException e) {
@@ -68,36 +76,42 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
         }
     }
 
-    // only for testing
+    // only for tests
     int getQueueSize() {
-        return Math.max(0, queueSize - capacitySemaphore.availablePermits());
+        return queue.size();
     }
 
-    private class BulkheadTask extends NamedFutureTask<Future<V>> {
+    private class FutureBulkheadTask extends NamedFutureTask<Future<V>> {
         private static final int WAITING = 0;
         private static final int RUNNING = 1;
         private static final int CANCELLED = 2;
 
         private final AtomicInteger state = new AtomicInteger(WAITING);
 
-        public BulkheadTask(String name, Callable<Future<V>> callable) {
-            super(name, callable);
+        public FutureBulkheadTask(Callable<Future<V>> callable) {
+            super("FutureBulkheadTask", callable);
+        }
+
+        public boolean markRunning() {
+            return state.compareAndSet(WAITING, RUNNING);
         }
 
         @Override
         public void run() {
-            if (state.compareAndSet(WAITING, RUNNING)) {
-                try {
-                    super.run();
-                } finally {
-                    capacitySemaphore.release();
-                }
+            try {
+                super.run();
+            } finally {
+                releaseSemaphores();
+
+                runQueuedTasks();
             }
         }
 
         public void cancel() {
             if (state.compareAndSet(WAITING, CANCELLED)) {
-                capacitySemaphore.release();
+                releaseSemaphores();
+
+                queue.remove(this);
             }
         }
 
@@ -105,6 +119,31 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
         public boolean cancel(boolean mayInterruptIfRunning) {
             cancel();
             return super.cancel(mayInterruptIfRunning);
+        }
+
+        private void releaseSemaphores() {
+            if (this.state.get() == RUNNING) {
+                workSemaphore.release();
+            }
+            capacitySemaphore.release();
+        }
+
+        private void runQueuedTasks() {
+            FutureBulkheadTask queuedTask = queue.pollFirst();
+            while (queuedTask != null) {
+                if (workSemaphore.tryAcquire()) {
+                    if (queuedTask.markRunning()) {
+                        queuedTask.run(); // TODO this itself will again call runQueuedTasks, so do we need a loop?
+                    } else {
+                        // cancelled, no need to do anything
+                        workSemaphore.release();
+                    }
+                    queuedTask = queue.poll();
+                } else {
+                    queue.addFirst(queuedTask);
+                    break;
+                }
+            }
         }
     }
 }
