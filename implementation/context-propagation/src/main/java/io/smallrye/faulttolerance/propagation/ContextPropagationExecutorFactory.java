@@ -12,11 +12,6 @@ public class ContextPropagationExecutorFactory implements ExecutorFactory {
     }
 
     @Override
-    public ExecutorService createExecutor(int coreSize, int size) {
-        return SmallRyeManagedExecutor.builder().withNewExecutorService().maxAsync(size).build();
-    }
-
-    @Override
     public int priority() {
         return 100;
     }
