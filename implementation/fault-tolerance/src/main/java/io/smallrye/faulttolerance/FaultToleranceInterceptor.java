@@ -214,7 +214,8 @@ public class FaultToleranceInterceptor {
             Integer queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
             result = new CompletionStageBulkhead<>(result,
                     "CompletionStage[" + point + "]",
-                    executorProvider.createAdHocExecutor(size), size,
+                    asyncExecutor,
+                    size,
                     queueSize);
         }
 
@@ -361,9 +362,8 @@ public class FaultToleranceInterceptor {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             int size = bulkheadConfig.get(BulkheadConfig.VALUE);
             int queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
-            ExecutorService executor = executorProvider.createAdHocExecutor(size);
             result = new ThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
-                    executor, size, queueSize);
+                    asyncExecutor, size, queueSize);
         }
 
         if (operation.hasTimeout()) {

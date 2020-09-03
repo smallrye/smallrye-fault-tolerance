@@ -10,7 +10,7 @@ public class SemaphoreBulkhead<V> extends BulkheadBase<V> {
 
     public SemaphoreBulkhead(FaultToleranceStrategy<V> delegate, String description, int size) {
         super(description, delegate);
-        semaphore = new Semaphore(size);
+        this.semaphore = new Semaphore(size);
     }
 
     @Override
