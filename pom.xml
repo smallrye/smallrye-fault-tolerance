@@ -39,7 +39,7 @@
     <version.microprofile-metrics-api>2.3.2</version.microprofile-metrics-api>
     <version.slf4j-simple>1.7.30</version.slf4j-simple>
     <!-- smallrye-config is purely used for testing -->
-    <version.smallrye-config>1.8.6</version.smallrye-config>
+    <version.smallrye-config>1.9.0</version.smallrye-config>
     <!-- smallrye-metrics is purely used for testing -->
     <version.smallrye-metrics>2.4.3</version.smallrye-metrics>
     <version.smallrye-context-propagation>1.0.16</version.smallrye-context-propagation>
