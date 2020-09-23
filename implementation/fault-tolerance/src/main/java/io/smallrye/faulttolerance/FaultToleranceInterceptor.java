@@ -106,8 +106,6 @@ public class FaultToleranceInterceptor {
 
     private final MetricsProvider metricsProvider;
 
-    private final ExecutorProvider executorProvider;
-
     private final ExecutorService asyncExecutor;
 
     private final Timer timer;
@@ -123,16 +121,15 @@ public class FaultToleranceInterceptor {
             StrategyCache cache,
             FallbackHandlerProvider fallbackHandlerProvider,
             MetricsProvider metricsProvider,
-            ExecutorProvider executorProvider,
+            ExecutorHolder executorHolder,
             CircuitBreakerMaintenanceImpl cbMaintenance) {
         this.interceptedBean = interceptedBean;
         this.operationProvider = operationProvider;
         this.cache = cache;
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.metricsProvider = metricsProvider;
-        this.executorProvider = executorProvider;
-        asyncExecutor = executorProvider.getMainExecutor();
-        timer = executorProvider.getTimer();
+        asyncExecutor = executorHolder.getAsyncExecutor();
+        timer = executorHolder.getTimer();
         requestContextController = RequestContextControllerProvider.load().get();
         this.cbMaintenance = cbMaintenance;
     }
