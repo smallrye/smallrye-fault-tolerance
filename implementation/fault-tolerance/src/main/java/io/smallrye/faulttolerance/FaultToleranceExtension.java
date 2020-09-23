@@ -89,8 +89,10 @@ public class FaultToleranceExtension implements Extension {
                 FaultToleranceInterceptor.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class),
                 DefaultFallbackHandlerProvider.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(ExecutorProvider.class),
-                ExecutorProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultAsyncExecutorProvider.class),
+                DefaultAsyncExecutorProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(ExecutorHolder.class),
+                ExecutorHolder.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
                 DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultExistingCircuitBreakerNames.class),
