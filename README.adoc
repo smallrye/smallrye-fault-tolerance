@@ -11,46 +11,57 @@ image:https://img.shields.io/maven-central/v/io.smallrye/smallrye-fault-toleranc
 
 SmallRye Fault Tolerance is an implementation of {microprofile-fault-tolerance}[Eclipse MicroProfile Fault Tolerance].
 
+=== API
+
+SmallRye Fault Tolerance provides some additional APIs on top of MicroProfile Fault Tolerance.
+Before proper documentation exists, please refer to the `api` directory directly.
+
 === Integration
 
-==== Thread pools
-A vendor may want to provide custom executor services for the fault tolerant executions.
-This can be achieved by creating a custom `io.smallrye.faulttolerance.ExecutorFactory` and
-registering it via `ServiceLoader`.
+==== Thread pool
 
-If multiple factories are discovered, the one with the *highest* priority is used.
+SmallRye Fault Tolerance expects integrators to provide a thread pool for running `@Asynchronous` methods and other asynchronous tasks.
+The integration is based on CDI; see `io.smallrye.faulttolerance.AsyncExecutorProvider` and `io.smallrye.faulttolerance.DefaultAsyncExecutorProvider` for details.
+
+There is a default thread pool in case no integration is provided, but it shouldn't be used outside of tests or experiments.
 
 ==== Context Propagation
-`smallrye-fault-tolerance-context-propagation` provides an integration with MicroProfile Context Propagation.
-It is done by providing a custom `ExecutorFactory`, namely `ContextPropagationExecutorFactory`.
 
-Please note that if you override the executor factory with a custom one and would like the context propagation
-to be enabled, you have to make sure your executor factory creates the executor services in the right way.
+SmallRye Fault Tolerance supports MicroProfile Context Propagation, if 2 conditions are satistied:
 
-==== Open Tracing
-SmallRye Fault Tolerance enables trace propagation to the asynchronous invocations via MicroProfile
-Context Propagation. To enable it, add `smallrye-fault-tolerance-tracing-propagation` to your project
+- the integrator provides a MicroProfile Context Propagation enabled thread pool (see above);
+- the `smallrye-fault-tolerance-context-propagation` artifact is present (it provides alternative implementations of some internal services).
+
+==== OpenTracing
+
+SmallRye Fault Tolerance includes an integration between MicroProfile Context Propagation and OpenTracing.
+It is the `smallrye-fault-tolerance-tracing-propagation` artifact.
+
+Technically, this doesn't even belong to SmallRye Fault Tolerance.
 
 === Configuration
-SmallRye Fault Tolerance supports all the configuration options of MicroProfile Fault Tolerance
-and, additionally, the following options:
 
-- `io.smallrye.faulttolerance.mainThreadPoolSize`: the number of threads used by the fault tolerance mechanisms.
-This does not include bulkhead thread pools.
-Defaults to `100`.
+SmallRye Fault Tolerance supports all the configuration options of MicroProfile Fault Tolerance.
+This includes both annotations and `.properties` configuration.
+
+If SmallRye Fault Tolerance integrator doesn't provide a thread pool, the default thread pool is used and the following option is also recongized:
+
+- `io.smallrye.faulttolerance.mainThreadPoolSize`: maximum number of threads in the fault tolerance thread pool.
+  Defaults to `100`.
 
 Older configuration properties that should no longer be used:
 
 - `io.smallrye.faulttolerance.globalThreadPoolSize`: deprecated; use `mainThreadPoolSize` instead.
-If `mainThreadPoolSize` isn't set, this is still used as a fallback.
+  If `mainThreadPoolSize` isn't set, this is still used as a fallback.
 
 - `io.smallrye.faulttolerance.timeoutExecutorThreads`: ignored.
-Was previously used to set size of a dedicated thread pool for timeout watchers.
-No longer used, because timeout watchers are now executed on the main thread pool.
+  Was previously used to set size of a dedicated thread pool for timeout watchers.
+  No longer used, because timeout watchers are now executed on the main thread pool.
 
 === Instructions
 
 Compile and install this project:
+
 [source,bash]
 ----
 mvn clean install
@@ -60,20 +71,20 @@ This will run all the tests and the TCK.
 
 ==== Project structure
 
-* link:api[] - SmallRye Fault Tolerance API, additional to the Eclipse MicroProfile Fault Tolerance API.
-Treated as a public API.
-* link:implementation/core[] - Implementation of core fault tolerance strategies.
-Independent of the Eclipse MicroProfile Fault Tolerance API or the SmallRye Fault Tolerance API.
-Treated as private API, no compatibility guaranteed.
-* link:implementation/fault-tolerance[] - Implementation of the Eclipse MicroProfile Fault Tolerance API and the SmallRye Fault Tolerance API.
-* link:implementation/context-propagation[] - Optional integration with MicroProfile Context Propagation.
-* link:implementation/tracing-propagation[] - Optional integration between MicroProfile OpenTracing and MicroProfile Context Propagation.
-Technically doesn't even belong into SmallRye Fault Tolerance.
-* link:testsuite/basic[] - Basic test suite.
-Some parts of it overlap with the Eclipse MicroProfile Fault Tolerance TCK.
-* link:testsuite/integration[] - Context propagation integration test suite.
-* link:testsuite/tck[] - Runs the implementation against the Eclipse MicroProfile Fault Tolerance TCK.
-* link:docs[] - Project documentation.
+* link:api[]:  SmallRye Fault Tolerance API, additional to the Eclipse MicroProfile Fault Tolerance API.
+  Treated as a public API.
+* link:implementation/core[]: Implementation of core fault tolerance strategies.
+  Independent of the Eclipse MicroProfile Fault Tolerance API or the SmallRye Fault Tolerance API.
+  Treated as private API, no compatibility guaranteed.
+* link:implementation/fault-tolerance[]: Implementation of the Eclipse MicroProfile Fault Tolerance API and the SmallRye Fault Tolerance API.
+* link:implementation/context-propagation[]: Optional integration with MicroProfile Context Propagation.
+* link:implementation/tracing-propagation[]: Optional integration between MicroProfile Context Propagation and OpenTracing.
+* link:testsuite/basic[]: Basic test suite.
+  Some parts of it overlap with the Eclipse MicroProfile Fault Tolerance TCK.
+* link:testsuite/integration[]: Context propagation integration test suite.
+* link:testsuite/tck[]: Runs the implementation against the Eclipse MicroProfile Fault Tolerance TCK.
+* link:docs[]: Where documentation should live.
+  Currently, there is none, unfortunately.
 
 ==== Links
 
