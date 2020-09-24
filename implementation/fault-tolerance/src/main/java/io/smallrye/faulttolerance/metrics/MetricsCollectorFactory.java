@@ -17,6 +17,7 @@ import org.eclipse.microprofile.metrics.MetricType;
 import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.metrics.api.FunctionGaugeSupport;
 
 @ApplicationScoped
 public class MetricsCollectorFactory {
@@ -76,7 +77,11 @@ public class MetricsCollectorFactory {
                 synchronized (operation) {
                     gauge = registry.getGauges().get(metricID);
                     if (gauge == null) {
-                        registry.register(name, (Gauge<Long>) supplier::get);
+                        if (registry instanceof FunctionGaugeSupport) {
+                            ((FunctionGaugeSupport) registry).gauge(name, supplier);
+                        } else {
+                            registry.register(name, (Gauge<Long>) supplier::get);
+                        }
                     }
                 }
             }
