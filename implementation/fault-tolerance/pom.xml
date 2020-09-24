@@ -88,6 +88,10 @@
       <artifactId>microprofile-metrics-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.smallrye</groupId>
+      <artifactId>smallrye-metrics-api</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-api</artifactId>
       <optional>true</optional>
