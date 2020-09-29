@@ -1,5 +1,5 @@
 /*
- * Copyright 202 Red Hat, Inc, and individual contributors.
+ * Copyright 2020 Red Hat, Inc, and individual contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,12 @@ import io.smallrye.common.annotation.Experimental;
 
 /**
  * CDI event type that is fired when some circuit breaker changes its state.
+ *
+ * @deprecated this will be removed in SmallRye Fault Tolerance 5.0.0,
+ *             which will introduce a new, easier to use API for circuit breaker maintenance
  */
 @Experimental("first attempt at providing a way to observe circuit breaker state")
+@Deprecated
 public class CircuitBreakerStateChanged {
     public final Class<?> clazz;
     public final Method method;
