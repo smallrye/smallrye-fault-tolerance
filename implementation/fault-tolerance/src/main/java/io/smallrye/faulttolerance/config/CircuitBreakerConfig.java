@@ -27,6 +27,8 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 import org.jboss.logging.Logger;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerName;
+
 /**
  * @author Antoine Sabot-Durand
  */
@@ -50,12 +52,22 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
 
     private static final Logger LOGGER = Logger.getLogger(CircuitBreakerConfig.class);
 
+    private final String circuitBreakerName;
+
     public CircuitBreakerConfig(Class<?> beanClass, Method method) {
         super(CircuitBreaker.class, beanClass, method);
+        CircuitBreakerName circuitBreakerName = method.getAnnotation(CircuitBreakerName.class);
+        this.circuitBreakerName = circuitBreakerName != null ? circuitBreakerName.value() : null;
     }
 
     public CircuitBreakerConfig(AnnotatedMethod<?> annotatedMethod) {
         super(CircuitBreaker.class, annotatedMethod);
+        CircuitBreakerName circuitBreakerName = annotatedMethod.getAnnotation(CircuitBreakerName.class);
+        this.circuitBreakerName = circuitBreakerName != null ? circuitBreakerName.value() : null;
+    }
+
+    public String getCircuitBreakerName() {
+        return circuitBreakerName;
     }
 
     @Override
