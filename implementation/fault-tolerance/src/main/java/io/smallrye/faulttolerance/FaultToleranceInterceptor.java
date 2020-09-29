@@ -34,7 +34,6 @@ import java.util.concurrent.Future;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.control.RequestContextController;
-import javax.enterprise.event.Event;
 import javax.enterprise.inject.Intercepted;
 import javax.enterprise.inject.spi.Bean;
 import javax.inject.Inject;
@@ -45,7 +44,6 @@ import javax.interceptor.InvocationContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
-import io.smallrye.faulttolerance.api.CircuitBreakerStateChanged;
 import io.smallrye.faulttolerance.config.BulkheadConfig;
 import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 import io.smallrye.faulttolerance.config.FallbackConfig;
@@ -79,7 +77,6 @@ import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
-import io.smallrye.faulttolerance.internal.CircuitBreakerStateObserver;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
@@ -98,45 +95,45 @@ import io.smallrye.faulttolerance.metrics.MetricsProvider;
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class FaultToleranceInterceptor {
 
-    private final FallbackHandlerProvider fallbackHandlerProvider;
-
     private final Bean<?> interceptedBean;
-
-    private final MetricsProvider metricsProvider;
-
-    private final Timer timer;
-
-    private final ExecutorService asyncExecutor;
 
     private final FaultToleranceOperationProvider operationProvider;
 
+    private final StrategyCache cache;
+
+    private final FallbackHandlerProvider fallbackHandlerProvider;
+
+    private final MetricsProvider metricsProvider;
+
     private final ExecutorProvider executorProvider;
 
-    private final StrategyCache cache;
+    private final ExecutorService asyncExecutor;
+
+    private final Timer timer;
 
     private final RequestContextController requestContextController;
 
-    private final Event<CircuitBreakerStateChanged> cbStateEvent;
+    private final CircuitBreakerMaintenanceRegistry cbMaintenanceRegistry;
 
     @Inject
     public FaultToleranceInterceptor(
-            FallbackHandlerProvider fallbackHandlerProvider,
             @Intercepted Bean<?> interceptedBean,
-            MetricsProvider metricsProvider,
             FaultToleranceOperationProvider operationProvider,
             StrategyCache cache,
+            FallbackHandlerProvider fallbackHandlerProvider,
+            MetricsProvider metricsProvider,
             ExecutorProvider executorProvider,
-            Event<CircuitBreakerStateChanged> cbStateEvent) {
-        this.fallbackHandlerProvider = fallbackHandlerProvider;
+            CircuitBreakerMaintenanceRegistry cbMaintenanceRegistry) {
         this.interceptedBean = interceptedBean;
-        this.metricsProvider = metricsProvider;
         this.operationProvider = operationProvider;
-        this.executorProvider = executorProvider;
         this.cache = cache;
-        this.cbStateEvent = cbStateEvent;
+        this.fallbackHandlerProvider = fallbackHandlerProvider;
+        this.metricsProvider = metricsProvider;
+        this.executorProvider = executorProvider;
         asyncExecutor = executorProvider.getMainExecutor();
         timer = executorProvider.getTimer();
         requestContextController = RequestContextControllerProvider.load().get();
+        this.cbMaintenanceRegistry = cbMaintenanceRegistry;
     }
 
     @AroundInvoke
@@ -238,7 +235,9 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch());
-            result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
+            if (cbConfig.getCircuitBreakerName() != null) {
+                cbMaintenanceRegistry.register(cbConfig.getCircuitBreakerName(), (CircuitBreaker<?>) result);
+            }
         }
 
         if (operation.hasRetry()) {
@@ -304,7 +303,9 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch());
-            result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
+            if (cbConfig.getCircuitBreakerName() != null) {
+                cbMaintenanceRegistry.register(cbConfig.getCircuitBreakerName(), (CircuitBreaker<?>) result);
+            }
         }
 
         if (operation.hasRetry()) {
@@ -377,7 +378,9 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch());
-            result = new CircuitBreakerStateObserver<>(result, point, cbStateEvent);
+            if (cbConfig.getCircuitBreakerName() != null) {
+                cbMaintenanceRegistry.register(cbConfig.getCircuitBreakerName(), (CircuitBreaker<?>) result);
+            }
         }
 
         if (operation.hasRetry()) {
