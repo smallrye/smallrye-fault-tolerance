@@ -53,7 +53,6 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
                     if (failureThresholdReached) {
                         toOpen(ctx, state);
                     }
-                    listeners.forEach(CircuitBreakerListener::succeeded);
                     result.complete(value);
                 }
             });
@@ -68,10 +67,8 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
     private void onFailure(InvocationContext<CompletionStage<V>> ctx, State state, Throwable e) {
         boolean isFailure = !isConsideredSuccess(e);
         if (isFailure) {
-            listeners.forEach(CircuitBreakerListener::failed);
             ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
         } else {
-            listeners.forEach(CircuitBreakerListener::succeeded);
             ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
         }
         boolean failureThresholdReached = isFailure
@@ -85,7 +82,6 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
     private CompletionStage<V> inOpen(InvocationContext<CompletionStage<V>> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
-            listeners.forEach(CircuitBreakerListener::rejected);
             return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
             toHalfOpen(ctx, state);
@@ -101,7 +97,6 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             delegate.apply(ctx).whenComplete((value, error) -> {
                 if (error != null) {
                     ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-                    listeners.forEach(CircuitBreakerListener::failed);
                     toOpen(ctx, state);
                     result.completeExceptionally(error);
                 } else {
@@ -111,7 +106,6 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
                     if (successes >= successThreshold) {
                         toClosed(ctx, state);
                     }
-                    listeners.forEach(CircuitBreakerListener::succeeded);
                     result.complete(value);
                 }
             });
@@ -119,7 +113,6 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             return result;
         } catch (Throwable e) {
             ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-            listeners.forEach(CircuitBreakerListener::failed);
             toOpen(ctx, state);
             return failedStage(e);
         }

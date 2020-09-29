@@ -4,7 +4,6 @@ import java.util.Collections;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
-import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerListener;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.retry.Delay;
 import io.smallrye.faulttolerance.core.retry.Retry;
@@ -28,16 +27,13 @@ final class Strategies {
                 SetOfThrowables.EMPTY, 10, 0, Delay.NONE, new TestStopwatch());
     }
 
-    static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, CircuitBreakerListener listener) {
-        return circuitBreaker(delegate, 0, listener);
+    static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate) {
+        return circuitBreaker(delegate, 0);
     }
 
-    static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, int delayInMillis,
-            CircuitBreakerListener listener) {
-        CircuitBreaker<V> result = new CircuitBreaker<>(delegate, "circuit breaker",
+    static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, int delayInMillis) {
+        return new CircuitBreaker<>(delegate, "circuit breaker",
                 SetOfThrowables.ALL, SetOfThrowables.EMPTY, delayInMillis, 5, 0.2, 3,
                 new TestStopwatch());
-        result.addListener(listener);
-        return result;
     }
 }
