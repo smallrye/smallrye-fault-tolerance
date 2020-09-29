@@ -12,83 +12,90 @@ import org.junit.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerListener;
+import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.retry.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class CircuitBreakerAndRetryTest {
     @Test
     public void shouldRecordEveryAttemptInCircuitBreaker() throws Exception {
-        CircuitBreakerRecorder recorder = new CircuitBreakerRecorder();
-
         // fail 2x and then succeed, under circuit breaker
         // circuit breaker volume threshold = 5, so CB will stay closed
-        FaultToleranceStrategy<String> operation = retry(
-                circuitBreaker(
-                        TestInvocation.initiallyFailing(2, TestException::new, () -> "foobar"),
-                        recorder));
+        CircuitBreakerRecorder<String> operation = new CircuitBreakerRecorder<>(
+                retry(
+                        circuitBreaker(
+                                TestInvocation.initiallyFailing(2, TestException::new, () -> "foobar"))));
 
         assertThat(operation.apply(new InvocationContext<>(() -> "ignored"))).isEqualTo("foobar");
-        assertThat(recorder.failureCount.get()).isEqualTo(2);
-        assertThat(recorder.successCount.get()).isEqualTo(1);
+
+        assertThat(operation.successCount.get()).isEqualTo(1);
+        assertThat(operation.failureCount.get()).isEqualTo(2);
     }
 
     @Test
     public void shouldRetryCircuitBreakerInHalfOpen() throws Exception {
-        CircuitBreakerRecorder recorder = new CircuitBreakerRecorder();
-
         // fail 5x and then succeed
         // CB volume threshold = 5, so the CB will open right after all the failures and before the success
         // CB delay is 0, so with the successful attempt, the CB will immediately move to half-open and succeed
         // doing 6 attemps (1 initial + 5 retries)
-        FaultToleranceStrategy<String> operation = retry(
-                circuitBreaker(
-                        TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
-                        recorder));
+        CircuitBreakerRecorder<String> operation = new CircuitBreakerRecorder<>(
+                retry(
+                        circuitBreaker(
+                                TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"))));
 
         assertThat(operation.apply(new InvocationContext<>(() -> "ignored"))).isEqualTo("foobar");
-        assertThat(recorder.failureCount.get()).isEqualTo(5);
-        assertThat(recorder.successCount.get()).isEqualTo(1);
+
+        assertThat(operation.successCount.get()).isEqualTo(1);
+        assertThat(operation.failureCount.get()).isEqualTo(5);
     }
 
     @Test
     public void shouldRetryCircuitBreakerInHalfOpenOrOpenAndFail() {
-        CircuitBreakerRecorder recorder = new CircuitBreakerRecorder();
-
         // fail 5x and then succeed
         // CB volume threshold = 5, so the CB will open right after all the failures and before the success
         // CB delay is > 0, so the successful attempt will be prevented, because the CB will be open
         // doing 11 attemps (1 initial + 10 retries, because max retries = 10)
-        FaultToleranceStrategy<String> operation = retry(
-                circuitBreaker(
-                        TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
-                        100, recorder));
+        CircuitBreakerRecorder<String> operation = new CircuitBreakerRecorder<>(
+                retry(
+                        circuitBreaker(
+                                TestInvocation.initiallyFailing(5, TestException::new, () -> "foobar"),
+                                100)));
 
         assertThatThrownBy(() -> operation.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
-        assertThat(recorder.failureCount.get()).isEqualTo(5);
-        assertThat(recorder.rejectedCount.get()).isEqualTo(6);
-        assertThat(recorder.successCount.get()).isEqualTo(0);
+
+        assertThat(operation.successCount.get()).isEqualTo(0);
+        assertThat(operation.failureCount.get()).isEqualTo(5);
+        assertThat(operation.preventedCount.get()).isEqualTo(6);
     }
 
-    private static class CircuitBreakerRecorder implements CircuitBreakerListener {
-        final AtomicInteger failureCount = new AtomicInteger();
+    private static class CircuitBreakerRecorder<V> implements FaultToleranceStrategy<V> {
+        private final FaultToleranceStrategy<V> delegate;
+
         final AtomicInteger successCount = new AtomicInteger();
-        final AtomicInteger rejectedCount = new AtomicInteger();
+        final AtomicInteger failureCount = new AtomicInteger();
+        final AtomicInteger preventedCount = new AtomicInteger();
 
-        @Override
-        public void succeeded() {
-            successCount.incrementAndGet();
+        CircuitBreakerRecorder(FaultToleranceStrategy<V> delegate) {
+            this.delegate = delegate;
         }
 
         @Override
-        public void failed() {
-            failureCount.incrementAndGet();
-        }
-
-        @Override
-        public void rejected() {
-            rejectedCount.incrementAndGet();
+        public V apply(InvocationContext<V> ctx) throws Exception {
+            ctx.registerEventHandler(CircuitBreakerEvents.Finished.class, event -> {
+                switch (event.result) {
+                    case SUCCESS:
+                        successCount.incrementAndGet();
+                        break;
+                    case FAILURE:
+                        failureCount.incrementAndGet();
+                        break;
+                    case PREVENTED:
+                        preventedCount.incrementAndGet();
+                        break;
+                }
+            });
+            return delegate.apply(ctx);
         }
     }
 }
