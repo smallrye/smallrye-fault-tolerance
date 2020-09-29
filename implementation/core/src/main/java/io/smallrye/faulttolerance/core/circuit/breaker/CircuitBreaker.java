@@ -3,10 +3,7 @@ package io.smallrye.faulttolerance.core.circuit.breaker;
 import static io.smallrye.faulttolerance.core.util.Preconditions.check;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
@@ -18,9 +15,9 @@ import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
-    static final int STATE_CLOSED = 0;
-    static final int STATE_OPEN = 1;
-    static final int STATE_HALF_OPEN = 2;
+    public static final int STATE_CLOSED = 0;
+    public static final int STATE_OPEN = 1;
+    public static final int STATE_HALF_OPEN = 2;
 
     final FaultToleranceStrategy<V> delegate;
     final String description;
@@ -33,16 +30,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     final int successThreshold;
     final Stopwatch stopwatch;
 
-    final List<CircuitBreakerListener> listeners = new CopyOnWriteArrayList<>();
-
     final AtomicReference<State> state;
-
-    final AtomicLong previousHalfOpenTime = new AtomicLong();
-    volatile long halfOpenStart;
-    final AtomicLong previousClosedTime = new AtomicLong();
-    volatile long closedStart;
-    final AtomicLong previousOpenTime = new AtomicLong();
-    volatile long openStart;
 
     @SuppressWarnings("UnnecessaryThis")
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn,
@@ -62,12 +50,6 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
                 "Circuit breaker rolling window size must be > 0");
 
         this.state = new AtomicReference<>(State.closed(rollingWindowSize, failureThreshold));
-    }
-
-    private Long getTime(int measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
-        return state.get().id == measuredState
-                ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
-                : prevMeasuredStateTime.get();
     }
 
     @Override
@@ -100,15 +82,12 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             if (failureThresholdReached) {
                 toOpen(ctx, state);
             }
-            listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
         } catch (Throwable e) {
             boolean isFailure = !isConsideredSuccess(e);
             if (isFailure) {
-                listeners.forEach(CircuitBreakerListener::failed);
                 ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
             } else {
-                listeners.forEach(CircuitBreakerListener::succeeded);
                 ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
             }
             boolean failureThresholdReached = isFailure
@@ -124,7 +103,6 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     private V inOpen(InvocationContext<V> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
-            listeners.forEach(CircuitBreakerListener::rejected);
             throw new CircuitBreakerOpenException(description + " circuit breaker is open");
         } else {
             toHalfOpen(ctx, state);
@@ -142,11 +120,9 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             if (successes >= successThreshold) {
                 toClosed(ctx, state);
             }
-            listeners.forEach(CircuitBreakerListener::succeeded);
             return result;
         } catch (Throwable e) {
             ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-            listeners.forEach(CircuitBreakerListener::failed);
             toOpen(ctx, state);
             throw e;
         }
@@ -208,7 +184,14 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    public void addListener(CircuitBreakerListener listener) {
-        listeners.add(listener);
+    // maintenance
+
+    public int currentState() {
+        return this.state.get().id;
+    }
+
+    public void reset() {
+        State newState = State.closed(rollingWindowSize, failureThreshold);
+        this.state.set(newState);
     }
 }
