@@ -92,10 +92,12 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
             super("FutureBulkheadTask", callable);
         }
 
+        // this must only be called when work semaphore is acquired
         public boolean markRunning() {
             return state.compareAndSet(WAITING, RUNNING);
         }
 
+        // this must only be called (= the task submitted to an executor) when state is "running"
         @Override
         public void run() {
             try {
@@ -103,7 +105,7 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
             } finally {
                 releaseSemaphores();
 
-                runQueuedTasks();
+                runQueuedTask();
             }
         }
 
@@ -122,26 +124,29 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
         }
 
         private void releaseSemaphores() {
+            // at this point, state is either "running" or "cancelled"
             if (this.state.get() == RUNNING) {
                 workSemaphore.release();
             }
             capacitySemaphore.release();
         }
 
-        private void runQueuedTasks() {
+        private void runQueuedTask() {
+            // it's enough to run just one queued task, because when that task finishes,
+            // it will run another one, etc. etc.
+            // this has performance implications (potentially less threads are utilized
+            // than possible), but it currently makes the code easier to reason about
             FutureBulkheadTask queuedTask = queue.pollFirst();
-            while (queuedTask != null) {
+            if (queuedTask != null) {
                 if (workSemaphore.tryAcquire()) {
                     if (queuedTask.markRunning()) {
-                        queuedTask.run(); // TODO this itself will again call runQueuedTasks, so do we need a loop?
+                        queuedTask.run();
                     } else {
                         // cancelled, no need to do anything
                         workSemaphore.release();
                     }
-                    queuedTask = queue.poll();
                 } else {
                     queue.addFirst(queuedTask);
-                    break;
                 }
             }
         }
