@@ -78,14 +78,14 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
                         result.complete(value);
                     }
 
-                    runQueuedTasks();
+                    runQueuedTask();
                 });
             } catch (Exception e) {
                 releaseSemaphores();
                 ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
                 result.completeExceptionally(e);
 
-                runQueuedTasks();
+                runQueuedTask();
             }
         }
 
@@ -94,15 +94,17 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             capacitySemaphore.release();
         }
 
-        private void runQueuedTasks() {
+        private void runQueuedTask() {
+            // it's enough to run just one queued task, because when that task finishes,
+            // it will run another one, etc. etc.
+            // this has performance implications (potentially less threads are utilized
+            // than possible), but it currently makes the code easier to reason about
             CompletionStageBulkheadTask queuedTask = queue.pollFirst();
-            while (queuedTask != null) {
+            if (queuedTask != null) {
                 if (workSemaphore.tryAcquire()) {
-                    queuedTask.run(); // TODO this itself will again call runQueuedTasks, so do we need a loop?
-                    queuedTask = queue.poll();
+                    queuedTask.run();
                 } else {
                     queue.addFirst(queuedTask);
-                    break;
                 }
             }
         }
