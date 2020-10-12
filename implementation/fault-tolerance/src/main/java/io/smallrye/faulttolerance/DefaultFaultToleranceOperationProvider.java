@@ -18,9 +18,9 @@ package io.smallrye.faulttolerance;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 
-import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
@@ -30,7 +30,7 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
  * @author Martin Kouba
  * @see FaultToleranceOperationProvider
  */
-@Dependent
+@Singleton
 public class DefaultFaultToleranceOperationProvider implements FaultToleranceOperationProvider {
 
     private final FaultToleranceExtension extension;
