@@ -12,7 +12,6 @@ import org.junit.runner.RunWith;
 
 import io.smallrye.faulttolerance.TestArchive;
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
-import io.smallrye.faulttolerance.api.CircuitBreakerName;
 
 @RunWith(Arquillian.class)
 public class CircuitBreakerNameInheritanceTest {
@@ -23,7 +22,6 @@ public class CircuitBreakerNameInheritanceTest {
     }
 
     @Inject
-    @CircuitBreakerName("hello")
     private CircuitBreakerMaintenance cb;
 
     @Test

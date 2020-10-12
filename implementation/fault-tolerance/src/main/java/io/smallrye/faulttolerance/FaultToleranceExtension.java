@@ -42,9 +42,7 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.DefinitionException;
 import javax.enterprise.inject.spi.Extension;
-import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
-import javax.enterprise.inject.spi.ProcessInjectionPoint;
 import javax.enterprise.inject.spi.ProcessManagedBean;
 import javax.enterprise.util.AnnotationLiteral;
 
@@ -57,8 +55,6 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.jboss.logging.Logger;
 
-import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
-import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
@@ -77,8 +73,6 @@ public class FaultToleranceExtension implements Extension {
     private final ConcurrentMap<String, FaultToleranceOperation> faultToleranceOperations = new ConcurrentHashMap<>();
 
     private final ConcurrentMap<String, Set<String>> existingCircuitBreakerNames = new ConcurrentHashMap<>();
-
-    private final ConcurrentMap<String, Set<String>> injectedCircuitBreakerNames = new ConcurrentHashMap<>();
 
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOGGER.infof("MicroProfile: Fault Tolerance activated (SmallRye Fault Tolerance version: %s)",
@@ -99,10 +93,12 @@ public class FaultToleranceExtension implements Extension {
                 ExecutorProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFaultToleranceOperationProvider.class),
                 DefaultFaultToleranceOperationProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultExistingCircuitBreakerNames.class),
+                DefaultExistingCircuitBreakerNames.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(MetricsProvider.class), MetricsProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(CircuitBreakerMaintenanceRegistry.class),
-                CircuitBreakerMaintenanceRegistry.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(CircuitBreakerMaintenanceImpl.class),
+                CircuitBreakerMaintenanceImpl.class.getName());
     }
 
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {
@@ -144,34 +140,11 @@ public class FaultToleranceExtension implements Extension {
         }
     }
 
-    void collectCircuitBreakerMaintenanceInjectionPoints(@Observes ProcessInjectionPoint<?, CircuitBreakerMaintenance> event) {
-        InjectionPoint ip = event.getInjectionPoint();
-        Optional<CircuitBreakerName> qualifier = ip.getQualifiers()
-                .stream()
-                .filter(it -> it instanceof CircuitBreakerName)
-                .map(it -> (CircuitBreakerName) it)
-                .findAny();
-        if (qualifier.isPresent()) {
-            injectedCircuitBreakerNames.computeIfAbsent(qualifier.get().value(), ignored -> new HashSet<>())
-                    .add(ip.getAnnotated().toString());
-        } else {
-            event.addDefinitionError(new DefinitionException(CircuitBreakerMaintenance.class.getSimpleName()
-                    + " injection point " + ip + " doesn't declare @" + CircuitBreakerName.class.getSimpleName()));
-        }
-    }
-
     void validate(@Observes AfterDeploymentValidation event) {
         for (Map.Entry<String, Set<String>> entry : existingCircuitBreakerNames.entrySet()) {
             if (entry.getValue().size() > 1) {
                 event.addDeploymentProblem(new DefinitionException("Multiple circuit breakers have the same name '"
                         + entry.getKey() + "': " + entry.getValue()));
-            }
-        }
-
-        for (Map.Entry<String, Set<String>> entry : injectedCircuitBreakerNames.entrySet()) {
-            if (!existingCircuitBreakerNames.containsKey(entry.getKey())) {
-                event.addDeploymentProblem(new DefinitionException("Undefined circuit breaker '" + entry.getKey()
-                        + "' used at " + entry.getValue()));
             }
         }
     }
@@ -182,6 +155,10 @@ public class FaultToleranceExtension implements Extension {
 
     FaultToleranceOperation getFaultToleranceOperation(Class<?> beanClass, Method method) {
         return faultToleranceOperations.get(getCacheKey(beanClass, method));
+    }
+
+    Set<String> getExistingCircuitBreakerNames() {
+        return existingCircuitBreakerNames.keySet();
     }
 
     private static Optional<String> getImplementationVersion() {

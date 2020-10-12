@@ -20,24 +20,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import javax.enterprise.util.Nonbinding;
-import javax.inject.Qualifier;
-
 import io.smallrye.common.annotation.Experimental;
 
 /**
  * A {@code @CircuitBreaker} method can be annotated {@code @CircuitBreakerName}
  * to provide a name for the circuit breaker associated with the annotated method.
- * The same annotation can then be used as a qualifier to inject {@link CircuitBreakerMaintenance}.
+ * This name can then be used with {@link CircuitBreakerMaintenance}.
  * <p>
- * It is an error if multiple {@code @CircuitBreaker} methods have the same {@code @CircuitBreakerName}
- * or if an undefined {@code @CircuitBreakerName} is used for injecting {@code CircuitBreakerMaintenance}.
+ * It is an error if multiple {@code @CircuitBreaker} methods have the same {@code @CircuitBreakerName}.
  */
-@Qualifier
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER })
+@Target(ElementType.METHOD)
 @Experimental("first attempt at providing maintenance access to circuit breakers")
 public @interface CircuitBreakerName {
-    @Nonbinding
     String value();
 }
