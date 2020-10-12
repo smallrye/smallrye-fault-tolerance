@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -113,7 +114,7 @@ public class FaultToleranceInterceptor {
 
     private final RequestContextController requestContextController;
 
-    private final CircuitBreakerMaintenanceRegistry cbMaintenanceRegistry;
+    private final CircuitBreakerMaintenanceImpl cbMaintenance;
 
     @Inject
     public FaultToleranceInterceptor(
@@ -123,7 +124,7 @@ public class FaultToleranceInterceptor {
             FallbackHandlerProvider fallbackHandlerProvider,
             MetricsProvider metricsProvider,
             ExecutorProvider executorProvider,
-            CircuitBreakerMaintenanceRegistry cbMaintenanceRegistry) {
+            CircuitBreakerMaintenanceImpl cbMaintenance) {
         this.interceptedBean = interceptedBean;
         this.operationProvider = operationProvider;
         this.cache = cache;
@@ -133,7 +134,7 @@ public class FaultToleranceInterceptor {
         asyncExecutor = executorProvider.getMainExecutor();
         timer = executorProvider.getTimer();
         requestContextController = RequestContextControllerProvider.load().get();
-        this.cbMaintenanceRegistry = cbMaintenanceRegistry;
+        this.cbMaintenance = cbMaintenance;
     }
 
     @AroundInvoke
@@ -235,9 +236,12 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch());
-            if (cbConfig.getCircuitBreakerName() != null) {
-                cbMaintenanceRegistry.register(cbConfig.getCircuitBreakerName(), (CircuitBreaker<?>) result);
+
+            String cbName = cbConfig.getCircuitBreakerName();
+            if (cbName == null) {
+                cbName = UUID.randomUUID().toString();
             }
+            cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
         }
 
         if (operation.hasRetry()) {
@@ -303,9 +307,12 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch());
-            if (cbConfig.getCircuitBreakerName() != null) {
-                cbMaintenanceRegistry.register(cbConfig.getCircuitBreakerName(), (CircuitBreaker<?>) result);
+
+            String cbName = cbConfig.getCircuitBreakerName();
+            if (cbName == null) {
+                cbName = UUID.randomUUID().toString();
             }
+            cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
         }
 
         if (operation.hasRetry()) {
@@ -378,9 +385,12 @@ public class FaultToleranceInterceptor {
                     cbConfig.get(CircuitBreakerConfig.FAILURE_RATIO),
                     cbConfig.get(CircuitBreakerConfig.SUCCESS_THRESHOLD),
                     new SystemStopwatch());
-            if (cbConfig.getCircuitBreakerName() != null) {
-                cbMaintenanceRegistry.register(cbConfig.getCircuitBreakerName(), (CircuitBreaker<?>) result);
+
+            String cbName = cbConfig.getCircuitBreakerName();
+            if (cbName == null) {
+                cbName = UUID.randomUUID().toString();
             }
+            cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
         }
 
         if (operation.hasRetry()) {

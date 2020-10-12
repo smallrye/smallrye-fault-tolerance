@@ -13,12 +13,12 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.smallrye.faulttolerance.TestArchive;
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
-import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
 
 @RunWith(Arquillian.class)
@@ -33,12 +33,16 @@ public class CircuitBreakerMaintenanceTest {
     private HelloService helloService;
 
     @Inject
-    @CircuitBreakerName("hello")
     private CircuitBreakerMaintenance cb;
+
+    @Before
+    public void reset() {
+        cb.resetAll();
+    }
 
     @Test
     public void readCircuitBreakerState() {
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState());
+        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
 
         for (int i = 0; i < HelloService.THRESHOLD; i++) {
             assertThrows(IOException.class, () -> {
@@ -46,7 +50,7 @@ public class CircuitBreakerMaintenanceTest {
             });
         }
 
-        assertEquals(CircuitBreakerState.OPEN, cb.currentState());
+        assertEquals(CircuitBreakerState.OPEN, cb.currentState("hello"));
 
         await().atMost(HelloService.DELAY * 2, TimeUnit.MILLISECONDS)
                 .ignoreException(CircuitBreakerOpenException.class)
@@ -54,12 +58,25 @@ public class CircuitBreakerMaintenanceTest {
                     assertEquals(HelloService.OK, helloService.hello(null));
                 });
 
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState());
+        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
     }
 
     @Test
-    public void resetCircuitBreakerState() throws Exception {
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState());
+    public void resetCircuitBreaker() throws Exception {
+        testCircuitBreakerReset(() -> {
+            cb.reset("hello");
+        });
+    }
+
+    @Test
+    public void resetAllCircuitBreakers() throws Exception {
+        testCircuitBreakerReset(() -> {
+            cb.resetAll();
+        });
+    }
+
+    private void testCircuitBreakerReset(Runnable resetFunction) throws Exception {
+        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
 
         for (int i = 0; i < HelloService.THRESHOLD; i++) {
             assertThrows(IOException.class, () -> {
@@ -67,16 +84,27 @@ public class CircuitBreakerMaintenanceTest {
             });
         }
 
-        assertEquals(CircuitBreakerState.OPEN, cb.currentState());
+        assertEquals(CircuitBreakerState.OPEN, cb.currentState("hello"));
 
         assertThrows(CircuitBreakerOpenException.class, () -> {
             helloService.hello(null);
         });
 
-        cb.reset();
+        resetFunction.run();
 
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState());
+        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
 
         assertEquals(HelloService.OK, helloService.hello(null));
+    }
+
+    @Test
+    public void undefinedCircuitBreaker() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            cb.currentState("undefined");
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            cb.reset("undefined");
+        });
     }
 }
