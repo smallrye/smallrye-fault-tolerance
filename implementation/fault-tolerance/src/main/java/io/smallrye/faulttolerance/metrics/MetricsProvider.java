@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.metrics.Gauge;
@@ -57,9 +58,11 @@ import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 @ApplicationScoped
 public class MetricsProvider {
 
+    // this must be a lazy injection (`Provider<MetricRegistry>` instead of just `MetricRegistry`),
+    // because when metrics are disabled, no `MetricRegistry` has to be present
     @Inject
     @RegistryType(type = MetricRegistry.Type.BASE)
-    MetricRegistry registry;
+    Provider<MetricRegistry> registry;
 
     @Inject
     @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
@@ -67,7 +70,7 @@ public class MetricsProvider {
 
     public MetricsRecorder create(FaultToleranceOperation operation) {
         if (metricsEnabled) {
-            return new MetricsRecorderImpl(registry, operation);
+            return new MetricsRecorderImpl(registry.get(), operation);
         } else {
             return MetricsRecorder.NOOP;
         }
