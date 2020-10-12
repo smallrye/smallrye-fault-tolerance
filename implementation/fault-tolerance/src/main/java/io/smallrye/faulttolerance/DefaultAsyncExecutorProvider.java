@@ -8,8 +8,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -21,7 +21,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
  * yet still want to customize the thread factory, they can provide
  * an {@code @Alternative} bean which inherits from this class.
  */
-@Dependent
+@Singleton
 public class DefaultAsyncExecutorProvider implements AsyncExecutorProvider {
     private final ExecutorService executor;
 
