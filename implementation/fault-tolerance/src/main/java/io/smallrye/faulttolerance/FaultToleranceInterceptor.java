@@ -17,7 +17,6 @@
 package io.smallrye.faulttolerance;
 
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
 import static java.util.Arrays.asList;
 
 import java.lang.reflect.InvocationTargetException;
@@ -28,7 +27,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -54,6 +52,7 @@ import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.config.TimeoutConfig;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Invocation;
+import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
@@ -155,56 +154,53 @@ public class FaultToleranceInterceptor {
             InterceptionPoint point) {
         FaultToleranceStrategy<CompletionStage<T>> strategy = cache.getStrategy(point,
                 ignored -> prepareAsyncStrategy(operation, point));
+
+        @SuppressWarnings("unchecked")
+        io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
+                () -> (CompletionStage<T>) invocationContext.proceed());
+        ctx.set(InvocationContext.class, invocationContext);
+
         try {
-            io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
-                    () -> {
-                        CompletableFuture<T> result = new CompletableFuture<>();
-                        asyncExecutor.submit(() -> {
-                            try {
-                                // the requestContextController.activate/deactivate pair here is the minimum
-                                // to pass TCK; for anything serious, Context Propagation is required
-                                requestContextController.activate();
-                                //noinspection unchecked
-                                propagateCompletion(((CompletionStage<T>) invocationContext.proceed()), result);
-                            } catch (Exception any) {
-                                result.completeExceptionally(any);
-                            } finally {
-                                requestContextController.deactivate();
-                            }
-                        });
-                        return result;
-                    });
-            ctx.set(InvocationContext.class, invocationContext);
             return strategy.apply(ctx);
         } catch (Exception e) {
             return failedStage(e);
         }
     }
 
-    @SuppressWarnings("unchecked")
     private <T> T syncFlow(FaultToleranceOperation operation, InvocationContext invocationContext, InterceptionPoint point)
             throws Exception {
-        FaultToleranceStrategy<T> strategy = cache.getStrategy(point, ignored -> prepareSyncStrategy(operation, point));
+        FaultToleranceStrategy<T> strategy = cache.getStrategy(point,
+                ignored -> prepareSyncStrategy(operation, point));
+
+        @SuppressWarnings("unchecked")
         io.smallrye.faulttolerance.core.InvocationContext<T> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (T) invocationContext.proceed());
         ctx.set(InvocationContext.class, invocationContext);
+
         return strategy.apply(ctx);
     }
 
-    @SuppressWarnings("unchecked")
     private <T> Future<T> futureFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
             InterceptionPoint point) throws Exception {
         FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point,
                 ignored -> prepareFutureStrategy(operation, point));
+
+        @SuppressWarnings("unchecked")
         io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (Future<T>) invocationContext.proceed());
         ctx.set(InvocationContext.class, invocationContext);
+
         return strategy.apply(ctx);
     }
 
     private <T> FaultToleranceStrategy<CompletionStage<T>> prepareAsyncStrategy(FaultToleranceOperation operation,
             InterceptionPoint point) {
         FaultToleranceStrategy<CompletionStage<T>> result = Invocation.invocation();
+
+        result = new RequestScopeActivator<>(result, requestContextController);
+
+        result = new CompletionStageExecution<>(result, asyncExecutor);
+
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             Integer size = bulkheadConfig.get(BulkheadConfig.VALUE);
@@ -280,6 +276,7 @@ public class FaultToleranceInterceptor {
 
     private <T> FaultToleranceStrategy<T> prepareSyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
         FaultToleranceStrategy<T> result = Invocation.invocation();
+
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             result = new SemaphoreBulkhead<>(result,
