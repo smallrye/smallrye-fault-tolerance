@@ -16,6 +16,9 @@ public class RequestScopeActivator<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        // for CompletionStage, the requestContextController.activate/deactivate pair here
+        // is the minimum to pass TCK; for anything serious, Context Propagation is required
+
         try {
             requestContextController.activate();
             return delegate.apply(ctx);
