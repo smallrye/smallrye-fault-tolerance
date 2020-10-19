@@ -10,7 +10,9 @@ import io.smallrye.faulttolerance.TestArchive;
 
 @RunWith(Arquillian.class)
 public class AsyncThreadPoolSizingOldConfigTest extends AbstractAsyncThreadPoolSizingTest {
-    private static final String CONFIG = "io.smallrye.faulttolerance.globalThreadPoolSize=" + SIZE;
+    private static final String CONFIG = ""
+            + "io.smallrye.faulttolerance.globalThreadPoolSize=" + SIZE + "\n"
+            + "io.smallrye.faulttolerance.mainThreadPoolQueueSize=0\n";
 
     @Deployment
     public static JavaArchive createTestArchive() {

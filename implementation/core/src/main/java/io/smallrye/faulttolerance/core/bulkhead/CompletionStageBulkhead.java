@@ -6,22 +6,19 @@ import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
 public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>> {
-    private final ExecutorService executor;
     private final Deque<CompletionStageBulkheadTask> queue;
     private final Semaphore capacitySemaphore;
     private final Semaphore workSemaphore;
 
     public CompletionStageBulkhead(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            ExecutorService executor, int size, int queueSize) {
+            int size, int queueSize) {
         super(description, delegate);
-        this.executor = executor;
         this.queue = new ConcurrentLinkedDeque<>();
         this.capacitySemaphore = new Semaphore(size + queueSize);
         this.workSemaphore = new Semaphore(size);
@@ -34,18 +31,27 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
 
             CompletionStageBulkheadTask task = new CompletionStageBulkheadTask(ctx);
-            if (workSemaphore.tryAcquire()) {
-                // TODO eventually, we should just `task.run()` here, because for CompletionStage,
-                //  Invocation moves the execution to a thread pool, so we don't have to do it here
-                //  (except that's just in "real" code, we need to review and adjust unit tests)
-                executor.execute(task);
-            } else {
-                queue.addLast(task);
-            }
+            queue.addLast(task);
+            runQueuedTask();
             return task.result;
         } else {
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             return failedStage(bulkheadRejected());
+        }
+    }
+
+    private void runQueuedTask() {
+        // it's enough to run just one queued task, because when that task finishes,
+        // it will run another one, etc. etc.
+        // this has performance implications (potentially less threads are utilized
+        // than possible), but it currently makes the code easier to reason about
+        CompletionStageBulkheadTask queuedTask = queue.pollFirst();
+        if (queuedTask != null) {
+            if (workSemaphore.tryAcquire()) {
+                queuedTask.run();
+            } else {
+                queue.addFirst(queuedTask);
+            }
         }
     }
 
@@ -54,7 +60,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
         return queue.size();
     }
 
-    private class CompletionStageBulkheadTask implements Runnable {
+    private class CompletionStageBulkheadTask {
         private final CompletableFuture<V> result = new CompletableFuture<>();
         private final InvocationContext<CompletionStage<V>> ctx;
 
@@ -92,21 +98,6 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
         private void releaseSemaphores() {
             workSemaphore.release();
             capacitySemaphore.release();
-        }
-
-        private void runQueuedTask() {
-            // it's enough to run just one queued task, because when that task finishes,
-            // it will run another one, etc. etc.
-            // this has performance implications (potentially less threads are utilized
-            // than possible), but it currently makes the code easier to reason about
-            CompletionStageBulkheadTask queuedTask = queue.pollFirst();
-            if (queuedTask != null) {
-                if (workSemaphore.tryAcquire()) {
-                    queuedTask.run();
-                } else {
-                    queue.addFirst(queuedTask);
-                }
-            }
         }
     }
 }

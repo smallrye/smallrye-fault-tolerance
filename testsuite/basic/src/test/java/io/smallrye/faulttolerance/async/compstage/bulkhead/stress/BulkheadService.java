@@ -10,16 +10,22 @@ import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 
 public class BulkheadService {
-    // must be a fraction of max thread pool size, not more than 1/2
-    // (this is because thread usage in thread pool style bulkheads isn't very efficient yet)
-    static final int BULKHEAD_SIZE = 50;
-    static final int BULKHEAD_QUEUE_SIZE = 50000;
+    // must NOT be more than max thread pool size (100), because the test
+    // waits for the tasks to actually enter the bulkhead
+    static final int BULKHEAD_SIZE = 100;
+    static final int BULKHEAD_QUEUE_SIZE = 10000;
 
-    private AtomicInteger counter = new AtomicInteger(0);
+    private final AtomicInteger counter = new AtomicInteger(0);
 
     @Bulkhead(value = BULKHEAD_SIZE, waitingTaskQueue = BULKHEAD_QUEUE_SIZE)
     @Asynchronous
-    public CompletionStage<String> hello(CountDownLatch startLatch, CountDownLatch endLatch) {
+    public CompletionStage<String> hello() {
+        return completedFuture("" + counter.getAndIncrement());
+    }
+
+    @Bulkhead(value = BULKHEAD_SIZE, waitingTaskQueue = BULKHEAD_QUEUE_SIZE)
+    @Asynchronous
+    public CompletionStage<String> helloWithWaiting(CountDownLatch startLatch, CountDownLatch endLatch) {
         startLatch.countDown();
         try {
             endLatch.await();
@@ -27,5 +33,9 @@ public class BulkheadService {
         }
 
         return completedFuture("" + counter.getAndIncrement());
+    }
+
+    public void reset() {
+        counter.set(0);
     }
 }
