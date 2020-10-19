@@ -20,8 +20,8 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             int size, int queueSize) {
         super(description, delegate);
         this.queue = new ConcurrentLinkedDeque<>();
-        this.capacitySemaphore = new Semaphore(size + queueSize);
-        this.workSemaphore = new Semaphore(size);
+        this.capacitySemaphore = new Semaphore(size + queueSize, true);
+        this.workSemaphore = new Semaphore(size, true);
     }
 
     @Override
