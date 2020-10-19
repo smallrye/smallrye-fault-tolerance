@@ -25,8 +25,8 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
     public ThreadPoolBulkhead(FaultToleranceStrategy<Future<V>> delegate, String description, int size, int queueSize) {
         super(description, delegate);
         this.queueSize = queueSize;
-        this.capacitySemaphore = new Semaphore(size + queueSize);
-        this.workSemaphore = new Semaphore(size);
+        this.capacitySemaphore = new Semaphore(size + queueSize, true);
+        this.workSemaphore = new Semaphore(size, true);
     }
 
     @Override
