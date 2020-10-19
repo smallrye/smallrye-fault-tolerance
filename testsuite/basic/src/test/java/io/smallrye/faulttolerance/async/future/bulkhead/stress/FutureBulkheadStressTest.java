@@ -28,6 +28,13 @@ public class FutureBulkheadStressTest {
 
     @Test
     public void stressTest(BulkheadService service) throws InterruptedException, ExecutionException {
+        for (int i = 0; i < 50; i++) {
+            service.reset();
+            iteration(service);
+        }
+    }
+
+    private void iteration(BulkheadService service) throws InterruptedException, ExecutionException {
         List<Future<String>> futures = new ArrayList<>();
         for (int i = 0; i < BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE; i++) {
             futures.add(service.hello());

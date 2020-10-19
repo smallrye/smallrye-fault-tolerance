@@ -44,10 +44,17 @@ Technically, this doesn't even belong to SmallRye Fault Tolerance.
 SmallRye Fault Tolerance supports all the configuration options of MicroProfile Fault Tolerance.
 This includes both annotations and `.properties` configuration.
 
-If SmallRye Fault Tolerance integrator doesn't provide a thread pool, the default thread pool is used and the following option is also recongized:
+If SmallRye Fault Tolerance integrator doesn't provide a thread pool, the default thread pool is used and the following configuration properties are also recongized:
 
 - `io.smallrye.faulttolerance.mainThreadPoolSize`: maximum number of threads in the fault tolerance thread pool.
   Defaults to `100`.
+
+- `io.smallrye.faulttolerance.mainThreadPoolQueueSize`: size of the queue that the thread pool should use.
+  Can be `> 0`, in which case the queue will be bounded to given size.
+  Can be `0`, in which case there will be no queue and the thread pool will reject excess tasks.
+  Can be `-1`, in which case the queue will be unbounded.
+  Values `< -1` are an error.
+  Defaults to `-1`.
 
 Older configuration properties that should no longer be used:
 

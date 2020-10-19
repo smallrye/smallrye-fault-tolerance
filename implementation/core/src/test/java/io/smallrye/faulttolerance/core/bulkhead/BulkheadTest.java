@@ -48,11 +48,13 @@ public class BulkheadTest {
 
     @Test
     public void shouldRejectMaxPlus1() throws Exception {
-        Barrier startBarrier = Barrier.noninterruptible();
         Barrier delayBarrier = Barrier.noninterruptible();
         CountDownLatch startedLatch = new CountDownLatch(5);
-        TestInvocation<String> invocation = TestInvocation.delayed(startBarrier, delayBarrier, startedLatch,
-                () -> "shouldRejectMaxPlus1");
+        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> {
+            startedLatch.countDown();
+            delayBarrier.await();
+            return "shouldRejectMaxPlus1";
+        });
         SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldRejectMaxPlus1", 5);
 
         List<TestThread<String>> threads = new ArrayList<>();
@@ -60,7 +62,6 @@ public class BulkheadTest {
         for (int i = 0; i < 5; i++) {
             threads.add(runOnTestThread(bulkhead));
         }
-        startBarrier.await();
         startedLatch.await(); // makes sure that all the threads have put their runnables into bulkhead
         assertThatThrownBy(() -> bulkhead.apply(new InvocationContext<>(() -> "")))
                 .isExactlyInstanceOf(BulkheadException.class);
