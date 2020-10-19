@@ -11,7 +11,6 @@ import java.util.concurrent.TimeoutException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 
 public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
     private final FaultToleranceStrategy<Future<V>> delegate;
@@ -24,7 +23,7 @@ public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) {
-        FutureTask<Future<V>> task = new NamedFutureTask<>("FutureExecution", () -> delegate.apply(ctx));
+        FutureTask<Future<V>> task = new FutureTask<>(() -> delegate.apply(ctx));
         executor.execute(task);
         return new Future<V>() {
             @Override
