@@ -31,19 +31,52 @@ public class CompletionStageBulkheadStressTest {
 
     @Test
     public void stressTest(BulkheadService service) throws InterruptedException, ExecutionException {
+        for (int i = 0; i < 50; i++) {
+            service.reset();
+            iteration(service);
+        }
+    }
+
+    private void iteration(BulkheadService service) throws InterruptedException, ExecutionException {
+        List<CompletionStage<String>> futures = new ArrayList<>();
+        for (int i = 0; i < BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE; i++) {
+            futures.add(service.hello());
+        }
+
+        Set<String> results = new HashSet<>();
+        for (CompletionStage<String> future : futures) {
+            results.add(future.toCompletableFuture().get());
+        }
+
+        assertEquals(BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE, results.size());
+
+        for (int i = 0; i < BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE; i++) {
+            assertTrue(results.contains("" + i));
+        }
+    }
+
+    @Test
+    public void stressTestWithWaiting(BulkheadService service) throws InterruptedException, ExecutionException {
+        for (int i = 0; i < 50; i++) {
+            service.reset();
+            iterationWithWaiting(service);
+        }
+    }
+
+    private void iterationWithWaiting(BulkheadService service) throws InterruptedException, ExecutionException {
         CountDownLatch startLatch = new CountDownLatch(BulkheadService.BULKHEAD_SIZE);
         CountDownLatch endLatch = new CountDownLatch(1);
 
         List<CompletionStage<String>> futures = new ArrayList<>();
         for (int i = 0; i < BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE; i++) {
-            futures.add(service.hello(startLatch, endLatch));
+            futures.add(service.helloWithWaiting(startLatch, endLatch));
         }
 
         startLatch.await();
 
         for (int i = 0; i < BulkheadService.BULKHEAD_SIZE * 2; i++) {
             ExecutionException exception = assertThrows(ExecutionException.class, () -> {
-                service.hello(null, null).toCompletableFuture().get();
+                service.helloWithWaiting(null, null).toCompletableFuture().get();
             });
             assertTrue(exception.getCause() instanceof BulkheadException);
         }
