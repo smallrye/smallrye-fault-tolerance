@@ -7,10 +7,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.util.NamedFutureTask;
 
 /**
  * The next strategy in the chain must be {@link Timeout}, and it is invoked on an extra thread.
@@ -34,7 +34,7 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
-        AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>("AsyncTimeout", () -> delegate.apply(ctx));
+        AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>(() -> delegate.apply(ctx));
         ctx.registerEventHandler(TimeoutEvents.AsyncTimedOut.class, task::timedOut);
         executor.execute(task);
         try {
@@ -45,9 +45,9 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
     }
 
     // only to expose `setException`, which is `protected` in `FutureTask`
-    private static class AsyncTimeoutTask<T> extends NamedFutureTask<T> {
-        public AsyncTimeoutTask(String name, Callable<T> callable) {
-            super(name, callable);
+    private static class AsyncTimeoutTask<T> extends FutureTask<T> {
+        AsyncTimeoutTask(Callable<T> callable) {
+            super(callable);
         }
 
         public void timedOut(TimeoutEvents.AsyncTimedOut event) {
