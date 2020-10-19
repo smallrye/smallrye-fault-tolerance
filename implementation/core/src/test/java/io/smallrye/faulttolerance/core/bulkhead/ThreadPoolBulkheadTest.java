@@ -8,7 +8,6 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -18,6 +17,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
@@ -25,13 +26,24 @@ import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
 public class ThreadPoolBulkheadTest {
-    private final ExecutorService executor = executor(4, queue(4));
+    private ExecutorService executor;
+
+    @Before
+    public void setUp() {
+        executor = new ThreadPoolExecutor(4, 4, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(4));
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        executor.shutdownNow();
+        executor.awaitTermination(1, TimeUnit.SECONDS);
+    }
 
     @Test
     public void shouldLetSingleThrough() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation
                 .immediatelyReturning(() -> completedFuture("shouldLetSingleThrough"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 2);
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2);
         Future<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
     }
@@ -41,7 +53,7 @@ public class ThreadPoolBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldLetMaxThrough"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", executor, 2, 3);
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -57,11 +69,10 @@ public class ThreadPoolBulkheadTest {
     @Test
     public void shouldRejectMaxPlus1() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
-        Barrier startBarrier = Barrier.noninterruptible();
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(startBarrier, delayBarrier,
+        TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier,
                 () -> completedFuture("shouldRejectMaxPlus1"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", executor, 2, 3);
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -83,15 +94,13 @@ public class ThreadPoolBulkheadTest {
     public void shouldLetMaxPlus1After1Left() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
         Semaphore letOneInSemaphore = new Semaphore(1);
-        Semaphore finishedThreadsCount = new Semaphore(0);
 
         TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier, () -> {
             letOneInSemaphore.acquire();
-            finishedThreadsCount.release();
             return completedFuture("shouldLetMaxPlus1After1Left");
         });
 
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor,
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left",
                 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -100,17 +109,14 @@ public class ThreadPoolBulkheadTest {
         }
 
         delayBarrier.open();
-        finishedThreadsCount.acquire();
 
         TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 1000L);
-        assertThat(finishedThread.await().get()).isEqualTo("shouldLetMaxPlus1After1Left");
         threads.remove(finishedThread);
+        assertThat(finishedThread.await().get()).isEqualTo("shouldLetMaxPlus1After1Left");
 
         threads.add(runOnTestThread(bulkhead));
-
-        letOneInSemaphore.release(5);
+        letOneInSemaphore.release(100);
         for (TestThread<Future<String>> thread : threads) {
-            finishedThreadsCount.acquire();
             assertThat(thread.await().get()).isEqualTo("shouldLetMaxPlus1After1Left");
         }
     }
@@ -128,7 +134,7 @@ public class ThreadPoolBulkheadTest {
             throw error;
         });
 
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left", executor,
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left",
                 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -170,7 +176,7 @@ public class ThreadPoolBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Canceled");
         });
 
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled", executor,
+        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled",
                 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -228,11 +234,4 @@ public class ThreadPoolBulkheadTest {
         throw new AssertionError(); // dead code
     }
 
-    private ThreadPoolExecutor executor(int size, BlockingQueue<Runnable> queue) {
-        return new ThreadPoolExecutor(size, size, 0, TimeUnit.MILLISECONDS, queue);
-    }
-
-    private LinkedBlockingQueue<Runnable> queue(int capacity) {
-        return new LinkedBlockingQueue<>(capacity);
-    }
 }

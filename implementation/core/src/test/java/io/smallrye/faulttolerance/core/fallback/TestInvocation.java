@@ -30,6 +30,7 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
         if (startBarrier != null) {
             startBarrier.open();
         }
+
         if (endBarrier != null) {
             endBarrier.await();
         }
