@@ -42,7 +42,7 @@
     <version.smallrye-config>1.9.2</version.smallrye-config>
     <version.smallrye-metrics>2.4.4</version.smallrye-metrics>
     <version.smallrye-context-propagation>1.0.19</version.smallrye-context-propagation>
-    <version.smallrye-common>1.4.0</version.smallrye-common>
+    <version.smallrye-common>1.4.1</version.smallrye-common>
     <version.opentracing>0.31.0</version.opentracing>
 
     <version.org.assertj.assertj-core>3.17.2</version.org.assertj.assertj-core>
