@@ -15,34 +15,24 @@
  */
 package io.smallrye.faulttolerance.tracing.stress;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import io.opentracing.Scope;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.util.GlobalTracerTestUtil;
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceIntegrationTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceIntegrationTest
 public class TracingContextPropagationStressTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(TracingContextPropagationStressTest.class)
-                .addPackage(TracingContextPropagationStressTest.class.getPackage());
-    }
-
-    @AfterClass
+    @AfterAll
     public static void reset() {
         GlobalTracerTestUtil.resetGlobalTracer();
     }
@@ -58,23 +48,23 @@ public class TracingContextPropagationStressTest {
 
     private void doTest(Service service) throws ExecutionException, InterruptedException {
         try (Scope ignored = Service.tracer.buildSpan("parent").startActive(true)) {
-            assertEquals("fallback", service.hello().toCompletableFuture().get());
+            assertThat(service.hello().toCompletableFuture().get()).isEqualTo("fallback");
         }
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
-            assertEquals(5, Service.tracer.finishedSpans().size());
+            assertThat(Service.tracer.finishedSpans()).hasSize(5);
         });
 
         List<MockSpan> spans = Service.tracer.finishedSpans();
         for (MockSpan mockSpan : spans) {
-            assertEquals(spans.get(0).context().traceId(), mockSpan.context().traceId());
+            assertThat(mockSpan.context().traceId()).isEqualTo(spans.get(0).context().traceId());
         }
 
         // if timeout occurs, subsequent retries/fallback can be interleaved with the execution that timed out,
         // resulting in varying span order
-        assertEquals(3, countSpansWithOperationName(spans, "hello"));
-        assertEquals(1, countSpansWithOperationName(spans, "fallback"));
-        assertEquals(1, countSpansWithOperationName(spans, "parent"));
+        assertThat(countSpansWithOperationName(spans, "hello")).isEqualTo(3);
+        assertThat(countSpansWithOperationName(spans, "fallback")).isEqualTo(1);
+        assertThat(countSpansWithOperationName(spans, "parent")).isEqualTo(1);
     }
 
     private long countSpansWithOperationName(List<MockSpan> spans, String operationName) {

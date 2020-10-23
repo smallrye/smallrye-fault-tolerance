@@ -36,9 +36,7 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
     @Override
     public void process(Archive<?> applicationArchive, TestClass testClass) {
         if (!(applicationArchive instanceof ClassContainer)) {
-            LOGGER.warning(
-                    "Unable to add additional classes - not a class/resource container: "
-                            + applicationArchive);
+            LOGGER.warning("Unable to add additional classes - not a class/resource container: " + applicationArchive);
             return;
         }
         ClassContainer<?> classContainer = (ClassContainer<?>) applicationArchive;
@@ -54,7 +52,5 @@ public class FaultToleranceApplicationArchiveProcessor implements ApplicationArc
         if (!applicationArchive.contains("META-INF/beans.xml")) {
             applicationArchive.add(EmptyAsset.INSTANCE, "META-INF/beans.xml");
         }
-
-        LOGGER.info("Added additional resources to " + applicationArchive.toString(true));
     }
 }

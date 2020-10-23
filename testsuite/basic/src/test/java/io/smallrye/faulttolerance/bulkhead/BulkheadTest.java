@@ -15,10 +15,8 @@
  */
 package io.smallrye.faulttolerance.bulkhead;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,26 +26,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class BulkheadTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(BulkheadTest.class).addPackage(BulkheadTest.class.getPackage());
-    }
-
     static final int QUEUE_SIZE = 3;
 
     @Test
@@ -59,19 +43,20 @@ public class BulkheadTest {
         for (int i = 0; i < loop; i++) {
             futures.add(pingService.ping(startLatch, endLatch));
         }
-        assertTrue(startLatch.await(5000L, TimeUnit.MILLISECONDS));
+        assertThat(startLatch.await(5000L, TimeUnit.MILLISECONDS)).isTrue();
         Thread.sleep(500L);
         // Next invocation should not make it due to BulkheadException
-        try {
+        assertThatThrownBy(() -> {
             pingService.ping(null, null).get();
-            fail("The call finished successfully but BulkheadException was expected to be thrown");
-        } catch (ExecutionException e) {
-            assertTrue(e.getCause() instanceof BulkheadException);
-        }
+        }).as("The call finished successfully but BulkheadException was expected to be thrown")
+                .isExactlyInstanceOf(ExecutionException.class)
+                .hasCauseExactlyInstanceOf(BulkheadException.class);
         endLatch.countDown();
         for (int i = 0; i < loop; i++) {
-            assertFalse(futures.get(i).isCancelled());
-            assertEquals("the content check failed for future: " + futures.get(i), "pong", futures.get(i).get());
+            assertThat(futures.get(i)).isNotCancelled();
+            assertThat(futures.get(i).get())
+                    .as("the content check failed for future: " + futures.get(i))
+                    .isEqualTo("pong");
         }
     }
 

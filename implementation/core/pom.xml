@@ -28,13 +28,6 @@
     <name>SmallRye Fault Tolerance: Core</name>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <version.java>1.8</version.java>
-
-        <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
-        <version.org.jacoco.jacoco-maven-plugin>0.8.6</version.org.jacoco.jacoco-maven-plugin>
         <version.org.pitest.pitest-maven>1.5.2</version.org.pitest.pitest-maven>
 
         <!--suppress CheckTagEmptyBody -->
@@ -52,8 +45,8 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -79,7 +72,6 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>${version.org.jacoco.jacoco-maven-plugin}</version>
                         <executions>
                             <execution>
                                 <id>default-prepare-agent</id>
@@ -130,5 +122,4 @@
             </build>
         </profile>
     </profiles>
-
 </project>

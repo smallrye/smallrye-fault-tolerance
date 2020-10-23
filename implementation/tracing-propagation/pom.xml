@@ -45,5 +45,4 @@
             <artifactId>opentracing-util</artifactId>
         </dependency>
     </dependencies>
-
 </project>

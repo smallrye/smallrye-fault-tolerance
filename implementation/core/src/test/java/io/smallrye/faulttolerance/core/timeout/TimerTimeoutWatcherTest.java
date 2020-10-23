@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,9 +9,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.timer.Timer;
 
@@ -20,14 +20,14 @@ public class TimerTimeoutWatcherTest {
     private Timer timer;
     private TimerTimeoutWatcher watcher;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
         timer = new Timer(executor);
         watcher = new TimerTimeoutWatcher(timer);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws InterruptedException {
         timer.shutdown();
         executor.shutdownNow();

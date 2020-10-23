@@ -15,9 +15,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.data.Percentage;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
@@ -46,14 +46,14 @@ public class RealWorldCompletionStageTimeoutTest {
 
     private Stopwatch stopwatch = new SystemStopwatch();
 
-    @Before
+    @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
         timer = new Timer(executor);
         watcher = new TimerTimeoutWatcher(timer);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws InterruptedException {
         timer.shutdown();
         executor.shutdownNow();

@@ -17,11 +17,11 @@ package io.smallrye.faulttolerance.timeout;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
-@RequestScoped
+@ApplicationScoped
 public class TimingOutService {
 
     static final AtomicBoolean INTERRUPTED = new AtomicBoolean(false);

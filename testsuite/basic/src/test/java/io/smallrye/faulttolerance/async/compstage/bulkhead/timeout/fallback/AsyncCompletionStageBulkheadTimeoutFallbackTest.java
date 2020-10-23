@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.async.compstage.bulkhead.timeout.fallback;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,22 +14,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class AsyncCompletionStageBulkheadTimeoutFallbackTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsyncCompletionStageBulkheadTimeoutFallbackTest.class)
-                .addPackage(AsyncCompletionStageBulkheadTimeoutFallbackTest.class.getPackage());
-    }
-
     @Test
     public void test(AsyncHelloService helloService) throws InterruptedException {
         Map<String, Integer> expectedResponses = new HashMap<>();
@@ -61,7 +50,7 @@ public class AsyncCompletionStageBulkheadTimeoutFallbackTest {
         }
         executor.shutdown();
         boolean finished = executor.awaitTermination(10, TimeUnit.SECONDS);
-        assertTrue(finished);
+        assertThat(finished).isTrue();
 
         for (String seenResponse : seenResponses) {
             if (!expectedResponses.containsKey(seenResponse)) {
@@ -80,8 +69,6 @@ public class AsyncCompletionStageBulkheadTimeoutFallbackTest {
                         + ": " + expectedResponse.getKey());
             }
         }
-        if (!violations.isEmpty()) {
-            fail(violations.toString());
-        }
+        assertThat(violations).isEmpty();
     }
 }
