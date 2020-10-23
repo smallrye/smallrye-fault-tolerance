@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.async.future.bulkhead.stress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -10,22 +9,13 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class FutureBulkheadStressTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(FutureBulkheadStressTest.class)
-                .addPackage(FutureBulkheadStressTest.class.getPackage());
-    }
-
     @Test
     public void stressTest(BulkheadService service) throws InterruptedException, ExecutionException {
         for (int i = 0; i < 50; i++) {
@@ -45,10 +35,11 @@ public class FutureBulkheadStressTest {
             results.add(future.get());
         }
 
-        assertEquals(BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE, results.size());
+        Assertions.assertThat(results).hasSize(BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE);
 
         for (int i = 0; i < BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE; i++) {
-            assertTrue(results.contains("" + i));
+            // assertThat(results).contains("" + i) is incredibly slow
+            assertThat(results.contains("" + i)).isTrue();
         }
     }
 }

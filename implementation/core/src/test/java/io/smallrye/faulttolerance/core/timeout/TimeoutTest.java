@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestThread;
@@ -18,7 +18,7 @@ public class TimeoutTest {
 
     private TestTimeoutWatcher timeoutWatcher;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         watcherTimeoutElapsedBarrier = Barrier.interruptible();
         watcherExecutionInterruptedBarrier = Barrier.interruptible();

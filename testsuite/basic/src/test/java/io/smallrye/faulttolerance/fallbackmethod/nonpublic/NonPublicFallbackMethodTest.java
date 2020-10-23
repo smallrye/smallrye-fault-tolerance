@@ -15,47 +15,32 @@
  */
 package io.smallrye.faulttolerance.fallbackmethod.nonpublic;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
 
 import javax.inject.Inject;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class NonPublicFallbackMethodTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(NonPublicFallbackMethodTest.class)
-                .addPackage(NonPublicFallbackMethodTest.class.getPackage());
-    }
-
     @Inject
     FaultyService service;
 
     @Test
-    public void testFallbackMethod() throws NoSuchMethodException, SecurityException {
+    public void testFallbackMethod() throws SecurityException {
         FaultyService.COUNTER.set(0);
-        assertEquals(service.foo(), 1);
-        assertEquals(3, FaultyService.COUNTER.get());
+        assertThat(service.foo()).isEqualTo(1);
+        assertThat(FaultyService.COUNTER.get()).isEqualTo(3);
     }
 
     @Test
-    public void testFallbackMethodParameterizedReturnType() throws NoSuchMethodException, SecurityException {
+    public void testFallbackMethodParameterizedReturnType() throws SecurityException {
         FaultyService.COUNTER.set(0);
-        assertEquals(service.fooParameterized(), Collections.emptyList());
-        assertEquals(3, FaultyService.COUNTER.get());
+        assertThat(service.fooParameterized()).isEqualTo(Collections.emptyList());
+        assertThat(FaultyService.COUNTER.get()).isEqualTo(3);
     }
 }

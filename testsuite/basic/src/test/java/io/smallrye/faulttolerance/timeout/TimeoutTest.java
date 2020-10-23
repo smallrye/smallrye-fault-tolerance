@@ -15,49 +15,27 @@
  */
 package io.smallrye.faulttolerance.timeout;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import javax.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class TimeoutTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(TimeoutTest.class).addPackage(TimeoutTest.class.getPackage());
-    }
-
     @Inject
     TimingOutService service;
 
     @Test
-    public void testTimeout() throws InterruptedException {
+    public void testTimeout() {
         TimingOutService.INTERRUPTED.set(false);
-        boolean timeoutExceptionThrown = false;
-        try {
+        assertThatThrownBy(() -> {
             service.someSlowMethod(1500);
-            fail("No timeout");
-        } catch (TimeoutException expected) {
-            timeoutExceptionThrown = true;
-        } catch (Exception e) {
-            fail("Unexpected: " + e.getMessage());
-        }
-        assertTrue(TimingOutService.INTERRUPTED.get());
-        assertTrue(timeoutExceptionThrown);
+        }).isExactlyInstanceOf(TimeoutException.class);
+        assertThat(TimingOutService.INTERRUPTED).isTrue();
     }
-
 }

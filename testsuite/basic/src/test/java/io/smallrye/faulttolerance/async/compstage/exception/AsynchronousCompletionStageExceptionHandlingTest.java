@@ -1,28 +1,18 @@
 package io.smallrye.faulttolerance.async.compstage.exception;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.ExecutionException;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class AsynchronousCompletionStageExceptionHandlingTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousCompletionStageExceptionHandlingTest.class)
-                .addPackage(AsynchronousCompletionStageExceptionHandlingTest.class.getPackage());
-    }
-
     @Test
     public void test(AsyncHelloService helloService) throws InterruptedException, ExecutionException {
-        assertEquals("hello fallback", helloService.hello().toCompletableFuture().get());
-        assertEquals(5, AsyncHelloService.COUNTER.get());
+        assertThat(helloService.hello().toCompletableFuture().get()).isEqualTo("hello fallback");
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(5);
     }
 }

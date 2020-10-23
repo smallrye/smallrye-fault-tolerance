@@ -15,85 +15,58 @@
  */
 package io.smallrye.faulttolerance.async.retry;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class AsynchronousRetryTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousRetryTest.class).addPackage(AsynchronousRetryTest.class.getPackage());
-    }
-
     @Test
     public void testAsyncRetrySuccess(AsyncHelloService helloService)
             throws IOException, InterruptedException, ExecutionException {
         AsyncHelloService.COUNTER.set(0);
-        assertEquals("Hello", helloService.retry(AsyncHelloService.Result.SUCCESS).get());
-        assertEquals(1, AsyncHelloService.COUNTER.get());
+        assertThat(helloService.retry(AsyncHelloService.Result.SUCCESS).get()).isEqualTo("Hello");
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(1);
     }
 
     @Test
-    public void testAsyncRetryMethodThrows(AsyncHelloService helloService) throws IOException, InterruptedException {
+    public void testAsyncRetryMethodThrows(AsyncHelloService helloService) {
         AsyncHelloService.COUNTER.set(0);
-        try {
+        assertThatThrownBy(() -> {
             helloService.retry(AsyncHelloService.Result.FAILURE).get();
-            fail();
-        } catch (ExecutionException expected) {
-            assertTrue(expected.getCause() instanceof IOException);
-        }
-        assertEquals(3, AsyncHelloService.COUNTER.get());
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(3);
     }
 
     @Test
-    public void testAsyncRetryFutureCompletesExceptionally(AsyncHelloService helloService)
-            throws IOException, InterruptedException {
+    public void testAsyncRetryFutureCompletesExceptionally(AsyncHelloService helloService) {
         AsyncHelloService.COUNTER.set(0);
-        try {
+        assertThatThrownBy(() -> {
             helloService.retry(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).get();
-            fail();
-        } catch (ExecutionException expected) {
-            assertTrue(expected.getCause() instanceof IOException);
-        }
-        assertEquals(1, AsyncHelloService.COUNTER.get());
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(1);
     }
 
     @Test
     public void testAsyncRetryFallbackMethodThrows(AsyncHelloService helloService)
             throws IOException, InterruptedException, ExecutionException {
         AsyncHelloService.COUNTER.set(0);
-        assertEquals("Fallback", helloService.retryWithFallback(AsyncHelloService.Result.FAILURE).get());
-        assertEquals(3, AsyncHelloService.COUNTER.get());
+        assertThat(helloService.retryWithFallback(AsyncHelloService.Result.FAILURE).get()).isEqualTo("Fallback");
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(3);
     }
 
     @Test
-    public void testAsyncRetryFallbackFutureCompletesExceptionally(AsyncHelloService helloService)
-            throws IOException, InterruptedException {
+    public void testAsyncRetryFallbackFutureCompletesExceptionally(AsyncHelloService helloService) {
         AsyncHelloService.COUNTER.set(0);
-        try {
+        assertThatThrownBy(() -> {
             helloService.retryWithFallback(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).get();
-            fail();
-        } catch (ExecutionException expected) {
-            assertTrue(expected.getCause() instanceof IOException);
-        }
-        assertEquals(1, AsyncHelloService.COUNTER.get());
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(1);
     }
-
 }

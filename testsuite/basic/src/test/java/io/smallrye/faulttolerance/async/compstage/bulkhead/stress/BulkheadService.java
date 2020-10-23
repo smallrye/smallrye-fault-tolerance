@@ -6,9 +6,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.enterprise.context.Dependent;
+
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 
+@Dependent
 public class BulkheadService {
     // must NOT be more than max thread pool size (100), because the test
     // waits for the tasks to actually enter the bulkhead
