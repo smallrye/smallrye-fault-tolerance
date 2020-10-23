@@ -5,9 +5,12 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.enterprise.context.Dependent;
+
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 
+@Dependent
 public class BulkheadService {
     // can be more than max thread pool size (100), because the test
     // doesn't wait for the tasks to actually enter the bulkhead

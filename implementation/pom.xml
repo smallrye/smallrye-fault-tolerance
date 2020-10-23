@@ -32,5 +32,4 @@
         <module>context-propagation</module>
         <module>tracing-propagation</module>
     </modules>
-
 </project>

@@ -1,87 +1,62 @@
 package io.smallrye.faulttolerance.fallback.varying;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class VaryingFallbackTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(VaryingFallbackTest.class)
-                .addPackage(VaryingFallbackTest.class.getPackage());
-    }
-
     @Inject
     HelloService service;
 
     @Test
     public void sync() throws IOException {
-        assertEquals("Hello 1", service.hello(1));
-        assertEquals("Hello 2", service.hello(2));
-        assertEquals("Hello 3", service.hello(3));
+        assertThat(service.hello(1)).isEqualTo("Hello 1");
+        assertThat(service.hello(2)).isEqualTo("Hello 2");
+        assertThat(service.hello(3)).isEqualTo("Hello 3");
     }
 
     @Test
     public void completionStageFailingSync() throws IOException, ExecutionException, InterruptedException {
-        assertEquals("Hello 1", service.helloCompletionStageFailingSync(1).toCompletableFuture().get());
-        assertEquals("Hello 2", service.helloCompletionStageFailingSync(2).toCompletableFuture().get());
-        assertEquals("Hello 3", service.helloCompletionStageFailingSync(3).toCompletableFuture().get());
+        assertThat(service.helloCompletionStageFailingSync(1).toCompletableFuture().get()).isEqualTo("Hello 1");
+        assertThat(service.helloCompletionStageFailingSync(2).toCompletableFuture().get()).isEqualTo("Hello 2");
+        assertThat(service.helloCompletionStageFailingSync(3).toCompletableFuture().get()).isEqualTo("Hello 3");
     }
 
     @Test
     public void completionStageFailingAsync() throws IOException, ExecutionException, InterruptedException {
-        assertEquals("Hello 1", service.helloCompletionStageFailingAsync(1).toCompletableFuture().get());
-        assertEquals("Hello 2", service.helloCompletionStageFailingAsync(2).toCompletableFuture().get());
-        assertEquals("Hello 3", service.helloCompletionStageFailingAsync(3).toCompletableFuture().get());
+        assertThat(service.helloCompletionStageFailingAsync(1).toCompletableFuture().get()).isEqualTo("Hello 1");
+        assertThat(service.helloCompletionStageFailingAsync(2).toCompletableFuture().get()).isEqualTo("Hello 2");
+        assertThat(service.helloCompletionStageFailingAsync(3).toCompletableFuture().get()).isEqualTo("Hello 3");
     }
 
     @Test
     public void futureFailingSync() throws IOException, ExecutionException, InterruptedException {
-        assertEquals("Hello 1", service.helloFutureFailingSync(1).get());
-        assertEquals("Hello 2", service.helloFutureFailingSync(2).get());
-        assertEquals("Hello 3", service.helloFutureFailingSync(3).get());
+        assertThat(service.helloFutureFailingSync(1).get()).isEqualTo("Hello 1");
+        assertThat(service.helloFutureFailingSync(2).get()).isEqualTo("Hello 2");
+        assertThat(service.helloFutureFailingSync(3).get()).isEqualTo("Hello 3");
     }
 
     @Test
-    public void futureFailingAsync() throws IOException, InterruptedException, ExecutionException {
-        try {
+    public void futureFailingAsync() {
+        assertThatThrownBy(() -> {
             service.helloFutureFailingAsync(1).get();
-            fail("Expected IOException");
-        } catch (ExecutionException e) {
-            if (!(e.getCause() instanceof IOException)) {
-                throw e;
-            }
-        }
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
 
-        try {
+        assertThatThrownBy(() -> {
             service.helloFutureFailingAsync(2).get();
-            fail("Expected IOException");
-        } catch (ExecutionException e) {
-            if (!(e.getCause() instanceof IOException)) {
-                throw e;
-            }
-        }
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
 
-        try {
+        assertThatThrownBy(() -> {
             service.helloFutureFailingAsync(3).get();
-            fail("Expected IOException");
-        } catch (ExecutionException e) {
-            if (!(e.getCause() instanceof IOException)) {
-                throw e;
-            }
-        }
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
     }
 }

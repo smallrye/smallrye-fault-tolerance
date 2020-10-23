@@ -132,7 +132,6 @@ public class MyMicroservice {
     @CircuitBreaker(successThreshold = 3, requestVolumeThreshold = 4, failureRatio = 0.75, delay = 200)
     public String sayHelloBreakerHighThreshold() {
         sayHelloBreakerCount5++;
-        System.err.printf("sayHelloBreakerHighThreshold, %d\n", sayHelloBreakerCount5);
         // Only two execution succeeds
         if (sayHelloBreakerCount5 < 5 || sayHelloBreakerCount5 > 6) {
             throw new RuntimeException("Connection failed");

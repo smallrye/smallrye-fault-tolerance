@@ -25,7 +25,6 @@ import org.eclipse.microprofile.faulttolerance.Asynchronous;
 
 @ApplicationScoped
 public class AsyncService {
-
     @Inject
     RequestFoo foo;
 
@@ -33,5 +32,4 @@ public class AsyncService {
     public Future<String> perform() {
         return CompletableFuture.completedFuture(foo.getFoo());
     }
-
 }

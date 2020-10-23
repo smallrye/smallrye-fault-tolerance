@@ -2,25 +2,15 @@ package io.smallrye.faulttolerance.circuitbreaker.maintenance.duplicate;
 
 import javax.enterprise.inject.spi.DefinitionException;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.container.test.api.ShouldThrowException;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.ExpectedDeploymentException;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
+@ExpectedDeploymentException(DefinitionException.class)
 public class DuplicateCircuitBreakerNameTest {
-    @Deployment
-    @ShouldThrowException(DefinitionException.class)
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(DuplicateCircuitBreakerNameTest.class)
-                .addPackage(DuplicateCircuitBreakerNameTest.class.getPackage());
-    }
-
     @Test
-    public void ignored() {
+    public void ignored(CircuitBreakerService1 ignored1, CircuitBreakerService2 ignored2) {
     }
 }

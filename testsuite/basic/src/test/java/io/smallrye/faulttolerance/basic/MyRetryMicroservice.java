@@ -16,11 +16,14 @@
 
 package io.smallrye.faulttolerance.basic;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
+@ApplicationScoped
 public class MyRetryMicroservice {
 
     @Retry(maxRetries = 1)

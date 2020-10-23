@@ -16,8 +16,8 @@
 package io.smallrye.faulttolerance.retry;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,108 +29,96 @@ import java.util.concurrent.Future;
 
 import javax.inject.Inject;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- * @author Radoslav Husar
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class RetryTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(RetryTest.class)
-                .addPackage(RetryTest.class.getPackage());
-    }
-
     @Inject
     private RetryTestBean retryTestBean;
 
-    @After
+    @AfterEach
     public void cleanUp() {
         retryTestBean.reset();
     }
 
     @Test
     public void shouldRetryIndefinitely() {
-        try {
+        assertThatThrownBy(() -> {
             retryTestBean.callWithUnlimitedRetries();
-        } catch (IllegalArgumentException ignore) {
-            return;
-        }
-        Assert.fail();
+        }).isExactlyInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     public void shouldFallbackOnMaxDurationExceeded() {
-        String result = retryTestBean.callWithMaxDuration500ms(600L);
-        assertEquals("fallback1", result);
+        assertThat(retryTestBean.callWithMaxDuration500ms(600L)).isEqualTo("fallback1");
     }
 
     @Test
     public void shouldNotFallbackIfTimeNotReached() {
-        String result = retryTestBean.callWithMaxDuration2s(600L, 100L);
-        assertEquals("call1", result);
+        assertThat(retryTestBean.callWithMaxDuration2s(600L, 100L)).isEqualTo("call1");
     }
 
     @Test
     public void shouldRetryOnTimeoutExceptionIfSpecified() {
-        String result = retryTestBean.callWithRetryOnTimeoutException();
-        assertEquals("call1", result);
+        assertThat(retryTestBean.callWithRetryOnTimeoutException()).isEqualTo("call1");
     }
 
     @Test
     public void shouldNotRetryOnTimeoutExceptionIfNotSpecified() {
-        String result = retryTestBean.callWithRetryOnOutOfMemoryError();
-        assertEquals("fallback1", result);
+        assertThat(retryTestBean.callWithRetryOnOutOfMemoryError()).isEqualTo("fallback1");
     }
 
     @Test
     public void shouldRetryOnBulkheadExceptionIfSpecified() throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
-        Callable<String> call = () -> retryTestBean.callWithRetryOnBulkhead();
-        List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
-        List<String> results = collectResultsAssumingFailures(futures, 0);
+        try {
+            Callable<String> call = () -> retryTestBean.callWithRetryOnBulkhead();
+            List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
+            List<String> results = collectResultsAssumingFailures(futures, 0);
 
-        assertEquals("There were " + results.size() + " results instead of 3", 3, results.size());
-        assertTrue("first call failed and was expected to be successful", results.contains("call0"));
-        assertTrue("second call failed and was expected to be successful", results.contains("call1"));
-        assertTrue("third call failed and wasn't successfully reattempted", results.contains("call2"));
+            assertThat(results).hasSize(3);
+            assertThat(results).as("first call failed and was expected to be successful").contains("call0");
+            assertThat(results).as("second call failed and was expected to be successful").contains("call1");
+            assertThat(results).as("third call failed and wasn't successfully reattempted").contains("call2");
+        } finally {
+            executorService.shutdownNow();
+        }
     }
 
     @Test
     public void shouldNotRetryOnBulkheadExceptionIfNotSpecified() throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
-        Callable<String> call = () -> retryTestBean.callWithNoRetryOnBulkhead();
-        List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
+        try {
+            Callable<String> call = () -> retryTestBean.callWithNoRetryOnBulkhead();
+            List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
 
-        List<String> results = collectResultsAssumingFailures(futures, 1);
-        assertEquals(2, results.size());
-        assertTrue("first call failed and was expected to be successful", results.contains("call0"));
-        assertTrue("second call failed and was expected to be successful", results.contains("call1"));
+            List<String> results = collectResultsAssumingFailures(futures, 1);
+            assertThat(results).hasSize(2);
+            assertThat(results).as("first call failed and was expected to be successful").contains("call0");
+            assertThat(results).as("second call failed and was expected to be successful").contains("call1");
+        } finally {
+            executorService.shutdownNow();
+        }
     }
 
     @Test
     public void shouldFallbackOnNoRetryOnBulkhead() throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
-        Callable<String> call = () -> retryTestBean.callWithFallbackAndNoRetryOnBulkhead();
-        List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
+        try {
+            Callable<String> call = () -> retryTestBean.callWithFallbackAndNoRetryOnBulkhead();
+            List<Future<String>> futures = executorService.invokeAll(asList(call, call, call));
 
-        List<String> results = collectResultsAssumingFailures(futures, 0);
-        assertEquals(3, results.size());
-        assertTrue("first call failed and was expected to be successful", results.contains("call0"));
-        assertTrue("second call failed and was expected to be successful", results.contains("call1"));
-        assertTrue("third call didn't fall back",
-                results.stream().anyMatch(t -> t.startsWith("fallback")));
+            List<String> results = collectResultsAssumingFailures(futures, 0);
+            assertThat(results).hasSize(3);
+            assertThat(results).as("first call failed and was expected to be successful").contains("call0");
+            assertThat(results).as("second call failed and was expected to be successful").contains("call1");
+            assertThat(results).as("third call didn't fall back").anyMatch(t -> t.startsWith("fallback"));
+        } finally {
+            executorService.shutdownNow();
+        }
     }
 
     private List<String> collectResultsAssumingFailures(List<Future<String>> futures, int expectedFailureCount) {
@@ -144,8 +132,9 @@ public class RetryTest {
             }
         }
 
-        assertEquals("Expected " + expectedFailureCount + " failures and got: " + failureCount,
-                expectedFailureCount, failureCount);
+        assertThat(failureCount)
+                .as("Expected " + expectedFailureCount + " failures and got: " + failureCount)
+                .isEqualTo(expectedFailureCount);
         return resultList;
     }
 }

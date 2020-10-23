@@ -15,66 +15,52 @@
  */
 package io.smallrye.faulttolerance.config.priority;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.temporal.ChronoUnit;
 
 import javax.inject.Inject;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.asset.StringAsset;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.jboss.weld.junit5.auto.AddBeanClasses;
+import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.FaultToleranceOperations;
-import io.smallrye.faulttolerance.TestArchive;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.config.RetryConfig;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@SetSystemProperty(key = "Retry/delay", value = "10")
+@FaultToleranceBasicTest
+@AddBeanClasses(FaultyService.class)
 public class ConfigParameterPriorityTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(ConfigParameterPriorityTest.class)
-                .addPackage(ConfigParameterPriorityTest.class.getPackage())
-                .addClass(FaultToleranceOperations.class)
-                .addAsManifestResource(new StringAsset("Retry/delay=10"), "microprofile-config.properties");
-    }
-
     @Inject
     FaultToleranceOperations ops;
 
     @Test
     public void testConfig() throws NoSuchMethodException, SecurityException {
         FaultToleranceOperation foo = ops.get(FaultyService.class, FaultyService.class.getMethod("foo"));
-        assertNotNull(foo);
-        assertTrue(foo.hasRetry());
+        assertThat(foo).isNotNull();
+        assertThat(foo.hasRetry()).isTrue();
+
         RetryConfig fooRetry = foo.getRetry();
         // Global override
-        assertEquals(fooRetry.get(RetryConfig.DELAY, Long.class), Long.valueOf(10));
+        assertThat(fooRetry.get(RetryConfig.DELAY, Long.class)).isEqualTo(10L);
         // Method-level
-        assertEquals(fooRetry.get(RetryConfig.MAX_RETRIES, Integer.class), Integer.valueOf(2));
+        assertThat(fooRetry.get(RetryConfig.MAX_RETRIES, Integer.class)).isEqualTo(2);
         // Default value
-        assertEquals(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class), ChronoUnit.MILLIS);
+        assertThat(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class)).isEqualTo(ChronoUnit.MILLIS);
 
         FaultToleranceOperation bar = ops.get(FaultyService.class, FaultyService.class.getMethod("bar"));
-        assertNotNull(bar);
-        assertTrue(bar.hasRetry());
+        assertThat(bar).isNotNull();
+        assertThat(bar.hasRetry()).isTrue();
+
         RetryConfig barRetry = bar.getRetry();
         // Global override
-        assertEquals(barRetry.get(RetryConfig.DELAY, Long.class), Long.valueOf(10));
+        assertThat(barRetry.get(RetryConfig.DELAY, Long.class)).isEqualTo(10L);
         // Class-level
-        assertEquals(barRetry.get(RetryConfig.MAX_RETRIES, Integer.class), Integer.valueOf(1));
+        assertThat(barRetry.get(RetryConfig.MAX_RETRIES, Integer.class)).isEqualTo(1);
         // Default value
-        assertEquals(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class), ChronoUnit.MILLIS);
+        assertThat(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class)).isEqualTo(ChronoUnit.MILLIS);
     }
 }
