@@ -52,8 +52,8 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -79,7 +79,6 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>${version.org.jacoco.jacoco-maven-plugin}</version>
                         <executions>
                             <execution>
                                 <id>default-prepare-agent</id>
@@ -130,5 +129,4 @@
             </build>
         </profile>
     </profiles>
-
 </project>

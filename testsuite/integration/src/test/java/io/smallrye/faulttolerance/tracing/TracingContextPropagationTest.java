@@ -15,42 +15,28 @@
  */
 package io.smallrye.faulttolerance.tracing;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.opentracing.Scope;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.util.GlobalTracerTestUtil;
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceIntegrationTest;
 
-/**
- * @author Pavol Loffay
- */
-@RunWith(Arquillian.class)
+@FaultToleranceIntegrationTest
 public class TracingContextPropagationTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(TracingContextPropagationTest.class)
-                .addPackage(TracingContextPropagationTest.class.getPackage());
-    }
-
-    @Before
+    @BeforeEach
     public void cleanUp() {
         Service.mockTracer.reset();
     }
 
-    @AfterClass
+    @AfterAll
     public static void reset() {
         GlobalTracerTestUtil.resetGlobalTracer();
     }
@@ -58,35 +44,35 @@ public class TracingContextPropagationTest {
     @Test
     public void testCircuitBreakerOpens(Service service) {
         try (Scope ignored = Service.mockTracer.buildSpan("parent").startActive(true)) {
-            assertEquals("fallback", service.foo());
+            assertThat(service.foo()).isEqualTo("fallback");
         }
 
         List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
-        assertEquals(4, mockSpans.size());
+        assertThat(mockSpans).hasSize(4);
         //test spans are part of the same trace
         for (MockSpan mockSpan : mockSpans) {
-            assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
+            assertThat(mockSpan.context().traceId()).isEqualTo(mockSpans.get(0).context().traceId());
         }
-        assertEquals("foo", mockSpans.get(0).operationName());
-        assertEquals("foo", mockSpans.get(1).operationName());
-        assertEquals("foo", mockSpans.get(2).operationName());
-        assertEquals("parent", mockSpans.get(3).operationName());
+        assertThat(mockSpans.get(0).operationName()).isEqualTo("foo");
+        assertThat(mockSpans.get(1).operationName()).isEqualTo("foo");
+        assertThat(mockSpans.get(2).operationName()).isEqualTo("foo");
+        assertThat(mockSpans.get(3).operationName()).isEqualTo("parent");
     }
 
     @Test
     public void testAsyncCircuitBreakerOpens(Service service) throws ExecutionException, InterruptedException {
         try (Scope ignored = Service.mockTracer.buildSpan("parent").startActive(true)) {
-            assertEquals("asyncFallback", service.asyncFoo().toCompletableFuture().get());
+            assertThat(service.asyncFoo().toCompletableFuture().get()).isEqualTo("asyncFallback");
         }
 
         List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
-        assertEquals(4, mockSpans.size());
+        assertThat(mockSpans).hasSize(4);
         for (MockSpan mockSpan : mockSpans) {
-            assertEquals(mockSpans.get(0).context().traceId(), mockSpan.context().traceId());
+            assertThat(mockSpan.context().traceId()).isEqualTo(mockSpans.get(0).context().traceId());
         }
-        assertEquals("asyncFoo", mockSpans.get(0).operationName());
-        assertEquals("asyncFoo", mockSpans.get(1).operationName());
-        assertEquals("asyncFoo", mockSpans.get(2).operationName());
-        assertEquals("parent", mockSpans.get(3).operationName());
+        assertThat(mockSpans.get(0).operationName()).isEqualTo("asyncFoo");
+        assertThat(mockSpans.get(1).operationName()).isEqualTo("asyncFoo");
+        assertThat(mockSpans.get(2).operationName()).isEqualTo("asyncFoo");
+        assertThat(mockSpans.get(3).operationName()).isEqualTo("parent");
     }
 }

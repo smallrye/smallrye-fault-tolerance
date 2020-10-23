@@ -15,8 +15,8 @@
  */
 package io.smallrye.faulttolerance.circuitbreaker.lastsuccess;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,56 +24,38 @@ import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class CircuitBreakerLastSuccessOpensTest {
-
     static final int THRESHOLD = 4;
 
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerLastSuccessOpensTest.class)
-                .addPackage(CircuitBreakerLastSuccessOpensTest.class.getPackage());
-    }
-
     @Test
-    public void testCircuitBreakerOpens(PingService pingService) throws InterruptedException {
-        for (int i = 1; i <= THRESHOLD - 1; i++) {
-            try {
+    public void testCircuitBreakerOpens(PingService pingService) {
+        for (int i = 0; i < THRESHOLD - 1; i++) {
+            assertThatThrownBy(() -> {
                 pingService.ping(false);
-                fail();
-            } catch (IllegalStateException expected) {
-            }
+            }).isExactlyInstanceOf(IllegalStateException.class);
         }
         pingService.ping(true);
-        // Circuit should be open now
-        try {
+
+        // Circuit breaker should be open now
+        assertThatThrownBy(() -> {
             pingService.ping(true);
-            fail();
-        } catch (CircuitBreakerOpenException expected) {
-        }
-        assertEquals(THRESHOLD, pingService.getPingCounter().get());
+        }).isExactlyInstanceOf(CircuitBreakerOpenException.class);
+        assertThat(pingService.getPingCounter().get()).isEqualTo(THRESHOLD);
     }
 
     @ApplicationScoped
     static class PingService {
-
         private AtomicInteger pingCounter = new AtomicInteger(0);
 
         @CircuitBreaker(requestVolumeThreshold = THRESHOLD)
         public String ping(boolean success) {
             pingCounter.incrementAndGet();
+
             if (success) {
                 return "ok";
             }
@@ -83,7 +65,5 @@ public class CircuitBreakerLastSuccessOpensTest {
         AtomicInteger getPingCounter() {
             return pingCounter;
         }
-
     }
-
 }

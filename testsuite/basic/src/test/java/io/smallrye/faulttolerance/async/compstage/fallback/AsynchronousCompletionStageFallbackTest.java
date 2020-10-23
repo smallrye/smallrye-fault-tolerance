@@ -15,43 +15,35 @@
  */
 package io.smallrye.faulttolerance.async.compstage.fallback;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class AsynchronousCompletionStageFallbackTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousCompletionStageFallbackTest.class)
-                .addPackage(AsynchronousCompletionStageFallbackTest.class.getPackage());
-    }
-
     @Test
     public void testAsyncFallbackSuccess(AsyncHelloService helloService)
             throws IOException, InterruptedException, ExecutionException {
-        assertEquals("Hello", helloService.hello(AsyncHelloService.Result.SUCCESS).toCompletableFuture().get());
+        assertThat(helloService.hello(AsyncHelloService.Result.SUCCESS).toCompletableFuture().get())
+                .isEqualTo("Hello");
     }
 
     @Test
     public void testAsyncFallbackMethodThrows(AsyncHelloService helloService)
             throws IOException, InterruptedException, ExecutionException {
-        assertEquals("Fallback", helloService.hello(AsyncHelloService.Result.FAILURE).toCompletableFuture().get());
+        assertThat(helloService.hello(AsyncHelloService.Result.FAILURE).toCompletableFuture().get())
+                .isEqualTo("Fallback");
     }
 
     @Test
     public void testAsyncFallbackFutureCompletesExceptionally(AsyncHelloService helloService)
             throws IOException, InterruptedException, ExecutionException {
-        assertEquals("Fallback",
-                helloService.hello(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).toCompletableFuture().get());
+        assertThat(helloService.hello(AsyncHelloService.Result.COMPLETE_EXCEPTIONALLY).toCompletableFuture().get())
+                .isEqualTo("Fallback");
     }
 }

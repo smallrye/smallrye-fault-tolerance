@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.Collections;
 import java.util.concurrent.Future;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
@@ -27,7 +27,7 @@ public class FutureRetryTest {
 
     private TestStopwatch stopwatch;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stopwatch = new TestStopwatch();
     }

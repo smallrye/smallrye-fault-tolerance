@@ -16,9 +16,8 @@
 
 package io.smallrye.faulttolerance.basic;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -27,27 +26,14 @@ import javax.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.jboss.weld.junit5.auto.AddBeanClasses;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- * @author Antoine Sabot-Durand
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
+@AddBeanClasses(SharedFallback.class) // not discovered automatically, because it's only injected non-contextually
 public class CommandInterceptorTest {
-
-    @Deployment
-    public static JavaArchive deploy() {
-        return TestArchive.createBase(CommandInterceptorTest.class)
-                .addPackages(false, CommandInterceptorTest.class.getPackage());
-    }
-
     @Inject
     MyMicroservice service;
 
@@ -56,48 +42,39 @@ public class CommandInterceptorTest {
 
     @Test
     public void shouldRunWithLongExecutionTime() {
-        assertEquals(MyMicroservice.HELLO, service.sayHello());
+        assertThat(service.sayHello()).isEqualTo(MyMicroservice.HELLO);
     }
 
     @Test
     public void testTimeoutFallback() {
         MyFallbackHandler.reset();
-        assertEquals(MyFallbackHandler.FALLBACK, service.sayHelloWithFallback());
-        assertTrue(MyFallbackHandler.DISPOSED.get());
+        assertThat(service.sayHelloWithFallback()).isEqualTo(MyFallbackHandler.FALLBACK);
+        assertThat(MyFallbackHandler.DISPOSED).isTrue();
     }
 
     @Test
     public void testHelloAsync() throws InterruptedException, ExecutionException {
-        Object result = service.sayHelloAsync();
-        assertTrue(result instanceof Future);
-        @SuppressWarnings("unchecked")
-        Future<String> future = (Future<String>) result;
-        assertEquals(MyMicroservice.HELLO, future.get());
+        Future<String> future = service.sayHelloAsync();
+        assertThat(future.get()).isEqualTo(MyMicroservice.HELLO);
     }
 
     @Test
     public void testHelloAsyncTimeoutFallback() throws InterruptedException, ExecutionException {
-        Object result = service.sayHelloAsyncTimeoutFallback();
-        assertTrue(result instanceof Future);
-        @SuppressWarnings("unchecked")
-        Future<String> future = (Future<String>) result;
-        assertEquals(MyFallbackHandler.FALLBACK, future.get());
+        Future<String> future = service.sayHelloAsyncTimeoutFallback();
+        assertThat(future.get()).isEqualTo(MyFallbackHandler.FALLBACK);
     }
 
     @Test
     public void testSayHelloBreaker() {
         for (int n = 0; n < 7; n++) {
             try {
-                String result = service.sayHelloBreaker();
-                System.out.printf("%d: Result: %s\n", n, result);
-                System.out.flush();
-            } catch (Exception e) {
-                System.out.printf("%d: Saw exception: %s\n", n, e);
-                System.out.flush();
+                service.sayHelloBreaker();
+            } catch (Exception ignored) {
             }
         }
+
         int count = service.getSayHelloBreakerCount();
-        assertEquals("The number of executions should be 4", count, 4);
+        assertThat(count).as("The number of executions should be 4").isEqualTo(4);
 
     }
 
@@ -105,33 +82,26 @@ public class CommandInterceptorTest {
     public void testSayHelloBreakerClassLevel() {
         for (int n = 0; n < 7; n++) {
             try {
-                String result = service.sayHelloBreakerClassLevel();
-                System.out.printf("%d: Result: %s\n", n, result);
-                System.out.flush();
-            } catch (Exception e) {
-                System.out.printf("%d: Saw exception: %s\n", n, e);
-                System.out.flush();
+                service.sayHelloBreakerClassLevel();
+            } catch (Exception ignored) {
             }
         }
-        int count = service.getSayHelloBreakerCount3();
-        assertEquals("The number of executions should be 4", count, 4);
 
+        int count = service.getSayHelloBreakerCount3();
+        assertThat(count).as("The number of executions should be 4").isEqualTo(4);
     }
 
     @Test
     public void testSayHelloBreaker2() {
         for (int i = 1; i < 12; i++) {
-
             try {
                 String result = service.sayHelloBreaker2();
-                System.out.printf("%d, %s\n", i, result);
 
                 if (i < 5 || (i > 6 && i < 12)) {
                     fail("serviceA should throw an Exception in testCircuitDefaultSuccessThreshold on iteration " + i);
                 }
             } catch (CircuitBreakerOpenException cboe) {
                 // Expected on execution 5 and iteration 10
-                System.out.printf("%d, CircuitBreakerOpenException\n", i);
 
                 if (i < 5) {
                     fail("serviceA should throw a RuntimeException in testCircuitDefaultSuccessThreshold on iteration " + i);
@@ -139,21 +109,20 @@ public class CommandInterceptorTest {
                     // Pause to allow the circuit breaker to half-open
                     try {
                         Thread.sleep(400);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    } catch (InterruptedException ignored) {
                     }
                 }
             } catch (RuntimeException ex) {
                 // Expected
-                System.out.printf("%d, RuntimeException\n", i);
             } catch (Exception ex) {
                 // Not Expected
                 fail("serviceA should throw a RuntimeException or CircuitBreakerOpenException in testCircuitDefaultSuccessThreshold "
                         + "on iteration " + i);
             }
         }
+
         int count = service.getSayHelloBreakerCount2();
-        assertEquals("The number of serviceA executions should be 9", count, 9);
+        assertThat(count).as("The number of serviceA executions should be 9").isEqualTo(9);
     }
 
     @Test
@@ -182,15 +151,13 @@ public class CommandInterceptorTest {
         }
 
         int count = service.getSayHelloBreakerCount4();
-
-        assertEquals("The number of executions should be 2", count, 2);
+        assertThat(count).as("The number of executions should be 2").isEqualTo(2);
     }
 
     // @Test(enabled = true, description = "Still trying to figure out @CircuitBreaker(successThreshold=...)")
     @Test
     public void testCircuitHighSuccessThreshold() {
         for (int i = 1; i < 10; i++) {
-
             try {
                 service.sayHelloBreakerHighThreshold();
 
@@ -205,8 +172,7 @@ public class CommandInterceptorTest {
                     // Pause to allow the circuit breaker to half-open
                     try {
                         Thread.sleep(400);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    } catch (InterruptedException ignored) {
                     }
                 }
             } catch (RuntimeException ex) {
@@ -217,9 +183,9 @@ public class CommandInterceptorTest {
                         + "on iteration " + i);
             }
         }
-        int count = service.getSayHelloBreakerCount5();
 
-        assertEquals("The number of serviceA executions should be 7", count, 7);
+        int count = service.getSayHelloBreakerCount5();
+        assertThat(count).as("The number of serviceA executions should be 7").isEqualTo(7);
     }
 
     /**
@@ -249,21 +215,23 @@ public class CommandInterceptorTest {
         }
 
         invokeCounter = serviceRetry.getSayHelloRetry();
-        assertEquals("The number of executions should be 4", 4, invokeCounter);
+        assertThat(invokeCounter).as("The number of executions should be 4").isEqualTo(4);
     }
 
     @Test
     public void testRetryTimeout() {
         try {
-            String result = serviceRetry.serviceA(1000);
+            serviceRetry.serviceA(1000);
         } catch (TimeoutException ex) {
             // Expected
         } catch (RuntimeException ex) {
             // Not Expected
-            Assert.fail("serviceA should not throw a RuntimeException in testRetryTimeout");
+            fail("serviceA should not throw a RuntimeException in testRetryTimeout");
         }
 
-        assertEquals("The execution count should be 2 (1 retry + 1)", 2, serviceRetry.getCounterForInvokingServiceA());
+        assertThat(serviceRetry.getCounterForInvokingServiceA())
+                .as("The execution count should be 2 (1 retry + 1)")
+                .isEqualTo(2);
     }
 
     @Test
@@ -271,17 +239,21 @@ public class CommandInterceptorTest {
 
         try {
             String result = serviceRetry.serviceA();
-            Assert.assertTrue("The message should be \"fallback for serviceA\"", result.contains("serviceA"));
+            assertThat(result).as("The message should be \"fallback for serviceA\"").contains("serviceA");
         } catch (RuntimeException ex) {
-            Assert.fail("serviceA should not throw a RuntimeException in testFallbackSuccess");
+            fail("serviceA should not throw a RuntimeException in testFallbackSuccess");
         }
-        assertEquals("The execution count should be 2 (1 retry + 1)", 2, serviceRetry.getCounterForInvokingServiceA());
+        assertThat(serviceRetry.getCounterForInvokingServiceA())
+                .as("The execution count should be 2 (1 retry + 1)")
+                .isEqualTo(2);
         try {
             String result = serviceRetry.serviceB();
-            Assert.assertTrue("The message should be \"fallback for serviceB\"", result.contains("serviceB"));
+            assertThat(result).as("The message should be \"fallback for serviceB\"").contains("serviceB");
         } catch (RuntimeException ex) {
-            Assert.fail("serviceB should not throw a RuntimeException in testFallbackSuccess");
+            fail("serviceB should not throw a RuntimeException in testFallbackSuccess");
         }
-        assertEquals("The execution count should be 3 (2 retries + 1)", 3, serviceRetry.getCounterForInvokingServiceB());
+        assertThat(serviceRetry.getCounterForInvokingServiceB())
+                .as("The execution count should be 3 (2 retries + 1)")
+                .isEqualTo(3);
     }
 }

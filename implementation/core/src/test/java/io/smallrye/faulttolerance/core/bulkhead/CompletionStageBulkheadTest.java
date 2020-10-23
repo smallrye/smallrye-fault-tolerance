@@ -3,7 +3,7 @@ package io.smallrye.faulttolerance.core.bulkhead;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,9 +17,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
@@ -28,12 +28,12 @@ import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 public class CompletionStageBulkheadTest {
     private ExecutorService executor;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         executor = new ThreadPoolExecutor(2, 2, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws InterruptedException {
         executor.shutdownNow();
         executor.awaitTermination(1, TimeUnit.SECONDS);

@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TimeoutExecutionTest {
     private TimeoutExecution execution;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         execution = new TimeoutExecution(Thread.currentThread(), 1000L);
     }
