@@ -11,7 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.util.TestThread;

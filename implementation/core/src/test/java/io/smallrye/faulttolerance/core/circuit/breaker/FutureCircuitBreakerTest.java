@@ -9,8 +9,8 @@ import java.util.Collections;
 import java.util.concurrent.Future;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
@@ -22,7 +22,7 @@ public class FutureCircuitBreakerTest {
 
     private TestStopwatch stopwatch;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stopwatch = new TestStopwatch();
     }

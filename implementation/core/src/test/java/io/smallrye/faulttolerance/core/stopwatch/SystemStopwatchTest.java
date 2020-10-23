@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Percentage.withPercentage;
 
 import org.assertj.core.data.Percentage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SystemStopwatchTest {
     private static final Percentage tolerance = withPercentage(25);

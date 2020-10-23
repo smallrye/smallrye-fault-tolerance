@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.circuitbreaker.maintenance;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -10,55 +10,45 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class CircuitBreakerMaintenanceTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerMaintenanceTest.class)
-                .addPackage(CircuitBreakerMaintenanceTest.class.getPackage());
-    }
-
     @Inject
     private HelloService helloService;
 
     @Inject
     private CircuitBreakerMaintenance cb;
 
-    @Before
+    @BeforeEach
     public void reset() {
         cb.resetAll();
     }
 
     @Test
     public void readCircuitBreakerState() {
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
+        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
 
         for (int i = 0; i < HelloService.THRESHOLD; i++) {
-            assertThrows(IOException.class, () -> {
+            assertThatThrownBy(() -> {
                 helloService.hello(new IOException());
-            });
+            }).isExactlyInstanceOf(IOException.class);
         }
 
-        assertEquals(CircuitBreakerState.OPEN, cb.currentState("hello"));
+        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.OPEN);
 
         await().atMost(HelloService.DELAY * 2, TimeUnit.MILLISECONDS)
                 .ignoreException(CircuitBreakerOpenException.class)
                 .untilAsserted(() -> {
-                    assertEquals(HelloService.OK, helloService.hello(null));
+                    assertThat(helloService.hello(null)).isEqualTo(HelloService.OK);
                 });
 
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
+        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
     }
 
     @Test
@@ -76,35 +66,35 @@ public class CircuitBreakerMaintenanceTest {
     }
 
     private void testCircuitBreakerReset(Runnable resetFunction) throws Exception {
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
+        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
 
         for (int i = 0; i < HelloService.THRESHOLD; i++) {
-            assertThrows(IOException.class, () -> {
+            assertThatThrownBy(() -> {
                 helloService.hello(new IOException());
-            });
+            }).isExactlyInstanceOf(IOException.class);
         }
 
-        assertEquals(CircuitBreakerState.OPEN, cb.currentState("hello"));
+        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.OPEN);
 
-        assertThrows(CircuitBreakerOpenException.class, () -> {
+        assertThatThrownBy(() -> {
             helloService.hello(null);
-        });
+        }).isExactlyInstanceOf(CircuitBreakerOpenException.class);
 
         resetFunction.run();
 
-        assertEquals(CircuitBreakerState.CLOSED, cb.currentState("hello"));
+        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
 
-        assertEquals(HelloService.OK, helloService.hello(null));
+        assertThat(helloService.hello(null)).isEqualTo(HelloService.OK);
     }
 
     @Test
     public void undefinedCircuitBreaker() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThatThrownBy(() -> {
             cb.currentState("undefined");
-        });
+        }).isExactlyInstanceOf(IllegalArgumentException.class);
 
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThatThrownBy(() -> {
             cb.reset("undefined");
-        });
+        }).isExactlyInstanceOf(IllegalArgumentException.class);
     }
 }

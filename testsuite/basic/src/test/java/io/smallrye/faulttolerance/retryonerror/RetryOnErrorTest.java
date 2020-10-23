@@ -15,38 +15,23 @@
  */
 package io.smallrye.faulttolerance.retryonerror;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.io.IOError;
 
-import io.smallrye.faulttolerance.TestArchive;
+import org.junit.jupiter.api.Test;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+
+@FaultToleranceBasicTest
 public class RetryOnErrorTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(RetryOnErrorTest.class).addPackage(RetryOnErrorTest.class.getPackage());
-    }
-
     @Test
     public void testRetry(HelloService helloService) {
         HelloService.COUNTER.set(0);
-        try {
+        assertThatThrownBy(() -> {
             helloService.retry();
-            fail();
-        } catch (AssertionError expected) {
-        }
-        assertEquals(3, HelloService.COUNTER.get());
+        }).isExactlyInstanceOf(IOError.class);
+        assertThat(HelloService.COUNTER.get()).isEqualTo(3);
     }
-
 }

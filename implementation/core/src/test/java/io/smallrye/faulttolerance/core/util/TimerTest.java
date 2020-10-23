@@ -8,9 +8,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.timer.Timer;
 
@@ -18,13 +18,13 @@ public class TimerTest {
     private ExecutorService executor;
     private Timer timer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
         timer = new Timer(executor);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws InterruptedException {
         timer.shutdown();
         executor.shutdownNow();

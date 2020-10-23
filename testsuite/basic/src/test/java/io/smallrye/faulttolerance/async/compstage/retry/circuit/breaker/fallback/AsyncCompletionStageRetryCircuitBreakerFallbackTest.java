@@ -1,9 +1,7 @@
 package io.smallrye.faulttolerance.async.compstage.retry.circuit.breaker.fallback;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -19,22 +17,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsyncCompletionStageRetryCircuitBreakerFallbackTest.class)
-                .addPackage(AsyncCompletionStageRetryCircuitBreakerFallbackTest.class.getPackage());
-    }
-
     @Test
     public void syncFailures(AsyncHelloService helloService)
             throws IOException, ExecutionException, InterruptedException {
@@ -44,12 +32,11 @@ public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
         test(16, expectedResponses, helloService::hello);
 
         // ensure circuit is opened (note number 44 does request correct behavior!)
-        assertEquals("Fallback44", helloService.hello(44).toCompletableFuture().get());
+        assertThat(helloService.hello(44).toCompletableFuture().get()).isEqualTo("Fallback44");
 
         // ensure circuit is closed
         await().atMost(3, TimeUnit.SECONDS).untilAsserted(() -> {
-            assertEquals("Hello44",
-                    helloService.hello(44).toCompletableFuture().get());
+            assertThat(helloService.hello(44).toCompletableFuture().get()).isEqualTo("Hello44");
         });
     }
 
@@ -62,12 +49,11 @@ public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
         test(16, expectedResponses, helloService::helloFailAsync);
 
         // ensure circuit is opened (note number 44 does request correct behavior!)
-        assertEquals("Fallback44", helloService.helloFailAsync(44).toCompletableFuture().get());
+        assertThat(helloService.helloFailAsync(44).toCompletableFuture().get()).isEqualTo("Fallback44");
 
         // ensure circuit is closed
         await().atMost(3, TimeUnit.SECONDS).untilAsserted(() -> {
-            assertEquals("Hello44",
-                    helloService.helloFailAsync(44).toCompletableFuture().get());
+            assertThat(helloService.helloFailAsync(44).toCompletableFuture().get()).isEqualTo("Hello44");
         });
     }
 
@@ -94,7 +80,7 @@ public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
         }
         executor.shutdown();
         boolean finished = executor.awaitTermination(15, TimeUnit.SECONDS);
-        assertTrue(finished);
+        assertThat(finished).isTrue();
 
         for (String seenResponse : seenResponses) {
             if (!expectedResponses.containsKey(seenResponse.replaceAll("[0-9]", ""))) {
@@ -113,9 +99,7 @@ public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
                         + ": " + expectedResponse.getKey());
             }
         }
-        if (!violations.isEmpty()) {
-            fail(violations.toString());
-        }
+        assertThat(violations).isEmpty();
     }
 
     private static class Range {

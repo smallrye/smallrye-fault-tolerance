@@ -1,35 +1,21 @@
 package io.smallrye.faulttolerance.metadata;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 /**
  * See also https://github.com/smallrye/smallrye-fault-tolerance/issues/20
- *
- * @author Martin Kouba
  */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class RetryOnSubclassOverrideTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(RetryOnSubclassOverrideTest.class)
-                .addPackage(RetryOnSubclassOverrideTest.class.getPackage());
-    }
-
     @Test
     public void testRetryOverriden(HelloService helloService) {
         BaseService.COUNTER.set(0);
-        assertEquals("ok", helloService.retry());
+        assertThat(helloService.retry()).isEqualTo("ok");
         // 1 + 4 retries
-        assertEquals(5, BaseService.COUNTER.get());
+        assertThat(BaseService.COUNTER.get()).isEqualTo(5);
     }
-
 }

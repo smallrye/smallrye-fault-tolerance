@@ -15,39 +15,23 @@
  */
 package io.smallrye.faulttolerance.fallback.retry;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class CircuitBreakerRetryFallbackTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerRetryFallbackTest.class)
-                .addPackage(CircuitBreakerRetryFallbackTest.class.getPackage());
-    }
-
     @Test
-    public void testCircuitBreakerOpens(SuperCoolService coolService) throws InterruptedException {
+    public void testCircuitBreakerOpens(SuperCoolService coolService) {
         // Total invocations = 9 because maxRetries = 2
         int loop = 3;
         for (int i = 1; i <= loop; i++) {
             // Fallback is always used
-            assertEquals(SuperCoolService.class.getName(), coolService.ping());
+            assertThat(coolService.ping()).isEqualTo(SuperCoolService.class.getName());
         }
-        // After 5 invocations the circuit should be open
-        assertEquals(5, coolService.getCounter().get());
+        // After 5 invocations the circuit breaker should be open
+        assertThat(coolService.getCounter().get()).isEqualTo(5);
     }
-
 }
