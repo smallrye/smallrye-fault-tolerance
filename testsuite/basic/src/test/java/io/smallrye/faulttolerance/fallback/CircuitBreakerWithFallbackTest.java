@@ -15,38 +15,23 @@
  */
 package io.smallrye.faulttolerance.fallback;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class CircuitBreakerWithFallbackTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerWithFallbackTest.class)
-                .addPackage(CircuitBreakerWithFallbackTest.class.getPackage());
-    }
-
     @Test
-    public void testCircuitBreakerOpens(PingService pingService) throws InterruptedException {
+    public void testCircuitBreakerOpens(PingService pingService) {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             // Fallback is always used
-            assertEquals(PingService.class.getName(), pingService.ping());
+            assertThat(pingService.ping()).isEqualTo(PingService.class.getName());
         }
-        // After 5 invocations the circuit should be open
-        assertEquals(5, pingService.getPingCounter().get());
-    }
 
+        // After 5 invocations the circuit breaker should be open
+        assertThat(pingService.getPingCounter().get()).isEqualTo(5);
+    }
 }

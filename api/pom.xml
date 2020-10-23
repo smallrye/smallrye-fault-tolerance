@@ -37,5 +37,4 @@
             <artifactId>smallrye-common-annotation</artifactId>
         </dependency>
     </dependencies>
-
 </project>

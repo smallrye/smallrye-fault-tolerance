@@ -11,8 +11,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestThread;
@@ -24,7 +24,7 @@ public class CompletionStageTimeoutTest {
 
     private TestTimeoutWatcher timeoutWatcher;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         watcherTimeoutElapsedBarrier = Barrier.interruptible();
         watcherExecutionInterruptedBarrier = Barrier.interruptible();

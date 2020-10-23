@@ -20,7 +20,6 @@ import javax.enterprise.context.RequestScoped;
 
 @RequestScoped
 public class RequestFoo {
-
     private String foo;
 
     @PostConstruct
@@ -31,5 +30,4 @@ public class RequestFoo {
     public String getFoo() {
         return foo;
     }
-
 }

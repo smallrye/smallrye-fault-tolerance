@@ -16,9 +16,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestThread;
@@ -31,7 +31,7 @@ public class FutureTimeoutTest {
     private TestTimeoutWatcher timeoutWatcher;
     private ExecutorService asyncExecutor;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         watcherTimeoutElapsedBarrier = Barrier.interruptible();
         watcherExecutionInterruptedBarrier = Barrier.interruptible();
@@ -40,7 +40,7 @@ public class FutureTimeoutTest {
         asyncExecutor = Executors.newFixedThreadPool(4);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws InterruptedException {
         asyncExecutor.shutdown();
         asyncExecutor.awaitTermination(10, TimeUnit.SECONDS);

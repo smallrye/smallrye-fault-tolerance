@@ -15,9 +15,12 @@
  */
 package io.smallrye.faulttolerance.bulkhead.reject;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 
+@ApplicationScoped
 public class PingService {
 
     @Fallback(fallbackMethod = "fallback")

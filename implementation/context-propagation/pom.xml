@@ -37,5 +37,4 @@
             <artifactId>smallrye-context-propagation</artifactId>
         </dependency>
     </dependencies>
-
 </project>

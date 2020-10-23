@@ -15,27 +15,17 @@
  */
 package io.smallrye.faulttolerance.circuitbreaker.failon.metrics;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class CircuitBreakerFailOnMetricsTest {
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerFailOnMetricsTest.class)
-                .addPackage(CircuitBreakerFailOnMetricsTest.class.getPackage());
-    }
-
     @Test
     public void test(PingService pingService, @RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) {
         for (int i = 0; i < 10; i++) {
@@ -45,18 +35,18 @@ public class CircuitBreakerFailOnMetricsTest {
             }
         }
 
-        assertEquals(5, metrics.counter("ft.circuitbreaker.calls.total",
+        assertThat(metrics.counter("ft.circuitbreaker.calls.total",
                 new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"),
                 new Tag("circuitBreakerResult", "success"))
-                .getCount());
-        assertEquals(5, metrics.counter("ft.circuitbreaker.calls.total",
+                .getCount()).isEqualTo(5);
+        assertThat(metrics.counter("ft.circuitbreaker.calls.total",
                 new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"),
                 new Tag("circuitBreakerResult", "failure"))
-                .getCount());
-        assertEquals(10, metrics.counter("ft.invocations.total",
+                .getCount()).isEqualTo(5);
+        assertThat(metrics.counter("ft.invocations.total",
                 new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"),
                 new Tag("result", "exceptionThrown"),
                 new Tag("fallback", "notDefined"))
-                .getCount());
+                .getCount()).isEqualTo(10);
     }
 }

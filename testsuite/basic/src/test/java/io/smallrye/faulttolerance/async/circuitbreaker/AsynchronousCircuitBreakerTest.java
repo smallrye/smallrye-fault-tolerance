@@ -15,59 +15,41 @@
  */
 package io.smallrye.faulttolerance.async.circuitbreaker;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class AsynchronousCircuitBreakerTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousCircuitBreakerTest.class)
-                .addPackage(AsynchronousCircuitBreakerTest.class.getPackage());
-    }
-
     @Test
-    public void testAsyncCircuitBreaker(AsyncHelloService helloService) throws IOException, InterruptedException {
+    public void testAsyncCircuitBreaker(AsyncHelloService helloService) {
         AsyncHelloService.COUNTER.set(0);
+
         for (int i = 0; i < AsyncHelloService.THRESHOLD; i++) {
-            try {
+            assertThatThrownBy(() -> {
                 helloService.hello(AsyncHelloService.Result.FAILURE).get();
-                Assert.fail();
-            } catch (ExecutionException e) {
-                Assert.assertTrue("Unexpected expection on iteration " + i + ": " + e, e.getCause() instanceof IOException);
-            }
+            }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(IOException.class);
         }
+
         // Circuit should be open now
-        try {
+        assertThatThrownBy(() -> {
             helloService.hello(AsyncHelloService.Result.SUCCESS).get();
-            Assert.fail();
-        } catch (ExecutionException expected) {
-            assertTrue(expected.getCause() instanceof CircuitBreakerOpenException);
-        }
-        assertEquals(AsyncHelloService.THRESHOLD, AsyncHelloService.COUNTER.get());
+        }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(CircuitBreakerOpenException.class);
+
+        assertThat(AsyncHelloService.COUNTER.get()).isEqualTo(AsyncHelloService.THRESHOLD);
+
         await().atMost(AsyncHelloService.DELAY * 2, TimeUnit.MILLISECONDS).untilAsserted(() -> {
             try {
-                assertEquals(AsyncHelloService.OK, helloService.hello(AsyncHelloService.Result.SUCCESS).get());
+                assertThat(helloService.hello(AsyncHelloService.Result.SUCCESS).get()).isEqualTo(AsyncHelloService.OK);
             } catch (ExecutionException e) {
                 if (!(e.getCause() instanceof CircuitBreakerOpenException)) {
                     // CircuitBreakerOpenException is expected

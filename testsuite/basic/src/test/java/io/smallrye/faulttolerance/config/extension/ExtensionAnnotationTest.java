@@ -15,40 +15,24 @@
  */
 package io.smallrye.faulttolerance.config.extension;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.temporal.ChronoUnit;
 
-import javax.enterprise.inject.spi.Extension;
 import javax.inject.Inject;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.jboss.weld.junit5.auto.AddExtensions;
+import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.FaultToleranceOperations;
-import io.smallrye.faulttolerance.TestArchive;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.config.RetryConfig;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
+@AddExtensions(CustomExtension.class)
 public class ExtensionAnnotationTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(ExtensionAnnotationTest.class).addPackage(ExtensionAnnotationTest.class.getPackage())
-                .addClass(FaultToleranceOperations.class).addAsServiceProvider(Extension.class, CustomExtension.class);
-    }
-
     @Inject
     FaultToleranceOperations ops;
 
@@ -58,21 +42,19 @@ public class ExtensionAnnotationTest {
     @Test
     public void testAnnotationAddedByExtension() throws NoSuchMethodException, SecurityException {
         FaultToleranceOperation ping = ops.get(UnconfiguredService.class, UnconfiguredService.class.getMethod("ping"));
-        assertNotNull(ping);
-        assertTrue(ping.hasRetry());
+        assertThat(ping).isNotNull();
+        assertThat(ping.hasRetry()).isTrue();
+
         RetryConfig fooRetry = ping.getRetry();
         // Method-level
-        assertEquals(fooRetry.get(RetryConfig.MAX_RETRIES, Integer.class), Integer.valueOf(2));
+        assertThat(fooRetry.get(RetryConfig.MAX_RETRIES, Integer.class)).isEqualTo(2);
         // Default value
-        assertEquals(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class), ChronoUnit.MILLIS);
+        assertThat(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class)).isEqualTo(ChronoUnit.MILLIS);
 
         UnconfiguredService.COUNTER.set(0);
-        try {
+        assertThatThrownBy(() -> {
             service.ping();
-            fail();
-        } catch (IllegalStateException expected) {
-        }
-        assertEquals(UnconfiguredService.COUNTER.get(), 3);
-
+        }).isExactlyInstanceOf(IllegalStateException.class);
+        assertThat(UnconfiguredService.COUNTER.get()).isEqualTo(3);
     }
 }

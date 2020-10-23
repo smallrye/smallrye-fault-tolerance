@@ -15,36 +15,21 @@
  */
 package io.smallrye.faulttolerance.circuitbreaker.failon;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.TestArchive;
+import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+@FaultToleranceBasicTest
 public class CircuitBreakerFailOnTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(CircuitBreakerFailOnTest.class).addPackage(CircuitBreakerFailOnTest.class.getPackage());
-    }
-
     @Test
-    public void testCircuitBreakerOpens(PingService pingService) throws InterruptedException {
+    public void testCircuitBreakerOpens(PingService pingService) {
         int loop = 8;
         for (int i = 1; i <= loop; i++) {
             pingService.ping();
         }
         // Circuit should never be open - failOn and failure do not match
-        assertEquals(loop, pingService.getPingCounter().get());
+        assertThat(pingService.getPingCounter().get()).isEqualTo(loop);
     }
-
 }

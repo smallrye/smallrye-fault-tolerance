@@ -18,6 +18,8 @@ package io.smallrye.faulttolerance.tracing;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import javax.enterprise.context.Dependent;
+
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
@@ -26,11 +28,8 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.opentracing.mock.MockTracer;
 import io.opentracing.util.GlobalTracer;
 
-/**
- * @author Pavol Loffay
- */
+@Dependent
 public class Service {
-
     public static MockTracer mockTracer = new MockTracer();
 
     static {

@@ -15,34 +15,33 @@
  */
 package io.smallrye.faulttolerance.async.requestcontext;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.ExecutionException;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.junit.Arquillian;
-import org.jboss.shrinkwrap.api.spec.JavaArchive;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import javax.enterprise.context.control.RequestContextController;
+import javax.inject.Inject;
 
-import io.smallrye.faulttolerance.TestArchive;
+import org.junit.jupiter.api.Test;
 
-/**
- *
- * @author Martin Kouba
- */
-@RunWith(Arquillian.class)
+import io.smallrye.faulttolerance.util.FaultToleranceIntegrationTest;
+
+@FaultToleranceIntegrationTest
 public class AsynchronousRequestContextTest {
-
-    @Deployment
-    public static JavaArchive createTestArchive() {
-        return TestArchive.createBase(AsynchronousRequestContextTest.class)
-                .addPackage(AsynchronousRequestContextTest.class.getPackage());
-    }
+    @Inject
+    RequestContextController rcc;
 
     @Test
     public void testRequestContextActive(AsyncService asyncService) throws InterruptedException, ExecutionException {
-        assertEquals("ok", asyncService.perform().get());
+        // Weld JUnit has a dumb context implementation that doesn't support context propagation,
+        // need to use the real request context
+        boolean activated = rcc.activate();
+        try {
+            assertThat(asyncService.perform().get()).isEqualTo("ok");
+        } finally {
+            if (activated) {
+                rcc.deactivate();
+            }
+        }
     }
-
 }

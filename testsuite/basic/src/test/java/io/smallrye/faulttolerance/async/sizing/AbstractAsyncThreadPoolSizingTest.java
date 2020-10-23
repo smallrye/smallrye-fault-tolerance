@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.async.sizing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractAsyncThreadPoolSizingTest {
     static final int SIZE = 10;
@@ -34,15 +33,15 @@ public abstract class AbstractAsyncThreadPoolSizingTest {
         int error = 0;
         for (CompletionStage<String> future : futures) {
             try {
-                assertEquals("hello", future.toCompletableFuture().get());
+                assertThat(future.toCompletableFuture().get()).isEqualTo("hello");
                 ok++;
             } catch (ExecutionException e) {
-                assertTrue(e.getCause() instanceof RejectedExecutionException);
+                assertThat(e).hasCauseExactlyInstanceOf(RejectedExecutionException.class);
                 error++;
             }
         }
 
-        assertEquals(SIZE, ok);
-        assertEquals(SIZE, error);
+        assertThat(ok).isEqualTo(SIZE);
+        assertThat(error).isEqualTo(SIZE);
     }
 }
