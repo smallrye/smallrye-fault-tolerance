@@ -69,7 +69,9 @@ import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.Jitter;
 import io.smallrye.faulttolerance.core.retry.RandomJitter;
 import io.smallrye.faulttolerance.core.retry.Retry;
+import io.smallrye.faulttolerance.core.retry.SimpleBackOff;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
+import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
@@ -250,7 +252,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
-                    new ThreadSleepDelay(delayMs, jitter),
+                    () -> new TimerDelay(new SimpleBackOff(delayMs, jitter), timer),
                     new SystemStopwatch());
         }
 
@@ -322,7 +324,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
-                    new ThreadSleepDelay(delayMs, jitter),
+                    () -> new ThreadSleepDelay(new SimpleBackOff(delayMs, jitter)),
                     new SystemStopwatch());
         }
 
@@ -399,7 +401,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
-                    new ThreadSleepDelay(delayMs, jitter),
+                    () -> new ThreadSleepDelay(new SimpleBackOff(delayMs, jitter)),
                     new SystemStopwatch());
         }
 
