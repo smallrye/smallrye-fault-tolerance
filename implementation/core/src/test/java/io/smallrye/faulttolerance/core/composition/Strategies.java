@@ -5,8 +5,8 @@ import java.util.Collections;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
-import io.smallrye.faulttolerance.core.retry.Delay;
 import io.smallrye.faulttolerance.core.retry.Retry;
+import io.smallrye.faulttolerance.core.retry.SyncDelay;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
@@ -24,7 +24,7 @@ final class Strategies {
     static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {
         return new Retry<>(delegate, "retry",
                 SetOfThrowables.create(Collections.singletonList(Exception.class)),
-                SetOfThrowables.EMPTY, 10, 0, Delay.NONE, new TestStopwatch());
+                SetOfThrowables.EMPTY, 10, 0, SyncDelay.NONE, new TestStopwatch());
     }
 
     static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate) {
