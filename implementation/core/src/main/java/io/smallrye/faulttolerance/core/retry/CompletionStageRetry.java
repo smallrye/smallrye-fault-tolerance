@@ -2,9 +2,11 @@ package io.smallrye.faulttolerance.core.retry;
 
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
@@ -15,38 +17,38 @@ import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
+    private final Supplier<AsyncDelay> delayBetweenRetries;
+
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
-            Delay delayBetweenRetries, Stopwatch stopwatch) {
-        super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, delayBetweenRetries, stopwatch);
+            Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+        // the SyncDelay.NONE is ignored here, we have our own AsyncDelay
+        super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, SyncDelay.NONE, stopwatch);
+        this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
     }
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        AsyncDelay delay = delayBetweenRetries.get();
         RunningStopwatch runningStopwatch = stopwatch.start();
-        return doRetry(ctx, 0, runningStopwatch, null);
+        return doRetry(ctx, 0, delay, runningStopwatch, null);
     }
 
-    public CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> ctx, int attempt,
-            RunningStopwatch stopwatch, Throwable latestFailure) {
+    private CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> ctx, int attempt,
+            AsyncDelay delay, RunningStopwatch stopwatch, Throwable latestFailure) {
         if (attempt == 0) {
             // do not sleep
+            return afterDelay(ctx, attempt, delay, stopwatch, latestFailure);
         } else if (attempt <= maxRetries) {
             ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
-            try {
-                delayBetweenRetries.sleep();
-            } catch (InterruptedException e) {
-                ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
-                return failedStage(e);
-            } catch (Exception e) {
-                ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
-                if (Thread.interrupted()) {
-                    return failedStage(new InterruptedException());
-                }
+            CompletableFuture<V> result = new CompletableFuture<>();
 
-                return failedStage(e);
-            }
+            delay.after(() -> {
+                propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, latestFailure), result);
+            });
+
+            return result;
         } else {
             ctx.fireEvent(RetryEvents.Finished.MAX_RETRIES_REACHED);
             if (latestFailure != null) {
@@ -55,7 +57,10 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                 return failedStage(new FaultToleranceException(description + " reached max retries"));
             }
         }
+    }
 
+    private CompletionStage<V> afterDelay(InvocationContext<CompletionStage<V>> ctx, int attempt,
+            AsyncDelay delay, RunningStopwatch stopwatch, Throwable latestFailure) {
         if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
             ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
             if (latestFailure != null) {
@@ -77,7 +82,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                         ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                         result.completeExceptionally(exception);
                     } else {
-                        propagateCompletion(doRetry(ctx, attempt + 1, stopwatch, exception), result);
+                        propagateCompletion(doRetry(ctx, attempt + 1, delay, stopwatch, exception), result);
                     }
                 }
             });
@@ -88,7 +93,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                 ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 return failedStage(e);
             } else {
-                return doRetry(ctx, attempt + 1, stopwatch, e);
+                return doRetry(ctx, attempt + 1, delay, stopwatch, e);
             }
         }
     }

@@ -19,7 +19,7 @@ import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
 /**
- * Tests a subset of {@link RetryTest} because the underlying logic is the same.
+ * Replicates a subset of {@link RetryTest} because the underlying logic is the same.
  */
 public class FutureRetryTest {
     private static final SetOfThrowables exception = SetOfThrowables.create(Collections.singletonList(Exception.class));
@@ -37,7 +37,7 @@ public class FutureRetryTest {
         RuntimeException exception = new RuntimeException();
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> failedFuture(exception));
         Retry<Future<String>> futureRetry = new Retry<>(invocation, "test invocation",
-                SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch);
+                SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, SyncDelay.NONE, stopwatch);
         Future<String> result = runOnTestThread(futureRetry).await();
         assertThatThrownBy(result::get).hasCause(exception);
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
@@ -48,7 +48,7 @@ public class FutureRetryTest {
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> completedFuture("foobar"));
         Future<String> result = runOnTestThread(
                 new Retry<>(invocation, "test invocation", SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000,
-                        Delay.NONE, stopwatch)).await();
+                        SyncDelay.NONE, stopwatch)).await();
         assertThat(result.get()).isEqualTo("foobar");
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }
@@ -63,7 +63,7 @@ public class FutureRetryTest {
             return completedFuture("foobar");
         });
         TestThread<Future<String>> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
-                SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
+                SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, SyncDelay.NONE, stopwatch));
         startInvocationBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
@@ -81,7 +81,7 @@ public class FutureRetryTest {
             throw new RuntimeException();
         });
         TestThread<Future<Void>> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
-                SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
+                SetOfThrowables.EMPTY, SetOfThrowables.EMPTY, 3, 1000, SyncDelay.NONE, stopwatch));
         startInvocationBarrier.await();
         endInvocationBarrier.open();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);
@@ -93,7 +93,7 @@ public class FutureRetryTest {
         TestInvocation<Future<String>> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new,
                 () -> completedFuture("foobar"));
         TestThread<Future<String>> result = runOnTestThread(new Retry<>(invocation, "test invocation",
-                exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
+                exception, SetOfThrowables.EMPTY, 3, 1000, SyncDelay.NONE, stopwatch));
         assertThat(result.await().get()).isEqualTo("foobar");
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
@@ -103,7 +103,7 @@ public class FutureRetryTest {
         TestInvocation<Future<String>> invocation = TestInvocation.initiallyFailing(4, RuntimeException::new,
                 () -> completedFuture("foobar"));
         TestThread<Future<String>> result = runOnTestThread(new Retry<>(invocation, "test invocation",
-                exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
+                exception, SetOfThrowables.EMPTY, 3, 1000, SyncDelay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
@@ -113,7 +113,7 @@ public class FutureRetryTest {
         TestInvocation<Future<Void>> invocation = TestInvocation.initiallyFailing(3, RuntimeException::new,
                 TestException::doThrow);
         TestThread<Future<Void>> result = runOnTestThread(new Retry<>(invocation, "test invocation",
-                exception, SetOfThrowables.EMPTY, 3, 1000, Delay.NONE, stopwatch));
+                exception, SetOfThrowables.EMPTY, 3, 1000, SyncDelay.NONE, stopwatch));
         assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
         assertThat(invocation.numberOfInvocations()).isEqualTo(4);
     }
@@ -128,7 +128,7 @@ public class FutureRetryTest {
             return completedFuture("foobar");
         });
         TestThread<Future<String>> executingThread = runOnTestThread(new Retry<>(invocation, "test invocation",
-                exception, testException, 3, 1000, Delay.NONE, stopwatch));
+                exception, testException, 3, 1000, SyncDelay.NONE, stopwatch));
         startInvocationBarrier.await();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isInstanceOf(InterruptedException.class);

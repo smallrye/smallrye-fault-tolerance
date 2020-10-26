@@ -2,7 +2,8 @@ package io.smallrye.faulttolerance.core.util;
 
 public class Preconditions {
     private Preconditions() {
-    } // avoid instantiation
+        // avoid instantiation
+    }
 
     public static <T> T checkNotNull(T value, String message) {
         if (value == null) {

@@ -3,6 +3,8 @@ package io.smallrye.faulttolerance.core.retry;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
+import java.util.function.Supplier;
+
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
@@ -19,11 +21,11 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     final SetOfThrowables abortOn;
     final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
     final long maxTotalDurationInMillis;
-    final Delay delayBetweenRetries;
+    private final Supplier<SyncDelay> delayBetweenRetries;
     final Stopwatch stopwatch;
 
     public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
-            long maxRetries, long maxTotalDurationInMillis, Delay delayBetweenRetries, Stopwatch stopwatch) {
+            long maxRetries, long maxTotalDurationInMillis, Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
         this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
@@ -37,6 +39,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
         long counter = 0;
+        SyncDelay delay = delayBetweenRetries.get();
         RunningStopwatch runningStopwatch = stopwatch.start();
         Throwable lastFailure = null;
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
@@ -44,7 +47,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
                 try {
-                    delayBetweenRetries.sleep();
+                    delay.sleep();
                 } catch (InterruptedException e) {
                     ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                     throw e;

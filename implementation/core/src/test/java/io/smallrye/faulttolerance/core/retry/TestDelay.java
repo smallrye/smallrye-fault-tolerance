@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
-public class TestDelay implements Delay {
+public class TestDelay implements SyncDelay {
     private final Barrier startBarrier;
     private final Barrier endBarrier;
     private final boolean selfInterrupt;
