@@ -77,6 +77,8 @@ public class FaultToleranceExtension implements Extension {
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOGGER.infof("MicroProfile: Fault Tolerance activated (SmallRye Fault Tolerance version: %s)",
                 getImplementationVersion().orElse("unknown"));
+        // @Blocking and @NonBlocking alone do _not_ trigger the fault tolerance interceptor,
+        // only in combination with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Retry.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Timeout.class)));
