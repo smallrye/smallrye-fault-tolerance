@@ -16,6 +16,47 @@ SmallRye Fault Tolerance is an implementation of {microprofile-fault-tolerance}[
 SmallRye Fault Tolerance provides some additional APIs on top of MicroProfile Fault Tolerance.
 Before proper documentation exists, please refer to the `api` directory directly.
 
+==== @Blocking and @NonBlocking
+
+In addition to the MicroProfile Fault Tolerance `@Asynchronous` annotation, which can be placed on methods returning `Future` or `CompletionStage`, SmallRye Fault Tolerance also supports 2 more annotations for asynchronous processing:
+
+* `@io.smallrye.common.annotation.Blocking`
+* `@io.smallrye.common.annotation.NonBlocking`
+
+These annotations can have multiple meanings, depending on context.
+SmallRye Fault Tolerance only pays attention to these annotations if:
+
+* they are placed on methods that return `CompletionStage` (the `Future` type can't really be used for non-blocking processing);
+* they are placed on methods that apply some fault tolerance strategy (such as `@Fallback`, defined either on a method or a class).
+
+Under these circumstances, SmallRye Fault Tolerance assigns these annotations the following meaning:
+
+* `@Blocking` means that execution of the operation will be offloaded to another thread (that's what `@Asynchronous` does by default).
+  Use this annotation if the method has blocking logic, but you don't want to block the caller thread.
+** The thread pool that is used for offloading method calls is the one provided by the runtime that integrates SmallRye Fault Tolerance.
+   See below for more info.
+* `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
+  Use this annotation if the method _doesn't_ have blocking logic and you want the execution to stay on the caller thread.
+** Note that if the guarded method also uses `@Retry` and some delay between retries is configured, only the initial execution will occur on the original thread.
+   Subsequent attempts will be offloaded to an extra thread, so that the original thread is not blocked on the delay.
+
+===== Rationale
+
+We believe that the `@Asynchronous` annotation is misnamed, because its meaning is "offload execution to another thread".
+This isn't always appropriate in modern asynchronous programming, where methods are often non-blocking and thread offload is not required.
+We believe that declaring whether the method blocks or not is a better aproach.
+
+At the same time, we designed these annotations to be used by a variety of frameworks, so SmallRye Fault Tolerance can't eagerly intercept all methods using them.
+We also want to stay compatible with the MicroProfile Fault Tolerance specification as much as possible.
+For these reasons, SmallRye Fault Tolerance only considers these annotations for methods that use some fault tolerance strategy.
+
+===== Recommendation
+
+For methods that use fault tolerance and return `CompletionStage`, we recommend to declare their `@Blocking` or `@NonBlocking` nature.
+In such case, the `@Asynchronous` annotation becomes optional.
+
+We also recommend to avoid `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
+
 === Integration
 
 ==== Thread pool
