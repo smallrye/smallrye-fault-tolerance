@@ -143,7 +143,7 @@ public class FaultToleranceInterceptor {
 
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
-        if (operation.isAsync() && operation.returnsCompletionStage()) {
+        if ((operation.isAsync() || operation.isAdditionalAsync()) && operation.returnsCompletionStage()) {
             return properAsyncFlow(operation, invocationContext, point);
         } else if (operation.isAsync()) {
             return futureFlow(operation, invocationContext, point);
@@ -201,7 +201,9 @@ public class FaultToleranceInterceptor {
 
         result = new RequestScopeActivator<>(result, requestContextController);
 
-        result = new CompletionStageExecution<>(result, asyncExecutor);
+        if (operation.isThreadOffloadRequired()) {
+            result = new CompletionStageExecution<>(result, asyncExecutor);
+        }
 
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();

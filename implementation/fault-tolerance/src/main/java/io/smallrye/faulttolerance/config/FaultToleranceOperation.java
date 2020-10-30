@@ -34,6 +34,9 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
+import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.NonBlocking;
+
 /**
  * Fault tolerance operation metadata.
  *
@@ -44,6 +47,8 @@ public class FaultToleranceOperation {
     public static FaultToleranceOperation of(AnnotatedMethod<?> annotatedMethod) {
         return new FaultToleranceOperation(annotatedMethod.getDeclaringType().getJavaClass(), annotatedMethod.getJavaMember(),
                 isAsync(annotatedMethod),
+                isBlocking(annotatedMethod) || isNonBlocking(annotatedMethod),
+                isThreadOffloadRequired(annotatedMethod),
                 returnsCompletionStage(annotatedMethod),
                 getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
                 getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
@@ -55,6 +60,8 @@ public class FaultToleranceOperation {
     public static FaultToleranceOperation of(Class<?> beanClass, Method method) {
         return new FaultToleranceOperation(beanClass, method,
                 isAsync(method, beanClass),
+                isBlocking(method, beanClass) || isNonBlocking(method, beanClass),
+                isThreadOffloadRequired(method, beanClass),
                 returnsCompletionStage(method),
                 getConfig(Bulkhead.class, beanClass, method, BulkheadConfig::new),
                 getConfig(CircuitBreaker.class, beanClass, method, CircuitBreakerConfig::new),
@@ -67,7 +74,15 @@ public class FaultToleranceOperation {
 
     private final Method method;
 
+    // whether @Asynchronous is present
     private final boolean async;
+
+    // whether @Blocking or @NonBlocking is present
+    private final boolean additionalAsync;
+
+    // whether thread offload is required based on presence or absence of @Blocking and @NonBlocking
+    // if the method doesn't return CompletionStage, this value is meaningless
+    private final boolean threadOffloadRequired;
 
     private final boolean returnsCompletionStage;
 
@@ -84,6 +99,8 @@ public class FaultToleranceOperation {
     private FaultToleranceOperation(Class<?> beanClass,
             Method method,
             boolean async,
+            boolean additionalAsync,
+            boolean threadOffloadRequired,
             boolean returnsCompletionStage,
             BulkheadConfig bulkhead,
             CircuitBreakerConfig circuitBreaker,
@@ -93,6 +110,8 @@ public class FaultToleranceOperation {
         this.beanClass = beanClass;
         this.method = method;
         this.async = async;
+        this.additionalAsync = additionalAsync;
+        this.threadOffloadRequired = threadOffloadRequired;
         this.returnsCompletionStage = returnsCompletionStage;
         this.bulkhead = bulkhead;
         this.circuitBreaker = circuitBreaker;
@@ -103,6 +122,14 @@ public class FaultToleranceOperation {
 
     public boolean isAsync() {
         return async;
+    }
+
+    public boolean isAdditionalAsync() {
+        return additionalAsync;
+    }
+
+    public boolean isThreadOffloadRequired() {
+        return threadOffloadRequired;
     }
 
     public boolean returnsCompletionStage() {
@@ -158,6 +185,8 @@ public class FaultToleranceOperation {
     }
 
     public boolean isLegitimate() {
+        // @Blocking and @NonBlocking alone do _not_ trigger the fault tolerance interceptor,
+        // only in combination with other fault tolerance annotations
         return async || bulkhead != null || circuitBreaker != null || fallback != null || retry != null || timeout != null;
     }
 
@@ -177,6 +206,10 @@ public class FaultToleranceOperation {
         if (async && !isAcceptableAsyncReturnType(method.getReturnType())) {
             throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method
                     + ": must return java.util.concurrent.Future or java.util.concurrent.CompletionStage");
+        }
+        if (additionalAsync && !isProperAsyncReturnType(method.getReturnType())) {
+            throw new FaultToleranceDefinitionException("Invalid @Blocking/@NonBlocking on " + method
+                    + ": must return java.util.concurrent.CompletionStage");
         }
         if (bulkhead != null) {
             bulkhead.validate();
@@ -199,17 +232,13 @@ public class FaultToleranceOperation {
         return Future.class.equals(returnType) || CompletionStage.class.equals(returnType);
     }
 
+    private boolean isProperAsyncReturnType(Class<?> returnType) {
+        return CompletionStage.class.equals(returnType);
+    }
+
     @Override
     public String toString() {
         return "FaultToleranceOperation [beanClass=" + beanClass + ", method=" + method.toGenericString() + "]";
-    }
-
-    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType,
-            AnnotatedMethod<?> annotatedMethod, Function<AnnotatedMethod<?>, C> function) {
-        if (getConfigStatus(annotationType, annotatedMethod.getJavaMember()) && isAnnotated(annotationType, annotatedMethod)) {
-            return function.apply(annotatedMethod);
-        }
-        return null;
     }
 
     private static boolean returnsCompletionStage(Method annotatedMethod) {
@@ -221,18 +250,35 @@ public class FaultToleranceOperation {
     }
 
     private static boolean isAsync(Method method, Class<?> beanClass) {
-
         return getConfigStatus(Asynchronous.class, method) && isAnnotated(Asynchronous.class, method, beanClass);
     }
 
     private static boolean isAsync(AnnotatedMethod<?> method) {
-
         return getConfigStatus(Asynchronous.class, method.getJavaMember()) && isAnnotated(Asynchronous.class, method);
     }
 
-    private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod) {
-        return annotatedMethod.isAnnotationPresent(annotationType)
-                || annotatedMethod.getDeclaringType().isAnnotationPresent(annotationType);
+    private static boolean isBlocking(Method method, Class<?> beanClass) {
+        return getConfigStatus(Blocking.class, method) && isAnnotated(Blocking.class, method, beanClass);
+    }
+
+    private static boolean isBlocking(AnnotatedMethod<?> method) {
+        return getConfigStatus(Blocking.class, method.getJavaMember()) && isAnnotated(Blocking.class, method);
+    }
+
+    private static boolean isNonBlocking(Method method, Class<?> beanClass) {
+        return getConfigStatus(NonBlocking.class, method) && isAnnotated(NonBlocking.class, method, beanClass);
+    }
+
+    private static boolean isNonBlocking(AnnotatedMethod<?> method) {
+        return getConfigStatus(NonBlocking.class, method.getJavaMember()) && isAnnotated(NonBlocking.class, method);
+    }
+
+    private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType,
+            AnnotatedMethod<?> annotatedMethod, Function<AnnotatedMethod<?>, C> function) {
+        if (getConfigStatus(annotationType, annotatedMethod.getJavaMember()) && isAnnotated(annotationType, annotatedMethod)) {
+            return function.apply(annotatedMethod);
+        }
+        return null;
     }
 
     private static <A extends Annotation, C extends GenericConfig<A>> C getConfig(Class<A> annotationType, Class<?> beanClass,
@@ -244,33 +290,35 @@ public class FaultToleranceOperation {
         return null;
     }
 
-    private static <A extends Annotation> Boolean getConfigStatus(Class<A> annotationType, Method method) {
+    private static <A extends Annotation> boolean getConfigStatus(Class<A> annotationType, Method method) {
         Config config = ConfigProvider.getConfig();
-        final String undifined = "undifined";
+        final String undefined = "undefined";
         String onMethod = config.getOptionalValue(method.getDeclaringClass().getName() +
-                "/" + method.getName() + "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
+                "/" + method.getName() + "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undefined);
         String onClass = config.getOptionalValue(method.getDeclaringClass().getName() +
-                "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
-        String onGlobal = config.getOptionalValue(annotationType.getSimpleName() + "/enabled", String.class).orElse(undifined);
-        Boolean returnConfig = !annotationType.equals(Fallback.class)
+                "/" + annotationType.getSimpleName() + "/enabled", String.class).orElse(undefined);
+        String onGlobal = config.getOptionalValue(annotationType.getSimpleName() + "/enabled", String.class).orElse(undefined);
+        boolean returnConfig = !annotationType.equals(Fallback.class)
                 ? config.getOptionalValue("MP_Fault_Tolerance_NonFallback_Enabled", Boolean.class).orElse(true)
                 : true;
 
-        if (!undifined.equals(onMethod)) {
-            returnConfig = new Boolean(onMethod);
-        } else if (!undifined.equals(onClass)) {
-            returnConfig = new Boolean(onClass);
-        } else if (!undifined.equals(onGlobal)) {
-            returnConfig = new Boolean(onGlobal);
+        if (!undefined.equals(onMethod)) {
+            returnConfig = Boolean.parseBoolean(onMethod);
+        } else if (!undefined.equals(onClass)) {
+            returnConfig = Boolean.parseBoolean(onClass);
+        } else if (!undefined.equals(onGlobal)) {
+            returnConfig = Boolean.parseBoolean(onGlobal);
         }
         return returnConfig;
     }
 
+    private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, AnnotatedMethod<?> annotatedMethod) {
+        return annotatedMethod.isAnnotationPresent(annotationType)
+                || annotatedMethod.getDeclaringType().isAnnotationPresent(annotationType);
+    }
+
     private static <A extends Annotation> boolean isAnnotated(Class<A> annotationType, Method method, Class<?> beanClass) {
         if (method.isAnnotationPresent(annotationType)) {
-            return true;
-        }
-        if (beanClass.isAnnotationPresent(annotationType)) {
             return true;
         }
         while (beanClass != null) {
@@ -282,4 +330,48 @@ public class FaultToleranceOperation {
         return false;
     }
 
+    // @Blocking and @NonBlocking can currently only be used on methods, but that will likely change,
+    // so we'd better define meaning for class annotations as well
+    // the result of isThreadOffloadRequired only makes sense if the method in question returns CompletionStage
+
+    private static boolean isThreadOffloadRequired(AnnotatedMethod<?> method) {
+        if (method.isAnnotationPresent(Blocking.class)) {
+            return true;
+        }
+        if (method.isAnnotationPresent(NonBlocking.class)) {
+            return false;
+        }
+
+        if (method.getDeclaringType().isAnnotationPresent(Blocking.class)) {
+            return true;
+        }
+        if (method.getDeclaringType().isAnnotationPresent(NonBlocking.class)) {
+            return false;
+        }
+
+        // no @Blocking or @NonBlocking, we should offload to another thread as that's MP FT default
+        return true;
+    }
+
+    private static boolean isThreadOffloadRequired(Method method, Class<?> beanClass) {
+        if (method.isAnnotationPresent(Blocking.class)) {
+            return true;
+        }
+        if (method.isAnnotationPresent(NonBlocking.class)) {
+            return false;
+        }
+
+        while (beanClass != null) {
+            if (beanClass.isAnnotationPresent(Blocking.class)) {
+                return true;
+            }
+            if (beanClass.isAnnotationPresent(NonBlocking.class)) {
+                return false;
+            }
+            beanClass = beanClass.getSuperclass();
+        }
+
+        // no @Blocking or @NonBlocking, we should offload to another thread as that's MP FT default
+        return true;
+    }
 }
