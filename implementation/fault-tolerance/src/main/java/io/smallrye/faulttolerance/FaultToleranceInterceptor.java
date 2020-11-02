@@ -80,7 +80,6 @@ import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
-import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MetricsProvider;
@@ -123,6 +122,7 @@ public class FaultToleranceInterceptor {
             FallbackHandlerProvider fallbackHandlerProvider,
             MetricsProvider metricsProvider,
             ExecutorHolder executorHolder,
+            RequestContextIntegration requestContextIntegration,
             CircuitBreakerMaintenanceImpl cbMaintenance) {
         this.interceptedBean = interceptedBean;
         this.operationProvider = operationProvider;
@@ -131,7 +131,7 @@ public class FaultToleranceInterceptor {
         this.metricsProvider = metricsProvider;
         asyncExecutor = executorHolder.getAsyncExecutor();
         timer = executorHolder.getTimer();
-        requestContextController = RequestContextControllerProvider.load().get();
+        requestContextController = requestContextIntegration.get();
         this.cbMaintenance = cbMaintenance;
     }
 
