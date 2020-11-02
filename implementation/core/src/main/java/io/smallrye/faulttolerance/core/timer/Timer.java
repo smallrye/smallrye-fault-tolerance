@@ -24,8 +24,6 @@ public final class Timer {
 
     private static final AtomicInteger COUNTER = new AtomicInteger(0);
 
-    private static final TimerRunnableWrapper RUNNABLE_WRAPPER = TimerRunnableWrapper.load();
-
     private static final Comparator<TimerTask> TIMER_TASK_COMPARATOR = (o1, o2) -> {
         if (o1 == o2) {
             // two different instances are never equal
@@ -36,6 +34,8 @@ public final class Timer {
         // with `equals` (see also above)
         return o1.startTime <= o2.startTime ? -1 : 1;
     };
+
+    private final TimerRunnableWrapper runnableWrapper = TimerRunnableWrapper.load();
 
     private final SortedSet<TimerTask> tasks;
 
@@ -94,7 +94,7 @@ public final class Timer {
 
     public TimerTask schedule(long delayInMillis, Runnable runnable) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        TimerTask task = new TimerTask(startTime, RUNNABLE_WRAPPER.wrap(runnable), tasks::remove);
+        TimerTask task = new TimerTask(startTime, runnableWrapper.wrap(runnable), tasks::remove);
         tasks.add(task);
         LockSupport.unpark(thread);
         return task;

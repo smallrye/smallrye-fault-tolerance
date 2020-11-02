@@ -103,6 +103,8 @@ public class FaultToleranceExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CircuitBreakerMaintenanceImpl.class),
                 CircuitBreakerMaintenanceImpl.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(RequestContextIntegration.class),
+                RequestContextIntegration.class.getName());
     }
 
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {

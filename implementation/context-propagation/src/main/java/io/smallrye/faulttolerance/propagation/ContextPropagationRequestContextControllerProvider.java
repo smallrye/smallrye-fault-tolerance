@@ -6,7 +6,7 @@ import javax.enterprise.context.control.RequestContextController;
 import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 
 public class ContextPropagationRequestContextControllerProvider implements RequestContextControllerProvider {
-    private static final RequestContextController DUMMY = new RequestContextController() {
+    private final RequestContextController dummy = new RequestContextController() {
         @Override
         public boolean activate() {
             return false;
@@ -19,6 +19,6 @@ public class ContextPropagationRequestContextControllerProvider implements Reque
 
     @Override
     public RequestContextController get() {
-        return DUMMY;
+        return dummy;
     }
 }
