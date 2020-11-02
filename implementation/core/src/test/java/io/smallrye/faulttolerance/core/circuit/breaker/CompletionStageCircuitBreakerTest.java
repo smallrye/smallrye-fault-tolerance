@@ -9,32 +9,45 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.Collections;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
 
-/**
- * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- */
 public class CompletionStageCircuitBreakerTest {
     private static final SetOfThrowables testException = SetOfThrowables.create(Collections.singletonList(TestException.class));
 
     private TestStopwatch stopwatch;
 
+    private ExecutorService executor;
+
     @BeforeEach
     public void setUp() {
         stopwatch = new TestStopwatch();
+
+        executor = Executors.newSingleThreadExecutor();
+    }
+
+    @AfterEach
+    public void tearDown() throws InterruptedException {
+        executor.shutdownNow();
+        executor.awaitTermination(1, TimeUnit.SECONDS);
     }
 
     @Test
     public void test1() throws Exception {
-        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
+        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
                 testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch);
 
@@ -86,7 +99,8 @@ public class CompletionStageCircuitBreakerTest {
 
     @Test
     public void test2() throws Exception {
-        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
+        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
                 testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch);
 
@@ -120,7 +134,8 @@ public class CompletionStageCircuitBreakerTest {
     public void shouldTreatCompletionStageFailureAsCBFailure() throws Exception {
         TestException exception = new TestException();
 
-        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(invocation(), "test invocation",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
+        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
                 testException, SetOfThrowables.EMPTY,
                 1000, 4, 0.5, 2, stopwatch);
 
