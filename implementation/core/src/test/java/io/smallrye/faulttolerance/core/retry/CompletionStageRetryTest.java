@@ -8,15 +8,33 @@ import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetryTest {
+    private ExecutorService executor;
+
+    @BeforeEach
+    public void setUp() {
+        executor = Executors.newSingleThreadExecutor();
+    }
+
+    @AfterEach
+    public void tearDown() throws InterruptedException {
+        executor.shutdownNow();
+        executor.awaitTermination(1, TimeUnit.SECONDS);
+    }
 
     @Test
     public void shouldNotRetryOnSuccess() throws Exception {
@@ -26,7 +44,8 @@ public class CompletionStageRetryTest {
                     invocationCount.incrementAndGet();
                     return CompletableFuture.supplyAsync(() -> "shouldNotRetryOnSuccess");
                 });
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldNotRetryOnSuccess",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldNotRetryOnSuccess",
                 SetOfThrowables.ALL, SetOfThrowables.EMPTY,
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
@@ -36,7 +55,7 @@ public class CompletionStageRetryTest {
     }
 
     @Test
-    public void shouldPropagateAbortOnError() throws Exception {
+    public void shouldPropagateAbortOnError() {
         RuntimeException error = new RuntimeException("forced");
 
         AtomicInteger invocationCount = new AtomicInteger(0);
@@ -47,7 +66,8 @@ public class CompletionStageRetryTest {
                         throw error;
                     });
                 });
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldPropagateAbortOnError",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnError",
                 SetOfThrowables.ALL, SetOfThrowables.create(Collections.singletonList(RuntimeException.class)),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
@@ -58,7 +78,7 @@ public class CompletionStageRetryTest {
     }
 
     @Test
-    public void shouldPropagateAbortOnErrorInCSCreation() throws Exception {
+    public void shouldPropagateAbortOnErrorInCSCreation() {
         RuntimeException error = new RuntimeException("forced");
 
         AtomicInteger invocationCount = new AtomicInteger(0);
@@ -67,7 +87,8 @@ public class CompletionStageRetryTest {
                     invocationCount.incrementAndGet();
                     throw error;
                 });
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldPropagateAbortOnErrorInCSCreation",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnErrorInCSCreation",
                 SetOfThrowables.ALL, SetOfThrowables.create(Collections.singletonList(RuntimeException.class)),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
@@ -91,7 +112,8 @@ public class CompletionStageRetryTest {
                         return completedFuture("shouldRetryOnce");
                     }
                 });
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryOnce",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnce",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
@@ -116,7 +138,8 @@ public class CompletionStageRetryTest {
                         }
                     });
                 });
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryOnceOnCsFailure",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnceOnCsFailure",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
@@ -141,7 +164,8 @@ public class CompletionStageRetryTest {
                         }
                     });
                 });
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryMaxTimesAndSucceed",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
@@ -151,7 +175,7 @@ public class CompletionStageRetryTest {
     }
 
     @Test
-    public void shouldRetryMaxTimesAndFail() throws Exception {
+    public void shouldRetryMaxTimesAndFail() {
         RuntimeException error = new RuntimeException("forced");
 
         AtomicInteger invocationCount = new AtomicInteger(0);
@@ -160,7 +184,8 @@ public class CompletionStageRetryTest {
                     invocationCount.incrementAndGet();
                     throw error;
                 }));
-        CompletionStageRetry<String> retry = new CompletionStageRetry<>(invocation, "shouldRetryMaxTimesAndSucceed",
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
                 SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
