@@ -17,7 +17,8 @@ public final class Invocation<V> implements FaultToleranceStrategy<V> {
     }
 
     private Invocation() {
-    } // avoid instantiation
+        // avoid instantiation
+    }
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {

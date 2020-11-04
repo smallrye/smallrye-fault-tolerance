@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.internal;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.inject.Singleton;
 
@@ -16,11 +16,11 @@ public class StrategyCache {
 
     @SuppressWarnings("unchecked")
     public <V> FaultToleranceStrategy<V> getStrategy(InterceptionPoint point,
-            Function<InterceptionPoint, FaultToleranceStrategy<V>> producer) {
-        return (FaultToleranceStrategy<V>) strategies.computeIfAbsent(point, producer);
+            Supplier<FaultToleranceStrategy<V>> producer) {
+        return (FaultToleranceStrategy<V>) strategies.computeIfAbsent(point, ignored -> producer.get());
     }
 
-    public MetricsRecorder getMetrics(InterceptionPoint point, Function<InterceptionPoint, MetricsRecorder> producer) {
-        return metricsRecorders.computeIfAbsent(point, producer);
+    public MetricsRecorder getMetrics(InterceptionPoint point, Supplier<MetricsRecorder> producer) {
+        return metricsRecorders.computeIfAbsent(point, ignored -> producer.get());
     }
 }
