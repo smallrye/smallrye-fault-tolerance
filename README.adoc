@@ -57,6 +57,30 @@ In such case, the `@Asynchronous` annotation becomes optional.
 
 We also recommend to avoid `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 
+==== Additional asynchronous types
+
+MicroProfile Fault Tolerance supports asynchronous fault tolerance for methods that return `CompletionStage`.
+(The `Future` type is not truly asynchronous, so we won't take it into account here.)
+SmallRye Fault Tolerance adds support for additional asynchronous types:
+
+* Mutiny: `Uni`
+* RxJava: `Single`, `Maybe`, `Completable`
+* Reactor: `Mono`
+
+These types are treated just like `CompletionStage`, so everything that works for `CompletionStage` works for these types as well.
+Stream-like types (`Multi`, `Observable`, `Flowable`, `Flux`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
+
+The implementation is based on the https://github.com/smallrye/smallrye-reactive-utils/tree/master/reactive-converters[SmallRye Reactive Converters] project.
+For each library, add the corresponding converter dependency:
+
+* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye.reactive:smallrye-reactive-converter-mutiny`
+* https://github.com/ReactiveX/RxJava/tree/1.x[RxJava 1]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava1`
+* https://github.com/ReactiveX/RxJava/tree/2.x[RxJava 2]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava2`
+* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava3`
+* https://projectreactor.io/[Reactor]: `io.smallrye.reactive:smallrye-reactive-converter-reactor`
+
+If you use SmallRye Fault Tolerance integrated in some runtime, it's possible that the runtime already provides the correct integration.
+
 === Integration
 
 ==== Thread pool
