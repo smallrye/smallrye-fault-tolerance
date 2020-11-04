@@ -17,7 +17,7 @@ package io.smallrye.faulttolerance.config;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.concurrent.CompletionStage;
+import java.util.StringJoiner;
 import java.util.concurrent.Future;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -36,6 +36,8 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.AsyncTypes;
+import io.smallrye.reactive.converters.ReactiveTypeConverter;
 
 /**
  * Fault tolerance operation metadata.
@@ -49,7 +51,7 @@ public class FaultToleranceOperation {
                 isAsync(annotatedMethod),
                 isBlocking(annotatedMethod) || isNonBlocking(annotatedMethod),
                 isThreadOffloadRequired(annotatedMethod),
-                returnsCompletionStage(annotatedMethod),
+                returnType(annotatedMethod),
                 getConfig(Bulkhead.class, annotatedMethod, BulkheadConfig::new),
                 getConfig(CircuitBreaker.class, annotatedMethod, CircuitBreakerConfig::new),
                 getConfig(Fallback.class, annotatedMethod, FallbackConfig::new),
@@ -62,7 +64,7 @@ public class FaultToleranceOperation {
                 isAsync(method, beanClass),
                 isBlocking(method, beanClass) || isNonBlocking(method, beanClass),
                 isThreadOffloadRequired(method, beanClass),
-                returnsCompletionStage(method),
+                returnType(method),
                 getConfig(Bulkhead.class, beanClass, method, BulkheadConfig::new),
                 getConfig(CircuitBreaker.class, beanClass, method, CircuitBreakerConfig::new),
                 getConfig(Fallback.class, beanClass, method, FallbackConfig::new),
@@ -81,10 +83,10 @@ public class FaultToleranceOperation {
     private final boolean additionalAsync;
 
     // whether thread offload is required based on presence or absence of @Blocking and @NonBlocking
-    // if the method doesn't return CompletionStage, this value is meaningless
+    // if the guarded method doesn't return CompletionStage, this value is meaningless
     private final boolean threadOffloadRequired;
 
-    private final boolean returnsCompletionStage;
+    private final Class<?> returnType;
 
     private final BulkheadConfig bulkhead;
 
@@ -101,7 +103,7 @@ public class FaultToleranceOperation {
             boolean async,
             boolean additionalAsync,
             boolean threadOffloadRequired,
-            boolean returnsCompletionStage,
+            Class<?> returnType,
             BulkheadConfig bulkhead,
             CircuitBreakerConfig circuitBreaker,
             FallbackConfig fallback,
@@ -112,7 +114,7 @@ public class FaultToleranceOperation {
         this.async = async;
         this.additionalAsync = additionalAsync;
         this.threadOffloadRequired = threadOffloadRequired;
-        this.returnsCompletionStage = returnsCompletionStage;
+        this.returnType = returnType;
         this.bulkhead = bulkhead;
         this.circuitBreaker = circuitBreaker;
         this.fallback = fallback;
@@ -132,8 +134,8 @@ public class FaultToleranceOperation {
         return threadOffloadRequired;
     }
 
-    public boolean returnsCompletionStage() {
-        return returnsCompletionStage;
+    public Class<?> getReturnType() {
+        return returnType;
     }
 
     public boolean hasBulkhead() {
@@ -205,11 +207,11 @@ public class FaultToleranceOperation {
     public void validate() {
         if (async && !isAcceptableAsyncReturnType(method.getReturnType())) {
             throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method
-                    + ": must return java.util.concurrent.Future or java.util.concurrent.CompletionStage");
+                    + ": must return java.util.concurrent.Future or " + describeAsyncReturnTypes());
         }
-        if (additionalAsync && !isProperAsyncReturnType(method.getReturnType())) {
+        if (additionalAsync && !AsyncTypes.isKnown(method.getReturnType())) {
             throw new FaultToleranceDefinitionException("Invalid @Blocking/@NonBlocking on " + method
-                    + ": must return java.util.concurrent.CompletionStage");
+                    + ": must return " + describeAsyncReturnTypes());
         }
         if (bulkhead != null) {
             bulkhead.validate();
@@ -229,11 +231,7 @@ public class FaultToleranceOperation {
     }
 
     private boolean isAcceptableAsyncReturnType(Class<?> returnType) {
-        return Future.class.equals(returnType) || CompletionStage.class.equals(returnType);
-    }
-
-    private boolean isProperAsyncReturnType(Class<?> returnType) {
-        return CompletionStage.class.equals(returnType);
+        return Future.class.equals(returnType) || AsyncTypes.isKnown(returnType);
     }
 
     @Override
@@ -241,12 +239,20 @@ public class FaultToleranceOperation {
         return "FaultToleranceOperation [beanClass=" + beanClass + ", method=" + method.toGenericString() + "]";
     }
 
-    private static boolean returnsCompletionStage(Method annotatedMethod) {
-        return CompletionStage.class.isAssignableFrom(annotatedMethod.getReturnType());
+    private static String describeAsyncReturnTypes() {
+        StringJoiner result = new StringJoiner(" or ");
+        for (ReactiveTypeConverter<?> converter : AsyncTypes.allKnown()) {
+            result.add(converter.type().getName());
+        }
+        return result.toString();
     }
 
-    private static boolean returnsCompletionStage(AnnotatedMethod<?> annotatedMethod) {
-        return returnsCompletionStage(annotatedMethod.getJavaMember());
+    private static Class<?> returnType(Method annotatedMethod) {
+        return annotatedMethod.getReturnType();
+    }
+
+    private static Class<?> returnType(AnnotatedMethod<?> annotatedMethod) {
+        return annotatedMethod.getJavaMember().getReturnType();
     }
 
     private static boolean isAsync(Method method, Class<?> beanClass) {
