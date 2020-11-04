@@ -33,20 +33,21 @@
 
     <properties>
         <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
-        <version.jakarta.enterprise.concurrent-api>1.1.2</version.jakarta.enterprise.concurrent-api>
         <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
         <version.mp-fault-tolerance>3.0-RC2</version.mp-fault-tolerance>
         <version.microprofile-config-api>1.4</version.microprofile-config-api>
         <version.microprofile-metrics-api>2.3.2</version.microprofile-metrics-api>
-        <version.slf4j-simple>1.7.30</version.slf4j-simple>
         <!-- smallrye-config is purely used for testing -->
         <version.smallrye-config>1.9.3</version.smallrye-config>
         <version.smallrye-metrics>2.4.4</version.smallrye-metrics>
         <version.smallrye-context-propagation>1.0.19</version.smallrye-context-propagation>
         <version.smallrye-common>1.4.1</version.smallrye-common>
+        <version.smallrye-reactive-utils>1.2.2</version.smallrye-reactive-utils>
         <version.opentracing>0.31.0</version.opentracing>
 
         <version.junit-pioneer>1.0.0</version.junit-pioneer>
+        <version.mutiny>0.10.1</version.mutiny>
+        <version.rxjava3>3.0.7</version.rxjava3>
         <version.weld-junit5>2.0.1.Final</version.weld-junit5>
 
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
@@ -96,11 +97,6 @@
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>jakarta.enterprise.concurrent</groupId>
-                <artifactId>jakarta.enterprise.concurrent-api</artifactId>
-                <version>${version.jakarta.enterprise.concurrent-api}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.eclipse.microprofile.config</groupId>
                 <artifactId>microprofile-config-api</artifactId>
                 <version>${version.microprofile-config-api}</version>
@@ -143,6 +139,11 @@
                 <version>${version.smallrye-metrics}</version>
             </dependency>
             <dependency>
+                <groupId>io.smallrye.reactive</groupId>
+                <artifactId>smallrye-reactive-converter-api</artifactId>
+                <version>${version.smallrye-reactive-utils}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.opentracing</groupId>
                 <artifactId>opentracing-api</artifactId>
                 <version>${version.opentracing}</version>
@@ -180,12 +181,6 @@
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-context-propagation-cdi</artifactId>
                 <version>${version.smallrye-context-propagation}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${version.slf4j-simple}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
