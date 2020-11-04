@@ -2,7 +2,6 @@ package io.smallrye.faulttolerance.async.types.rxjava;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,35 +18,35 @@ public class RxjavaTest {
     @Test
     public void nonblocking(HelloService service) {
         Single<String> hello = service.helloNonblocking();
-        Assertions.assertThat(hello.blockingGet()).isEqualTo("hello");
+        assertThat(hello.blockingGet()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }
 
     @Test
     public void blocking(HelloService service) {
         Single<String> hello = service.helloBlocking();
-        Assertions.assertThat(hello.blockingGet()).isEqualTo("hello");
+        assertThat(hello.blockingGet()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }
 
     @Test
     public void asynchronous(HelloService service) {
         Single<String> hello = service.helloAsynchronous();
-        Assertions.assertThat(hello.blockingGet()).isEqualTo("hello");
+        assertThat(hello.blockingGet()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }
 
     @Test
     public void asynchronousNonblocking(HelloService service) {
         Single<String> hello = service.helloAsynchronousNonblocking();
-        Assertions.assertThat(hello.blockingGet()).isEqualTo("hello");
+        assertThat(hello.blockingGet()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }
 
     @Test
     public void asynchronousBlocking(HelloService service) {
         Single<String> hello = service.helloAsynchronousBlocking();
-        Assertions.assertThat(hello.blockingGet()).isEqualTo("hello");
+        assertThat(hello.blockingGet()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }
 }
