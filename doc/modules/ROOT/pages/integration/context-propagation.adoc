@@ -1,0 +1,6 @@
+= Context Propagation
+
+{smallrye-fault-tolerance} supports MicroProfile Context Propagation for `@Asynchronous` method invocations, if 2 conditions are satistied:
+
+- the integrator provides a MicroProfile Context Propagation enabled thread pool (see xref:integration/thread-pool.adoc[Thread Pool]);
+- the `io.smallrye:smallrye-fault-tolerance-context-propagation` artifact is present (it provides alternative implementations of some internal services, loaded using `ServiceLoader`).
