@@ -1,0 +1,19 @@
+= Instructions
+
+To compile this project and install the artifacts into local Maven repository, run:
+
+[source,bash]
+----
+mvn clean install
+----
+
+This will also run all the tests and the TCK.
+
+You can use
+
+[source,bash]
+----
+mvn clean install -DskipTests
+----
+
+to skip the tests and make the build a lot faster.

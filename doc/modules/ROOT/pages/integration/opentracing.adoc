@@ -1,0 +1,11 @@
+= OpenTracing
+
+{smallrye-fault-tolerance} includes an integration between MicroProfile Context Propagation and OpenTracing.
+That is, {smallrye-fault-tolerance} includes an implementation of `ThreadContextProvider` which propagates the active OpenTracing span from one thread to another.
+This can be used when xref:integration/context-propagation.adoc[Context Propagation] is enabled.
+
+This integration is present in the `io.smallrye:smallrye-fault-tolerance-tracing-propagation` artifact.
+It is used automatically when xref:integration/context-propagation.adoc[Context Propagation] is present.
+When Context Propagation is not present, this artifact can still be in place, it just won't do anything.
+
+Technically, this doesn't even belong to {smallrye-fault-tolerance}, but it's present for historical reasons.

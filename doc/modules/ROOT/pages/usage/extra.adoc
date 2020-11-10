@@ -1,0 +1,175 @@
+= Extra Features
+
+{smallrye-fault-tolerance} provides several features that are not present in the {microprofile-fault-tolerance} specification.
+Note that these features may have experimental status, marked by the `@Experimental` annotation.
+
+== Circuit Breaker Maintenance
+
+It is sometimes useful to see the circuit breaker status from within the application, or reset it to the initial state.
+This is possible in two steps:
+
+. Give the circuit breaker a name by annotating the guarded method with `@CircuitBreakerName`:
++
+[source,java]
+----
+@Singleton
+public class MyService {
+    @CircuitBreaker
+    @CircuitBreakerName("hello-cb") // <1>
+    public String hello() {
+        ...
+    }
+}
+----
++
+<1> The circuit breaker guarding the `MyService.hello` method is given a name `hello-cb`.
+. Inject `CircuitBreakerMaintenance` and call its methods:
++
+[source,java]
+----
+@Singleton
+public class Example {
+    @Inject
+    CircuitBreakerMaintenance maintenance;
+
+    public void test() {
+        System.out.println("Circuit breaker state: "
+            + maintenance.currentState("hello-cb")); // <1>
+        maintenance.resetAll(); // <2>
+    }
+}
+----
++
+<1> Obtains current circuit breaker state.
+<2> Resets all circuit breakers to the initial state.
+
+The `CircuitBreakerMaintenance` interface provides 3 methods:
+
+. `currentState(name)`: returns current state of given circuit breaker.
+  The return type `CircuitBreakerState` is an `enum` with 3 values: `CLOSED`, `OPEN`, `HALF_OPEN`.
+. `reset(name)`: resets given circuit breaker to the initial state.
+. `resetAll()`: resets all circuit breakers in the application to the initial state.
+
+[[blocking-nonblocking]]
+== @Blocking and @NonBlocking
+
+In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, which can be placed on methods returning `Future` or `CompletionStage`, {smallrye-fault-tolerance} also supports 2 more annotations for asynchronous processing:
+
+* `@io.smallrye.common.annotation.Blocking`
+* `@io.smallrye.common.annotation.NonBlocking`
+
+These annotations can have multiple meanings, depending on context.
+{smallrye-fault-tolerance} only pays attention to these annotations if:
+
+* they are placed on methods that return `CompletionStage` (the `Future` type can't really be used for non-blocking processing);
+* they are placed on methods that apply some fault tolerance strategy (such as `@Fallback`, defined either on a method or a class).
+
+Under these circumstances, {smallrye-fault-tolerance} assigns these annotations the following meaning:
+
+* `@Blocking` means that execution of the operation will be offloaded to another thread.
+In other words, it is an equivalent of `@Asynchronous`.
+Use this annotation if the method has blocking logic, but you don't want to block the caller thread.
++
+For example:
++
+[source,java]
+----
+@Singleton
+public class MyService {
+    @Retry // <1>
+    @Blocking // <2>
+    CompletionStage<String> hello() {
+        ...
+    }
+}
+----
++
+<1> A fault tolerance annotation.
+    If this wouldn't be present, the `@Blocking` annotation would be meaningless.
+<2> Using the `@Blocking` annotation, because the method blocks and it is necessary to offload its execution to another thread.
+    With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
++
+The thread pool that is used for offloading method calls is the one provided by the runtime that integrates {smallrye-fault-tolerance}.
+* `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
+Use this annotation if the method _doesn't_ have blocking logic and you want the execution to stay on the caller thread.
++
+Note that if the guarded method also uses `@Retry` and some delay between retries is configured, only the initial execution will occur on the original thread.
+Subsequent attempts will be offloaded to an extra thread, so that the original thread is not blocked on the delay.
++
+For example:
++
+[source,java]
+----
+@Singleton
+public class MyService {
+    @Retry // <1>
+    @NonBlocking // <2>
+    CompletionStage <String> hello() {
+        ...
+    }
+}
+----
++
+<1> A fault tolerance annotation.
+If this wouldn't be present, the `@NonBlocking` annotation would be meaningless.
+<2> Using the `@NonBlocking` annotation, because the method doesn't block and offloading execution to another thread is not necessary.
+With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
+
+=== Rationale
+
+We believe that the `@Asynchronous` annotation is misnamed, because its meaning is "offload execution to another thread".
+This isn't always appropriate in modern asynchronous programming, where methods are often non-blocking and thread offload is not required.
+We believe that declaring whether the method blocks or not is a better aproach.
+
+At the same time, we designed these annotations to be used by a variety of frameworks, so {smallrye-fault-tolerance} can't eagerly intercept all methods using them.
+We also want to stay compatible with the {microprofile-fault-tolerance} specification as much as possible.
+For these reasons, {smallrye-fault-tolerance} only considers these annotations for methods that use some fault tolerance strategy.
+
+=== Recommendation
+
+For methods that use fault tolerance and return `CompletionStage`, we recommend to declare their `@Blocking` or `@NonBlocking` nature.
+In such case, the `@Asynchronous` annotation becomes optional.
+
+We also recommend to avoid `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
+
+== Additional Asynchronous Types
+
+{microprofile-fault-tolerance} supports asynchronous fault tolerance for methods that return `CompletionStage`.
+(The `Future` type is not truly asynchronous, so we won't take it into account here.)
+{smallrye-fault-tolerance} adds support for additional asynchronous types:
+
+* Mutiny: `Uni`
+* RxJava: `Single`, `Maybe`, `Completable`
+* Reactor: `Mono`
+
+These types are treated just like `CompletionStage`, so everything that works for `CompletionStage` works for these types as well.
+Stream-like types (`Multi`, `Observable`, `Flowable`, `Flux`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
+
+For example:
+
+[source,java]
+----
+@Singleton
+public class MyService {
+    @Retry
+    @NonBlocking // <1>
+    Uni<String> hello() { // <2>
+        ...
+    }
+}
+----
+
+<1> Using the `@NonBlocking` annotation described in <<blocking-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
+<2> Returning the `Uni` type from Mutiny.
+    This shows that whatever works for `CompletionStage` also works for the other async types.
+
+The implementation is based on the https://github.com/smallrye/smallrye-reactive-utils/tree/master/reactive-converters[SmallRye Reactive Converters] project.
+This means that to be able to use any particular asynchronous type, the corresponding converter library must be present.
+It is possible that the runtime you use already provides the correct integration.
+Otherwise, add a dependency to your application:
+
+* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye.reactive:smallrye-reactive-converter-mutiny`
+* https://github.com/ReactiveX/RxJava/tree/1.x[RxJava 1]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava1`
+* https://github.com/ReactiveX/RxJava/tree/2.x[RxJava 2]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava2`
+* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava3`
+* https://projectreactor.io/[Reactor]: `io.smallrye.reactive:smallrye-reactive-converter-reactor`

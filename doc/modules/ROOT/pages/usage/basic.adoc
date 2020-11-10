@@ -1,0 +1,85 @@
+= Basic Usage
+
+== Installation
+
+As an application developer, you don't have to "install" {smallrye-fault-tolerance} in any way.
+Your chosen runtime, such as Quarkus or WildFly, already integrates {smallrye-fault-tolerance} to provide {microprofile-fault-tolerance}.
+Please refer to the documentation of your selected runtime to understand how to enable MicroProfile Fault Tolerance.
+
+If you are a framework developer, interested in integrating {smallrye-fault-tolerance}, please refer to the xref:integration/intro.adoc[integration] chapter.
+
+== Annotations
+
+{microprofile-fault-tolerance} is built on top of CDI and interceptors.
+This lets you guard method calls with selected fault tolerance strategies simply by annotating a CDI bean class or method with one of the fault tolerance annotations.
+For example:
+
+[source,java]
+----
+@Singleton // <1>
+public class MyService {
+    @Retry // <2>
+    public String hello() {
+        ...
+    }
+}
+----
+
+<1> `@Singleton` is a bean defining annotation.
+    It makes the `MyService` class a CDI bean.
+<2> `@Retry` is a fault tolerance annotation.
+    It could also be placed on the class, in which case it would apply to all methods in the class.
+
+Here, if the `hello` method throws an exception, the invocation will be retried several times, until the method returns a value.
+
+TIP: CDI beginners often expect that this will work if you create an instance manually: `new MyService()`.
+That is not the case.
+You have to let the CDI container construct an instance for you and inject it: `@Inject MyService service`.
+What you get injected is actually a proxy that implements the additional behaviors.
+
+The fault tolerance strategies present in {microprofile-fault-tolerance}, together with the corresponding annotations, are:
+
+* `@Asynchronous`: offload method execution to another thread
+* `@Bulkhead`: limit concurrent invocations
+* `@CircuitBreaker`: prevent invocations if previous invocations failed too often
+* `@Fallback`: provide alternative result in case of a failure
+* `@Retry`: retry several times in case of a failure
+* `@Timeout`: fail if the invocation takes too long
+
+We won't go into detail here.
+This is all described in the {microprofile-fault-tolerance-url}[{microprofile-fault-tolerance} specification].
+
+== Configuration
+
+The fault tolerance strategies can be configured using annotation attributes, such as:
+
+[source,java]
+----
+@Singleton
+public class MyService {
+    @Retry(maxRetries = 10, retryOn = IOException.class) // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+
+<1> Retries will only be attempted if the thrown exception was `IOException`.
+    Other exceptions will be rethrown directly.
+    Also the maximum number of retry attempts is changed to 10 (the default is 3).
+
+This is convenient, but changing such configuration requires recompilation.
+For that reason, {microprofile-fault-tolerance} also allows configuration using MicroProfile Config.
+For example:
+
+[source,properties]
+----
+com.example.MyService/hello/Retry/maxRetries=5
+----
+
+Again, this is all described in the {microprofile-fault-tolerance-url}#configuration[{microprofile-fault-tolerance} specification], so we won't go into detail here.
+
+== Metrics
+
+The {microprofile-fault-tolerance} specification describes how implementations should expose metrics over MicroProfile Metrics.
+As usual, this is described in the {microprofile-fault-tolerance-url}#_integration_with_microprofile_metrics[{microprofile-fault-tolerance} specification].
