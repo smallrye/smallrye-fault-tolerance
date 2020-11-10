@@ -1,0 +1,12 @@
+[[index]]
+= {smallrye-fault-tolerance} Documentation
+
+{smallrye-fault-tolerance} {smallrye-fault-tolerance-version} is an implementation of https://github.com/eclipse/microprofile-fault-tolerance/[Eclipse {microprofile-fault-tolerance}] {microprofile-fault-tolerance-version}.
+
+include::../nav.adoc[]
+
+Runtimes that currently use {smallrye-fault-tolerance} include:
+
+* https://quarkus.io/[Quarkus]
+* https://wildfly.org/[WildFly]
+* https://thorntail.io/[Thorntail]

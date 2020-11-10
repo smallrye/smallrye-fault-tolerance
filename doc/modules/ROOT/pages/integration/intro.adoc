@@ -1,0 +1,28 @@
+= Introduction
+
+{smallrye-fault-tolerance} is comprised of the following main artifacts:
+
+* `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance};
+* `io.smallrye:smallrye-fault-tolerance-core`: core implementations of fault tolerance strategies;
+* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance}.
+
+These artifacts must be always present, together with the following dependencies:
+
+* Jakarta CDI, Annotations and Interceptors API;
+* `org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-api`;
+* `org.eclipse.microprofile.config:microprofile-config-api` and some implementation;
+* `org.eclipse.microprofile.metrics:microprofile-metrics-api` and some implementation;
+** `io.smallrye:smallrye-metrics-api` must also be present, but this restriction will be lifted in the future;
+* `io.smallrye.reactive:smallrye-reactive-converter-api`;
+* `org.jboss.logging:jboss-logging`.
+
+Some other artifacts are provided to facilitate additional integrations.
+These are described in the subsequent sections.
+
+Most of the integration is performed automatically by the CDI Portable Extension present in {smallrye-fault-tolerance}: `io.smallrye.faulttolerance.FaultToleranceExtension`.
+Make sure the extension is active.
+The remaining integration concerns are described in the following sections:
+
+* xref:integration/thread-pool.adoc[providing a thread pool] for `@Asynchronous` methods and other asynchronous tasks;
+* xref:integration/context-propagation.adoc[enabling Context Propagation] for `@Asynchronous` methods;
+* xref:integration/opentracing.adoc[enabling OpenTracing integration] with Context Propagation.
