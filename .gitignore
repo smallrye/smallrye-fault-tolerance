@@ -62,3 +62,8 @@ client/shade/dependency-reduced-pom.xml
 
 # Maven Formatter Plugin
 .cache/
+
+# locally installed Antora
+doc/build
+doc/node_modules
+doc/package-lock.json

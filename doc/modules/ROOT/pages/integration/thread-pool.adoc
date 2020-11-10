@@ -1,0 +1,28 @@
+= Thread Pool
+
+{smallrye-fault-tolerance} expects integrators to provide a thread pool for running `@Asynchronous` methods and other asynchronous tasks.
+This integration is based on CDI.
+
+The integrator should provide a CDI bean which implements `AsyncExecutorProvider`.
+The bean should be `@Singleton`, must be marked as alternative and selected globally for the application.
+
+There is a default thread pool in case no integration is provided, but it shouldn't be used outside of tests or experiments.
+This is provided by the `AsyncExecutorProvider` default implementation, `DefaultAsyncExecutorProvider`.
+
+Integrators that are themselves Jakarta EE application servers and don't want to expose their own thread pool can subclass `DefaultAsyncExecutorProvider`.
+This at least allows customizing the `ThreadFactory`.
+
+== Configuration
+
+If the integrator doesn't provide a thread pool, the default thread pool is used as described above.
+In such case, the following configuration properties are recongized:
+
+- `io.smallrye.faulttolerance.mainThreadPoolSize`: maximum number of threads in the thread pool.
+Defaults to `100`.
+
+- `io.smallrye.faulttolerance.mainThreadPoolQueueSize`: size of the queue that the thread pool should use.
+Can be `> 0`, in which case the queue will be bounded to given size.
+Can be `0`, in which case there will be no queue and the thread pool will reject excess tasks.
+Can be `-1`, in which case the queue will be unbounded.
+Values `< -1` are an error.
+Defaults to `-1`.
