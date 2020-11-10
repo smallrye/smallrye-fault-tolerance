@@ -1,0 +1,103 @@
+= Fault Tolerance Core
+
+WARNING: Please note that everything explained here is an implementation detail.
+API stability for these interfaces and classes is _not_ guaranteed!
+This documentation is only present to provide implementation insight for people who have to debug issues or want to contribute.
+
+The core idea in {smallrye-fault-tolerance} is a `FaultToleranceStrategy`.
+It is an interface that looks like this:
+
+[source,java]
+----
+interface FaultToleranceStrategy<V> {
+    V apply(InvocationContext<V> ctx) throws Exception;
+}
+----
+
+The `InvocationContext` is a `Callable` that represents the method invocation guarded by this fault tolerance strategy.
+The fault tolerance strategy does its work around `ctx.call()`.
+It can catch exceptions, invoke `ctx.call()` multiple times, invoke something else, etc.
+As an example, let's consider this strategy, applicable to methods that return a `String`:
+
+[source,java]
+----
+public class MyStringFallback implements FaultToleranceStrategy<String> {
+    @Override
+    public String apply(InvocationContext<String> ctx) {
+        try {
+            return ctx.call();
+        } catch (Exception ignored) {
+            return "my string value";
+        }
+    }
+}
+----
+
+This is a very simple fallback mechanism, which returns a pre-defined value in case of an exception.
+
+In the {smallrye-fault-tolerance} codebase, you can find implementations of all the strategies required by {microprofile-fault-tolerance}: retry, fallback, timeout, circuit breaker or bulkhead.
+Asynchronous invocation, delegated to a thread pool, is of course also supported.
+
+When multiple fault tolerance strategies are supposed to be used to guard one method, they form a chain.
+Continuing with our simple example, adding the ability to chain with another strategy would look like this:
+
+[source,java]
+----
+public class MyStringFallback implements FaultToleranceStrategy<String> {
+    private final FaultToleranceStrategy<String> delegate;
+
+    public MyStringFallback(FaultToleranceStrategy<String> delegate) {
+        this.delegate = delegate;
+    }
+
+    @Override
+    public String apply(InvocationContext<String> ctx) {
+        try {
+            return delegate.apply(ctx);
+        } catch (Exception ignored) {
+            return "my string value";
+        }
+    }
+}
+----
+
+We see that one strategy delegates to another, passing the `InvocationContext` along.
+In fact, all the implementations in {smallrye-fault-tolerance} are written like this: they expect to be used in a chain, so they take another `FaultToleranceStrategy` to which they delegate.
+But if all strategies have this form, when is `ctx.call()` actually invoked?
+Good question!
+The ultimate `ctx.call()` invocation is done by a special fault tolerance strategy which is called, well, `Invocation`.
+
+As an example which uses real {microprofile-fault-tolerance} annotations, let's consider this method:
+
+[source,java]
+----
+@Retry(...)
+@Timeout(...)
+@Fallback(...)
+public void doSomething() {
+    ...
+}
+----
+
+The chain of fault tolerance strategies will look roughly like this:
+
+[source]
+----
+Fallback(
+    Retry(
+        Timeout(
+            Invocation(
+                // ctx.call() will happen here
+                // that will, in turn, invoke doSomething()
+            )
+        )
+    )
+)
+----
+
+The order in which the strategies are chained (or, in fact, nested) is specified by {microprofile-fault-tolerance}.
+
+Other strategies might also be present in more complex cases.
+For example, if metrics are enabled, a special strategy is used that collects metrics.
+If the method is `@Asynchronous`, a special strategy is used that offloads method execution to another thread.
+Etc.
