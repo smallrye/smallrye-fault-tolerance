@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
+import static io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 
 import java.util.concurrent.CompletableFuture;
@@ -23,6 +24,15 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) throws Exception {
+        LOG.trace("CompletionStageCircuitBreaker started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageCircuitBreaker finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) throws Exception {
         // this is the only place where `state` can be dereferenced!
         // it must be passed through as a parameter to all the state methods,
         // so that they don't see the circuit breaker moving to a different state under them
@@ -51,6 +61,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
                     ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
                     boolean failureThresholdReached = state.rollingWindow.recordSuccess();
                     if (failureThresholdReached) {
+                        LOG.trace("Failure threshold reached, circuit breaker moving to open");
                         toOpen(ctx, state);
                     }
                     result.complete(value);
@@ -75,6 +86,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
                 ? state.rollingWindow.recordFailure()
                 : state.rollingWindow.recordSuccess();
         if (failureThresholdReached) {
+            LOG.trace("Failure threshold reached, circuit breaker moving to open");
             toOpen(ctx, state);
         }
     }
@@ -84,6 +96,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
+            LOG.trace("Delay elapsed, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
             return apply(ctx);
@@ -96,6 +109,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
             delegate.apply(ctx).whenComplete((value, error) -> {
                 if (error != null) {
+                    LOG.trace("Failure while in half-open, circuit breaker moving to open");
                     ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
                     toOpen(ctx, state);
                     result.completeExceptionally(error);
@@ -104,6 +118,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
                     int successes = state.consecutiveSuccesses.incrementAndGet();
                     if (successes >= successThreshold) {
+                        LOG.trace("Success threshold reached, circuit breaker moving to closed");
                         toClosed(ctx, state);
                     }
                     result.complete(value);
@@ -112,6 +127,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
             return result;
         } catch (Throwable e) {
+            LOG.trace("Failure while in half-open, circuit breaker moving to open");
             ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
             toOpen(ctx, state);
             return failedStage(e);

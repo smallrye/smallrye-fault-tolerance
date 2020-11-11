@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.retry;
 
+import static io.smallrye.faulttolerance.core.retry.RetryLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
@@ -38,12 +39,22 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        LOG.trace("Retry started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("Retry finished");
+        }
+    }
+
+    private V doApply(InvocationContext<V> ctx) throws Exception {
         long counter = 0;
         SyncDelay delay = delayBetweenRetries.get();
         RunningStopwatch runningStopwatch = stopwatch.start();
         Throwable lastFailure = null;
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
             if (counter > 0) {
+                LOG.trace("Invocation failed, retrying");
                 ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
                 try {

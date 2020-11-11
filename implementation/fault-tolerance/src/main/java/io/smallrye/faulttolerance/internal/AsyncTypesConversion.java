@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.internal;
 
+import static io.smallrye.faulttolerance.internal.InternalLogger.LOG;
+
 import java.util.concurrent.CompletionStage;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
@@ -19,8 +21,13 @@ public class AsyncTypesConversion {
 
         @Override
         public Object apply(InvocationContext ctx) throws Exception {
-            Object result = delegate.apply(ctx);
-            return converter.toCompletionStage(result);
+            LOG.trace("AsyncTypesConversion.ToCompletionStage started");
+            try {
+                Object result = delegate.apply(ctx);
+                return converter.toCompletionStage(result);
+            } finally {
+                LOG.trace("AsyncTypesConversion.ToCompletionStage finished");
+            }
         }
     }
 
@@ -35,8 +42,13 @@ public class AsyncTypesConversion {
 
         @Override
         public Object apply(InvocationContext ctx) throws Exception {
-            CompletionStage result = (CompletionStage) delegate.apply(ctx);
-            return converter.fromCompletionStage(result);
+            LOG.trace("AsyncTypesConversion.FromCompletionStage started");
+            try {
+                CompletionStage result = (CompletionStage) delegate.apply(ctx);
+                return converter.fromCompletionStage(result);
+            } finally {
+                LOG.trace("AsyncTypesConversion.FromCompletionStage finished");
+            }
         }
     }
 }

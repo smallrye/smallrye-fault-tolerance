@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
+import static io.smallrye.faulttolerance.core.bulkhead.BulkheadLogger.LOG;
+
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
@@ -31,7 +33,17 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
+        LOG.trace("ThreadPoolBulkhead started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("ThreadPoolBulkhead finished");
+        }
+    }
+
+    private Future<V> doApply(InvocationContext<Future<V>> ctx) throws Exception {
         if (capacitySemaphore.tryAcquire()) {
+            LOG.trace("Capacity semaphore acquired, accepting task into bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
             ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
 
@@ -46,8 +58,10 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
 
             try {
                 workSemaphore.acquire();
+                LOG.trace("Work semaphore acquired, running task");
             } catch (InterruptedException e) {
                 capacitySemaphore.release();
+                LOG.trace("Capacity semaphore released, task leaving bulkhead");
                 throw new CancellationException();
             }
 
@@ -60,10 +74,13 @@ public class ThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                 return delegate.apply(ctx);
             } finally {
                 workSemaphore.release();
+                LOG.trace("Work semaphore released, task finished");
                 capacitySemaphore.release();
+                LOG.trace("Capacity semaphore released, task leaving bulkhead");
                 ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
             }
         } else {
+            LOG.trace("Capacity semaphore not acquired, rejecting task from bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             throw bulkheadRejected();
         }
