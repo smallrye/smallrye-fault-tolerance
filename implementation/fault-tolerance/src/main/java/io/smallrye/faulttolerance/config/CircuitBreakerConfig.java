@@ -25,7 +25,6 @@ import javax.enterprise.inject.spi.AnnotatedMethod;
 
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
-import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 
@@ -49,8 +48,6 @@ public class CircuitBreakerConfig extends GenericConfig<CircuitBreaker> {
     public static final String SUCCESS_THRESHOLD = "successThreshold";
 
     public static final String SYNCHRONOUS_STATE_VALIDATION = "synchronousStateValidation";
-
-    private static final Logger LOGGER = Logger.getLogger(CircuitBreakerConfig.class);
 
     private final String circuitBreakerName;
 

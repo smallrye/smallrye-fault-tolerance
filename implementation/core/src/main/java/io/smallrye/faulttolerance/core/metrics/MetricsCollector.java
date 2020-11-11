@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.metrics;
 
+import static io.smallrye.faulttolerance.core.metrics.MetricsLogger.LOG;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -63,6 +65,15 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        LOG.trace("MetricsCollector started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("MetricsCollector finished");
+        }
+    }
+
+    private V doApply(InvocationContext<V> ctx) throws Exception {
         registerMetrics(ctx);
 
         try {

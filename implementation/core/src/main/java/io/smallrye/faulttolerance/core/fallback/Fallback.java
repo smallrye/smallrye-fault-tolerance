@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.fallback;
 
+import static io.smallrye.faulttolerance.core.fallback.FallbackLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
@@ -26,6 +27,15 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        LOG.trace("Fallback started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("Fallback finished");
+        }
+    }
+
+    private V doApply(InvocationContext<V> ctx) throws Exception {
         ctx.fireEvent(FallbackEvents.Defined.INSTANCE);
 
         Throwable failure;
@@ -43,6 +53,7 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
             throw sneakyThrow(failure);
         }
 
+        LOG.trace("Invocation failed, invoking fallback");
         ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
         FallbackContext<V> fallbackContext = new FallbackContext<>(failure, ctx);
         return fallback.call(fallbackContext);

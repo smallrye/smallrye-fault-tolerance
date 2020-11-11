@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import static io.smallrye.faulttolerance.core.timeout.TimeoutLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +18,15 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        LOG.trace("CompletionStageTimeout started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageTimeout finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
         ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
@@ -24,6 +34,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         AtomicBoolean completedWithTimeout = new AtomicBoolean(false);
         Runnable onTimeout = () -> {
             if (completedWithTimeout.compareAndSet(false, true)) {
+                LOG.trace("Invocation timed out");
                 ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
                 result.completeExceptionally(timeoutException(description));
             }

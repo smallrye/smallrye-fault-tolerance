@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
+import static io.smallrye.faulttolerance.core.bulkhead.BulkheadLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 
 import java.util.Deque;
@@ -26,7 +27,17 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        LOG.trace("CompletionStageBulkhead started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageBulkhead finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         if (capacitySemaphore.tryAcquire()) {
+            LOG.trace("Capacity semaphore acquired, accepting task into bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
             ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
 
@@ -35,6 +46,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             runQueuedTask();
             return task.result;
         } else {
+            LOG.trace("Capacity semaphore not acquired, rejecting task from bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             return failedStage(bulkheadRejected());
         }
@@ -48,8 +60,10 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
         CompletionStageBulkheadTask queuedTask = queue.pollFirst();
         if (queuedTask != null) {
             if (workSemaphore.tryAcquire()) {
+                LOG.trace("Work semaphore acquired, running task");
                 queuedTask.run();
             } else {
+                LOG.trace("Work semaphore not acquired, putting task to queue");
                 queue.addFirst(queuedTask);
             }
         }
@@ -97,7 +111,9 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
 
         private void releaseSemaphores() {
             workSemaphore.release();
+            LOG.trace("Work semaphore released, task finished");
             capacitySemaphore.release();
+            LOG.trace("Capacity semaphore released, task leaving bulkhead");
         }
     }
 }
