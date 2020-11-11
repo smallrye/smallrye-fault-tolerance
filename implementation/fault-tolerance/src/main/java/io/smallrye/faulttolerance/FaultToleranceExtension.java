@@ -16,6 +16,8 @@
 
 package io.smallrye.faulttolerance;
 
+import static io.smallrye.faulttolerance.CdiLogger.LOG;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
@@ -40,7 +42,6 @@ import javax.enterprise.inject.spi.AnnotatedMethod;
 import javax.enterprise.inject.spi.AnnotatedType;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
-import javax.enterprise.inject.spi.DefinitionException;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessManagedBean;
@@ -53,7 +54,6 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
-import org.jboss.logging.Logger;
 
 import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
@@ -65,8 +65,6 @@ import io.smallrye.faulttolerance.metrics.MetricsProvider;
  */
 public class FaultToleranceExtension implements Extension {
 
-    private static final Logger LOGGER = Logger.getLogger(FaultToleranceExtension.class);
-
     /**
      * @see #collectFaultToleranceOperations(ProcessManagedBean)
      */
@@ -75,8 +73,8 @@ public class FaultToleranceExtension implements Extension {
     private final ConcurrentMap<String, Set<String>> existingCircuitBreakerNames = new ConcurrentHashMap<>();
 
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
-        LOGGER.infof("MicroProfile: Fault Tolerance activated (SmallRye Fault Tolerance version: %s)",
-                getImplementationVersion().orElse("unknown"));
+        LOG.activated(getImplementationVersion().orElse("unknown"));
+
         // @Blocking and @NonBlocking alone do _not_ trigger the fault tolerance interceptor,
         // only in combination with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
@@ -133,7 +131,7 @@ public class FaultToleranceExtension implements Extension {
             FaultToleranceOperation operation = FaultToleranceOperation.of(annotatedMethod);
             if (operation.isLegitimate()) {
                 operation.validate();
-                LOGGER.debugf("Found %s", operation);
+                LOG.debug("Found " + operation);
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()),
                         operation);
 
@@ -149,8 +147,8 @@ public class FaultToleranceExtension implements Extension {
     void validate(@Observes AfterDeploymentValidation event) {
         for (Map.Entry<String, Set<String>> entry : existingCircuitBreakerNames.entrySet()) {
             if (entry.getValue().size() > 1) {
-                event.addDeploymentProblem(new DefinitionException("Multiple circuit breakers have the same name '"
-                        + entry.getKey() + "': " + entry.getValue()));
+                event.addDeploymentProblem(LOG.multipleCircuitBreakersWithTheSameName(
+                        entry.getKey(), entry.getValue()));
             }
         }
     }
@@ -180,7 +178,7 @@ public class FaultToleranceExtension implements Extension {
                         return Optional.ofNullable(properties.getProperty("version"));
                     }
                 } catch (IOException e) {
-                    LOGGER.debug("Unable to detect SmallRye Fault Tolerance version");
+                    LOG.debug("Unable to detect SmallRye Fault Tolerance version");
                 }
                 return Optional.empty();
             }

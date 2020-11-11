@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core;
 
+import static io.smallrye.faulttolerance.core.CoreLogger.LOG;
+
 import java.util.concurrent.Callable;
 
 /**
@@ -22,6 +24,7 @@ public final class Invocation<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        LOG.trace("Invoking guarded method");
         return ctx.call();
     }
 }

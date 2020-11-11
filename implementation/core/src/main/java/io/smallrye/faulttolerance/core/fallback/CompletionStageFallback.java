@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.fallback;
 
+import static io.smallrye.faulttolerance.core.fallback.FallbackLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
 
@@ -18,6 +19,15 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        LOG.trace("CompletionStageFallback started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageFallback finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         ctx.fireEvent(FallbackEvents.Defined.INSTANCE);
 
         CompletableFuture<V> result = new CompletableFuture<>();
@@ -46,6 +56,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
             }
 
             try {
+                LOG.trace("Invocation failed, invoking fallback");
                 ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
                 FallbackContext<CompletionStage<V>> fallbackContext = new FallbackContext<>(exception, ctx);
                 propagateCompletion(fallback.call(fallbackContext), result);

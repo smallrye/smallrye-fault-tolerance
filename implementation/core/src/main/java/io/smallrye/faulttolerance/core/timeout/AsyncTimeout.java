@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import static io.smallrye.faulttolerance.core.timeout.TimeoutLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
@@ -21,19 +22,26 @@ import io.smallrye.faulttolerance.core.InvocationContext;
  * as a result of {@code TimeoutEvent}. Both might happen, and whichever happens first gets to decide.
  * That's why we take extra care to make sure that there's only one place where the exception is created.
  */
-// the constructor takes `FaultToleranceStrategy` instead of `Timeout` so that it's possible to insert
-// `Tracer` in between. When we replace `Tracer` with proper logging, this can be fixed.
 public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
     private final FaultToleranceStrategy<Future<V>> delegate;
     private final Executor executor;
 
-    public AsyncTimeout(FaultToleranceStrategy<Future<V>> delegate, Executor executor) {
+    public AsyncTimeout(Timeout<Future<V>> delegate, Executor executor) {
         this.delegate = delegate;
         this.executor = checkNotNull(executor, "Executor must be set");
     }
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) throws Exception {
+        LOG.trace("AsyncTimeout started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("AsyncTimeout finished");
+        }
+    }
+
+    private Future<V> doApply(InvocationContext<Future<V>> ctx) throws Exception {
         AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>(() -> delegate.apply(ctx));
         ctx.registerEventHandler(TimeoutEvents.AsyncTimedOut.class, task::timedOut);
         executor.execute(task);

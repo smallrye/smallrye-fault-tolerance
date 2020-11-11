@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.async;
 
+import static io.smallrye.faulttolerance.core.async.AsyncLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
@@ -21,6 +22,15 @@ public class CompletionStageExecution<V> implements FaultToleranceStrategy<Compl
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        LOG.trace("CompletionStageExecution started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageExecution finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();
         executor.execute(() -> {
             try {

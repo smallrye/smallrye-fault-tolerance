@@ -3,6 +3,8 @@ package io.smallrye.faulttolerance.core.timer;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
+
 public final class TimerTask {
     static final int STATE_NEW = 0; // was scheduled, but isn't running yet
     static final int STATE_RUNNING = 1; // running on the executor
@@ -29,6 +31,7 @@ public final class TimerTask {
     // can't cancel if it's already running
     public void cancel() {
         if (state.compareAndSet(STATE_NEW, STATE_CANCELLED)) {
+            LOG.cancelledTask(this);
             onCancel.accept(this);
         }
     }
