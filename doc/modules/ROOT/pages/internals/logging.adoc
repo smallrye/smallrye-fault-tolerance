@@ -1,0 +1,14 @@
+= Logging
+
+Logging in {smallrye-fault-tolerance} is based on https://jboss-logging.github.io/jboss-logging-tools/[JBoss Logging Tools] (see also https://github.com/smallrye/smallrye/wiki/I18N-Messages-and-Logging[SmallRye instructions]).
+It's an annotation processor that takes annotated interfaces and generates logger implementations with out of the box support for message codes and internationalization.
+We use a project code of `SRFTL`.
+Message codes are divided into ranges that are defined in the `message-ranges.txt` file in the root directory.
+
+In addition to logging, JBoss Logging Tools can also be used for creating exceptions, again, with out of the box support for message codes and internationalization.
+Contrary to both documentation sites mentioned above, it _is_ possible to mix logging and exceptions in a single interface, as demonstrated by `CdiLogger`.
+However, {smallrye-fault-tolerance} doesn't use this feature yet, with the exception of `CdiLogger.multipleCircuitBreakersWithTheSameName`.
+This should be rectified in the future.
+
+Note that `DEBUG` and `TRACE` logging doesn't need message codes or internationalization, so we usually don't declare logger methods for them, unless the log message requires parameters.
+We still declare the logger interface, let it extend `BasicLogger` and use the singleton instance to log plain ``String``s.

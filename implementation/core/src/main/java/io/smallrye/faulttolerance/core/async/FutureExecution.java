@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.async;
 
+import static io.smallrye.faulttolerance.core.async.AsyncLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.ExecutionException;
@@ -23,6 +24,15 @@ public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
 
     @Override
     public Future<V> apply(InvocationContext<Future<V>> ctx) {
+        LOG.trace("FutureExecution started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("FutureExecution finished");
+        }
+    }
+
+    private Future<V> doApply(InvocationContext<Future<V>> ctx) {
         FutureTask<Future<V>> task = new FutureTask<>(() -> delegate.apply(ctx));
         executor.execute(task);
         return new Future<V>() {

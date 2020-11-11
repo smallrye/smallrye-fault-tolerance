@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
+import static io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.check;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
@@ -54,6 +55,15 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        LOG.trace("CircuitBreaker started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CircuitBreaker finished");
+        }
+    }
+
+    private V doApply(InvocationContext<V> ctx) throws Exception {
         // this is the only place where `state` can be dereferenced!
         // it must be passed through as a parameter to all the state methods,
         // so that they don't see the circuit breaker moving to a different state under them
@@ -76,10 +86,12 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     private V inClosed(InvocationContext<V> ctx, State state) throws Exception {
         try {
+            LOG.trace("Circuit breaker closed, invocation allowed");
             V result = delegate.apply(ctx);
             ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
             boolean failureThresholdReached = state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
+                LOG.trace("Failure threshold reached, circuit breaker moving to open");
                 toOpen(ctx, state);
             }
             return result;
@@ -94,6 +106,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
                     ? state.rollingWindow.recordFailure()
                     : state.rollingWindow.recordSuccess();
             if (failureThresholdReached) {
+                LOG.trace("Failure threshold reached, circuit breaker moving to open");
                 toOpen(ctx, state);
             }
             throw e;
@@ -102,9 +115,11 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     private V inOpen(InvocationContext<V> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
+            LOG.trace("Circuit breaker open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             throw new CircuitBreakerOpenException(description + " circuit breaker is open");
         } else {
+            LOG.trace("Delay elapsed, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
             return apply(ctx);
@@ -113,15 +128,18 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     private V inHalfOpen(InvocationContext<V> ctx, State state) throws Exception {
         try {
+            LOG.trace("Circuit breaker half-open, probe invocation allowed");
             V result = delegate.apply(ctx);
             ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
 
             int successes = state.consecutiveSuccesses.incrementAndGet();
             if (successes >= successThreshold) {
+                LOG.trace("Success threshold reached, circuit breaker moving to closed");
                 toClosed(ctx, state);
             }
             return result;
         } catch (Throwable e) {
+            LOG.trace("Failure while in half-open, circuit breaker moving to open");
             ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
             toOpen(ctx, state);
             throw e;

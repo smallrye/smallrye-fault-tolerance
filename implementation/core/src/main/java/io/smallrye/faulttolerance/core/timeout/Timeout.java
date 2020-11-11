@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import static io.smallrye.faulttolerance.core.timeout.TimeoutLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.check;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
@@ -24,6 +25,15 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
+        LOG.trace("Timeout started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("Timeout finished");
+        }
+    }
+
+    private V doApply(InvocationContext<V> ctx) throws Exception {
         TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis,
                 () -> ctx.fireEvent(new TimeoutEvents.AsyncTimedOut(() -> timeoutException(description))));
         TimeoutWatch watch = watcher.schedule(execution);
@@ -54,6 +64,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         }
 
         if (execution.hasTimedOut()) {
+            LOG.trace("Invocation timed out");
             ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
             throw timeoutException(description);
         }

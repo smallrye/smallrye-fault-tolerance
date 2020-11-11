@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
-import org.jboss.logging.Logger;
+import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
 
 /**
  * Allows scheduling tasks ({@code Runnable}s) to be executed on an {@code Executor} after some delay.
@@ -20,8 +20,6 @@ import org.jboss.logging.Logger;
  */
 // TODO implement a hashed wheel?
 public final class Timer {
-    private static final Logger LOG = Logger.getLogger(Timer.class);
-
     private static final AtomicInteger COUNTER = new AtomicInteger(0);
 
     private static final Comparator<TimerTask> TIMER_TASK_COMPARATOR = (o1, o2) -> {
@@ -37,6 +35,8 @@ public final class Timer {
 
     private final TimerRunnableWrapper runnableWrapper = TimerRunnableWrapper.load();
 
+    private final String name;
+
     private final SortedSet<TimerTask> tasks;
 
     private final Thread thread;
@@ -44,6 +44,9 @@ public final class Timer {
     private final AtomicBoolean running = new AtomicBoolean(true);
 
     public Timer(Executor executor) {
+        this.name = "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet();
+        LOG.created(name);
+
         this.tasks = new ConcurrentSkipListSet<>(TIMER_TASK_COMPARATOR);
         this.thread = new Thread(() -> {
             while (running.get()) {
@@ -70,6 +73,7 @@ public final class Timer {
                             tasks.remove(task);
                             if (task.state.compareAndSet(TimerTask.STATE_NEW, TimerTask.STATE_RUNNING)) {
                                 executor.execute(() -> {
+                                    LOG.runningTask(task);
                                     try {
                                         task.runnable.run();
                                     } finally {
@@ -85,10 +89,10 @@ public final class Timer {
                     }
                 } catch (Exception e) {
                     // can happen e.g. when the executor is shut down sooner than the timer
-                    LOG.warn("Unexpected exception in timer loop, ignoring", e);
+                    LOG.unexpectedExceptionInTimerLoop(e);
                 }
             }
-        }, "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet());
+        }, name);
         thread.start();
     }
 
@@ -97,6 +101,7 @@ public final class Timer {
         TimerTask task = new TimerTask(startTime, runnableWrapper.wrap(runnable), tasks::remove);
         tasks.add(task);
         LockSupport.unpark(thread);
+        LOG.scheduledTask(task, delayInMillis);
         return task;
     }
 
@@ -106,6 +111,7 @@ public final class Timer {
      */
     public void shutdown() throws InterruptedException {
         if (running.compareAndSet(true, false)) {
+            LOG.shutdown(name);
             thread.interrupt();
             thread.join();
         }

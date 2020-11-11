@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.metrics;
 
+import static io.smallrye.faulttolerance.core.metrics.MetricsLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +16,15 @@ public class CompletionStageMetricsCollector<V> extends MetricsCollector<Complet
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        LOG.trace("CompletionStageMetricsCollector started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageMetricsCollector finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         registerMetrics(ctx);
 
         CompletableFuture<V> result = new CompletableFuture<>();

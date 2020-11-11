@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.retry;
 
+import static io.smallrye.faulttolerance.core.retry.RetryLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
@@ -29,6 +30,15 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
     @Override
     public CompletionStage<V> apply(InvocationContext<CompletionStage<V>> ctx) {
+        LOG.trace("CompletionStageRetry started");
+        try {
+            return doApply(ctx);
+        } finally {
+            LOG.trace("CompletionStageRetry finished");
+        }
+    }
+
+    private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         AsyncDelay delay = delayBetweenRetries.get();
         RunningStopwatch runningStopwatch = stopwatch.start();
         return doRetry(ctx, 0, delay, runningStopwatch, null);
@@ -40,6 +50,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
             // do not sleep
             return afterDelay(ctx, attempt, delay, stopwatch, latestFailure);
         } else if (attempt <= maxRetries) {
+            LOG.trace("Invocation failed, retrying");
             ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
             CompletableFuture<V> result = new CompletableFuture<>();
