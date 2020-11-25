@@ -88,28 +88,22 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         try {
             LOG.trace("Circuit breaker closed, invocation allowed");
             V result = delegate.apply(ctx);
-            ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
-            boolean failureThresholdReached = state.rollingWindow.recordSuccess();
-            if (failureThresholdReached) {
-                LOG.trace("Failure threshold reached, circuit breaker moving to open");
-                toOpen(ctx, state);
-            }
+            inClosedHandleResult(true, ctx, state);
             return result;
         } catch (Throwable e) {
-            boolean isFailure = !isConsideredSuccess(e);
-            if (isFailure) {
-                ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-            } else {
-                ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
-            }
-            boolean failureThresholdReached = isFailure
-                    ? state.rollingWindow.recordFailure()
-                    : state.rollingWindow.recordSuccess();
-            if (failureThresholdReached) {
-                LOG.trace("Failure threshold reached, circuit breaker moving to open");
-                toOpen(ctx, state);
-            }
+            inClosedHandleResult(isConsideredSuccess(e), ctx, state);
             throw e;
+        }
+    }
+
+    final void inClosedHandleResult(boolean isSuccess, InvocationContext<V> ctx, State state) {
+        ctx.fireEvent(isSuccess ? CircuitBreakerEvents.Finished.SUCCESS : CircuitBreakerEvents.Finished.FAILURE);
+        boolean failureThresholdReached = isSuccess
+                ? state.rollingWindow.recordSuccess()
+                : state.rollingWindow.recordFailure();
+        if (failureThresholdReached) {
+            LOG.trace("Failure threshold reached, circuit breaker moving to open");
+            toOpen(ctx, state);
         }
     }
 
@@ -130,19 +124,25 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         try {
             LOG.trace("Circuit breaker half-open, probe invocation allowed");
             V result = delegate.apply(ctx);
-            ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
+            inHalfOpenHandleResult(true, ctx, state);
+            return result;
+        } catch (Throwable e) {
+            inHalfOpenHandleResult(isConsideredSuccess(e), ctx, state);
+            throw e;
+        }
+    }
 
+    final void inHalfOpenHandleResult(boolean isSuccess, InvocationContext<V> ctx, State state) {
+        ctx.fireEvent(isSuccess ? CircuitBreakerEvents.Finished.SUCCESS : CircuitBreakerEvents.Finished.FAILURE);
+        if (isSuccess) {
             int successes = state.consecutiveSuccesses.incrementAndGet();
             if (successes >= successThreshold) {
                 LOG.trace("Success threshold reached, circuit breaker moving to closed");
                 toClosed(ctx, state);
             }
-            return result;
-        } catch (Throwable e) {
+        } else {
             LOG.trace("Failure while in half-open, circuit breaker moving to open");
-            ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
             toOpen(ctx, state);
-            throw e;
         }
     }
 
