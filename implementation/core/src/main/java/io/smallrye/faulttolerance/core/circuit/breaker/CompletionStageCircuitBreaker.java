@@ -51,6 +51,8 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inClosed(InvocationContext<CompletionStage<V>> ctx, State state) {
         try {
+            LOG.trace("Circuit breaker closed, invocation allowed");
+
             CompletableFuture<V> result = new CompletableFuture<>();
 
             delegate.apply(ctx).whenComplete((value, error) -> {
@@ -77,11 +79,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private void onFailure(InvocationContext<CompletionStage<V>> ctx, State state, Throwable e) {
         boolean isFailure = !isConsideredSuccess(e);
-        if (isFailure) {
-            ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-        } else {
-            ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
-        }
+        ctx.fireEvent(isFailure ? CircuitBreakerEvents.Finished.FAILURE : CircuitBreakerEvents.Finished.SUCCESS);
         boolean failureThresholdReached = isFailure
                 ? state.rollingWindow.recordFailure()
                 : state.rollingWindow.recordSuccess();
@@ -93,6 +91,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inOpen(InvocationContext<CompletionStage<V>> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
+            LOG.trace("Circuit breaker open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
@@ -105,13 +104,26 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inHalfOpen(InvocationContext<CompletionStage<V>> ctx, State state) {
         try {
+            LOG.trace("Circuit breaker half-open, probe invocation allowed");
+
             CompletableFuture<V> result = new CompletableFuture<>();
 
             delegate.apply(ctx).whenComplete((value, error) -> {
                 if (error != null) {
-                    LOG.trace("Failure while in half-open, circuit breaker moving to open");
-                    ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-                    toOpen(ctx, state);
+                    boolean isFailure = !isConsideredSuccess(error);
+                    if (isFailure) {
+                        LOG.trace("Failure while in half-open, circuit breaker moving to open");
+                        ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
+                        toOpen(ctx, state);
+                    } else {
+                        ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
+
+                        int successes = state.consecutiveSuccesses.incrementAndGet();
+                        if (successes >= successThreshold) {
+                            LOG.trace("Success threshold reached, circuit breaker moving to closed");
+                            toClosed(ctx, state);
+                        }
+                    }
                     result.completeExceptionally(error);
                 } else {
                     ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
@@ -127,9 +139,20 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
             return result;
         } catch (Throwable e) {
-            LOG.trace("Failure while in half-open, circuit breaker moving to open");
-            ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-            toOpen(ctx, state);
+            boolean isFailure = !isConsideredSuccess(e);
+            if (isFailure) {
+                LOG.trace("Failure while in half-open, circuit breaker moving to open");
+                ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
+                toOpen(ctx, state);
+            } else {
+                ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
+
+                int successes = state.consecutiveSuccesses.incrementAndGet();
+                if (successes >= successThreshold) {
+                    LOG.trace("Success threshold reached, circuit breaker moving to closed");
+                    toClosed(ctx, state);
+                }
+            }
             return failedStage(e);
         }
     }

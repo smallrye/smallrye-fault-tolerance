@@ -97,11 +97,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             return result;
         } catch (Throwable e) {
             boolean isFailure = !isConsideredSuccess(e);
-            if (isFailure) {
-                ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-            } else {
-                ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
-            }
+            ctx.fireEvent(isFailure ? CircuitBreakerEvents.Finished.FAILURE : CircuitBreakerEvents.Finished.SUCCESS);
             boolean failureThresholdReached = isFailure
                     ? state.rollingWindow.recordFailure()
                     : state.rollingWindow.recordSuccess();
@@ -139,9 +135,20 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             }
             return result;
         } catch (Throwable e) {
-            LOG.trace("Failure while in half-open, circuit breaker moving to open");
-            ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
-            toOpen(ctx, state);
+            boolean isFailure = !isConsideredSuccess(e);
+            if (isFailure) {
+                LOG.trace("Failure while in half-open, circuit breaker moving to open");
+                ctx.fireEvent(CircuitBreakerEvents.Finished.FAILURE);
+                toOpen(ctx, state);
+            } else {
+                ctx.fireEvent(CircuitBreakerEvents.Finished.SUCCESS);
+
+                int successes = state.consecutiveSuccesses.incrementAndGet();
+                if (successes >= successThreshold) {
+                    LOG.trace("Success threshold reached, circuit breaker moving to closed");
+                    toClosed(ctx, state);
+                }
+            }
             throw e;
         }
     }
