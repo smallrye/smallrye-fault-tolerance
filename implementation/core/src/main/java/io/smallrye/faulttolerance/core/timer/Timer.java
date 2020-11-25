@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.timer;
 
+import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
+
 import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
@@ -9,8 +11,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
-
-import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
 
 /**
  * Allows scheduling tasks ({@code Runnable}s) to be executed on an {@code Executor} after some delay.
