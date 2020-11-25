@@ -1,9 +1,9 @@
 package io.smallrye.faulttolerance.core.timer;
 
+import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
 
 public final class TimerTask {
     static final int STATE_NEW = 0; // was scheduled, but isn't running yet
