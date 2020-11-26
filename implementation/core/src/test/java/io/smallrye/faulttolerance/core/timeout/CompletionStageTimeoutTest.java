@@ -1,6 +1,5 @@
 package io.smallrye.faulttolerance.core.timeout;
 
-import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,7 +17,9 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestExecutor;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class CompletionStageTimeoutTest {
     private Barrier watcherTimeoutElapsedBarrier;
@@ -40,8 +41,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void negativeTimeout() {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .immediatelyReturning(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation",
                 -1, timeoutWatcher))
@@ -50,8 +50,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void zeroTimeout() {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .immediatelyReturning(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation",
                 0, timeoutWatcher))
@@ -60,8 +59,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void immediatelyReturning_value() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .immediatelyReturning(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -72,7 +70,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void immediatelyReturning_directException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(TestException::doThrow);
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -85,8 +83,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void immediatelyReturning_completionStageException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation
-                .immediatelyReturning(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -99,25 +96,29 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void delayed_value_notTimedOut() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Barrier delayBarrier = Barrier.interruptible();
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedStage("foobar");
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
-        invocationDelayBarrier.open();
+        delayBarrier.open();
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
     }
 
     @Test
     public void delayed_value_timedOut() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Barrier delayBarrier = Barrier.interruptible();
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedStage("foobar");
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -133,17 +134,19 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void delayed_value_timedOutNoninterruptibly() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.noninterruptible();
+        Barrier delayBarrier = Barrier.noninterruptible();
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedStage("foobar");
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
         watcherTimeoutElapsedBarrier.open();
         watcherExecutionInterruptedBarrier.await();
-        invocationDelayBarrier.open();
+        delayBarrier.open();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class)
@@ -153,16 +156,17 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void delayed_value_interruptedEarly() throws Exception {
-        Barrier invocationStartBarrier = Barrier.interruptible();
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Party party = Party.create(1);
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(invocationStartBarrier,
-                invocationDelayBarrier, () -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
+            return completedStage("foobar");
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
-        invocationStartBarrier.await();
+        party.organizer().waitForAll();
         executor.interruptExecutingThread();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
@@ -171,16 +175,18 @@ public class CompletionStageTimeoutTest {
     }
 
     @Test
-    public void delayed_exception_notTimedOut() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+    public void delayed_exception_notTimedOut() {
+        Barrier delayBarrier = Barrier.interruptible();
 
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return failedStage(new TestException());
+        });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
-        invocationDelayBarrier.open();
+        delayBarrier.open();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
@@ -189,10 +195,12 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void delayed_exception_timedOut() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Barrier delayBarrier = Barrier.interruptible();
 
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return failedStage(new TestException());
+        });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -208,17 +216,19 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void delayed_exception_timedOutNoninterruptibly() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.noninterruptible();
+        Barrier delayBarrier = Barrier.noninterruptible();
 
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return failedStage(new TestException());
+        });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
         watcherTimeoutElapsedBarrier.open();
         watcherExecutionInterruptedBarrier.await();
-        invocationDelayBarrier.open();
+        delayBarrier.open();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class)
@@ -228,16 +238,17 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void delayed_exception_interruptedEarly() throws Exception {
-        Barrier invocationStartBarrier = Barrier.interruptible();
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Party party = Party.create(1);
 
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.delayed(invocationStartBarrier,
-                invocationDelayBarrier, () -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
+            return failedStage(new TestException());
+        });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
-        invocationStartBarrier.await();
+        party.organizer().waitForAll();
         executor.interruptExecutingThread();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
@@ -249,7 +260,7 @@ public class CompletionStageTimeoutTest {
     public void immediatelyReturning_completionStageTimedOut() throws Exception {
         Barrier barrier = Barrier.interruptible();
 
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.immediatelyReturning(
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(
                 () -> CompletableFuture.supplyAsync(() -> {
                     try {
                         barrier.await();

@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.byLessThan;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.timer.Timer;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class TimerStressTest {
     private static final int ITERATIONS = 100;
@@ -36,19 +36,17 @@ public class TimerStressTest {
         // precreate all threads in the pool
         // if we didn't do this, the first few iterations would be dominated
         // by the cost of creating threads
-        CountDownLatch startLatch = new CountDownLatch(POOL_SIZE);
-        CountDownLatch endLatch = new CountDownLatch(1);
+        Party party = Party.create(POOL_SIZE);
         for (int i = 0; i < POOL_SIZE; i++) {
             executor.submit(() -> {
-                startLatch.countDown();
                 try {
-                    endLatch.await();
+                    party.participant().attend();
                 } catch (InterruptedException ignored) {
                 }
             });
         }
-        startLatch.await();
-        endLatch.countDown();
+        party.organizer().waitForAll();
+        party.organizer().disband();
     }
 
     @AfterEach

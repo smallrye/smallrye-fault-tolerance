@@ -8,12 +8,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.core.util.party.Party;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
@@ -54,23 +54,22 @@ public class CompletionStageBulkheadStressTest {
     }
 
     private void iterationWithWaiting(BulkheadService service) throws InterruptedException, ExecutionException {
-        CountDownLatch startLatch = new CountDownLatch(BulkheadService.BULKHEAD_SIZE);
-        CountDownLatch endLatch = new CountDownLatch(1);
+        Party party = Party.create(BulkheadService.BULKHEAD_SIZE);
 
         List<CompletionStage<String>> futures = new ArrayList<>();
         for (int i = 0; i < BulkheadService.BULKHEAD_SIZE + BulkheadService.BULKHEAD_QUEUE_SIZE; i++) {
-            futures.add(service.helloWithWaiting(startLatch, endLatch));
+            futures.add(service.helloWithWaiting(party.participant()));
         }
 
-        startLatch.await();
+        party.organizer().waitForAll();
 
         for (int i = 0; i < BulkheadService.BULKHEAD_SIZE * 2; i++) {
             assertThatThrownBy(() -> {
-                service.helloWithWaiting(null, null).toCompletableFuture().get();
+                service.helloWithWaiting(null).toCompletableFuture().get();
             }).isExactlyInstanceOf(ExecutionException.class).hasCauseExactlyInstanceOf(BulkheadException.class);
         }
 
-        endLatch.countDown();
+        party.organizer().disband();
 
         Set<String> results = new HashSet<>();
         for (CompletionStage<String> future : futures) {

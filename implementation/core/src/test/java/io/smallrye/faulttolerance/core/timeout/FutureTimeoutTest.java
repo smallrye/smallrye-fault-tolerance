@@ -21,8 +21,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.util.TestException;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class FutureTimeoutTest {
     private Barrier watcherTimeoutElapsedBarrier;
@@ -48,7 +50,7 @@ public class FutureTimeoutTest {
 
     @Test
     public void failOnLackOfExecutor() {
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> completedFuture("foobar"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
                 timeoutWatcher);
         assertThatThrownBy(() -> new AsyncTimeout<>(timeout, null))
@@ -73,14 +75,16 @@ public class FutureTimeoutTest {
 
     @Test
     public void delayed_value_notTimedOut() throws Exception {
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Barrier delayBarrier = Barrier.interruptible();
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> completedFuture("foobar"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedFuture("foobar");
+        });
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
                 timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
-        invocationDelayBarrier.open();
+        delayBarrier.open();
 
         Future<String> future = testThread.await();
         assertThat(future.get()).isEqualTo("foobar");
@@ -90,10 +94,12 @@ public class FutureTimeoutTest {
 
     @Test
     public void delayed_value_timedOut() throws InterruptedException {
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Barrier delayBarrier = Barrier.interruptible();
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> completedFuture("foobar"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedFuture("foobar");
+        });
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
                 timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
@@ -108,10 +114,12 @@ public class FutureTimeoutTest {
 
     @Test
     public void delayed_value_timedOutNoninterruptibly() throws InterruptedException {
-        Barrier invocationDelayBarrier = Barrier.noninterruptible();
+        Barrier delayBarrier = Barrier.noninterruptible();
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(invocationDelayBarrier,
-                () -> completedFuture("foobar"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedFuture("foobar");
+        });
 
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
                 timeoutWatcher);
@@ -124,29 +132,30 @@ public class FutureTimeoutTest {
                 .hasMessage("test invocation timed out");
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse(); // watcher should not be canceled if it caused the stop
 
-        invocationDelayBarrier.open();
+        delayBarrier.open();
     }
 
     @Test
     public void delayed_value_cancelled() throws InterruptedException {
-        Barrier invocationStartBarrier = Barrier.interruptible();
-        Barrier invocationDelayBarrier = Barrier.interruptible();
+        Party party = Party.create(1);
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(invocationStartBarrier, invocationDelayBarrier,
-                () -> completedFuture("foobar"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
+            return completedFuture("foobar");
+        });
 
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
                 timeoutWatcher);
         TestThread<Future<String>> testThread = runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
 
-        invocationStartBarrier.await();
+        party.organizer().waitForAll();
         testThread.interrupt();
 
         assertThatThrownBy(testThread::await)
                 .isExactlyInstanceOf(InterruptedException.class);
         assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse(); // watcher should not be canceled if it caused the stop
 
-        invocationDelayBarrier.open();
+        party.organizer().disband(); // not stricly necessary, but would cause tearDown to wait
     }
 
     @Test
@@ -245,7 +254,7 @@ public class FutureTimeoutTest {
     }
 
     private TestThread<Future<String>> runAsyncTimeoutImmediately(Callable<Future<String>> action) {
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(action);
+        TestInvocation<Future<String>> invocation = TestInvocation.of(action);
         Timeout<Future<String>> timeout = new Timeout<>(invocation, "test invocation", 1000,
                 timeoutWatcher);
         return runOnTestThread(new AsyncTimeout<>(timeout, asyncExecutor));
