@@ -116,11 +116,17 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             LOG.trace("Delay elapsed, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return apply(ctx);
+            return doApply(ctx);
         }
     }
 
     private V inHalfOpen(InvocationContext<V> ctx, State state) throws Exception {
+        if (state.probeAttempts.incrementAndGet() > successThreshold) {
+            LOG.trace("Circuit breaker half-open, invocation prevented");
+            ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
+            throw new CircuitBreakerOpenException(description + " circuit breaker is half-open");
+        }
+
         try {
             LOG.trace("Circuit breaker half-open, probe invocation allowed");
             V result = delegate.apply(ctx);
@@ -177,6 +183,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         final int id;
         RollingWindow rollingWindow; // only consulted in CLOSED
         RunningStopwatch runningStopwatch; // only consulted in OPEN
+        AtomicInteger probeAttempts; // only consulted in HALF_OPEN
         AtomicInteger consecutiveSuccesses; // only consulted in HALF_OPEN
 
         private State(int id) {
@@ -197,6 +204,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
         static State halfOpen() {
             State result = new State(STATE_HALF_OPEN);
+            result.probeAttempts = new AtomicInteger(0);
             result.consecutiveSuccesses = new AtomicInteger(0);
             return result;
         }

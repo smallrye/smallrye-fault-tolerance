@@ -32,6 +32,12 @@
             <artifactId>smallrye-fault-tolerance</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.smallrye</groupId>
+            <artifactId>smallrye-fault-tolerance-core</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.smallrye.config</groupId>
