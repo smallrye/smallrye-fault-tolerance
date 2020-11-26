@@ -12,13 +12,14 @@ import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 
 public class FutureFallbackTest {
     @Test
     public void shouldNotFallBackOnFailingFuture() throws Exception {
         RuntimeException forcedException = new RuntimeException();
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(
+        TestInvocation<Future<String>> invocation = TestInvocation.of(
                 () -> failedFuture(forcedException));
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
@@ -29,7 +30,7 @@ public class FutureFallbackTest {
     @Test
     public void shouldFallbackOnFailureToCreateFuture() throws Exception {
         RuntimeException forcedException = new RuntimeException();
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> {
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
             throw forcedException;
         });
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
@@ -40,7 +41,7 @@ public class FutureFallbackTest {
 
     @Test
     public void shouldSucceed() throws Exception {
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> completedFuture("invocation"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> completedFuture("invocation"));
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         Future<String> future = result.await();
@@ -49,7 +50,7 @@ public class FutureFallbackTest {
 
     @Test
     public void immediatelyReturning_exceptionThenException() {
-        TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestInvocation<Void> invocation = TestInvocation.of(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> {
             throw new RuntimeException();
         }, SetOfThrowables.ALL, SetOfThrowables.EMPTY));

@@ -3,13 +3,14 @@ package io.smallrye.faulttolerance.async.compstage.bulkhead.stress;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.enterprise.context.Dependent;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
+
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 @Dependent
 public class BulkheadService {
@@ -28,10 +29,9 @@ public class BulkheadService {
 
     @Bulkhead(value = BULKHEAD_SIZE, waitingTaskQueue = BULKHEAD_QUEUE_SIZE)
     @Asynchronous
-    public CompletionStage<String> helloWithWaiting(CountDownLatch startLatch, CountDownLatch endLatch) {
-        startLatch.countDown();
+    public CompletionStage<String> helloWithWaiting(Party.Participant participant) {
         try {
-            endLatch.await();
+            participant.attend();
         } catch (InterruptedException ignored) {
         }
 
