@@ -81,11 +81,17 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             LOG.trace("Delay elapsed, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return apply(ctx);
+            return doApply(ctx);
         }
     }
 
     private CompletionStage<V> inHalfOpen(InvocationContext<CompletionStage<V>> ctx, State state) {
+        if (state.probeAttempts.incrementAndGet() > successThreshold) {
+            LOG.trace("Circuit breaker half-open, invocation prevented");
+            ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
+            return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is half-open"));
+        }
+
         try {
             LOG.trace("Circuit breaker half-open, probe invocation allowed");
 
