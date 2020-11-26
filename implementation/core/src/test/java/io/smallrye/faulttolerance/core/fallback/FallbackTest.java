@@ -9,13 +9,14 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
-import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class FallbackTest {
     @Test
     public void immediatelyReturning_valueThenValue() throws Exception {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "foobar");
+        TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> "fallback", SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         assertThat(result.await()).isEqualTo("foobar");
@@ -23,7 +24,7 @@ public class FallbackTest {
 
     @Test
     public void immediatelyReturning_valueThenException() throws Exception {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "foobar");
+        TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> TestException.doThrow(), SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         assertThat(result.await()).isEqualTo("foobar");
@@ -31,7 +32,7 @@ public class FallbackTest {
 
     @Test
     public void immediatelyReturning_exceptionThenValue() throws Exception {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> "fallback", SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         assertThat(result.await()).isEqualTo("fallback");
@@ -39,7 +40,7 @@ public class FallbackTest {
 
     @Test
     public void immediatelyReturning_exceptionThenException() {
-        TestInvocation<Void> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestInvocation<Void> invocation = TestInvocation.of(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", ctx -> {
             throw new RuntimeException();
         }, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
@@ -50,30 +51,30 @@ public class FallbackTest {
     // the tests just codify existing behavior
 
     @Test
-    public void waitingOnBarrier_interruptedInInvocation() throws InterruptedException {
-        Barrier startBarrier = Barrier.interruptible();
-        Barrier endBarrier = Barrier.interruptible();
-        TestInvocation<String> invocation = TestInvocation.waitingOnBarrier(startBarrier, endBarrier, () -> "foobar");
+    public void waitingOnParty_interruptedInInvocation() throws InterruptedException {
+        Party party = Party.create(1);
+        TestInvocation<String> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
+            return "foobar";
+        });
         TestThread<String> executingThread = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> "fallback", SetOfThrowables.ALL, SetOfThrowables.EMPTY));
-        startBarrier.await();
+        party.organizer().waitForAll();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
     }
 
     @Test
-    public void waitingOnBarrier_interruptedInFallback() throws InterruptedException {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
-        Barrier startBarrier = Barrier.interruptible();
-        Barrier endBarrier = Barrier.interruptible();
+    public void waitingOnParty_interruptedInFallback() throws InterruptedException {
+        TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
+        Party party = Party.create(1);
         FallbackFunction<String> fallback = ctx -> {
-            startBarrier.open();
-            endBarrier.await();
+            party.participant().attend();
             return "fallback";
         };
         TestThread<String> executingThread = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
-        startBarrier.await();
+        party.organizer().waitForAll();
         executingThread.interrupt();
         assertThatThrownBy(executingThread::await).isExactlyInstanceOf(InterruptedException.class);
     }
@@ -102,7 +103,7 @@ public class FallbackTest {
 
     @Test
     public void selfInterruptedInFallback_value() throws Exception {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
         FallbackFunction<String> fallback = ctx -> {
             Thread.currentThread().interrupt();
             return "fallback";
@@ -114,7 +115,7 @@ public class FallbackTest {
 
     @Test
     public void selfInterruptedInFallback_exception() {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(TestException::doThrow);
+        TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
         FallbackFunction<String> fallback = ctx -> {
             Thread.currentThread().interrupt();
             throw new RuntimeException();

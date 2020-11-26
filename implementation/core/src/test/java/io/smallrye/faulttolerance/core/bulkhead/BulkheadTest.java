@@ -7,32 +7,33 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
-/**
- * @author Michal Szynkiewicz, michal.l.szynkiewicz@gmail.com
- */
 public class BulkheadTest {
     @Test
-    public void shouldLetSingleThrough() throws Exception {
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> "shouldLetSingleThrough");
+    public void shouldLetOneIn() throws Exception {
+        TestInvocation<String> invocation = TestInvocation.of(() -> "shouldLetSingleThrough");
         SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetSingleThrough", 2);
         String result = bulkhead.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("shouldLetSingleThrough");
     }
 
     @Test
-    public void shouldLetMaxThrough() throws Exception {
+    public void shouldLetMaxIn() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
-        TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> "shouldLetMaxThrough");
+        TestInvocation<String> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return "shouldLetMaxThrough";
+        });
         SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldLetMaxThrough", 5);
 
         List<TestThread<String>> threads = new ArrayList<>();
@@ -48,26 +49,27 @@ public class BulkheadTest {
 
     @Test
     public void shouldRejectMaxPlus1() throws Exception {
-        Barrier delayBarrier = Barrier.noninterruptible();
-        CountDownLatch startedLatch = new CountDownLatch(5);
-        TestInvocation<String> invocation = TestInvocation.immediatelyReturning(() -> {
-            startedLatch.countDown();
-            delayBarrier.await();
+        int size = 5;
+
+        Party party = Party.create(size);
+        TestInvocation<String> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
             return "shouldRejectMaxPlus1";
         });
-        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldRejectMaxPlus1", 5);
+        SemaphoreBulkhead<String> bulkhead = new SemaphoreBulkhead<>(invocation, "shouldRejectMaxPlus1", size);
 
         List<TestThread<String>> threads = new ArrayList<>();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < size; i++) {
             threads.add(runOnTestThread(bulkhead));
         }
-        startedLatch.await(); // makes sure that all the threads have put their runnables into bulkhead
+
+        party.organizer().waitForAll(); // make sure all threads have entered the bulkhead
         assertThatThrownBy(() -> bulkhead.apply(new InvocationContext<>(() -> "")))
                 .isExactlyInstanceOf(BulkheadException.class);
-        delayBarrier.open();
+        party.organizer().disband();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < size; i++) {
             assertThat(threads.get(i).await()).isEqualTo("shouldRejectMaxPlus1");
         }
     }
@@ -79,7 +81,8 @@ public class BulkheadTest {
         Semaphore finishedThreadsCount = new Semaphore(0);
         List<TestThread<String>> finishedThreads = new Vector<>();
 
-        TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> {
+        TestInvocation<String> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
             letOneInSemaphore.acquire();
             // noinspection unchecked
             finishedThreads.add((TestThread<String>) Thread.currentThread());
@@ -115,7 +118,8 @@ public class BulkheadTest {
         Semaphore finishedThreadsCount = new Semaphore(0);
         List<TestThread<String>> finishedThreads = new Vector<>();
 
-        TestInvocation<String> invocation = TestInvocation.delayed(delayBarrier, () -> {
+        TestInvocation<String> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
             letOneInSemaphore.acquire();
             //noinspection unchecked
             finishedThreads.add((TestThread<String>) Thread.currentThread());
