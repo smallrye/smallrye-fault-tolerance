@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -22,8 +21,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class ThreadPoolBulkheadTest {
     private ExecutorService executor;
@@ -40,19 +41,20 @@ public class ThreadPoolBulkheadTest {
     }
 
     @Test
-    public void shouldLetSingleThrough() throws Exception {
-        TestInvocation<Future<String>> invocation = TestInvocation
-                .immediatelyReturning(() -> completedFuture("shouldLetSingleThrough"));
+    public void shouldLetOneIn() throws Exception {
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> completedFuture("shouldLetSingleThrough"));
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2);
         Future<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
     }
 
     @Test
-    public void shouldLetMaxThrough() throws Exception { // max threads + max queue
+    public void shouldLetMaxIn() throws Exception { // max threads + max queue
         Barrier delayBarrier = Barrier.noninterruptible();
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier,
-                () -> completedFuture("shouldLetMaxThrough"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedFuture("shouldLetMaxThrough");
+        });
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -70,8 +72,10 @@ public class ThreadPoolBulkheadTest {
     public void shouldRejectMaxPlus1() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier,
-                () -> completedFuture("shouldRejectMaxPlus1"));
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedFuture("shouldRejectMaxPlus1");
+        });
         ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -95,7 +99,8 @@ public class ThreadPoolBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         Semaphore letOneInSemaphore = new Semaphore(1);
 
-        TestInvocation<Future<String>> invocation = TestInvocation.delayed(delayBarrier, () -> {
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
             letOneInSemaphore.acquire();
             return completedFuture("shouldLetMaxPlus1After1Left");
         });
@@ -128,7 +133,7 @@ public class ThreadPoolBulkheadTest {
         Semaphore letOneInSemaphore = new Semaphore(0);
         Semaphore finishedThreadsCount = new Semaphore(0);
 
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> {
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
             letOneInSemaphore.acquire();
             finishedThreadsCount.release();
             throw error;
@@ -167,12 +172,10 @@ public class ThreadPoolBulkheadTest {
      */
     @Test
     public void shouldLetMaxPlus1After1Canceled() throws Exception {
-        Barrier delayBarrier = Barrier.interruptible();
-        CountDownLatch invocationsStarted = new CountDownLatch(2);
+        Party party = Party.create(2);
 
-        TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> {
-            invocationsStarted.countDown();
-            delayBarrier.await();
+        TestInvocation<Future<String>> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
             return completedFuture("shouldLetMaxPlus1After1Canceled");
         });
 
@@ -185,7 +188,7 @@ public class ThreadPoolBulkheadTest {
             threads.add(runOnTestThread(bulkhead));
         }
         // to make sure the fifth added is enqueued, wait until two are started
-        invocationsStarted.await();
+        party.organizer().waitForAll();
 
         threads.add(runOnTestThread(bulkhead));
 
@@ -200,7 +203,7 @@ public class ThreadPoolBulkheadTest {
         threads.add(runOnTestThread(bulkhead));
         waitUntilQueueSize(bulkhead, 3, 1000);
 
-        delayBarrier.open();
+        party.organizer().disband();
 
         for (TestThread<Future<String>> thread : threads) {
             assertThat(thread.await().get()).isEqualTo("shouldLetMaxPlus1After1Canceled");

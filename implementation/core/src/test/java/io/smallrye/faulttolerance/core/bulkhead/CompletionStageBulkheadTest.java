@@ -23,7 +23,9 @@ import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
+import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class CompletionStageBulkheadTest {
     private ExecutorService executor;
@@ -40,9 +42,8 @@ public class CompletionStageBulkheadTest {
     }
 
     @Test
-    public void shouldLetSingleThrough() throws ExecutionException, InterruptedException {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(
-                () -> completedFuture("shouldLetSingleThrough"));
+    public void shouldLetOneIn() throws ExecutionException, InterruptedException {
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("shouldLetSingleThrough"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetSingleThrough", 2, 2);
 
@@ -51,9 +52,8 @@ public class CompletionStageBulkheadTest {
     }
 
     @Test
-    public void shouldLetMaxThrough() throws Exception { // max threads + max queue
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(
-                () -> completedFuture("shouldLetMaxThrough"));
+    public void shouldLetMaxIn() throws Exception { // max threads + max queue
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("shouldLetMaxThrough"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetSingleThrough", 2, 3);
 
@@ -70,8 +70,10 @@ public class CompletionStageBulkheadTest {
     public void shouldRejectMaxPlus1() throws Exception {
         Barrier delayBarrier = Barrier.noninterruptible();
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(delayBarrier,
-                () -> completedFuture("shouldRejectMaxPlus1"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            return completedFuture("shouldRejectMaxPlus1");
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldRejectMaxPlus1", 2, 3);
 
@@ -99,7 +101,8 @@ public class CompletionStageBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         Semaphore letOneInSemaphore = new Semaphore(1);
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(delayBarrier, () -> {
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
             letOneInSemaphore.acquire();
             return completedFuture("shouldLetMaxPlus1After1Left");
         });
@@ -132,11 +135,11 @@ public class CompletionStageBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         Semaphore letOneInSemaphore = new Semaphore(1);
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(delayBarrier,
-                () -> {
-                    letOneInSemaphore.acquire();
-                    throw error;
-                });
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            letOneInSemaphore.acquire();
+            throw error;
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetMaxPlus1After1Failed", 2,
                 3);
@@ -170,13 +173,13 @@ public class CompletionStageBulkheadTest {
         Barrier delayBarrier = Barrier.noninterruptible();
         Semaphore letOneInSemaphore = new Semaphore(1);
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.delayed(delayBarrier,
-                () -> {
-                    letOneInSemaphore.acquire();
-                    return CompletableFuture.supplyAsync(() -> {
-                        throw error;
-                    });
-                });
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            delayBarrier.await();
+            letOneInSemaphore.acquire();
+            return CompletableFuture.supplyAsync(() -> {
+                throw error;
+            });
+        });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetMaxPlus1After1Failed", 2,
                 3);
@@ -205,12 +208,10 @@ public class CompletionStageBulkheadTest {
 
     @Test
     public void shouldNotStartNextIfCSInProgress() throws Exception {
-        Barrier startBarrier = Barrier.interruptible();
-        Barrier delayBarrier = Barrier.interruptible();
+        Party party = Party.create(1);
 
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.immediatelyReturning(() -> {
-            startBarrier.open();
-            delayBarrier.await();
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
+            party.participant().attend();
             return CompletableFuture.supplyAsync(() -> "shouldNotStartNextIfCSInProgress");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
@@ -219,12 +220,12 @@ public class CompletionStageBulkheadTest {
 
         CompletionStage<String> firstResult = bulkhead.apply(new InvocationContext<>(null));
 
-        startBarrier.await();
+        party.organizer().waitForAll();
 
         CompletionStage<String> secondResult = bulkhead.apply(new InvocationContext<>(null));
         waitUntilQueueSize(bulkhead, 1, 100);
 
-        delayBarrier.open();
+        party.organizer().disband();
 
         assertThat(firstResult.toCompletableFuture().get()).isEqualTo("shouldNotStartNextIfCSInProgress");
         assertThat(secondResult.toCompletableFuture().get()).isEqualTo("shouldNotStartNextIfCSInProgress");
