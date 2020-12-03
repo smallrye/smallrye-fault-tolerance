@@ -87,6 +87,61 @@ public class MetricsProvider {
 
             String methodName = operation.getBeanClass().getCanonicalName() + "." + operation.getMethod().getName();
             this.methodTag = new Tag("method", methodName);
+
+            registerMetrics(operation);
+        }
+
+        private void registerMetrics(FaultToleranceOperation operation) {
+            // make sure all applicable metrics for given method are registered eagerly
+            // we only touch counters and histograms, because gauges are registered eagerly otherwise
+
+            if (operation.hasFallback()) {
+                registry.counter(INVOCATIONS_TOTAL, methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_APPLIED).getCount();
+                registry.counter(INVOCATIONS_TOTAL, methodTag, RESULT_VALUE_RETURNED, FALLBACK_APPLIED).getCount();
+                registry.counter(INVOCATIONS_TOTAL, methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_APPLIED).getCount();
+                registry.counter(INVOCATIONS_TOTAL, methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_APPLIED).getCount();
+            } else {
+                registry.counter(INVOCATIONS_TOTAL, methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_DEFINED).getCount();
+                registry.counter(INVOCATIONS_TOTAL, methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_DEFINED).getCount();
+            }
+
+            if (operation.hasRetry()) {
+                registry.counter(RETRY_RETRIES_TOTAL, methodTag).getCount();
+
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_FALSE, RETRY_RESULT_VALUE_RETURNED).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_FALSE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_FALSE, RETRY_RESULT_MAX_RETRIES_REACHED).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_FALSE, RETRY_RESULT_MAX_DURATION_REACHED).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_TRUE, RETRY_RESULT_VALUE_RETURNED).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_TRUE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_RETRIES_REACHED).getCount();
+                registry.counter(RETRY_CALLS_TOTAL, methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_DURATION_REACHED).getCount();
+            }
+
+            if (operation.hasTimeout()) {
+                registry.counter(TIMEOUT_CALLS_TOTAL, methodTag, TIMED_OUT_TRUE).getCount();
+                registry.counter(TIMEOUT_CALLS_TOTAL, methodTag, TIMED_OUT_FALSE).getCount();
+
+                registry.histogram(TIMEOUT_EXECUTION_DURATION_METADATA, methodTag).getCount();
+            }
+
+            if (operation.hasCircuitBreaker()) {
+                registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, methodTag, CIRCUIT_BREAKER_RESULT_SUCCESS).getCount();
+                registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, methodTag, CIRCUIT_BREAKER_RESULT_FAILURE).getCount();
+                registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, methodTag, CIRCUIT_BREAKER_RESULT_CB_OPEN).getCount();
+
+                registry.counter(CIRCUIT_BREAKER_OPENED_TOTAL, methodTag).getCount();
+            }
+
+            if (operation.hasBulkhead()) {
+                registry.counter(BULKHEAD_CALLS_TOTAL, methodTag, BULKHEAD_RESULT_ACCEPTED).getCount();
+                registry.counter(BULKHEAD_CALLS_TOTAL, methodTag, BULKHEAD_RESULT_REJECTED).getCount();
+
+                registry.histogram(BULKHEAD_RUNNING_DURATION_METADATA, methodTag).getCount();
+                if (operation.isAsync() || operation.isAdditionalAsync()) {
+                    registry.histogram(BULKHEAD_WAITING_DURATION_METADATA, methodTag).getCount();
+                }
+            }
         }
 
         private void registerGauge(Supplier<Long> supplier, String name, String unit, Tag... tags) {
@@ -116,36 +171,24 @@ public class MetricsProvider {
 
         @Override
         public void retryValueReturned(boolean retried) {
-            // just to make sure the metric has been registered
-            registry.counter(RETRY_RETRIES_TOTAL, methodTag).getCount();
-
             registry.counter(RETRY_CALLS_TOTAL, methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
                     RETRY_RESULT_VALUE_RETURNED).inc();
         }
 
         @Override
         public void retryExceptionNotRetryable(boolean retried) {
-            // just to make sure the metric has been registered
-            registry.counter(RETRY_RETRIES_TOTAL, methodTag).getCount();
-
             registry.counter(RETRY_CALLS_TOTAL, methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
                     RETRY_RESULT_EXCEPTION_NOT_RETRYABLE).inc();
         }
 
         @Override
         public void retryMaxRetriesReached(boolean retried) {
-            // just to make sure the metric has been registered
-            registry.counter(RETRY_RETRIES_TOTAL, methodTag).getCount();
-
             registry.counter(RETRY_CALLS_TOTAL, methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
                     RETRY_RESULT_MAX_RETRIES_REACHED).inc();
         }
 
         @Override
         public void retryMaxDurationReached(boolean retried) {
-            // just to make sure the metric has been registered
-            registry.counter(RETRY_RETRIES_TOTAL, methodTag).getCount();
-
             registry.counter(RETRY_CALLS_TOTAL, methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
                     RETRY_RESULT_MAX_DURATION_REACHED).inc();
         }
@@ -158,9 +201,6 @@ public class MetricsProvider {
 
         @Override
         public void circuitBreakerFinished(CircuitBreakerEvents.Result result) {
-            // just to make sure the metric has been registered
-            registry.counter(CIRCUIT_BREAKER_OPENED_TOTAL, methodTag).getCount();
-
             Tag circuitBreakerResultTag = null;
             switch (result) {
                 case SUCCESS:
