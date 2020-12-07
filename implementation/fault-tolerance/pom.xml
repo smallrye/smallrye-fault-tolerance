@@ -93,10 +93,6 @@
             <artifactId>microprofile-metrics-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.smallrye</groupId>
-            <artifactId>smallrye-metrics-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.smallrye.reactive</groupId>
             <artifactId>smallrye-reactive-converter-api</artifactId>
         </dependency>
