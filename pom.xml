@@ -35,11 +35,14 @@
         <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
         <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
         <version.mp-fault-tolerance>3.0-RC2</version.mp-fault-tolerance>
-        <version.microprofile-config-api>1.4</version.microprofile-config-api>
-        <version.microprofile-metrics-api>2.3.2</version.microprofile-metrics-api>
+        <version.microprofile-config-api>2.0</version.microprofile-config-api>
+        <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
+        <version.microprofile-context-propagation-api>1.1</version.microprofile-context-propagation-api>
         <!-- smallrye-config is purely used for testing -->
-        <version.smallrye-config>1.10.0</version.smallrye-config>
-        <version.smallrye-metrics>2.4.4</version.smallrye-metrics>
+        <version.smallrye-config>2.0.0-RC3</version.smallrye-config>
+        <!-- smallrye-metrics is purely used for testing -->
+        <version.smallrye-metrics>3.0.0-RC2</version.smallrye-metrics>
+        <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>1.0.20</version.smallrye-context-propagation>
         <version.smallrye-common>1.5.0</version.smallrye-common>
         <version.smallrye-reactive-utils>1.2.2</version.smallrye-reactive-utils>
@@ -106,6 +109,11 @@
                 <version>${version.microprofile-metrics-api}</version>
             </dependency>
             <dependency>
+                <groupId>org.eclipse.microprofile.context-propagation</groupId>
+                <artifactId>microprofile-context-propagation-api</artifactId>
+                <version>${version.microprofile-context-propagation-api}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.eclipse.microprofile.fault-tolerance</groupId>
                 <artifactId>microprofile-fault-tolerance-api</artifactId>
                 <version>${version.mp-fault-tolerance}</version>
@@ -123,19 +131,9 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>io.smallrye</groupId>
-                <artifactId>smallrye-context-propagation</artifactId>
-                <version>${version.smallrye-context-propagation}</version>
-            </dependency>
-            <dependency>
                 <groupId>io.smallrye.common</groupId>
                 <artifactId>smallrye-common-annotation</artifactId>
                 <version>${version.smallrye-common}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.smallrye</groupId>
-                <artifactId>smallrye-metrics-api</artifactId>
-                <version>${version.smallrye-metrics}</version>
             </dependency>
             <dependency>
                 <groupId>io.smallrye.reactive</groupId>
@@ -174,6 +172,12 @@
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-metrics</artifactId>
                 <version>${version.smallrye-metrics}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-context-propagation</artifactId>
+                <version>${version.smallrye-context-propagation}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
