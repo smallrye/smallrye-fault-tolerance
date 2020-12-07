@@ -42,9 +42,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.metrics.Gauge;
 import org.eclipse.microprofile.metrics.Metadata;
-import org.eclipse.microprofile.metrics.MetricID;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricType;
 import org.eclipse.microprofile.metrics.MetricUnits;
@@ -92,18 +90,12 @@ public class MetricsProvider {
         }
 
         private void registerGauge(Supplier<Long> supplier, String name, String unit, Tag... tags) {
-            MetricID metricID = new MetricID(name, tags);
-            synchronized (registry) {
-                Gauge<?> gauge = registry.getGauges().get(metricID);
-                if (gauge == null) {
-                    Metadata metadata = Metadata.builder()
-                            .withName(name)
-                            .withType(MetricType.GAUGE)
-                            .withUnit(unit)
-                            .build();
-                    registry.register(metadata, (Gauge<Long>) supplier::get, tags);
-                }
-            }
+            Metadata metadata = Metadata.builder()
+                    .withName(name)
+                    .withType(MetricType.GAUGE)
+                    .withUnit(unit)
+                    .build();
+            registry.gauge(metadata, supplier, tags);
         }
 
         // ---
