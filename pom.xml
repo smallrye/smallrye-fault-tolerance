@@ -34,7 +34,7 @@
     <properties>
         <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
         <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
-        <version.mp-fault-tolerance>3.0-RC2</version.mp-fault-tolerance>
+        <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
         <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.1</version.microprofile-context-propagation-api>
@@ -116,7 +116,7 @@
             <dependency>
                 <groupId>org.eclipse.microprofile.fault-tolerance</groupId>
                 <artifactId>microprofile-fault-tolerance-api</artifactId>
-                <version>${version.mp-fault-tolerance}</version>
+                <version>${version.microprofile-fault-tolerance}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.osgi</groupId>
@@ -127,7 +127,7 @@
             <dependency>
                 <groupId>org.eclipse.microprofile.fault-tolerance</groupId>
                 <artifactId>microprofile-fault-tolerance-tck</artifactId>
-                <version>${version.mp-fault-tolerance}</version>
+                <version>${version.microprofile-fault-tolerance}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -238,6 +238,14 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- this is only to release SmallRye Fault Tolerance 5.0.0-RC* and should be removed afterwards -->
+    <repositories>
+        <repository>
+            <id>fault-tolerance-30-staging</id>
+            <url>https://oss.sonatype.org/content/repositories/orgeclipsemicroprofile-1400/</url>
+        </repository>
+    </repositories>
 
     <build>
         <pluginManagement>
