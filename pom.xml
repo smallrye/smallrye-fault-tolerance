@@ -48,7 +48,7 @@
         <version.opentracing>0.31.0</version.opentracing>
 
         <version.junit-pioneer>1.1.0</version.junit-pioneer>
-        <version.mutiny>0.10.1</version.mutiny>
+        <version.mutiny>0.11.0</version.mutiny>
         <version.rxjava3>3.0.7</version.rxjava3>
         <version.weld-junit5>2.0.1.Final</version.weld-junit5>
 
