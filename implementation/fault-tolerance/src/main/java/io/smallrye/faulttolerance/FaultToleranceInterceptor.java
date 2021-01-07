@@ -57,6 +57,7 @@ import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.ThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
+import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
@@ -463,10 +464,12 @@ public class FaultToleranceInterceptor {
 
         Class<?> returnType = operation.getReturnType();
 
+        FallbackFunction<V> fallbackFunction;
+
         Method fallbackMethodFinal = fallbackMethod;
         if (fallbackMethod != null) {
             boolean isDefault = fallbackMethodFinal.isDefault();
-            return ctx -> {
+            fallbackFunction = ctx -> {
                 InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
                 ExecutionContextWithInvocationContext executionContext = new ExecutionContextWithInvocationContext(
                         interceptionContext);
@@ -496,7 +499,7 @@ public class FaultToleranceInterceptor {
         } else {
             FallbackHandler<V> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
-                return ctx -> {
+                fallbackFunction = ctx -> {
                     InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
                     ExecutionContextWithInvocationContext executionContext = new ExecutionContextWithInvocationContext(
                             interceptionContext);
@@ -509,6 +512,13 @@ public class FaultToleranceInterceptor {
                 throw new FaultToleranceException("Could not obtain fallback handler for " + point);
             }
         }
+
+        if ((operation.isAsync() || operation.isAdditionalAsync()) && AsyncTypes.isKnown(returnType)
+                && operation.isThreadOffloadRequired()) {
+            fallbackFunction = new AsyncFallbackFunction(fallbackFunction, asyncExecutor);
+        }
+
+        return fallbackFunction;
     }
 
     private long getTimeInMs(GenericConfig<?> config, String configKey, String unitConfigKey) {
