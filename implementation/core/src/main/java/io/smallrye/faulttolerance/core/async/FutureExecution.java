@@ -2,7 +2,9 @@ package io.smallrye.faulttolerance.core.async;
 
 import static io.smallrye.faulttolerance.core.async.AsyncLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -49,7 +51,15 @@ public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
 
             @Override
             public boolean isDone() {
-                return task.isDone();
+                try {
+                    return task.isDone() && (task.isCancelled() || task.get().isDone());
+                } catch (InterruptedException e) {
+                    // at this point, `task.get` shouldn't block, as `task.isDone` is already true
+                    throw sneakyThrow(e);
+                } catch (CancellationException | ExecutionException e) {
+                    // only happens in `task.get`, which is only called when `task.isDone` is true
+                    return true;
+                }
             }
 
             @Override
