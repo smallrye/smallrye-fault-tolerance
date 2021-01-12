@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.util.GlobalTracerTestUtil;
 import io.smallrye.faulttolerance.util.FaultToleranceIntegrationTest;
@@ -47,8 +48,11 @@ public class TracingContextPropagationStressTest {
     }
 
     private void doTest(Service service) throws ExecutionException, InterruptedException {
-        try (Scope ignored = Service.tracer.buildSpan("parent").startActive(true)) {
+        Span span = Service.tracer.buildSpan("parent").start();
+        try (Scope ignored = Service.tracer.scopeManager().activate(span)) {
             assertThat(service.hello().toCompletableFuture().get()).isEqualTo("fallback");
+        } finally {
+            span.finish();
         }
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {

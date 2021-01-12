@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.util.GlobalTracerTestUtil;
 import io.smallrye.faulttolerance.util.FaultToleranceIntegrationTest;
@@ -43,8 +44,11 @@ public class TracingContextPropagationTest {
 
     @Test
     public void testCircuitBreakerOpens(Service service) {
-        try (Scope ignored = Service.mockTracer.buildSpan("parent").startActive(true)) {
+        Span span = Service.mockTracer.buildSpan("parent").start();
+        try (Scope ignored = Service.mockTracer.scopeManager().activate(span)) {
             assertThat(service.foo()).isEqualTo("fallback");
+        } finally {
+            span.finish();
         }
 
         List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
@@ -61,8 +65,11 @@ public class TracingContextPropagationTest {
 
     @Test
     public void testAsyncCircuitBreakerOpens(Service service) throws ExecutionException, InterruptedException {
-        try (Scope ignored = Service.mockTracer.buildSpan("parent").startActive(true)) {
+        Span span = Service.mockTracer.buildSpan("parent").start();
+        try (Scope ignored = Service.mockTracer.scopeManager().activate(span)) {
             assertThat(service.asyncFoo().toCompletableFuture().get()).isEqualTo("asyncFallback");
+        } finally {
+            span.finish();
         }
 
         List<MockSpan> mockSpans = Service.mockTracer.finishedSpans();
