@@ -11,7 +11,7 @@ These artifacts must be always present, together with the following dependencies
 * Jakarta CDI, Annotations and Interceptors API;
 * `org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-api`;
 * `org.eclipse.microprofile.config:microprofile-config-api` and some implementation;
-* `org.eclipse.microprofile.metrics:microprofile-metrics-api` and some implementation;
+* `org.eclipse.microprofile.metrics:microprofile-metrics-api` and some implementation (implementation is only required if fault tolerance metrics are enabled);
 * `io.smallrye.reactive:smallrye-reactive-converter-api`;
 * `org.jboss.logging:jboss-logging`.
 

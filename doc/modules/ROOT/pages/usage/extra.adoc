@@ -104,7 +104,7 @@ For example:
 public class MyService {
     @Retry // <1>
     @NonBlocking // <2>
-    CompletionStage <String> hello() {
+    CompletionStage<String> hello() {
         ...
     }
 }

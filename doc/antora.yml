@@ -10,4 +10,4 @@ asciidoc:
     smallrye-fault-tolerance-version: '5.0'
     microprofile-fault-tolerance: MicroProfile Fault Tolerance
     microprofile-fault-tolerance-version: '3.0'
-    microprofile-fault-tolerance-url: https://download.eclipse.org/microprofile/microprofile-fault-tolerance-3.0-RC2/microprofile-fault-tolerance-spec.html
+    microprofile-fault-tolerance-url: https://download.eclipse.org/microprofile/microprofile-fault-tolerance-3.0/microprofile-fault-tolerance-spec-3.0.html
