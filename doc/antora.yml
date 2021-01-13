@@ -1,6 +1,6 @@
 name: smallrye-fault-tolerance
 title: SmallRye Fault Tolerance
-version: 5.0.0-RC3
+version: master
 nav:
 - modules/ROOT/nav.adoc
 
