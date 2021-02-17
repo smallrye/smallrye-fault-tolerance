@@ -44,7 +44,7 @@
         <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>1.1.0</version.smallrye-context-propagation>
         <version.smallrye-common>1.5.0</version.smallrye-common>
-        <version.smallrye-reactive-utils>2.0.0</version.smallrye-reactive-utils>
+        <version.smallrye-reactive-utils>2.1.1</version.smallrye-reactive-utils>
         <version.opentracing>0.33.0</version.opentracing>
 
         <version.junit-pioneer>1.3.0</version.junit-pioneer>
