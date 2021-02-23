@@ -40,7 +40,7 @@
         <!-- smallrye-config is purely used for testing -->
         <version.smallrye-config>2.1.0</version.smallrye-config>
         <!-- smallrye-metrics is purely used for testing -->
-        <version.smallrye-metrics>3.0.1</version.smallrye-metrics>
+        <version.smallrye-metrics>3.0.2</version.smallrye-metrics>
         <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>1.1.0</version.smallrye-context-propagation>
         <version.smallrye-common>1.5.0</version.smallrye-common>
