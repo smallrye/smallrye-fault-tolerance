@@ -12,7 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.core.timer.Timer;
+import io.smallrye.faulttolerance.core.scheduler.Timer;
 
 public class TimerTest {
     private ExecutorService executor;

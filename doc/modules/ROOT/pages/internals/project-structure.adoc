@@ -11,8 +11,11 @@
   See xref:integration/context-propagation.adoc[Context Propagation integration].
 * `implementation/tracing-propagation`: Optional integration between MicroProfile Context Propagation and OpenTracing.
   See xref:integration/opentracing.adoc[OpenTracing integration].
+* `implementation/vertx`: Optional integration of the Vert.x event loop.
+  See xref:integration/event-loop.adoc[event loop integration].
 * `testsuite/basic`: Basic test suite.
   Some parts of it overlap with the Eclipse MicroProfile Fault Tolerance TCK.
-* `testsuite/integration`: Context Propagation integration test suite.
+* `testsuite/integration`: Integration test suite.
+  Includes several Context Propagation and Vert.x tests.
 * `testsuite/tck`: Runs the implementation against the Eclipse MicroProfile Fault Tolerance TCK.
 * `doc`: This documentation.
