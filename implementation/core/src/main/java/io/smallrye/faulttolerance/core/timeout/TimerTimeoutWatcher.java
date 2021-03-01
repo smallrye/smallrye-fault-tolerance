@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.timeout;
 
-import io.smallrye.faulttolerance.core.timer.Timer;
-import io.smallrye.faulttolerance.core.timer.TimerTask;
+import io.smallrye.faulttolerance.core.scheduler.Timer;
+import io.smallrye.faulttolerance.core.scheduler.TimerTask;
 
 public class TimerTimeoutWatcher implements TimeoutWatcher {
     private final Timer timer;

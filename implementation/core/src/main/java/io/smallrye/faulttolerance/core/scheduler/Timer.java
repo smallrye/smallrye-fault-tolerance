@@ -1,6 +1,6 @@
-package io.smallrye.faulttolerance.core.timer;
+package io.smallrye.faulttolerance.core.scheduler;
 
-import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
+import static io.smallrye.faulttolerance.core.scheduler.SchedulerLogger.LOG;
 
 import java.util.Comparator;
 import java.util.NoSuchElementException;
@@ -19,7 +19,7 @@ import java.util.concurrent.locks.LockSupport;
  * it gets submitted to the executor.
  */
 // TODO implement a hashed wheel?
-public final class Timer {
+public final class Timer implements Scheduler {
     private static final AtomicInteger COUNTER = new AtomicInteger(0);
 
     private static final Comparator<TimerTask> TIMER_TASK_COMPARATOR = (o1, o2) -> {
@@ -33,8 +33,6 @@ public final class Timer {
         return o1.startTime <= o2.startTime ? -1 : 1;
     };
 
-    private final TimerRunnableWrapper runnableWrapper = TimerRunnableWrapper.load();
-
     private final String name;
 
     private final SortedSet<TimerTask> tasks;
@@ -45,7 +43,7 @@ public final class Timer {
 
     public Timer(Executor executor) {
         this.name = "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet();
-        LOG.created(name);
+        LOG.createdTimer(name);
 
         this.tasks = new ConcurrentSkipListSet<>(TIMER_TASK_COMPARATOR);
         this.thread = new Thread(() -> {
@@ -73,7 +71,7 @@ public final class Timer {
                             tasks.remove(task);
                             if (task.state.compareAndSet(TimerTask.STATE_NEW, TimerTask.STATE_RUNNING)) {
                                 executor.execute(() -> {
-                                    LOG.runningTask(task);
+                                    LOG.runningTimerTask(task);
                                     try {
                                         task.runnable.run();
                                     } finally {
@@ -96,12 +94,13 @@ public final class Timer {
         thread.start();
     }
 
+    @Override
     public TimerTask schedule(long delayInMillis, Runnable runnable) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        TimerTask task = new TimerTask(startTime, runnableWrapper.wrap(runnable), tasks::remove);
+        TimerTask task = new TimerTask(startTime, SchedulerRunnableWrapper.INSTANCE.wrap(runnable), tasks::remove);
         tasks.add(task);
         LockSupport.unpark(thread);
-        LOG.scheduledTask(task, delayInMillis);
+        LOG.scheduledTimerTask(task, delayInMillis);
         return task;
     }
 
@@ -111,7 +110,7 @@ public final class Timer {
      */
     public void shutdown() throws InterruptedException {
         if (running.compareAndSet(true, false)) {
-            LOG.shutdown(name);
+            LOG.shutdownTimer(name);
             thread.interrupt();
             thread.join();
         }

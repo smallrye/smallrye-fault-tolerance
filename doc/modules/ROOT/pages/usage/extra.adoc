@@ -93,8 +93,9 @@ The thread pool that is used for offloading method calls is the one provided by 
 * `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
 Use this annotation if the method _doesn't_ have blocking logic and you want the execution to stay on the caller thread.
 +
-Note that if the guarded method also uses `@Retry` and some delay between retries is configured, only the initial execution will occur on the original thread.
-Subsequent attempts will be offloaded to an extra thread, so that the original thread is not blocked on the delay.
+Note that if the guarded method also uses `@Retry` and some delay between retries is configured, only the initial execution is guaranteed to occur on the original thread.
+Subsequent attempts may be offloaded to an extra thread, so that the original thread is not blocked on the delay.
+If the original thread is an event loop thread and event loop integration is enabled, then the event loop is used to execute subsequent retries and hence all retry attempts will also happen on the original thread.
 +
 For example:
 +

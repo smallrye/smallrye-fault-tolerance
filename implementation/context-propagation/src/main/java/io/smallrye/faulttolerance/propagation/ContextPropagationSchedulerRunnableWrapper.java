@@ -2,9 +2,9 @@ package io.smallrye.faulttolerance.propagation;
 
 import org.eclipse.microprofile.context.ThreadContext;
 
-import io.smallrye.faulttolerance.core.timer.TimerRunnableWrapper;
+import io.smallrye.faulttolerance.core.scheduler.SchedulerRunnableWrapper;
 
-public class ContextPropagationTimerRunnableWrapper implements TimerRunnableWrapper {
+public class ContextPropagationSchedulerRunnableWrapper implements SchedulerRunnableWrapper {
     private final ThreadContext threadContext = ThreadContext.builder().build();
 
     @Override

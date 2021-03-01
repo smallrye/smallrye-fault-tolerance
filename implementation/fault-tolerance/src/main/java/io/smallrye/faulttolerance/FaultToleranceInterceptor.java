@@ -68,15 +68,16 @@ import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.Jitter;
 import io.smallrye.faulttolerance.core.retry.RandomJitter;
 import io.smallrye.faulttolerance.core.retry.Retry;
+import io.smallrye.faulttolerance.core.retry.SchedulerDelay;
 import io.smallrye.faulttolerance.core.retry.SimpleBackOff;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
-import io.smallrye.faulttolerance.core.retry.TimerDelay;
+import io.smallrye.faulttolerance.core.scheduler.Scheduler;
+import io.smallrye.faulttolerance.core.scheduler.Timer;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
-import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.AsyncTypesConversion;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
@@ -108,7 +109,11 @@ public class FaultToleranceInterceptor {
 
     private final ExecutorService asyncExecutor;
 
+    // we don't want timeout watchers to be notified on an event loop thread,
+    // so for timeouts, we use Timer directly instead of going through a Scheduler
     private final Timer timer;
+
+    private final Scheduler scheduler;
 
     private final RequestContextController requestContextController;
 
@@ -131,6 +136,7 @@ public class FaultToleranceInterceptor {
         this.metricsProvider = metricsProvider;
         asyncExecutor = executorHolder.getAsyncExecutor();
         timer = executorHolder.getTimer();
+        scheduler = executorHolder.getScheduler();
         requestContextController = requestContextIntegration.get();
         this.cbMaintenance = cbMaintenance;
     }
@@ -270,7 +276,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
-                    () -> new TimerDelay(new SimpleBackOff(delayMs, jitter), timer),
+                    () -> new SchedulerDelay(new SimpleBackOff(delayMs, jitter), scheduler),
                     new SystemStopwatch());
         }
 
