@@ -5,6 +5,6 @@ import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.MessageLogger;
 
 @MessageLogger(projectCode = "SRFTL", length = 5)
-public interface FallbackLogger extends BasicLogger {
+interface FallbackLogger extends BasicLogger {
     FallbackLogger LOG = Logger.getMessageLogger(FallbackLogger.class, FallbackLogger.class.getPackage().getName());
 }

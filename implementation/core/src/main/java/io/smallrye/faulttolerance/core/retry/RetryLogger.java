@@ -5,6 +5,6 @@ import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.MessageLogger;
 
 @MessageLogger(projectCode = "SRFTL", length = 5)
-public interface RetryLogger extends BasicLogger {
+interface RetryLogger extends BasicLogger {
     RetryLogger LOG = Logger.getMessageLogger(RetryLogger.class, RetryLogger.class.getPackage().getName());
 }
