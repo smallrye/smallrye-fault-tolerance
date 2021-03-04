@@ -1,16 +1,18 @@
 package io.smallrye.faulttolerance.vertx.retry.requestcontext;
 
-import io.smallrye.faulttolerance.vertx.AbstractVertxTest;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
-import javax.enterprise.context.control.RequestContextController;
-import javax.inject.Inject;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import javax.enterprise.context.control.RequestContextController;
+import javax.inject.Inject;
+
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import io.smallrye.faulttolerance.vertx.AbstractVertxTest;
 
 public class AsyncRetryWithRequestContextOnVertxThreadTest extends AbstractVertxTest {
     @Inject

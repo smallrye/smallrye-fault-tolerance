@@ -1,17 +1,19 @@
 package io.smallrye.faulttolerance.vertx.retry.requestcontext;
 
-import io.smallrye.common.annotation.NonBlocking;
-import io.smallrye.faulttolerance.core.util.CompletionStages;
-import org.eclipse.microprofile.faulttolerance.Retry;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import java.time.temporal.ChronoUnit;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
+import org.eclipse.microprofile.faulttolerance.Retry;
+
+import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.core.util.CompletionStages;
 
 @ApplicationScoped
 public class MyService {
