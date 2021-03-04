@@ -1,9 +1,10 @@
 package io.smallrye.faulttolerance.vertx.retry.requestcontext;
 
-import javax.enterprise.context.RequestScoped;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.enterprise.context.RequestScoped;
 
 @RequestScoped
 public class MyRequestScopedService {
