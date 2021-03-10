@@ -10,7 +10,6 @@ import io.smallrye.faulttolerance.core.scheduler.SchedulerRunnableWrapper;
 import io.smallrye.faulttolerance.core.scheduler.SchedulerTask;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.ContextInternal;
 
 public final class VertxEventLoop implements EventLoop {
     @Override
@@ -22,7 +21,7 @@ public final class VertxEventLoop implements EventLoop {
     public SchedulerTask schedule(long delayInMillis, Runnable runnable) {
         Runnable wrappedRunnable = SchedulerRunnableWrapper.INSTANCE.wrap(runnable);
 
-        Vertx vertx = ContextInternal.current().owner();
+        Vertx vertx = Vertx.currentContext().owner();
         AtomicBoolean taskDone = new AtomicBoolean(false);
         AtomicReference<VertxEventLoopTask> taskRef = new AtomicReference<>();
         long timerId = vertx.setTimer(delayInMillis, ignored -> {
