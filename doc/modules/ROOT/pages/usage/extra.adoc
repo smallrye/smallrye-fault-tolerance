@@ -164,7 +164,7 @@ public class MyService {
 <2> Returning the `Uni` type from Mutiny.
     This shows that whatever works for `CompletionStage` also works for the other async types.
 
-The implementation is based on the https://github.com/smallrye/smallrye-reactive-utils/tree/master/reactive-converters[SmallRye Reactive Converters] project.
+The implementation is based on the https://github.com/smallrye/smallrye-reactive-utils/tree/main/reactive-converters[SmallRye Reactive Converters] project.
 This means that to be able to use any particular asynchronous type, the corresponding converter library must be present.
 It is possible that the runtime you use already provides the correct integration.
 Otherwise, add a dependency to your application:

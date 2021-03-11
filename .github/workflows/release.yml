@@ -39,14 +39,14 @@ jobs:
           git config --global user.name "SmallRye CI"
           git config --global user.email "smallrye@googlegroups.com"
           git checkout -b release
-          sed -i -e 's|^version: master|version: ${{steps.metadata.outputs.current-version}}|' doc/antora.yml
+          sed -i -e 's|^version: main|version: ${{steps.metadata.outputs.current-version}}|' doc/antora.yml
           sed -i -e 's|smallrye-fault-tolerance-version: .*|smallrye-fault-tolerance-version: '"'"'${{steps.metadata.outputs.current-version}}'"'"'|' doc/antora.yml
           git commit -a -m 'Update antora.yml before release'
           mvn -B release:prepare -Prelease -DreleaseVersion=${{steps.metadata.outputs.current-version}} -DdevelopmentVersion=${{steps.metadata.outputs.next-version}} -s maven-settings.xml
           git checkout ${{github.base_ref}}
           git rebase release
           mvn -B release:perform -Prelease -s maven-settings.xml
-          sed -i -e 's|^version: ${{steps.metadata.outputs.current-version}}|version: master|' doc/antora.yml
+          sed -i -e 's|^version: ${{steps.metadata.outputs.current-version}}|version: main|' doc/antora.yml
           git commit -a -m 'Update antora.yml after release'
           git push
           git push --tags
