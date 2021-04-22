@@ -35,7 +35,7 @@
 
         <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
         <version.org.jacoco.jacoco-maven-plugin>0.8.6</version.org.jacoco.jacoco-maven-plugin>
-        <version.org.pitest.pitest-maven>1.6.4</version.org.pitest.pitest-maven>
+        <version.org.pitest.pitest-maven>1.6.5</version.org.pitest.pitest-maven>
 
         <!--suppress CheckTagEmptyBody -->
         <jacoco.argLine /> <!-- will be set by the JaCoCo Maven plugin when active -->
