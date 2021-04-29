@@ -32,7 +32,7 @@
 
     <properties>
         <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
-        <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
+        <version.jakarta.interceptor-api>2.0.0</version.jakarta.interceptor-api>
         <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
         <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
