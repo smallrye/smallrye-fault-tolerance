@@ -3,61 +3,96 @@ name: SmallRye Build
 on:
   push:
     branches:
-      - main
+    - main
     paths-ignore:
-      - '.gitignore'
-      - 'CODEOWNERS'
-      - 'LICENSE'
-      - 'NOTICE'
-      - 'README*'
+    - '.gitattributes'
+    - '.gitignore'
+    - 'CODEOWNERS'
+    - 'LICENSE'
+    - 'NOTICE'
+    - 'README*'
   pull_request:
     paths-ignore:
-      - '.gitignore'
-      - 'CODEOWNERS'
-      - 'LICENSE'
-      - 'NOTICE'
-      - 'README*'
+    - '.gitattributes'
+    - '.gitignore'
+    - 'CODEOWNERS'
+    - 'LICENSE'
+    - 'NOTICE'
+    - 'README*'
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [8, 11]
-    name: build with jdk ${{matrix.java}}
-
+        java:
+        # we want: all LTS versions (that we care about), latest GA, upcoming
+        - 8
+        - 11
+        - 16
+        # https://github.com/smallrye/smallrye-fault-tolerance/issues/412
+        # - 17-ea
+        os:
+        - ubuntu-latest
+        - windows-latest
+        - macos-latest
+    runs-on: ${{ matrix.os }}
+    name: Build with JDK ${{ matrix.java }} (${{ matrix.os }})
     steps:
-      - uses: actions/checkout@v2
-        name: checkout
+    - name: Checkout
+      uses: actions/checkout@v2
 
-      - uses: actions/setup-java@v1
-        name: set up jdk ${{matrix.java}}
-        with:
-          java-version: ${{matrix.java}}
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v2
+      with:
+        distribution: adopt
+        java-version: ${{ matrix.java }}
 
-      - name: build with maven
-        run: mvn -B formatter:validate verify --file pom.xml
+    - name: Cache local Maven repository
+      uses: actions/cache@v2
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
 
-      - uses: actions/upload-artifact@v2
+    - name: Build with Maven
+      shell: bash
+      run: mvn -B formatter:validate verify --file pom.xml
+
+    - name: Upload TCK report
+      if: ${{ matrix.java == '11' && matrix.os == 'ubuntu-latest' }}
+      uses: actions/upload-artifact@v2
+      with:
         name: tck-report
-        with:
-          name: tck-report
-          path: testsuite/tck/target/surefire-reports
+        path: testsuite/tck/target/surefire-reports
 
   quality:
-    needs: [build]
-    if: github.event_name == 'push' && startsWith('smallrye', github.repository)
+    needs:
+    - build
+    if: github.event_name == 'push' && github.repository == 'smallrye/smallrye-fault-tolerance'
     runs-on: ubuntu-latest
-    name: quality
+    name: Quality
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
-        with:
-          java-version: 8
+    - name: Checkout
+      uses: actions/checkout@v2
 
-      - name: sonar
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          SONAR_TOKEN: ${{secrets.SONAR_TOKEN}}
-        run: mvn -B verify --file pom.xml -Pcoverage javadoc:javadoc sonar:sonar -Dsonar.projectKey=smallrye_smallrye-fault-tolerance -Dsonar.login=$SONAR_TOKEN
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        distribution: adopt
+        java-version: 11
+
+    - name: Cache local Maven repository
+      uses: actions/cache@v2
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Sonar
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        SONAR_TOKEN: ${{secrets.SONAR_TOKEN}}
+      run: mvn -B verify --file pom.xml -Pcoverage javadoc:javadoc sonar:sonar -Dsonar.projectKey=smallrye_smallrye-fault-tolerance -Dsonar.login=$SONAR_TOKEN
