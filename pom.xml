@@ -274,14 +274,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <!-- this is only to release SmallRye Fault Tolerance 5.0.0-RC* and should be removed afterwards -->
-    <repositories>
-        <repository>
-            <id>fault-tolerance-30-staging</id>
-            <url>https://oss.sonatype.org/content/repositories/orgeclipsemicroprofile-1400/</url>
-        </repository>
-    </repositories>
-
     <build>
         <pluginManagement>
             <plugins>
