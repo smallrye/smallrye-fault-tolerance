@@ -277,24 +277,6 @@
     <build>
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <groupId>org.asciidoctor</groupId>
-                    <artifactId>asciidoctor-maven-plugin</artifactId>
-                    <configuration>
-                        <sourceHighlighter>coderay</sourceHighlighter>
-                        <attributes>
-                            <icons>font</icons>
-                            <pagenums />
-                            <version>${project.version}</version>
-                            <idprefix />
-                            <idseparator>-</idseparator>
-                            <allow-uri-read>true</allow-uri-read>
-                            <revnumber>${project.version}</revnumber>
-                            <revdate>${maven.build.timestamp}</revdate>
-                            <organization>${project.organization.name}</organization>
-                        </attributes>
-                    </configuration>
-                </plugin>
                 <!-- Fixes maven build warnings by making maven-resources-plugin version explicit,
                   since it is not managed by smallrye parent pom -->
                 <plugin>
