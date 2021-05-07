@@ -34,8 +34,9 @@
         <version.java>1.8</version.java>
 
         <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
-        <version.org.jacoco.jacoco-maven-plugin>0.8.6</version.org.jacoco.jacoco-maven-plugin>
-        <version.org.pitest.pitest-maven>1.6.6</version.org.pitest.pitest-maven>
+        <version.jacoco-maven-plugin>0.8.6</version.jacoco-maven-plugin>
+        <version.pitest-maven>1.6.6</version.pitest-maven>
+        <version.pitest-junit5-plugin>0.14</version.pitest-junit5-plugin>
 
         <!--suppress CheckTagEmptyBody -->
         <jacoco.argLine /> <!-- will be set by the JaCoCo Maven plugin when active -->
@@ -157,7 +158,14 @@
                     <plugin>
                         <groupId>org.pitest</groupId>
                         <artifactId>pitest-maven</artifactId>
-                        <version>${version.org.pitest.pitest-maven}</version>
+                        <version>${version.pitest-maven}</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.pitest</groupId>
+                                <artifactId>pitest-junit5-plugin</artifactId>
+                                <version>${version.pitest-junit5-plugin}</version>
+                            </dependency>
+                        </dependencies>
                         <executions>
                             <execution>
                                 <id>mutation-coverage</id>
