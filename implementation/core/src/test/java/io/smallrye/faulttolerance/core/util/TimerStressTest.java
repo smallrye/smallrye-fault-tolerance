@@ -13,10 +13,13 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import io.smallrye.faulttolerance.core.scheduler.Timer;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
+@EnabledOnOs(OS.LINUX)
 public class TimerStressTest {
     private static final int ITERATIONS = 100;
     private static final int TASKS_PER_ITERATION = 100;

@@ -12,7 +12,10 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
+@EnabledOnOs(OS.LINUX)
 public class ScheduledExecutorTimeoutWatcherTest {
     private ScheduledExecutorService executor;
     private ScheduledExecutorTimeoutWatcher watcher;
