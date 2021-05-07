@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.scheduler;
 
 import static io.smallrye.faulttolerance.core.scheduler.SchedulerLogger.LOG;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -19,8 +20,8 @@ public final class TimerTask implements SchedulerTask {
 
     TimerTask(long startTime, Runnable runnable, Consumer<TimerTask> onCancel) {
         this.startTime = startTime;
-        this.runnable = runnable;
-        this.onCancel = onCancel;
+        this.runnable = checkNotNull(runnable, "Runnable task must be set");
+        this.onCancel = checkNotNull(onCancel, "Cancellation callback must be set");
     }
 
     @Override
