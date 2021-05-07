@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
-public class AsyncCompletionStageBulkheadTimeoutFallbackTest {
+public class AsyncCompletionStageThreadPoolBulkheadTimeoutFallbackTest {
     @Test
     public void test(AsyncHelloService helloService) throws InterruptedException {
         Map<String, Integer> expectedResponses = new HashMap<>();

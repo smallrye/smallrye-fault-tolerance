@@ -27,7 +27,7 @@ import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
-public class CompletionStageBulkheadTest {
+public class CompletionStageThreadPoolBulkheadTest {
     private ExecutorService executor;
 
     @BeforeEach
@@ -45,7 +45,8 @@ public class CompletionStageBulkheadTest {
     public void shouldLetOneIn() throws ExecutionException, InterruptedException {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("shouldLetSingleThrough"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetSingleThrough", 2, 2);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldLetSingleThrough", 2, 2);
 
         CompletionStage<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldLetSingleThrough");
@@ -55,7 +56,8 @@ public class CompletionStageBulkheadTest {
     public void shouldLetMaxIn() throws Exception { // max threads + max queue
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("shouldLetMaxThrough"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetSingleThrough", 2, 3);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldLetSingleThrough", 2, 3);
 
         List<CompletionStage<String>> results = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -75,7 +77,8 @@ public class CompletionStageBulkheadTest {
             return completedFuture("shouldRejectMaxPlus1");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldRejectMaxPlus1", 2, 3);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldRejectMaxPlus1", 2, 3);
 
         List<CompletionStage<String>> results = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -107,8 +110,8 @@ public class CompletionStageBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Left");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetMaxPlus1After1Left",
-                2, 3);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldLetMaxPlus1After1Left", 2, 3);
 
         List<CompletionStage<String>> results = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -141,8 +144,8 @@ public class CompletionStageBulkheadTest {
             throw error;
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetMaxPlus1After1Failed", 2,
-                3);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldLetMaxPlus1After1Failed", 2, 3);
 
         List<CompletionStage<String>> results = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -181,8 +184,8 @@ public class CompletionStageBulkheadTest {
             });
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldLetMaxPlus1After1Failed", 2,
-                3);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldLetMaxPlus1After1Failed", 2, 3);
 
         List<CompletionStage<String>> results = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -215,8 +218,8 @@ public class CompletionStageBulkheadTest {
             return CompletableFuture.supplyAsync(() -> "shouldNotStartNextIfCSInProgress");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        CompletionStageBulkhead<String> bulkhead = new CompletionStageBulkhead<>(execution, "shouldNotStartNextIfCSInProgress",
-                1, 1);
+        CompletionStageThreadPoolBulkhead<String> bulkhead = new CompletionStageThreadPoolBulkhead<>(execution,
+                "shouldNotStartNextIfCSInProgress", 1, 1);
 
         CompletionStage<String> firstResult = bulkhead.apply(new InvocationContext<>(null));
 
@@ -232,7 +235,10 @@ public class CompletionStageBulkheadTest {
         assertThat(bulkhead.getQueueSize()).isEqualTo(0);
     }
 
-    private static <V> void waitUntilQueueSize(CompletionStageBulkhead<V> bulkhead, int size, long timeout) throws Exception {
+    // TODO waiting for a condition in a unit test shouldn't really be needed
+    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
+    private static <V> void waitUntilQueueSize(CompletionStageThreadPoolBulkhead<V> bulkhead, int size, long timeout)
+            throws Exception {
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < timeout) {
             Thread.sleep(50);
@@ -243,6 +249,8 @@ public class CompletionStageBulkheadTest {
         fail("queue not reached size " + size + " in " + timeout + " [ms]");
     }
 
+    // TODO waiting for a condition in a unit test shouldn't really be needed
+    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
     private static <V> CompletionStage<V> getSingleFinishedResult(List<CompletionStage<V>> results, long timeout)
             throws Exception {
         long startTime = System.currentTimeMillis();

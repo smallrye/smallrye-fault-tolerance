@@ -12,12 +12,19 @@ import java.util.concurrent.Semaphore;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
-public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>> {
+/**
+ * Thread pool style bulkhead for {@code CompletionStage} asynchronous executions.
+ * <p>
+ * Implements a proper queue of tasks. When a task (that was previously allowed
+ * to enter) leaves the bulkhead, it will attempt to take one task from
+ * the queue and execute it.
+ */
+public class CompletionStageThreadPoolBulkhead<V> extends BulkheadBase<CompletionStage<V>> {
     private final Deque<CompletionStageBulkheadTask> queue;
     private final Semaphore capacitySemaphore;
     private final Semaphore workSemaphore;
 
-    public CompletionStageBulkhead(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
+    public CompletionStageThreadPoolBulkhead(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             int size, int queueSize) {
         super(description, delegate);
         this.queue = new ConcurrentLinkedDeque<>();
@@ -63,7 +70,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
                 LOG.trace("Work semaphore acquired, running task");
                 queuedTask.run();
             } else {
-                LOG.trace("Work semaphore not acquired, putting task to queue");
+                LOG.trace("Work semaphore not acquired, putting task back to queue");
                 queue.addFirst(queuedTask);
             }
         }
@@ -92,6 +99,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
                 rawResult.whenComplete((value, error) -> {
                     releaseSemaphores();
                     ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
+
                     if (error != null) {
                         result.completeExceptionally(error);
                     } else {
@@ -103,6 +111,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
             } catch (Exception e) {
                 releaseSemaphores();
                 ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
+
                 result.completeExceptionally(e);
 
                 runQueuedTask();
@@ -112,6 +121,7 @@ public class CompletionStageBulkhead<V> extends BulkheadBase<CompletionStage<V>>
         private void releaseSemaphores() {
             workSemaphore.release();
             LOG.trace("Work semaphore released, task finished");
+
             capacitySemaphore.release();
             LOG.trace("Capacity semaphore released, task leaving bulkhead");
         }

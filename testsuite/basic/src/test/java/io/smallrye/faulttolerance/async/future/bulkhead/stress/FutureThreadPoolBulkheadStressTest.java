@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
-public class FutureBulkheadStressTest {
+public class FutureThreadPoolBulkheadStressTest {
     @Test
     public void stressTest(BulkheadService service) throws InterruptedException, ExecutionException {
         for (int i = 0; i < 50; i++) {

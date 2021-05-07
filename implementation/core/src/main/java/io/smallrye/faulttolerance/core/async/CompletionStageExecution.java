@@ -35,8 +35,8 @@ public class CompletionStageExecution<V> implements FaultToleranceStrategy<Compl
         executor.execute(() -> {
             try {
                 propagateCompletion(delegate.apply(ctx), result);
-            } catch (Exception any) {
-                result.completeExceptionally(any);
+            } catch (Exception e) {
+                result.completeExceptionally(e);
             }
         });
         return result;

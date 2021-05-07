@@ -7,6 +7,9 @@ import java.util.concurrent.Semaphore;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
+/**
+ * Semaphore style bulkhead for synchronous executions.
+ */
 public class SemaphoreBulkhead<V> extends BulkheadBase<V> {
     private final Semaphore semaphore;
 

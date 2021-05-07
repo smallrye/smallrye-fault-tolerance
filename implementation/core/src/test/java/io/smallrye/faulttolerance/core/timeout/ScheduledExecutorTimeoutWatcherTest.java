@@ -71,7 +71,7 @@ public class ScheduledExecutorTimeoutWatcherTest {
         assertThatWithin(100, "watch not running", () -> !watch.isRunning());
     }
 
-    // TODO waiting for a condition in this test shouldn't really be needed
+    // TODO waiting for a condition in a unit test shouldn't really be needed
     //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
     private static void assertThatWithin(int timeoutMs, String message, Supplier<Boolean> test) {
         long start = System.currentTimeMillis();

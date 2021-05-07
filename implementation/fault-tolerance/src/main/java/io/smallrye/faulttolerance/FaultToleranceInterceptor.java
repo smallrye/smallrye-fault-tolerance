@@ -52,9 +52,9 @@ import io.smallrye.faulttolerance.config.TimeoutConfig;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
-import io.smallrye.faulttolerance.core.bulkhead.CompletionStageBulkhead;
+import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
+import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
-import io.smallrye.faulttolerance.core.bulkhead.ThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
 import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
@@ -231,7 +231,7 @@ public class FaultToleranceInterceptor {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             Integer size = bulkheadConfig.get(BulkheadConfig.VALUE);
             Integer queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
-            result = new CompletionStageBulkhead<>(result, "CompletionStage[" + point + "]",
+            result = new CompletionStageThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
                     size, queueSize);
         }
 
@@ -379,7 +379,7 @@ public class FaultToleranceInterceptor {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
             int size = bulkheadConfig.get(BulkheadConfig.VALUE);
             int queueSize = bulkheadConfig.get(BulkheadConfig.WAITING_TASK_QUEUE);
-            result = new ThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
+            result = new FutureThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
                     size, queueSize);
         }
 

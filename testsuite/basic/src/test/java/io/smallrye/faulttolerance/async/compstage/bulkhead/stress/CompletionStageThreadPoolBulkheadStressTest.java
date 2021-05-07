@@ -17,7 +17,7 @@ import io.smallrye.faulttolerance.core.util.party.Party;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
-public class CompletionStageBulkheadStressTest {
+public class CompletionStageThreadPoolBulkheadStressTest {
     @Test
     public void stressTest(BulkheadService service) throws InterruptedException, ExecutionException {
         for (int i = 0; i < 50; i++) {
