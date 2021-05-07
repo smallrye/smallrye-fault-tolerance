@@ -15,7 +15,7 @@ import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class FallbackTest {
     @Test
-    public void immediatelyReturning_valueThenValue() throws Exception {
+    public void immediatelyReturning_allExceptionsSupported_valueThenValue() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> "fallback", SetOfThrowables.ALL, SetOfThrowables.EMPTY));
@@ -23,7 +23,7 @@ public class FallbackTest {
     }
 
     @Test
-    public void immediatelyReturning_valueThenException() throws Exception {
+    public void immediatelyReturning_allExceptionsSupported_valueThenException() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> TestException.doThrow(), SetOfThrowables.ALL, SetOfThrowables.EMPTY));
@@ -31,7 +31,7 @@ public class FallbackTest {
     }
 
     @Test
-    public void immediatelyReturning_exceptionThenValue() throws Exception {
+    public void immediatelyReturning_allExceptionsSupported_exceptionThenValue() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 ctx -> "fallback", SetOfThrowables.ALL, SetOfThrowables.EMPTY));
@@ -39,12 +39,45 @@ public class FallbackTest {
     }
 
     @Test
-    public void immediatelyReturning_exceptionThenException() {
+    public void immediatelyReturning_allExceptionsSupported_exceptionThenException() {
         TestInvocation<Void> invocation = TestInvocation.of(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", ctx -> {
             throw new RuntimeException();
         }, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    public void immediatelyReturning_noExceptionSupported_valueThenValue() throws Exception {
+        TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
+                ctx -> "fallback", SetOfThrowables.EMPTY, SetOfThrowables.ALL));
+        assertThat(result.await()).isEqualTo("foobar");
+    }
+
+    @Test
+    public void immediatelyReturning_noExceptionSupported_valueThenException() throws Exception {
+        TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
+                ctx -> TestException.doThrow(), SetOfThrowables.EMPTY, SetOfThrowables.ALL));
+        assertThat(result.await()).isEqualTo("foobar");
+    }
+
+    @Test
+    public void immediatelyReturning_noExceptionSupported_exceptionThenValue() throws Exception {
+        TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
+        TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
+                ctx -> "fallback", SetOfThrowables.EMPTY, SetOfThrowables.ALL));
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
+    }
+
+    @Test
+    public void immediatelyReturning_noExceptionSupported_exceptionThenException() {
+        TestInvocation<Void> invocation = TestInvocation.of(TestException::doThrow);
+        TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", ctx -> {
+            throw new RuntimeException();
+        }, SetOfThrowables.EMPTY, SetOfThrowables.ALL));
+        assertThatThrownBy(result::await).isExactlyInstanceOf(TestException.class);
     }
 
     // testing interruption and especially self-interruption isn't exactly meaningful,

@@ -45,11 +45,6 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
                 return;
             }
 
-            if (exception instanceof InterruptedException || Thread.interrupted()) {
-                result.completeExceptionally(new InterruptedException());
-                return;
-            }
-
             if (shouldSkipFallback(exception)) {
                 result.completeExceptionally(exception);
                 return;
