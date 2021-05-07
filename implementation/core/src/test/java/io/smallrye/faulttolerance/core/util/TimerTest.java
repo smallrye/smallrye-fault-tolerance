@@ -11,9 +11,12 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import io.smallrye.faulttolerance.core.scheduler.Timer;
 
+@EnabledOnOs(OS.LINUX)
 public class TimerTest {
     private ExecutorService executor;
     private Timer timer;

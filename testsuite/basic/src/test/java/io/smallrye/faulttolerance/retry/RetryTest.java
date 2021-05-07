@@ -31,10 +31,13 @@ import javax.inject.Inject;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
+@EnabledOnOs(OS.LINUX)
 public class RetryTest {
     @Inject
     private RetryTestBean retryTestBean;
