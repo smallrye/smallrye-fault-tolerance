@@ -26,7 +26,7 @@ import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
-public class ThreadPoolBulkheadTest {
+public class FutureThreadPoolBulkheadTest {
     private ExecutorService executor;
 
     @BeforeEach
@@ -43,7 +43,7 @@ public class ThreadPoolBulkheadTest {
     @Test
     public void shouldLetOneIn() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation.of(() -> completedFuture("shouldLetSingleThrough"));
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2);
+        FutureThreadPoolBulkhead<String> bulkhead = new FutureThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 2);
         Future<String> result = bulkhead.apply(new InvocationContext<>(null));
         assertThat(result.get()).isEqualTo("shouldLetSingleThrough");
     }
@@ -55,7 +55,7 @@ public class ThreadPoolBulkheadTest {
             delayBarrier.await();
             return completedFuture("shouldLetMaxThrough");
         });
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3);
+        FutureThreadPoolBulkhead<String> bulkhead = new FutureThreadPoolBulkhead<>(invocation, "shouldLetSingleThrough", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -76,7 +76,7 @@ public class ThreadPoolBulkheadTest {
             delayBarrier.await();
             return completedFuture("shouldRejectMaxPlus1");
         });
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3);
+        FutureThreadPoolBulkhead<String> bulkhead = new FutureThreadPoolBulkhead<>(invocation, "shouldRejectMaxPlus1", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -105,7 +105,7 @@ public class ThreadPoolBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Left");
         });
 
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left",
+        FutureThreadPoolBulkhead<String> bulkhead = new FutureThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left",
                 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -139,7 +139,7 @@ public class ThreadPoolBulkheadTest {
             throw error;
         });
 
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left",
+        FutureThreadPoolBulkhead<String> bulkhead = new FutureThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Left",
                 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
@@ -179,8 +179,8 @@ public class ThreadPoolBulkheadTest {
             return completedFuture("shouldLetMaxPlus1After1Canceled");
         });
 
-        ThreadPoolBulkhead<String> bulkhead = new ThreadPoolBulkhead<>(invocation, "shouldLetMaxPlus1After1Canceled",
-                2, 3);
+        FutureThreadPoolBulkhead<String> bulkhead = new FutureThreadPoolBulkhead<>(invocation,
+                "shouldLetMaxPlus1After1Canceled", 2, 3);
 
         List<TestThread<Future<String>>> threads = new ArrayList<>();
 
@@ -210,7 +210,10 @@ public class ThreadPoolBulkheadTest {
         }
     }
 
-    private void waitUntilQueueSize(ThreadPoolBulkhead<String> bulkhead, int size, long timeoutMs) throws InterruptedException {
+    // TODO waiting for a condition in a unit test shouldn't really be needed
+    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
+    private void waitUntilQueueSize(FutureThreadPoolBulkhead<String> bulkhead, int size, long timeoutMs)
+            throws InterruptedException {
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < timeoutMs) {
             Thread.sleep(50);
@@ -222,6 +225,8 @@ public class ThreadPoolBulkheadTest {
 
     }
 
+    // TODO waiting for a condition in a unit test shouldn't really be needed
+    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
     private <V> TestThread<Future<V>> getSingleFinishedThread(List<TestThread<Future<V>>> threads, long timeout)
             throws InterruptedException {
         long startTime = System.currentTimeMillis();
