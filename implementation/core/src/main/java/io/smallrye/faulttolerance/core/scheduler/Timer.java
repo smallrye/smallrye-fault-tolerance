@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.scheduler;
 
 import static io.smallrye.faulttolerance.core.scheduler.SchedulerLogger.LOG;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.Comparator;
 import java.util.NoSuchElementException;
@@ -42,6 +43,8 @@ public final class Timer implements Scheduler {
     private final AtomicBoolean running = new AtomicBoolean(true);
 
     public Timer(Executor executor) {
+        checkNotNull(executor, "Executor must be set");
+
         this.name = "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet();
         LOG.createdTimer(name);
 
