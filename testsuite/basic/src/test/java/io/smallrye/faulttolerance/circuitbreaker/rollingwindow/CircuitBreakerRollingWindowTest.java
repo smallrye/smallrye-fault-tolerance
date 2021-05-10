@@ -48,7 +48,9 @@ public class CircuitBreakerRollingWindowTest {
 
         assertThat(pingService.getPingCounter().get()).isEqualTo(6);
 
-        Thread.sleep(300);
+        // sleep a little longer than the circuit breaker delay
+        // to account for scheduling accuracy on various operating systems
+        Thread.sleep(400);
 
         // Now the circuit should be HALF_OPEN
         // The follwing request should close it
