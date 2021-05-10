@@ -24,7 +24,11 @@ public final class Invocation<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public V apply(InvocationContext<V> ctx) throws Exception {
-        LOG.trace("Invoking guarded method");
-        return ctx.call();
+        LOG.trace("Guarded method invocation started");
+        try {
+            return ctx.call();
+        } finally {
+            LOG.trace("Guarded method invocation finished");
+        }
     }
 }
