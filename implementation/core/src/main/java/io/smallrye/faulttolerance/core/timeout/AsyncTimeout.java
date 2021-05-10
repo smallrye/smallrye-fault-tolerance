@@ -10,17 +10,19 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 
+import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
 /**
  * The next strategy in the chain must be {@link Timeout}, and it is invoked on an extra thread.
- * Communication then happens using {@link TimeoutEvents.AsyncTimedOut}.
+ * Communication then happens using {@link AsyncTimeoutNotification}.
  * <p>
  * Note that the {@code TimeoutException} thrown from this strategy might come from two places:
  * the {@code Timeout} strategy throwing, or {@code AsyncTimeoutTask#timedOut} setting an exception
- * as a result of {@code TimeoutEvent}. Both might happen, and whichever happens first gets to decide.
- * That's why we take extra care to make sure that there's only one place where the exception is created.
+ * as a result of {@code AsyncTimeoutNotification}. Both might happen, and whichever happens first
+ * gets to decide.
  */
 public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
     private final FaultToleranceStrategy<Future<V>> delegate;
@@ -43,11 +45,14 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
 
     private Future<V> doApply(InvocationContext<Future<V>> ctx) throws Exception {
         AsyncTimeoutTask<Future<V>> task = new AsyncTimeoutTask<>(() -> delegate.apply(ctx));
-        ctx.registerEventHandler(TimeoutEvents.AsyncTimedOut.class, task::timedOut);
+        LOG.asyncTimeoutTaskCreated(task);
+        ctx.set(AsyncTimeoutNotification.class, task::timedOut);
+
         executor.execute(task);
         try {
             return task.get();
         } catch (ExecutionException e) {
+            LOG.asyncTimeoutRethrowing(e.getCause());
             throw sneakyThrow(e.getCause());
         }
     }
@@ -58,8 +63,9 @@ public class AsyncTimeout<V> implements FaultToleranceStrategy<Future<V>> {
             super(callable);
         }
 
-        public void timedOut(TimeoutEvents.AsyncTimedOut event) {
-            super.setException(event.timeoutException());
+        public void timedOut(TimeoutException exception) {
+            LOG.asyncTimeoutTaskCompleting(this, exception);
+            super.setException(exception);
         }
     }
 }
