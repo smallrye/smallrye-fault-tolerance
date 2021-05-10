@@ -28,6 +28,10 @@ public final class InvocationContext<V> implements Callable<V> {
         data.put(clazz, object);
     }
 
+    public <T> void remove(Class<T> clazz) {
+        data.remove(clazz);
+    }
+
     public <T> T get(Class<T> clazz) {
         return clazz.cast(data.get(clazz));
     }

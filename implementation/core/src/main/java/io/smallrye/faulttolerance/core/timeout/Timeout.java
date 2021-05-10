@@ -34,8 +34,17 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
     }
 
     private V doApply(InvocationContext<V> ctx) throws Exception {
-        TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis,
-                () -> ctx.fireEvent(new TimeoutEvents.AsyncTimedOut(() -> timeoutException(description))));
+        // must extract `AsyncTimeoutNotification` synchronously, because if retries are present,
+        // a different `AsyncTimeoutNotification` may be present in the `InvocationContext`
+        // by the time the timeout callback is invoked
+        AsyncTimeoutNotification notification = ctx.get(AsyncTimeoutNotification.class);
+        ctx.remove(AsyncTimeoutNotification.class);
+
+        TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis, () -> {
+            if (notification != null) {
+                notification.accept(timeoutException(description));
+            }
+        });
         TimeoutWatch watch = watcher.schedule(execution);
         ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
