@@ -55,9 +55,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    - name: Build with Maven
+    - name: Build with Maven (Linux, Windows)
+      if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest' }}
       shell: bash
       run: mvn -B formatter:validate verify --file pom.xml
+
+    - name: Build with Maven (Mac)
+      if: ${{ matrix.os == 'macos-latest' }}
+      shell: bash
+      run: mvn -B formatter:validate verify --file pom.xml -Dorg.eclipse.microprofile.fault.tolerance.tck.timeout.multiplier=3.0
 
     - name: Upload TCK report
       if: ${{ matrix.java == '11' && matrix.os == 'ubuntu-latest' }}
