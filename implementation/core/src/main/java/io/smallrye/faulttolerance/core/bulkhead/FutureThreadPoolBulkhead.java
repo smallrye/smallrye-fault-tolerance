@@ -49,9 +49,20 @@ public class FutureThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
             ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
             ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
 
+            AtomicBoolean cancellationInvalid = new AtomicBoolean(false);
             AtomicBoolean cancelled = new AtomicBoolean(false);
             AtomicReference<Thread> executingThread = new AtomicReference<>(Thread.currentThread());
             ctx.registerEventHandler(FutureCancellationEvent.class, event -> {
+                if (cancellationInvalid.get()) {
+                    // in case of retries, multiple handlers of FutureCancellationEvent may be registered,
+                    // need to make sure that a handler belonging to an older bulkhead task doesn't do anything
+                    return;
+                }
+
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("Cancelling bulkhead task," + (event.interruptible ? "" : " NOT")
+                            + " interrupting executing thread");
+                }
                 cancelled.set(true);
                 if (event.interruptible) {
                     executingThread.get().interrupt();
@@ -62,8 +73,11 @@ public class FutureThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                 workSemaphore.acquire();
                 LOG.trace("Work semaphore acquired, running task");
             } catch (InterruptedException e) {
+                cancellationInvalid.set(true);
+
                 capacitySemaphore.release();
                 LOG.trace("Capacity semaphore released, task leaving bulkhead");
+                ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
                 throw new CancellationException();
             }
 
@@ -75,6 +89,8 @@ public class FutureThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                 }
                 return delegate.apply(ctx);
             } finally {
+                cancellationInvalid.set(true);
+
                 workSemaphore.release();
                 LOG.trace("Work semaphore released, task finished");
                 capacitySemaphore.release();
