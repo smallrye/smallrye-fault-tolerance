@@ -52,7 +52,7 @@
         <version.mutiny>0.17.0</version.mutiny>
         <version.rxjava3>3.0.12</version.rxjava3>
         <version.weld-api>3.1.SP4</version.weld-api>
-        <version.weld-core>3.1.7.SP1</version.weld-core>
+        <version.weld-core>4.0.1.Final</version.weld-core>
         <version.weld-junit5>2.0.2.Final</version.weld-junit5>
 
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
