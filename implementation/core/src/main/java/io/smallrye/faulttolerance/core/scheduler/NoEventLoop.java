@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.scheduler;
 
+import java.util.concurrent.Executor;
+
 final class NoEventLoop implements EventLoop {
     static final NoEventLoop INSTANCE = new NoEventLoop();
 
@@ -13,7 +15,12 @@ final class NoEventLoop implements EventLoop {
     }
 
     @Override
-    public SchedulerTask schedule(long delayInMillis, Runnable runnable) {
+    public Executor executor() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Scheduler scheduler() {
         throw new UnsupportedOperationException();
     }
 }

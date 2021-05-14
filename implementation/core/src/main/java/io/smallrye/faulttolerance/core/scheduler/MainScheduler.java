@@ -17,7 +17,7 @@ public final class MainScheduler implements Scheduler {
     @Override
     public SchedulerTask schedule(long delayInMillis, Runnable runnable) {
         if (eventLoop.isEventLoopThread()) {
-            return eventLoop.schedule(delayInMillis, runnable);
+            return eventLoop.scheduler().schedule(delayInMillis, runnable);
         } else {
             return timer.schedule(delayInMillis, runnable);
         }

@@ -15,6 +15,17 @@ import java.util.concurrent.TimeoutException;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 
+/**
+ * Unlike {@link CompletionStageExecution}, this is supposed to be the <em>first</em> strategy
+ * in the chain. The remaining strategies are executed on an extra thread. This allows using
+ * the <em>synchronous</em> strategies to implement {@code Future}-based {@code @Asynchronous}
+ * invocations, with two exceptions:
+ * <ul>
+ * <li>timeouts, where {@code AsyncTimeout} is needed in front of {@code Timeout};</li>
+ * <li>bulkheads, where {@code FutureThreadPoolBulkhead} is used instead of {@code SemaphoreBulkhead}
+ * simply because that's what the spec requires.</li>
+ * </ul>
+ */
 public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
     private final FaultToleranceStrategy<Future<V>> delegate;
     private final Executor executor;

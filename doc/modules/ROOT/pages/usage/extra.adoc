@@ -93,10 +93,6 @@ The thread pool that is used for offloading method calls is the one provided by 
 * `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
 Use this annotation if the method _doesn't_ have blocking logic and you want the execution to stay on the caller thread.
 +
-Note that if the guarded method also uses `@Retry` and some delay between retries is configured, only the initial execution is guaranteed to occur on the original thread.
-Subsequent attempts may be offloaded to an extra thread, so that the original thread is not blocked on the delay.
-If the original thread is an event loop thread and event loop integration is enabled, then the event loop is used to execute subsequent retries and hence all retry attempts will also happen on the original thread.
-+
 For example:
 +
 [source,java]
@@ -115,6 +111,15 @@ public class MyService {
 If this wouldn't be present, the `@NonBlocking` annotation would be meaningless.
 <2> Using the `@NonBlocking` annotation, because the method doesn't block and offloading execution to another thread is not necessary.
 With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
++
+If the guarded method uses `@Retry` and some delay between retries is configured, only the initial execution is guaranteed to occur on the original thread.
+Subsequent attempts may be offloaded to an extra thread, so that the original thread is not blocked on the delay.
++
+If the guarded method uses `@Bulkhead`, the execution is _not_ guaranteed to occur on the original thread.
+If the execution has to wait in the bulkhead queue, it may later end up on a different thread.
++
+If the original thread is an event loop thread and event loop integration is enabled, then the event loop is always used to execute the guarded method.
+In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
 
 === Rationale
 
