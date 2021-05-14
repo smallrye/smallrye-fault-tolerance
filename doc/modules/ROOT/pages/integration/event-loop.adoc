@@ -6,13 +6,15 @@ WARNING: This integration API comes from the `core` module and so is treated as 
 If you intend to implement it, please let us know in the {smallrye-fault-tolerance} issue tracker.
 We'd prefer all the implementations to live in the {smallrye-fault-tolerance} project.
 
-The integrator must implement the `EventLoop` interface, which lets {smallrye-fault-tolerance} schedule execution of ``Runnable``s to a later turn of an event loop.
+The integrator must implement the `EventLoop` interface, which lets {smallrye-fault-tolerance} submit ``Runnable``s to the event loop for immediate or scheduled execution.
 Implementations are discovered through `ServiceLoader`, so the corresponding `META-INF/services/\...` file must also exist.
 
 At most one implementation of `EventLoop` may be present at runtime.
-{smallrye-fault-tolerance} will use it to:
+{smallrye-fault-tolerance} will use it to execute `@NonBlocking` guarded methods when the caller was originally on an event loop thread.
+This is important in case of:
 
-- execute retry attempts on the original thread, if the guarded method is `@NonBlocking` and is called on an event loop thread.
+- retries, when there's a delay between retry attempts (the delay must not block);
+- bulkheads, when a task is queued (such task is executed when some other task finishes, which happens on an unknown thread).
 
 If no event loop integration is present, the tasks described above will be offloaded to the xref:integration/thread-pool.adoc[thread pool].
 

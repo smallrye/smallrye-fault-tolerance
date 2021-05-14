@@ -16,6 +16,8 @@ import io.smallrye.faulttolerance.core.scheduler.Timer;
 public class ExecutorHolder {
     private final ExecutorService asyncExecutor;
 
+    private final EventLoop eventLoop;
+
     private final Timer timer;
 
     private final Scheduler scheduler;
@@ -25,8 +27,9 @@ public class ExecutorHolder {
     @Inject
     public ExecutorHolder(AsyncExecutorProvider asyncExecutorProvider) {
         this.asyncExecutor = asyncExecutorProvider.get();
+        this.eventLoop = EventLoop.get();
         this.timer = new Timer(asyncExecutor);
-        this.scheduler = new MainScheduler(EventLoop.get(), timer);
+        this.scheduler = new MainScheduler(eventLoop, timer);
         this.shouldShutdownAsyncExecutor = asyncExecutorProvider instanceof DefaultAsyncExecutorProvider;
     }
 
@@ -54,6 +57,10 @@ public class ExecutorHolder {
 
     public ExecutorService getAsyncExecutor() {
         return asyncExecutor;
+    }
+
+    public EventLoop getEventLoop() {
+        return eventLoop;
     }
 
     public Timer getTimer() {

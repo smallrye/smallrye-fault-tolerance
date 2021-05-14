@@ -336,8 +336,6 @@ public class FaultToleranceOperation {
         return false;
     }
 
-    // @Blocking and @NonBlocking can currently only be used on methods, but that will likely change,
-    // so we'd better define meaning for class annotations as well
     // the result of isThreadOffloadRequired only makes sense if the method in question returns CompletionStage
 
     private static boolean isThreadOffloadRequired(AnnotatedMethod<?> method) {

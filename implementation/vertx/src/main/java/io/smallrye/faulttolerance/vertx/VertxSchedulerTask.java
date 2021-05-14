@@ -7,12 +7,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.smallrye.faulttolerance.core.scheduler.SchedulerTask;
 import io.vertx.core.Vertx;
 
-final class VertxEventLoopTask implements SchedulerTask {
+final class VertxSchedulerTask implements SchedulerTask {
     private final Vertx vertx;
     private final long timerId;
     private final AtomicBoolean taskDone;
 
-    VertxEventLoopTask(Vertx vertx, long timerId, AtomicBoolean taskDone) {
+    VertxSchedulerTask(Vertx vertx, long timerId, AtomicBoolean taskDone) {
         this.vertx = vertx;
         this.timerId = timerId;
         this.taskDone = taskDone;

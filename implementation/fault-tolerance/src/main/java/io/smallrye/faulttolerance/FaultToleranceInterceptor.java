@@ -27,6 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -52,6 +53,7 @@ import io.smallrye.faulttolerance.config.TimeoutConfig;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
+import io.smallrye.faulttolerance.core.async.RememberEventLoop;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
@@ -71,6 +73,7 @@ import io.smallrye.faulttolerance.core.retry.Retry;
 import io.smallrye.faulttolerance.core.retry.SchedulerDelay;
 import io.smallrye.faulttolerance.core.retry.SimpleBackOff;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
+import io.smallrye.faulttolerance.core.scheduler.EventLoop;
 import io.smallrye.faulttolerance.core.scheduler.Scheduler;
 import io.smallrye.faulttolerance.core.scheduler.Timer;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
@@ -78,6 +81,7 @@ import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
+import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.AsyncTypesConversion;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
@@ -109,6 +113,8 @@ public class FaultToleranceInterceptor {
 
     private final ExecutorService asyncExecutor;
 
+    private final EventLoop eventLoop;
+
     // we don't want timeout watchers to be notified on an event loop thread,
     // so for timeouts, we use Timer directly instead of going through a Scheduler
     private final Timer timer;
@@ -135,6 +141,7 @@ public class FaultToleranceInterceptor {
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.metricsProvider = metricsProvider;
         asyncExecutor = executorHolder.getAsyncExecutor();
+        eventLoop = executorHolder.getEventLoop();
         timer = executorHolder.getTimer();
         scheduler = executorHolder.getScheduler();
         requestContextController = requestContextIntegration.get();
@@ -223,9 +230,8 @@ public class FaultToleranceInterceptor {
 
         result = new RequestScopeActivator<>(result, requestContextController);
 
-        if (operation.isThreadOffloadRequired()) {
-            result = new CompletionStageExecution<>(result, asyncExecutor);
-        }
+        Executor executor = operation.isThreadOffloadRequired() ? asyncExecutor : DirectExecutor.INSTANCE;
+        result = new CompletionStageExecution<>(result, executor);
 
         if (operation.hasBulkhead()) {
             BulkheadConfig bulkheadConfig = operation.getBulkhead();
@@ -292,6 +298,10 @@ public class FaultToleranceInterceptor {
 
         if (metricsProvider.isEnabled()) {
             result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(operation, point));
+        }
+
+        if (!operation.isThreadOffloadRequired()) {
+            result = new RememberEventLoop<>(result, eventLoop);
         }
 
         return result;
