@@ -36,18 +36,18 @@ public class MyMicroservice {
     @Timeout(500)
     public String sayHello() {
         try {
-            Thread.sleep(400);
+            Thread.sleep(100);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         return HELLO;
     }
 
-    @Timeout(200)
+    @Timeout(100)
     @Fallback(MyFallbackHandler.class)
     public String sayHelloWithFallback() {
         try {
-            Thread.sleep(500);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -65,11 +65,11 @@ public class MyMicroservice {
     }
 
     @Asynchronous
-    @Timeout(200)
+    @Timeout(100)
     @Fallback(FutureStringFallbackHandler.class)
     public Future<String> sayHelloAsyncTimeoutFallback() {
         try {
-            Thread.sleep(500);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
