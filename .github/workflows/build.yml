@@ -23,6 +23,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         java:
         # we want: all LTS versions (that we care about), latest GA, upcoming
