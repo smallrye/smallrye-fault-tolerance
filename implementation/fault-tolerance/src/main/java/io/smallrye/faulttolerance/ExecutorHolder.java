@@ -8,8 +8,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import io.smallrye.faulttolerance.core.scheduler.EventLoop;
-import io.smallrye.faulttolerance.core.scheduler.MainScheduler;
-import io.smallrye.faulttolerance.core.scheduler.Scheduler;
 import io.smallrye.faulttolerance.core.scheduler.Timer;
 
 @Singleton
@@ -20,8 +18,6 @@ public class ExecutorHolder {
 
     private final Timer timer;
 
-    private final Scheduler scheduler;
-
     private final boolean shouldShutdownAsyncExecutor;
 
     @Inject
@@ -29,7 +25,6 @@ public class ExecutorHolder {
         this.asyncExecutor = asyncExecutorProvider.get();
         this.eventLoop = EventLoop.get();
         this.timer = new Timer(asyncExecutor);
-        this.scheduler = new MainScheduler(eventLoop, timer);
         this.shouldShutdownAsyncExecutor = asyncExecutorProvider instanceof DefaultAsyncExecutorProvider;
     }
 
@@ -65,9 +60,5 @@ public class ExecutorHolder {
 
     public Timer getTimer() {
         return timer;
-    }
-
-    public Scheduler getScheduler() {
-        return scheduler;
     }
 }

@@ -28,6 +28,6 @@ public final class VertxEventLoop implements EventLoop {
     @Override
     public Scheduler scheduler() {
         checkEventLoopThread();
-        return new VertxScheduler(Vertx.currentContext().owner());
+        return new VertxScheduler(Vertx.currentContext());
     }
 }

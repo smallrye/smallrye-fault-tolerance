@@ -7,6 +7,7 @@ import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -18,11 +19,18 @@ import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
-    private final Supplier<AsyncDelay> delayBetweenRetries;
+    private final Function<InvocationContext<CompletionStage<V>>, AsyncDelay> delayBetweenRetries;
 
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
             Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+        this(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis,
+                ignored -> delayBetweenRetries.get(), stopwatch);
+    }
+
+    public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
+            SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
+            Function<InvocationContext<CompletionStage<V>>, AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         // the SyncDelay.NONE is ignored here, we have our own AsyncDelay
         super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, SyncDelay.NONE, stopwatch);
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
@@ -39,7 +47,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     }
 
     private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
-        AsyncDelay delay = delayBetweenRetries.get();
+        AsyncDelay delay = delayBetweenRetries.apply(ctx);
         RunningStopwatch runningStopwatch = stopwatch.start();
         return doRetry(ctx, 0, delay, runningStopwatch, null);
     }
