@@ -8,6 +8,7 @@ import java.util.concurrent.Executor;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.scheduler.EventLoop;
+import io.smallrye.faulttolerance.core.scheduler.Scheduler;
 
 public class RememberEventLoop<V> implements FaultToleranceStrategy<CompletionStage<V>> {
     private final FaultToleranceStrategy<CompletionStage<V>> delegate;
@@ -31,6 +32,7 @@ public class RememberEventLoop<V> implements FaultToleranceStrategy<CompletionSt
     private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) throws Exception {
         if (eventLoop.isEventLoopThread()) {
             ctx.set(Executor.class, eventLoop.executor());
+            ctx.set(Scheduler.class, eventLoop.scheduler());
         }
 
         return delegate.apply(ctx);

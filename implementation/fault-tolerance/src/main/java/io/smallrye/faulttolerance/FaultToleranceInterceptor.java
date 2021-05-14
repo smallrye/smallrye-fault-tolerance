@@ -115,11 +115,7 @@ public class FaultToleranceInterceptor {
 
     private final EventLoop eventLoop;
 
-    // we don't want timeout watchers to be notified on an event loop thread,
-    // so for timeouts, we use Timer directly instead of going through a Scheduler
     private final Timer timer;
-
-    private final Scheduler scheduler;
 
     private final RequestContextController requestContextController;
 
@@ -143,7 +139,6 @@ public class FaultToleranceInterceptor {
         asyncExecutor = executorHolder.getAsyncExecutor();
         eventLoop = executorHolder.getEventLoop();
         timer = executorHolder.getTimer();
-        scheduler = executorHolder.getScheduler();
         requestContextController = requestContextIntegration.get();
         this.cbMaintenance = cbMaintenance;
     }
@@ -282,7 +277,14 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
-                    () -> new SchedulerDelay(new SimpleBackOff(delayMs, jitter), scheduler),
+                    ctx -> {
+                        Scheduler scheduler = ctx.get(Scheduler.class);
+                        if (scheduler == null) {
+                            scheduler = timer;
+                        }
+
+                        return new SchedulerDelay(new SimpleBackOff(delayMs, jitter), scheduler);
+                    },
                     new SystemStopwatch());
         }
 

@@ -4,6 +4,7 @@ import static io.smallrye.faulttolerance.core.retry.RetryLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -22,11 +23,18 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     final SetOfThrowables abortOn;
     final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
     final long maxTotalDurationInMillis;
-    private final Supplier<SyncDelay> delayBetweenRetries;
+    private final Function<InvocationContext<V>, SyncDelay> delayBetweenRetries;
     final Stopwatch stopwatch;
 
     public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
             long maxRetries, long maxTotalDurationInMillis, Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+        this(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis,
+                ignored -> delayBetweenRetries.get(), stopwatch);
+    }
+
+    public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
+            long maxRetries, long maxTotalDurationInMillis, Function<InvocationContext<V>, SyncDelay> delayBetweenRetries,
+            Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
         this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
@@ -49,7 +57,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
     private V doApply(InvocationContext<V> ctx) throws Exception {
         long counter = 0;
-        SyncDelay delay = delayBetweenRetries.get();
+        SyncDelay delay = delayBetweenRetries.apply(ctx);
         RunningStopwatch runningStopwatch = stopwatch.start();
         Throwable lastFailure = null;
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
