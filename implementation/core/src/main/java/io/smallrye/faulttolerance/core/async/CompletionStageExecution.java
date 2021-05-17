@@ -38,10 +38,7 @@ public class CompletionStageExecution<V> implements FaultToleranceStrategy<Compl
     }
 
     private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
-        Executor executor = ctx.get(Executor.class);
-        if (executor == null) {
-            executor = this.executor;
-        }
+        Executor executor = ctx.get(Executor.class, this.executor);
 
         CompletableFuture<V> result = new CompletableFuture<>();
         executor.execute(() -> {

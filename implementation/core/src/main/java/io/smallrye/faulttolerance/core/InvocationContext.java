@@ -36,6 +36,11 @@ public final class InvocationContext<V> implements Callable<V> {
         return clazz.cast(data.get(clazz));
     }
 
+    public <T> T get(Class<T> clazz, T defaultValue) {
+        T value = get(clazz);
+        return value != null ? value : defaultValue;
+    }
+
     // out-of-band communication between fault tolerance strategies in a single chain
 
     private final ConcurrentMap<Class<? extends InvocationContextEvent>, Collection<Consumer<? extends InvocationContextEvent>>> eventHandlers = new ConcurrentHashMap<>();

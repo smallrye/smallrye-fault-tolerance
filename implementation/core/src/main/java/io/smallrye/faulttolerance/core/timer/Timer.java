@@ -1,6 +1,6 @@
-package io.smallrye.faulttolerance.core.scheduler;
+package io.smallrye.faulttolerance.core.timer;
 
-import static io.smallrye.faulttolerance.core.scheduler.SchedulerLogger.LOG;
+import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.Comparator;
@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
+import io.smallrye.faulttolerance.core.util.RunnableWrapper;
+
 /**
  * Allows scheduling tasks ({@code Runnable}s) to be executed on an {@code Executor} after some delay.
  * <p>
@@ -20,7 +22,7 @@ import java.util.concurrent.locks.LockSupport;
  * it gets submitted to the executor.
  */
 // TODO implement a hashed wheel?
-public final class Timer implements Scheduler {
+public final class Timer {
     private static final AtomicInteger COUNTER = new AtomicInteger(0);
 
     private static final Comparator<TimerTask> TIMER_TASK_COMPARATOR = (o1, o2) -> {
@@ -97,10 +99,9 @@ public final class Timer implements Scheduler {
         thread.start();
     }
 
-    @Override
     public TimerTask schedule(long delayInMillis, Runnable runnable) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        TimerTask task = new TimerTask(startTime, SchedulerRunnableWrapper.INSTANCE.wrap(runnable), tasks::remove);
+        TimerTask task = new TimerTask(startTime, RunnableWrapper.INSTANCE.wrap(runnable), tasks::remove);
         tasks.add(task);
         LockSupport.unpark(thread);
         LOG.scheduledTimerTask(task, delayInMillis);

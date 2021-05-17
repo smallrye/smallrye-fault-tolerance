@@ -7,8 +7,8 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import io.smallrye.faulttolerance.core.scheduler.EventLoop;
-import io.smallrye.faulttolerance.core.scheduler.Timer;
+import io.smallrye.faulttolerance.core.event.loop.EventLoop;
+import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class ExecutorHolder {

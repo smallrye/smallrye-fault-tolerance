@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import io.smallrye.faulttolerance.core.scheduler.Timer;
+import io.smallrye.faulttolerance.core.timer.Timer;
 
 @EnabledOnOs(OS.LINUX)
 public class TimerTimeoutWatcherTest {

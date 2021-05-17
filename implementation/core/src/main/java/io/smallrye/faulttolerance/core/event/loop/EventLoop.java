@@ -1,6 +1,6 @@
-package io.smallrye.faulttolerance.core.scheduler;
+package io.smallrye.faulttolerance.core.event.loop;
 
-import static io.smallrye.faulttolerance.core.scheduler.SchedulerLogger.LOG;
+import static io.smallrye.faulttolerance.core.event.loop.EventLoopLogger.LOG;
 
 import java.util.ServiceLoader;
 import java.util.concurrent.Executor;
@@ -12,7 +12,7 @@ public interface EventLoop {
     /**
      * Returns whether current thread is an event loop thread.
      * <p>
-     * When this method returns {@code false}, calling {@link #executor()} or {@link #scheduler()}
+     * When this method returns {@code false}, calling {@link #executor()}
      * doesn't make sense and throws {@link UnsupportedOperationException}.
      */
     boolean isEventLoopThread();
@@ -25,15 +25,6 @@ public interface EventLoop {
      * early and remember the result.
      */
     Executor executor();
-
-    /**
-     * Returns a {@link Scheduler} that schedules tasks on the current thread's event loop.
-     * <p>
-     * Pay attention to when you call this method. If you want to <em>immediately</em> use a scheduler
-     * for current thread's event loop, call this method late, immediately before calling {@code schedule},
-     * and avoid remembering the result.
-     */
-    Scheduler scheduler();
 
     static EventLoop get() {
         for (EventLoop eventLoop : ServiceLoader.load(EventLoop.class)) {

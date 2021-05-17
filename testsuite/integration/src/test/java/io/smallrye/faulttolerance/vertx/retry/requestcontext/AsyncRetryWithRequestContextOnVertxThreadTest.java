@@ -10,6 +10,7 @@ import javax.enterprise.context.control.RequestContextController;
 import javax.inject.Inject;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.vertx.AbstractVertxTest;
@@ -17,6 +18,12 @@ import io.smallrye.faulttolerance.vertx.AbstractVertxTest;
 public class AsyncRetryWithRequestContextOnVertxThreadTest extends AbstractVertxTest {
     @Inject
     RequestContextController rcc;
+
+    @BeforeEach
+    public void setUp() {
+        MyService.invocationThreads.clear();
+        MyRequestScopedService.instanceIds.clear();
+    }
 
     @Test
     public void nonblockingRetryWithRequestContext(MyService myService) {

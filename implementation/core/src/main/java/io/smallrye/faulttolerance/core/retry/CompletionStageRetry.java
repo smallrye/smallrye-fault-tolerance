@@ -7,7 +7,7 @@ import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -16,21 +16,15 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
+import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
-    private final Function<InvocationContext<CompletionStage<V>>, AsyncDelay> delayBetweenRetries;
+    private final Supplier<AsyncDelay> delayBetweenRetries;
 
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
             Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
-        this(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis,
-                ignored -> delayBetweenRetries.get(), stopwatch);
-    }
-
-    public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
-            Function<InvocationContext<CompletionStage<V>>, AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         // the SyncDelay.NONE is ignored here, we have our own AsyncDelay
         super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, SyncDelay.NONE, stopwatch);
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
@@ -47,7 +41,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     }
 
     private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
-        AsyncDelay delay = delayBetweenRetries.apply(ctx);
+        AsyncDelay delay = delayBetweenRetries.get();
         RunningStopwatch runningStopwatch = stopwatch.start();
         return doRetry(ctx, 0, delay, runningStopwatch, null);
     }
@@ -63,8 +57,13 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
             CompletableFuture<V> result = new CompletableFuture<>();
 
+            // only to account for a potential Executor remembered by an earlier strategy;
+            // that's why we use `DirectExecutor` otherwise
+            Executor delayExecutor = ctx.get(Executor.class, DirectExecutor.INSTANCE);
             delay.after(() -> {
-                propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, latestFailure), result);
+                delayExecutor.execute(() -> {
+                    propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, latestFailure), result);
+                });
             });
 
             return result;

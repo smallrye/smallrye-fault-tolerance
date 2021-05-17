@@ -6,11 +6,17 @@ import static org.awaitility.Awaitility.await;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.vertx.AbstractVertxTest;
 
 public class AsyncRetryOnVertxThreadTest extends AbstractVertxTest {
+    @BeforeEach
+    public void setUp() {
+        MyService.invocationThreads.clear();
+    }
+
     @Test
     public void nonblockingRetry(MyService myService) {
         AtomicReference<Object> result = new AtomicReference<>(null);

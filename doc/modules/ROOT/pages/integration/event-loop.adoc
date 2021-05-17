@@ -6,7 +6,7 @@ WARNING: This integration API comes from the `core` module and so is treated as 
 If you intend to implement it, please let us know in the {smallrye-fault-tolerance} issue tracker.
 We'd prefer all the implementations to live in the {smallrye-fault-tolerance} project.
 
-The integrator must implement the `EventLoop` interface, which lets {smallrye-fault-tolerance} submit ``Runnable``s to the event loop for immediate or scheduled execution.
+The integrator must implement the `EventLoop` interface, which lets {smallrye-fault-tolerance} submit ``Runnable``s to the event loop for execution.
 Implementations are discovered through `ServiceLoader`, so the corresponding `META-INF/services/\...` file must also exist.
 
 At most one implementation of `EventLoop` may be present at runtime.

@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.vertx;
 
 import java.util.concurrent.Executor;
 
-import io.smallrye.faulttolerance.core.scheduler.SchedulerRunnableWrapper;
+import io.smallrye.faulttolerance.core.util.RunnableWrapper;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 
@@ -22,7 +22,7 @@ final class VertxExecutor implements Executor {
             return;
         }
 
-        Runnable wrappedRunnable = SchedulerRunnableWrapper.INSTANCE.wrap(runnable);
+        Runnable wrappedRunnable = RunnableWrapper.INSTANCE.wrap(runnable);
 
         vertxContext.runOnContext(ignored -> {
             wrappedRunnable.run();

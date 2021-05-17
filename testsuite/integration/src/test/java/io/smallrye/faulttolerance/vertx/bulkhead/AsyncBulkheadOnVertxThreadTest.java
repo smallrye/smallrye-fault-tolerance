@@ -8,11 +8,17 @@ import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Condition;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.vertx.AbstractVertxTest;
 
 public class AsyncBulkheadOnVertxThreadTest extends AbstractVertxTest {
+    @BeforeEach
+    public void setUp() {
+        MyService.invocationThreads.clear();
+    }
+
     @Test
     public void nonblockingBulkhead(MyService myService) {
         CopyOnWriteArrayList<Object> results = new CopyOnWriteArrayList<>();
