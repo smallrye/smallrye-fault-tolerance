@@ -59,6 +59,7 @@ import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
+import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
@@ -70,17 +71,15 @@ import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.Jitter;
 import io.smallrye.faulttolerance.core.retry.RandomJitter;
 import io.smallrye.faulttolerance.core.retry.Retry;
-import io.smallrye.faulttolerance.core.retry.SchedulerDelay;
 import io.smallrye.faulttolerance.core.retry.SimpleBackOff;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
-import io.smallrye.faulttolerance.core.scheduler.EventLoop;
-import io.smallrye.faulttolerance.core.scheduler.Scheduler;
-import io.smallrye.faulttolerance.core.scheduler.Timer;
+import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
+import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.AsyncTypesConversion;
@@ -277,14 +276,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(retryConf, RetryConfig.ABORT_ON),
                     (int) retryConf.get(RetryConfig.MAX_RETRIES),
                     maxDurationMs,
-                    ctx -> {
-                        Scheduler scheduler = ctx.get(Scheduler.class);
-                        if (scheduler == null) {
-                            scheduler = timer;
-                        }
-
-                        return new SchedulerDelay(new SimpleBackOff(delayMs, jitter), scheduler);
-                    },
+                    () -> new TimerDelay(new SimpleBackOff(delayMs, jitter), timer),
                     new SystemStopwatch());
         }
 

@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.core.scheduler;
+package io.smallrye.faulttolerance.core.event.loop;
 
 import java.util.concurrent.Executor;
 
@@ -16,11 +16,6 @@ final class NoEventLoop implements EventLoop {
 
     @Override
     public Executor executor() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Scheduler scheduler() {
         throw new UnsupportedOperationException();
     }
 }

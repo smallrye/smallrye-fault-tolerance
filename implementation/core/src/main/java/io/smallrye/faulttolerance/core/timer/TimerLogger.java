@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.core.scheduler;
+package io.smallrye.faulttolerance.core.timer;
 
 import static org.jboss.logging.annotations.Message.NONE;
 
@@ -11,8 +11,8 @@ import org.jboss.logging.annotations.MessageLogger;
 import org.jboss.logging.annotations.Transform;
 
 @MessageLogger(projectCode = "SRFTL", length = 5)
-interface SchedulerLogger extends BasicLogger {
-    SchedulerLogger LOG = Logger.getMessageLogger(SchedulerLogger.class, SchedulerLogger.class.getPackage().getName());
+interface TimerLogger extends BasicLogger {
+    TimerLogger LOG = Logger.getMessageLogger(TimerLogger.class, TimerLogger.class.getPackage().getName());
 
     @Message(id = NONE, value = "Timer %s created")
     @LogMessage(level = Logger.Level.TRACE)
@@ -37,12 +37,4 @@ interface SchedulerLogger extends BasicLogger {
     @Message(id = 11000, value = "Unexpected exception in timer loop, ignoring")
     @LogMessage(level = Logger.Level.WARN)
     void unexpectedExceptionInTimerLoop(@Cause Exception e);
-
-    @Message(id = NONE, value = "Found event loop integration %s")
-    @LogMessage(level = Logger.Level.TRACE)
-    void foundEventLoop(@Transform(Transform.TransformType.GET_CLASS) EventLoop eventLoop);
-
-    @Message(id = NONE, value = "No event loop integration found")
-    @LogMessage(level = Logger.Level.TRACE)
-    void noEventLoop();
 }

@@ -24,11 +24,11 @@
 
 10000-10999 = smallrye-fault-tolerance-core/timeout
 
-11000-11999 = smallrye-fault-tolerance-core/scheduler # was called "timer" previously
+11000-11999 = smallrye-fault-tolerance-core/timer
 
-12000-12999 = smallrye-fault-tolerance-vertx
+12000-12999 = smallrye-fault-tolerance-core/event/loop
 
-13000-13999 =
+13000-13999 = smallrye-fault-tolerance-vertx
 
 14000-14999 =
 

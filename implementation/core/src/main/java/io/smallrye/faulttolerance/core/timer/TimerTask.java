@@ -1,12 +1,12 @@
-package io.smallrye.faulttolerance.core.scheduler;
+package io.smallrye.faulttolerance.core.timer;
 
-import static io.smallrye.faulttolerance.core.scheduler.SchedulerLogger.LOG;
+import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-public final class TimerTask implements SchedulerTask {
+public final class TimerTask {
     static final int STATE_NEW = 0; // was scheduled, but isn't running yet
     static final int STATE_RUNNING = 1; // running on the executor
     static final int STATE_FINISHED = 2; // finished running
@@ -24,13 +24,11 @@ public final class TimerTask implements SchedulerTask {
         this.onCancel = checkNotNull(onCancel, "Cancellation callback must be set");
     }
 
-    @Override
     public boolean isDone() {
         int state = this.state.get();
         return state == STATE_FINISHED || state == STATE_CANCELLED;
     }
 
-    @Override
     public boolean cancel() {
         // can't cancel if it's already running
         if (state.compareAndSet(STATE_NEW, STATE_CANCELLED)) {
