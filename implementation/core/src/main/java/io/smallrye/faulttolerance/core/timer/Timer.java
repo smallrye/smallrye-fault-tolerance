@@ -44,6 +44,10 @@ public final class Timer {
 
     private final AtomicBoolean running = new AtomicBoolean(true);
 
+    /**
+     * @param executor default {@link Executor} used for running scheduled tasks, unless an executor
+     *        is provided when {@link #schedule(long, Runnable, Executor) scheduling} a task
+     */
     public Timer(Executor executor) {
         checkNotNull(executor, "Executor must be set");
 
@@ -75,7 +79,12 @@ public final class Timer {
                         if (taskStartTime - currentTime <= 0) {
                             tasks.remove(task);
                             if (task.state.compareAndSet(TimerTask.STATE_NEW, TimerTask.STATE_RUNNING)) {
-                                executor.execute(() -> {
+                                Executor executorForTask = task.executorOverride;
+                                if (executorForTask == null) {
+                                    executorForTask = executor;
+                                }
+
+                                executorForTask.execute(() -> {
                                     LOG.runningTimerTask(task);
                                     try {
                                         task.runnable.run();
@@ -99,13 +108,28 @@ public final class Timer {
         thread.start();
     }
 
-    public TimerTask schedule(long delayInMillis, Runnable runnable) {
+    /**
+     * Schedules the {@code task} to be executed in {@code delayInMillis} on the {@link Executor}
+     * specified when creating this {@code Timer}.
+     * <p>
+     * Equivalent to {@code schedule(delayInMillis, task, null)}.
+     */
+    public TimerTask schedule(long delayInMillis, Runnable task) {
+        return schedule(delayInMillis, task, null);
+    }
+
+    /**
+     * Schedules the {@code task} to be executed in {@code delayInMillis} on given {@code executor}.
+     * If {@code executor} is {@code null}, the {@link Executor} specified when creating this {@code Timer}
+     * is used.
+     */
+    public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        TimerTask task = new TimerTask(startTime, RunnableWrapper.INSTANCE.wrap(runnable), tasks::remove);
-        tasks.add(task);
+        TimerTask timerTask = new TimerTask(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove, executor);
+        tasks.add(timerTask);
         LockSupport.unpark(thread);
-        LOG.scheduledTimerTask(task, delayInMillis);
-        return task;
+        LOG.scheduledTimerTask(timerTask, delayInMillis);
+        return timerTask;
     }
 
     /**

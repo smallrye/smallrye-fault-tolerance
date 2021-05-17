@@ -16,7 +16,6 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
-import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
@@ -57,14 +56,9 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
             CompletableFuture<V> result = new CompletableFuture<>();
 
-            // only to account for a potential Executor remembered by an earlier strategy;
-            // that's why we use `DirectExecutor` otherwise
-            Executor delayExecutor = ctx.get(Executor.class, DirectExecutor.INSTANCE);
             delay.after(() -> {
-                delayExecutor.execute(() -> {
-                    propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, latestFailure), result);
-                });
-            });
+                propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, latestFailure), result);
+            }, ctx.get(Executor.class));
 
             return result;
         } else {

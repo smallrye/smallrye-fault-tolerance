@@ -2,6 +2,9 @@ package io.smallrye.faulttolerance.core.retry;
 
 import io.smallrye.faulttolerance.core.util.Preconditions;
 
+/**
+ * Sync delay based on {@code Thread.sleep}.
+ */
 public class ThreadSleepDelay implements SyncDelay {
     private final BackOff backOff;
 
