@@ -47,8 +47,9 @@ jobs:
           git checkout ${{github.base_ref}}
           git rebase release
           mvn -B release:perform -Prelease -s maven-settings.xml
+          sed -i -e 's|https://smallrye.io/docs/smallrye-fault-tolerance/.*/index.html|https://smallrye.io/docs/smallrye-fault-tolerance/${{steps.metadata.outputs.current-version}}/index.html|' README.adoc
           sed -i -e 's|^version: ${{steps.metadata.outputs.current-version}}|version: main|' doc/antora.yml
-          git commit -a -m 'Update antora.yml after release'
+          git commit -a -m 'Update README.adoc and antora.yml after release'
           git push
           git push --tags
 
