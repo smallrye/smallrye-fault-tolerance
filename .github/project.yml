@@ -2,4 +2,3 @@ name: SmallRye Fault Tolerance
 release:
   current-version: 5.1.0
   next-version: 5.1.1-SNAPSHOT
-
