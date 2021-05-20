@@ -6,9 +6,6 @@ updates:
     interval: daily
   open-pull-requests-limit: 10
   ignore:
-  - dependency-name: com.netflix.hystrix:hystrix-core
-    versions:
-    - "> 1.5.12"
   - dependency-name: org.jboss.weld:weld-junit5
     versions:
     - ">= 3.a, < 4"
