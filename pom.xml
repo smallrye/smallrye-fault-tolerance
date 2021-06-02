@@ -46,7 +46,7 @@
         <version.smallrye-common>1.6.0</version.smallrye-common>
         <version.smallrye-reactive-utils>2.5.1</version.smallrye-reactive-utils>
         <version.opentracing>0.33.0</version.opentracing>
-        <version.vertx>4.0.3</version.vertx>
+        <version.vertx>4.1.0</version.vertx>
 
         <version.junit-pioneer>1.4.2</version.junit-pioneer>
         <version.mutiny>0.17.0</version.mutiny>
