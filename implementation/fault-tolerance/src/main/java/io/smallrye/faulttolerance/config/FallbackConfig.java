@@ -75,7 +75,8 @@ public class FallbackConfig extends GenericConfig<Fallback> {
             if (!method.getReturnType().equals(void.class)
                     && !isAssignableFrom(method.getGenericReturnType(), fallbackMethod.getGenericReturnType())) {
                 throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + getMethodInfo() + " : fallback method "
-                        + get(FALLBACK_METHOD) + " must have a return type assignable to method's return type");
+                        + get(FALLBACK_METHOD) + " return type '" + fallbackMethod.getGenericReturnType()
+                        + "' is not assignable to method's return type '" + method.getGenericReturnType() + "'");
             }
         }
         if (!Fallback.DEFAULT.class.equals(get(VALUE))) {
@@ -123,12 +124,12 @@ public class FallbackConfig extends GenericConfig<Fallback> {
      * @return {@code true} if type1 is assignable from type2
      */
     private static boolean isAssignableFrom(Type type1, Type type2) {
-        if (type1 instanceof Class<?>) {
-            if (type2 instanceof Class<?>) {
+        if (type1 instanceof Class) {
+            if (type2 instanceof Class) {
                 return isAssignableFrom((Class<?>) type1, (Class<?>) type2);
             }
             if (type2 instanceof ParameterizedType) {
-                return isAssignableFrom((Class<?>) type1, (ParameterizedType) type2);
+                return isAssignableFrom((Class<?>) type1, (Class<?>) ((ParameterizedType) type2).getRawType());
             }
             throw new IllegalArgumentException("Unsupported type " + type2);
         }
@@ -136,9 +137,12 @@ public class FallbackConfig extends GenericConfig<Fallback> {
             if (type2 instanceof ParameterizedType) {
                 return isAssignableFrom((ParameterizedType) type1, (ParameterizedType) type2);
             }
+            if (type2 instanceof Class) {
+                return false;
+            }
             throw new IllegalArgumentException("Unsupported type " + type2);
         }
-        throw new IllegalArgumentException("Unsupported type " + type1);
+        throw new IllegalArgumentException("Unsupported types " + type1 + " and " + type2);
     }
 
     private static boolean isAssignableFrom(Class<?> type1, Class<?> type2) {

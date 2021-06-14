@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.smallrye.faulttolerance.fallbackmethod.parameterized;
+package io.smallrye.faulttolerance.fallbackmethod.parameterized.raw.param;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,18 +21,16 @@ import java.util.List;
 import javax.enterprise.context.Dependent;
 
 import org.eclipse.microprofile.faulttolerance.Fallback;
-import org.eclipse.microprofile.faulttolerance.Retry;
 
 @Dependent
-public class InvalidParameterizedFallbackMethod {
+public class RawAndParameterizedFallbackMethod {
 
-    @Fallback(fallbackMethod = "fallbackParameterized")
-    @Retry(maxRetries = 1)
-    public List<String> fooParameterized() {
+    @Fallback(fallbackMethod = "fallback")
+    public List hello() {
         throw new IllegalStateException();
     }
 
-    List<Integer> fallbackParameterized() {
+    List<Integer> fallback() {
         List<Integer> ints = new ArrayList<>();
         ints.add(1);
         return ints;
