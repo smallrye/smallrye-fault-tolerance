@@ -13,19 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.smallrye.faulttolerance.fallbackmethod.parameterized;
+package io.smallrye.faulttolerance.fallbackmethod.parameterized.param.raw;
 
-import javax.enterprise.inject.spi.DefinitionException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.junit.jupiter.api.Test;
+import javax.enterprise.context.Dependent;
 
-import io.smallrye.faulttolerance.util.ExpectedDeploymentException;
-import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import org.eclipse.microprofile.faulttolerance.Fallback;
 
-@FaultToleranceBasicTest
-@ExpectedDeploymentException(DefinitionException.class)
-public class ParameterizedFallbackMethodTest {
-    @Test
-    public void testIgnored(InvalidParameterizedFallbackMethod ignored) {
+@Dependent
+public class ParameterizedAndRawFallbackMethod {
+    @Fallback(fallbackMethod = "fallback")
+    public List<String> hello() {
+        throw new IllegalStateException();
+    }
+
+    List fallback() {
+        List<Integer> ints = new ArrayList<>();
+        ints.add(1);
+        return ints;
     }
 }

@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.Optional;
 
 import org.jboss.weld.junit5.auto.WeldJunit5AutoExtension;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ParameterContext;
@@ -18,6 +19,18 @@ import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
  */
 public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension implements InvocationInterceptor {
     private static final String SKIP_TEST_INVOCATIONS = "WeldWithFaultToleranceExtension.SKIP_TEST_INVOCATIONS";
+
+    private static ExtensionContext classContext(ExtensionContext extensionContext) {
+        if (extensionContext.getElement().isPresent() && extensionContext.getElement().get() instanceof Class) {
+            return extensionContext;
+        }
+
+        if (extensionContext.getParent().isPresent()) {
+            return classContext(extensionContext.getParent().get());
+        }
+
+        throw new IllegalStateException("Can't find ExtensionContext for test class");
+    }
 
     private static ExtensionContext.Namespace getNamespace(ExtensionContext extensionContext) {
         return ExtensionContext.Namespace.create(WeldWithFaultToleranceExtension.class,
@@ -42,6 +55,17 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
         }
     }
 
+    @Override
+    public void afterAll(ExtensionContext extensionContext) throws Exception {
+        super.afterAll(extensionContext);
+
+        Optional<ExpectedDeploymentException> expectedException = findAnnotation(extensionContext.getRequiredTestClass(),
+                ExpectedDeploymentException.class);
+        if (expectedException.isPresent() && !shouldSkipTestInvocations(extensionContext)) {
+            Assertions.fail("Exception " + expectedException.get().value().getName() + " was expected, but wasn't thrown");
+        }
+    }
+
     private void handle(Exception exception, ExtensionContext extensionContext) throws Exception {
         Optional<ExpectedDeploymentException> expectedException = findAnnotation(extensionContext.getRequiredTestClass(),
                 ExpectedDeploymentException.class);
@@ -50,7 +74,8 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
             Throwable probedException = exception;
             while (probedException != null) {
                 if (expectedExceptionType.isAssignableFrom(probedException.getClass())) {
-                    extensionContext.getStore(getNamespace(extensionContext)).put(SKIP_TEST_INVOCATIONS, Boolean.TRUE);
+                    classContext(extensionContext).getStore(getNamespace(extensionContext))
+                            .put(SKIP_TEST_INVOCATIONS, Boolean.TRUE);
                     return;
                 }
                 probedException = probedException.getCause();
@@ -89,7 +114,7 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
     }
 
     private boolean shouldSkipTestInvocations(ExtensionContext extensionContext) {
-        return extensionContext.getStore(getNamespace(extensionContext))
+        return classContext(extensionContext).getStore(getNamespace(extensionContext))
                 .getOrDefault(SKIP_TEST_INVOCATIONS, Boolean.class, false);
     }
 }
