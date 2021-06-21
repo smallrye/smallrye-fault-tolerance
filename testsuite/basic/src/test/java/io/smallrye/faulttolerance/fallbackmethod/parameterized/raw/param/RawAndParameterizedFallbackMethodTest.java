@@ -15,19 +15,17 @@
  */
 package io.smallrye.faulttolerance.fallbackmethod.parameterized.raw.param;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.List;
+import javax.enterprise.inject.spi.DefinitionException;
 
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.util.ExpectedDeploymentException;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
+@ExpectedDeploymentException(DefinitionException.class)
 public class RawAndParameterizedFallbackMethodTest {
     @Test
-    public void test(RawAndParameterizedFallbackMethod bean) {
-        List result = bean.hello();
-        assertThat(result).containsExactly(1);
+    public void testIgnored(RawAndParameterizedFallbackMethod ignored) {
     }
 }

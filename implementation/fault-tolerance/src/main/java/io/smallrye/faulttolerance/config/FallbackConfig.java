@@ -129,7 +129,7 @@ public class FallbackConfig extends GenericConfig<Fallback> {
                 return isAssignableFrom((Class<?>) type1, (Class<?>) type2);
             }
             if (type2 instanceof ParameterizedType) {
-                return isAssignableFrom((Class<?>) type1, (Class<?>) ((ParameterizedType) type2).getRawType());
+                return false;
             }
             throw new IllegalArgumentException("Unsupported type " + type2);
         }
@@ -160,7 +160,7 @@ public class FallbackConfig extends GenericConfig<Fallback> {
         if (types1.length != types2.length) {
             return false;
         }
-        for (int i = 0; i < type1.getActualTypeArguments().length; i++) {
+        for (int i = 0; i < types1.length; i++) {
             if (!isAssignableFrom(types1[i], types2[i])) {
                 return false;
             }
