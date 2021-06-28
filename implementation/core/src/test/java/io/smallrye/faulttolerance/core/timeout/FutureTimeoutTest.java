@@ -39,6 +39,7 @@ public class FutureTimeoutTest {
         watcherExecutionInterruptedBarrier = Barrier.interruptible();
 
         timeoutWatcher = new TestTimeoutWatcher(watcherTimeoutElapsedBarrier, watcherExecutionInterruptedBarrier);
+
         asyncExecutor = Executors.newFixedThreadPool(4);
     }
 
@@ -46,6 +47,8 @@ public class FutureTimeoutTest {
     public void tearDown() throws InterruptedException {
         asyncExecutor.shutdown();
         asyncExecutor.awaitTermination(10, TimeUnit.SECONDS);
+
+        timeoutWatcher.shutdown();
     }
 
     @Test

@@ -26,8 +26,13 @@ public class TestExecutor implements Executor {
     }
 
     public void waitUntilDone() throws InterruptedException {
-        while (executingThread.isAlive()) {
-            Thread.sleep(10);
+        executingThread.join();
+    }
+
+    public void shutdown() throws InterruptedException {
+        if (executingThread != null) {
+            executingThread.interrupt();
+            executingThread.join();
         }
     }
 }

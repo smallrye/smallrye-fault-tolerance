@@ -15,6 +15,8 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
 
     private final AtomicBoolean timeoutWatchCancelled = new AtomicBoolean(false);
 
+    private volatile Thread executingThread;
+
     public TestTimeoutWatcher(Barrier timeoutElapsedBarrier, Barrier executionInterruptedBarrier) {
         this.timeoutElapsedBarrier = timeoutElapsedBarrier;
         this.executionInterruptedBarrier = executionInterruptedBarrier;
@@ -27,7 +29,7 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
     @Override
     public TimeoutWatch schedule(TimeoutExecution execution) {
         if (alreadyUsed.compareAndSet(false, true)) {
-            Thread thread = new Thread(() -> {
+            executingThread = new Thread(() -> {
                 try {
                     timeoutElapsedBarrier.await();
                     execution.timeoutAndInterrupt();
@@ -37,21 +39,28 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
                     // see also the return value of this method
                 }
             }, "TestTimeoutWatcher thread");
-            thread.start();
+            executingThread.start();
             return new TimeoutWatch() {
                 @Override
                 public boolean isRunning() {
-                    return thread.isAlive();
+                    return executingThread.isAlive();
                 }
 
                 @Override
                 public void cancel() {
                     timeoutWatchCancelled.set(true);
-                    thread.interrupt();
+                    executingThread.interrupt();
                 }
             };
         } else {
             throw new IllegalStateException("TestTimeoutWatcher cannot be reused");
+        }
+    }
+
+    public void shutdown() throws InterruptedException {
+        if (executingThread != null) {
+            executingThread.interrupt();
+            executingThread.join();
         }
     }
 }
