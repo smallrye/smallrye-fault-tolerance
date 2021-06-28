@@ -8,7 +8,6 @@ import javax.inject.Inject;
 import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 
-import io.smallrye.faulttolerance.config.FallbackConfig;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
@@ -30,7 +29,7 @@ public class DefaultFallbackHandlerProvider implements FallbackHandlerProvider {
                 @Override
                 public T handle(ExecutionContext context) {
                     Unmanaged<FallbackHandler<T>> unmanaged = new Unmanaged<>(beanManager,
-                            operation.getFallback().get(FallbackConfig.VALUE));
+                            (Class<FallbackHandler<T>>) operation.getFallback().value());
                     Unmanaged.UnmanagedInstance<FallbackHandler<T>> unmanagedInstance = unmanaged.newInstance();
                     FallbackHandler<T> handler = unmanagedInstance.produce().inject().postConstruct().get();
                     try {

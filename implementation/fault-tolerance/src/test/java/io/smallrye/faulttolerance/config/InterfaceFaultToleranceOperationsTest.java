@@ -6,24 +6,28 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
+
 public class InterfaceFaultToleranceOperationsTest {
     @Test
     public void testInterfaceMethods() throws NoSuchMethodException, SecurityException {
-        FaultToleranceOperation ping = FaultToleranceOperation.of(Proxy.class, Proxy.class.getMethod("ping"));
+        FaultToleranceMethod pingMethod = FaultToleranceMethods.create(Proxy.class, Proxy.class.getMethod("ping"));
+        FaultToleranceOperation ping = FaultToleranceOperation.create(pingMethod);
         assertThat(ping.isValid()).isTrue();
         CircuitBreakerConfig circuitBreaker = ping.getCircuitBreaker();
         assertThat(circuitBreaker).isNotNull();
-        assertThat((Integer) circuitBreaker.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD)).isEqualTo(2);
+        assertThat(circuitBreaker.requestVolumeThreshold()).isEqualTo(2);
 
-        FaultToleranceOperation pong = FaultToleranceOperation.of(Proxy.class, Proxy.class.getMethod("pong"));
+        FaultToleranceMethod pongMethod = FaultToleranceMethods.create(Proxy.class, Proxy.class.getMethod("pong"));
+        FaultToleranceOperation pong = FaultToleranceOperation.create(pongMethod);
         assertThat(pong.isValid()).isTrue();
         RetryConfig retry = pong.getRetry();
         assertThat(retry).isNotNull();
         assertThat(pong.isAsync()).isFalse();
-        assertThat((Long) retry.get(RetryConfig.DELAY)).isEqualTo(1000);
+        assertThat(retry.delay()).isEqualTo(1000);
         circuitBreaker = pong.getCircuitBreaker();
         assertThat(circuitBreaker).isNotNull();
-        assertThat((Integer) circuitBreaker.get(CircuitBreakerConfig.REQUEST_VOLUME_THRESHOLD)).isEqualTo(2);
+        assertThat(circuitBreaker.requestVolumeThreshold()).isEqualTo(2);
     }
 
     @CircuitBreaker(requestVolumeThreshold = 2)

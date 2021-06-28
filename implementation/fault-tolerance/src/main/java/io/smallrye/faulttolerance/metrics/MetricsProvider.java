@@ -84,9 +84,7 @@ public class MetricsProvider {
 
         MetricsRecorderImpl(MetricRegistry registry, FaultToleranceOperation operation) {
             this.registry = registry;
-
-            String methodName = operation.getBeanClass().getCanonicalName() + "." + operation.getMethod().getName();
-            this.methodTag = new Tag("method", methodName);
+            this.methodTag = new Tag("method", operation.getName());
 
             registerMetrics(operation);
         }

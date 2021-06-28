@@ -1,73 +1,24 @@
-/*
- * Copyright 2017 Red Hat, Inc, and individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package io.smallrye.faulttolerance.config;
-
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.enterprise.inject.spi.AnnotatedMethod;
 
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
-/**
- * @author Antoine Sabot-Durand
- */
-public class BulkheadConfig extends GenericConfig<Bulkhead> {
+import io.smallrye.faulttolerance.autoconfig.AutoConfig;
+import io.smallrye.faulttolerance.autoconfig.Config;
 
-    public static final String VALUE = "value";
-
-    public static final String WAITING_TASK_QUEUE = "waitingTaskQueue";
-
-    public BulkheadConfig(Class<?> beanClass, Method method) {
-        super(Bulkhead.class, beanClass, method);
-    }
-
-    public BulkheadConfig(AnnotatedMethod<?> annotatedMethod) {
-        super(Bulkhead.class, annotatedMethod);
-    }
-
+@AutoConfig
+public interface BulkheadConfig extends Bulkhead, Config {
     @Override
-    public void validate() {
-        if (get(VALUE, Integer.class) < 0) {
-            throw new FaultToleranceDefinitionException(
-                    INVALID_BULKHEAD_ON + getMethodInfo() + " : value shouldn't be lower than 0");
+    default void validate() {
+        final String INVALID_BULKHEAD_ON = "Invalid @Bulkhead on ";
+
+        if (value() < 0) {
+            throw new FaultToleranceDefinitionException(INVALID_BULKHEAD_ON + method()
+                    + ": value shouldn't be lower than 0");
         }
-        if (get(WAITING_TASK_QUEUE, Integer.class) < 1) {
-            throw new FaultToleranceDefinitionException(
-                    INVALID_BULKHEAD_ON + getMethodInfo() + " : waitingTaskQueue shouldn't be lower than 1");
+        if (waitingTaskQueue() < 1) {
+            throw new FaultToleranceDefinitionException(INVALID_BULKHEAD_ON + method()
+                    + ": waitingTaskQueue shouldn't be lower than 1");
         }
     }
-
-    @Override
-    protected Map<String, Class<?>> getKeysToType() {
-        return keys2Type;
-    }
-
-    private static final String INVALID_BULKHEAD_ON = "Invalid @Bulkhead on ";
-
-    private static Map<String, Class<?>> keys2Type = initKeys();
-
-    private static Map<String, Class<?>> initKeys() {
-        Map<String, Class<?>> keys = new HashMap<>();
-        keys.put(VALUE, Integer.class);
-        keys.put(WAITING_TASK_QUEUE, Integer.class);
-        return Collections.unmodifiableMap(keys);
-    }
-
 }

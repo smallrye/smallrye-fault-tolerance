@@ -12,4 +12,5 @@
 ** xref:internals/project-structure.adoc[Project Structure]
 ** xref:internals/instructions.adoc[Instructions]
 ** xref:internals/core.adoc[Fault Tolerance Core]
+** xref:internals/config.adoc[Configuration System]
 ** xref:internals/logging.adoc[Logging]

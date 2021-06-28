@@ -4,14 +4,17 @@
 
     <parent>
         <groupId>io.smallrye</groupId>
-        <artifactId>smallrye-fault-tolerance-parent</artifactId>
+        <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
         <version>5.1.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>smallrye-fault-tolerance-release</artifactId>
+    <artifactId>smallrye-fault-tolerance-autoconfig-parent</artifactId>
     <packaging>pom</packaging>
 
-    <name>Empty Release Project to Avoid Maven Bug</name>
-    <description>Empty Release Project to Avoid Maven Bug</description>
+    <name>SmallRye Fault Tolerance: AutoConfig Parent</name>
 
+    <modules>
+        <module>core</module>
+        <module>processor</module>
+    </modules>
 </project>

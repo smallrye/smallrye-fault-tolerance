@@ -55,7 +55,8 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
-import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
+import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
+import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MetricsProvider;
@@ -84,7 +85,6 @@ public class FaultToleranceExtension implements Extension {
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
 
-        // It seems that fraction deployment module cannot be picked up as a CDI bean archive - see also SWARM-1725
         bbd.addAnnotatedType(bm.createAnnotatedType(FaultToleranceInterceptor.class),
                 FaultToleranceInterceptor.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class),
@@ -128,16 +128,17 @@ public class FaultToleranceExtension implements Extension {
     void collectFaultToleranceOperations(@Observes ProcessManagedBean<?> event) {
         AnnotatedType<?> annotatedType = event.getAnnotatedBeanClass();
         for (AnnotatedMethod<?> annotatedMethod : annotatedType.getMethods()) {
-            FaultToleranceOperation operation = FaultToleranceOperation.of(annotatedMethod);
-            if (operation.isLegitimate()) {
+            FaultToleranceMethod method = FaultToleranceMethods.create(annotatedMethod);
+            if (method.isLegitimate()) {
+                FaultToleranceOperation operation = FaultToleranceOperation.create(method);
                 operation.validate();
                 LOG.debug("Found " + operation);
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()),
                         operation);
 
-                CircuitBreakerConfig cb = operation.getCircuitBreaker();
-                if (cb != null && cb.getCircuitBreakerName() != null) {
-                    existingCircuitBreakerNames.computeIfAbsent(cb.getCircuitBreakerName(), ignored -> new HashSet<>())
+                if (operation.hasCircuitBreaker() && operation.hasCircuitBreakerName()) {
+                    existingCircuitBreakerNames
+                            .computeIfAbsent(operation.getCircuitBreakerName().value(), ignored -> new HashSet<>())
                             .add(annotatedMethod.getJavaMember().toGenericString());
                 }
             }
