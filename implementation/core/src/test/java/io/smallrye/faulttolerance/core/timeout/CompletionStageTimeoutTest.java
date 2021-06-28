@@ -10,6 +10,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +38,12 @@ public class CompletionStageTimeoutTest {
         timeoutWatcher = new TestTimeoutWatcher(watcherTimeoutElapsedBarrier, watcherExecutionInterruptedBarrier);
 
         executor = new TestExecutor();
+    }
+
+    @AfterEach
+    public void tearDown() throws InterruptedException {
+        executor.shutdown();
+        timeoutWatcher.shutdown();
     }
 
     @Test
