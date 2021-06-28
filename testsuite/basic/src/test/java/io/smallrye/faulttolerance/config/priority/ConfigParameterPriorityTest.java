@@ -45,11 +45,11 @@ public class ConfigParameterPriorityTest {
 
         RetryConfig fooRetry = foo.getRetry();
         // Global override
-        assertThat(fooRetry.get(RetryConfig.DELAY, Long.class)).isEqualTo(10L);
+        assertThat(fooRetry.delay()).isEqualTo(10L);
         // Method-level
-        assertThat(fooRetry.get(RetryConfig.MAX_RETRIES, Integer.class)).isEqualTo(2);
+        assertThat(fooRetry.maxRetries()).isEqualTo(2);
         // Default value
-        assertThat(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class)).isEqualTo(ChronoUnit.MILLIS);
+        assertThat(fooRetry.delayUnit()).isEqualTo(ChronoUnit.MILLIS);
 
         FaultToleranceOperation bar = ops.get(FaultyService.class, FaultyService.class.getMethod("bar"));
         assertThat(bar).isNotNull();
@@ -57,10 +57,10 @@ public class ConfigParameterPriorityTest {
 
         RetryConfig barRetry = bar.getRetry();
         // Global override
-        assertThat(barRetry.get(RetryConfig.DELAY, Long.class)).isEqualTo(10L);
+        assertThat(barRetry.delay()).isEqualTo(10L);
         // Class-level
-        assertThat(barRetry.get(RetryConfig.MAX_RETRIES, Integer.class)).isEqualTo(1);
+        assertThat(barRetry.maxRetries()).isEqualTo(1);
         // Default value
-        assertThat(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class)).isEqualTo(ChronoUnit.MILLIS);
+        assertThat(fooRetry.delayUnit()).isEqualTo(ChronoUnit.MILLIS);
     }
 }

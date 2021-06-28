@@ -9,8 +9,8 @@
     </parent>
 
     <artifactId>smallrye-fault-tolerance-tck</artifactId>
-    <name>SmallRye Fault Tolerance: TCK</name>
 
+    <name>SmallRye Fault Tolerance: TCK</name>
 
     <dependencies>
         <dependency>

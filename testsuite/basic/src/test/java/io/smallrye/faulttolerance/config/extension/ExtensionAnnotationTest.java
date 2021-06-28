@@ -47,9 +47,9 @@ public class ExtensionAnnotationTest {
 
         RetryConfig fooRetry = ping.getRetry();
         // Method-level
-        assertThat(fooRetry.get(RetryConfig.MAX_RETRIES, Integer.class)).isEqualTo(2);
+        assertThat(fooRetry.maxRetries()).isEqualTo(2);
         // Default value
-        assertThat(fooRetry.get(RetryConfig.DELAY_UNIT, ChronoUnit.class)).isEqualTo(ChronoUnit.MILLIS);
+        assertThat(fooRetry.delayUnit()).isEqualTo(ChronoUnit.MILLIS);
 
         UnconfiguredService.COUNTER.set(0);
         assertThatThrownBy(() -> {

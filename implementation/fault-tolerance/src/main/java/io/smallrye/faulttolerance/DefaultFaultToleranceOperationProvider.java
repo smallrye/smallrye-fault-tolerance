@@ -22,6 +22,7 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 /**
@@ -49,7 +50,7 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
         }
         if (operation == null) {
             // This is not a bean method - create metadata on the fly
-            operation = FaultToleranceOperation.of(beanClass, method);
+            operation = FaultToleranceOperation.create(FaultToleranceMethods.create(beanClass, method));
             operation.validate();
         }
         return operation;

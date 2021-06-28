@@ -25,14 +25,15 @@
 
     <artifactId>smallrye-fault-tolerance-parent</artifactId>
     <version>5.1.1-SNAPSHOT</version>
-
     <packaging>pom</packaging>
+
     <name>SmallRye Fault Tolerance: Parent</name>
     <url>http://smallrye.io</url>
 
     <properties>
         <version.jakarta.enterprise.cdi.api>2.0.2</version.jakarta.enterprise.cdi.api>
         <version.jakarta.interceptor-api>1.2.5</version.jakarta.interceptor-api>
+        <version.javapoet>1.13.0</version.javapoet>
         <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
         <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
@@ -99,6 +100,11 @@
                         <artifactId>jakarta.ejb-api</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup</groupId>
+                <artifactId>javapoet</artifactId>
+                <version>${version.javapoet}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.microprofile.config</groupId>
@@ -245,6 +251,18 @@
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-core</artifactId>
                 <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-autoconfig-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-autoconfig-processor</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

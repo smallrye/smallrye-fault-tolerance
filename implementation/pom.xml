@@ -16,6 +16,7 @@
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-parent</artifactId>
@@ -23,11 +24,13 @@
     </parent>
 
     <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
-    <name>SmallRye Fault Tolerance: Implementation Parent</name>
     <packaging>pom</packaging>
+
+    <name>SmallRye Fault Tolerance: Implementation Parent</name>
 
     <modules>
         <module>core</module>
+        <module>autoconfig</module>
         <module>fault-tolerance</module>
         <module>context-propagation</module>
         <module>tracing-propagation</module>
