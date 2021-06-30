@@ -1,6 +1,8 @@
 package io.smallrye.faulttolerance.autoconfig.processor;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -14,6 +16,7 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ArrayType;
@@ -27,11 +30,14 @@ import javax.tools.Diagnostic;
 
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+
+import io.smallrye.faulttolerance.autoconfig.AutoConfig;
 
 @SupportedAnnotationTypes("io.smallrye.faulttolerance.autoconfig.AutoConfig")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
@@ -99,6 +105,8 @@ public class AutoConfigProcessor extends AbstractProcessor {
     }
 
     private void generateConfigImpl(TypeElement configClass, TypeElement annotationDeclaration) throws IOException {
+        boolean configurable = configClass.getAnnotation(AutoConfig.class).configurable();
+
         String packageName = configClass.getQualifiedName().toString().replace("." + configClass.getSimpleName(), "");
         ClassName configImplClassName = ClassName.get(packageName, configClass.getSimpleName() + "Impl");
 
@@ -106,20 +114,23 @@ public class AutoConfigProcessor extends AbstractProcessor {
 
         JavaFile.builder(packageName, TypeSpec.classBuilder(configImplClassName)
                 .addOriginatingElement(configClass)
-                .addJavadoc("Automatically generated from the {@code @$L} annotation, do not modify.",
-                        annotationDeclaration.getSimpleName())
+                .addJavadoc("Automatically generated from the {@link $L} config interface, do not modify.",
+                        configClass.getSimpleName())
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
                 .addSuperinterface(configClass.asType())
                 .addField(TypeNames.CLASS, "beanClass", Modifier.PRIVATE, Modifier.FINAL)
                 .addField(TypeNames.METHOD_DESCRIPTOR, "method", Modifier.PRIVATE, Modifier.FINAL)
                 .addField(FieldSpec.builder(annotationType, "instance", Modifier.PRIVATE, Modifier.FINAL)
-                        .addJavadoc("Backing annotation instance. Used when runtime configuration doesn't override it.")
+                        .addJavadoc(configurable
+                                ? "Backing annotation instance. Used when runtime configuration doesn't override it."
+                                : "Backing annotation instance.")
                         .build())
+                // TODO this is not really necessary for non-configurable annotations
                 .addField(FieldSpec.builder(TypeName.BOOLEAN, "onMethod", Modifier.PRIVATE, Modifier.FINAL)
                         .addJavadoc(
                                 "{@code true} if annotation was placed on a method; {@code false} if annotation was placed on a class.")
                         .build())
-                .addFields(ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())
+                .addFields(configurable ? ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())
                         .stream()
                         .map(annotationMember -> FieldSpec.builder(
                                 TypeName.get(annotationMember.getReturnType()).box(),
@@ -128,7 +139,7 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                         "Cached value of the {@code $1L.$2L} annotation member; {@code null} if not looked up yet.",
                                         annotationDeclaration.getSimpleName(), annotationMember.getSimpleName())
                                 .build())
-                        .collect(Collectors.toList()))
+                        .collect(Collectors.toList()) : Collections.emptyList())
                 .addMethod(MethodSpec.constructorBuilder()
                         .addModifiers(Modifier.PRIVATE)
                         .addParameter(TypeNames.FAULT_TOLERANCE_METHOD, "method")
@@ -146,9 +157,12 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                 firstToLowerCase(annotationDeclaration.getSimpleName().toString()))
                         .addStatement("return null")
                         .endControlFlow()
-                        .beginControlFlow("if (!$1T.isEnabled($2T.class, method.method))", TypeNames.CONFIG, annotationType)
-                        .addStatement("return null")
-                        .endControlFlow()
+                        .addCode(configurable ? CodeBlock.builder()
+                                .beginControlFlow("if (!$1T.isEnabled($2T.class, method.method))",
+                                        TypeNames.CONFIG, annotationType)
+                                .addStatement("return null")
+                                .endControlFlow()
+                                .build() : CodeBlock.builder().build())
                         .addStatement("return new $T(method)", configImplClassName)
                         .build())
                 .addMethod(MethodSpec.methodBuilder("beanClass")
@@ -175,54 +189,70 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                 .addAnnotation(Override.class)
                                 .addModifiers(Modifier.PUBLIC)
                                 .returns(TypeName.get(annotationMember.getReturnType()))
-                                .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                                // TODO maybe cache `Config` in a `private static final` field?
-                                .addStatement("$1T config = $2T.getConfig()", TypeNames.MP_CONFIG, TypeNames.MP_CONFIG_PROVIDER)
-                                .beginControlFlow("if (onMethod)")
-                                .addComment("<classname>/<methodname>/<annotation>/<parameter>")
-                                .addStatement(
-                                        "_$1L = config.getOptionalValue(getConfigKeyForMethod($1S), $2T.class).orElse(null)",
-                                        annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
-                                .nextControlFlow("else")
-                                .addComment("<classname>/<annotation>/<parameter>")
-                                .addStatement(
-                                        "_$1L = config.getOptionalValue(getConfigKeyForClass($1S), $2T.class).orElse(null)",
-                                        annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
-                                .endControlFlow()
-                                .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                                .addComment("<annotation>/<parameter>")
-                                .addStatement(
-                                        "_$1L = config.getOptionalValue($2S + $3S + $1S, $4T.class).orElse(null)",
-                                        annotationMember.getSimpleName(), annotationDeclaration.getSimpleName(), "/",
-                                        rawType(annotationMember.getReturnType()))
-                                .endControlFlow()
-                                .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                                .addComment("annotation value")
-                                .addStatement("_$1L = instance.$1L()", annotationMember.getSimpleName())
-                                .endControlFlow()
-                                .endControlFlow()
-                                .addStatement("return _$L", annotationMember.getSimpleName())
+                                .addCode(configurable
+                                        ? generateConfigurableMethod(annotationMember, annotationDeclaration)
+                                        : generateNonconfigurableMethod(annotationMember))
                                 .build())
                         .collect(Collectors.toList()))
-                .addMethod(MethodSpec.methodBuilder("getConfigKeyForMethod")
-                        .addModifiers(Modifier.PRIVATE)
-                        .returns(TypeNames.STRING)
-                        .addParameter(TypeNames.STRING, "key")
-                        .addStatement(
-                                "return method.declaringClass.getName() + $1S + method.name + $1S + $2S + $1S + key",
-                                "/", annotationDeclaration.getSimpleName())
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("getConfigKeyForClass")
-                        .addModifiers(Modifier.PRIVATE)
-                        .returns(TypeNames.STRING)
-                        .addParameter(TypeNames.STRING, "key")
-                        .addStatement("return method.declaringClass.getName() + $1S + $2S + $1S + key",
-                                "/", annotationDeclaration.getSimpleName())
-                        .build())
+                .addMethods(configurable ? Arrays.asList(
+                        MethodSpec.methodBuilder("getConfigKeyForMethod")
+                                .addModifiers(Modifier.PRIVATE)
+                                .returns(TypeNames.STRING)
+                                .addParameter(TypeNames.STRING, "key")
+                                .addStatement(
+                                        "return method.declaringClass.getName() + $1S + method.name + $1S + $2S + $1S + key",
+                                        "/", annotationDeclaration.getSimpleName())
+                                .build(),
+                        MethodSpec.methodBuilder("getConfigKeyForClass")
+                                .addModifiers(Modifier.PRIVATE)
+                                .returns(TypeNames.STRING)
+                                .addParameter(TypeNames.STRING, "key")
+                                .addStatement("return method.declaringClass.getName() + $1S + $2S + $1S + key",
+                                        "/", annotationDeclaration.getSimpleName())
+                                .build())
+                        : Collections.emptyList())
                 .build())
                 .indent("    ") // 4 spaces
                 .build()
                 .writeTo(processingEnv.getFiler());
+    }
+
+    private CodeBlock generateConfigurableMethod(ExecutableElement annotationMember, TypeElement annotationDeclaration) {
+        return CodeBlock.builder()
+                .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
+                // TODO maybe cache `Config` in a `private static final` field?
+                .addStatement("$1T config = $2T.getConfig()", TypeNames.MP_CONFIG, TypeNames.MP_CONFIG_PROVIDER)
+                .beginControlFlow("if (onMethod)")
+                .add("// <classname>/<methodname>/<annotation>/<parameter>\n")
+                .addStatement(
+                        "_$1L = config.getOptionalValue(getConfigKeyForMethod($1S), $2T.class).orElse(null)",
+                        annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
+                .nextControlFlow("else")
+                .add("// <classname>/<annotation>/<parameter>\n")
+                .addStatement(
+                        "_$1L = config.getOptionalValue(getConfigKeyForClass($1S), $2T.class).orElse(null)",
+                        annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
+                .endControlFlow()
+                .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
+                .add("// <annotation>/<parameter>\n")
+                .addStatement(
+                        "_$1L = config.getOptionalValue($2S + $3S + $1S, $4T.class).orElse(null)",
+                        annotationMember.getSimpleName(), annotationDeclaration.getSimpleName(), "/",
+                        rawType(annotationMember.getReturnType()))
+                .endControlFlow()
+                .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
+                .add("// annotation value\n")
+                .addStatement("_$1L = instance.$1L()", annotationMember.getSimpleName())
+                .endControlFlow()
+                .endControlFlow()
+                .addStatement("return _$L", annotationMember.getSimpleName())
+                .build();
+    }
+
+    private CodeBlock generateNonconfigurableMethod(ExecutableElement annotationMember) {
+        return CodeBlock.builder()
+                .addStatement("return instance.$1L()", annotationMember.getSimpleName())
+                .build();
     }
 
     private static TypeName rawType(TypeMirror type) {

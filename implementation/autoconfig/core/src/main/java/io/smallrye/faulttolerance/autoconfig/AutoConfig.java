@@ -19,4 +19,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface AutoConfig {
+    /**
+     * Whether the annotation values can be overridden by MP Config.
+     * Usually {@code true}, but there may be annotations for which that is not desirable.
+     */
+    boolean configurable() default true;
 }

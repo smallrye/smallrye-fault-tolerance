@@ -6,7 +6,7 @@ import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
 import io.smallrye.faulttolerance.autoconfig.Config;
 
-@AutoConfig
+@AutoConfig(configurable = false)
 public interface CircuitBreakerNameConfig extends CircuitBreakerName, Config {
     @Override
     default void validate() {
