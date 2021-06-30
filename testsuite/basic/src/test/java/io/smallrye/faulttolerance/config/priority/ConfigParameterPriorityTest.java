@@ -21,13 +21,13 @@ import java.time.temporal.ChronoUnit;
 
 import javax.inject.Inject;
 
+import org.eclipse.microprofile.faulttolerance.Retry;
 import org.jboss.weld.junit5.auto.AddBeanClasses;
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.FaultToleranceOperations;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @SetSystemProperty(key = "Retry/delay", value = "10")
@@ -43,7 +43,7 @@ public class ConfigParameterPriorityTest {
         assertThat(foo).isNotNull();
         assertThat(foo.hasRetry()).isTrue();
 
-        RetryConfig fooRetry = foo.getRetry();
+        Retry fooRetry = foo.getRetry();
         // Global override
         assertThat(fooRetry.delay()).isEqualTo(10L);
         // Method-level
@@ -55,7 +55,7 @@ public class ConfigParameterPriorityTest {
         assertThat(bar).isNotNull();
         assertThat(bar.hasRetry()).isTrue();
 
-        RetryConfig barRetry = bar.getRetry();
+        Retry barRetry = bar.getRetry();
         // Global override
         assertThat(barRetry.delay()).isEqualTo(10L);
         // Class-level

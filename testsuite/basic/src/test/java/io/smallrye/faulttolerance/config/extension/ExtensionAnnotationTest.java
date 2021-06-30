@@ -22,12 +22,12 @@ import java.time.temporal.ChronoUnit;
 
 import javax.inject.Inject;
 
+import org.eclipse.microprofile.faulttolerance.Retry;
 import org.jboss.weld.junit5.auto.AddExtensions;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.FaultToleranceOperations;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
@@ -45,7 +45,7 @@ public class ExtensionAnnotationTest {
         assertThat(ping).isNotNull();
         assertThat(ping.hasRetry()).isTrue();
 
-        RetryConfig fooRetry = ping.getRetry();
+        Retry fooRetry = ping.getRetry();
         // Method-level
         assertThat(fooRetry.maxRetries()).isEqualTo(2);
         // Default value

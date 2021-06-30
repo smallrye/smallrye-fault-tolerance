@@ -14,14 +14,14 @@ public class InterfaceFaultToleranceOperationsTest {
         FaultToleranceMethod pingMethod = FaultToleranceMethods.create(Proxy.class, Proxy.class.getMethod("ping"));
         FaultToleranceOperation ping = FaultToleranceOperation.create(pingMethod);
         assertThat(ping.isValid()).isTrue();
-        CircuitBreakerConfig circuitBreaker = ping.getCircuitBreaker();
+        CircuitBreaker circuitBreaker = ping.getCircuitBreaker();
         assertThat(circuitBreaker).isNotNull();
         assertThat(circuitBreaker.requestVolumeThreshold()).isEqualTo(2);
 
         FaultToleranceMethod pongMethod = FaultToleranceMethods.create(Proxy.class, Proxy.class.getMethod("pong"));
         FaultToleranceOperation pong = FaultToleranceOperation.create(pongMethod);
         assertThat(pong.isValid()).isTrue();
-        RetryConfig retry = pong.getRetry();
+        Retry retry = pong.getRetry();
         assertThat(retry).isNotNull();
         assertThat(pong.isAsync()).isFalse();
         assertThat(retry.delay()).isEqualTo(1000);

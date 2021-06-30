@@ -43,11 +43,7 @@ import javax.interceptor.InvocationContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
-import io.smallrye.faulttolerance.config.BulkheadConfig;
-import io.smallrye.faulttolerance.config.CircuitBreakerConfig;
-import io.smallrye.faulttolerance.config.FallbackConfig;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.config.RetryConfig;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
@@ -226,9 +222,8 @@ public class FaultToleranceInterceptor {
         result = new CompletionStageExecution<>(result, executor);
 
         if (operation.hasBulkhead()) {
-            BulkheadConfig bulkheadConfig = operation.getBulkhead();
-            int size = bulkheadConfig.value();
-            int queueSize = bulkheadConfig.waitingTaskQueue();
+            int size = operation.getBulkhead().value();
+            int queueSize = operation.getBulkhead().waitingTaskQueue();
             result = new CompletionStageThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
                     size, queueSize);
         }
@@ -241,15 +236,14 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasCircuitBreaker()) {
-            CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
-            long delayInMillis = getTimeInMs(cbConfig.delay(), cbConfig.delayUnit());
+            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(cbConfig.failOn()),
-                    getSetOfThrowables(cbConfig.skipOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
                     delayInMillis,
-                    cbConfig.requestVolumeThreshold(),
-                    cbConfig.failureRatio(),
-                    cbConfig.successThreshold(),
+                    operation.getCircuitBreaker().requestVolumeThreshold(),
+                    operation.getCircuitBreaker().failureRatio(),
+                    operation.getCircuitBreaker().successThreshold(),
                     new SystemStopwatch());
 
             String cbName = operation.hasCircuitBreakerName()
@@ -259,32 +253,30 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            RetryConfig retryConf = operation.getRetry();
-            long maxDurationMs = getTimeInMs(retryConf.maxDuration(), retryConf.durationUnit());
+            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
-            long delayMs = getTimeInMs(retryConf.delay(), retryConf.delayUnit());
+            long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
 
-            long jitterMs = getTimeInMs(retryConf.jitter(), retryConf.jitterDelayUnit());
+            long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             result = new CompletionStageRetry<>(result,
                     "Retry[" + point + "]",
-                    getSetOfThrowables(retryConf.retryOn()),
-                    getSetOfThrowables(retryConf.abortOn()),
-                    retryConf.maxRetries(),
+                    getSetOfThrowables(operation.getRetry().retryOn()),
+                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new TimerDelay(new SimpleBackOff(delayMs, jitter), timer),
                     new SystemStopwatch());
         }
 
         if (operation.hasFallback()) {
-            FallbackConfig fallbackConf = operation.getFallback();
             result = new CompletionStageFallback<>(
                     result,
                     "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(fallbackConf.applyOn()),
-                    getSetOfThrowables(fallbackConf.skipOn()));
+                    getSetOfThrowables(operation.getFallback().applyOn()),
+                    getSetOfThrowables(operation.getFallback().skipOn()));
         }
 
         if (metricsProvider.isEnabled()) {
@@ -302,10 +294,9 @@ public class FaultToleranceInterceptor {
         FaultToleranceStrategy<T> result = invocation();
 
         if (operation.hasBulkhead()) {
-            BulkheadConfig bulkheadConfig = operation.getBulkhead();
             result = new SemaphoreBulkhead<>(result,
                     "Bulkhead[" + point + "]",
-                    bulkheadConfig.value());
+                    operation.getBulkhead().value());
         }
 
         if (operation.hasTimeout()) {
@@ -316,15 +307,14 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasCircuitBreaker()) {
-            CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
-            long delayInMillis = getTimeInMs(cbConfig.delay(), cbConfig.delayUnit());
+            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(cbConfig.failOn()),
-                    getSetOfThrowables(cbConfig.skipOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
                     delayInMillis,
-                    cbConfig.requestVolumeThreshold(),
-                    cbConfig.failureRatio(),
-                    cbConfig.successThreshold(),
+                    operation.getCircuitBreaker().requestVolumeThreshold(),
+                    operation.getCircuitBreaker().failureRatio(),
+                    operation.getCircuitBreaker().successThreshold(),
                     new SystemStopwatch());
 
             String cbName = operation.hasCircuitBreakerName()
@@ -334,32 +324,30 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            RetryConfig retryConf = operation.getRetry();
-            long maxDurationMs = getTimeInMs(retryConf.maxDuration(), retryConf.durationUnit());
+            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
-            long delayMs = getTimeInMs(retryConf.delay(), retryConf.delayUnit());
+            long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
 
-            long jitterMs = getTimeInMs(retryConf.jitter(), retryConf.jitterDelayUnit());
+            long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             result = new Retry<>(result,
                     "Retry[" + point + "]",
-                    getSetOfThrowables(retryConf.retryOn()),
-                    getSetOfThrowables(retryConf.abortOn()),
-                    retryConf.maxRetries(),
+                    getSetOfThrowables(operation.getRetry().retryOn()),
+                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(new SimpleBackOff(delayMs, jitter)),
                     new SystemStopwatch());
         }
 
         if (operation.hasFallback()) {
-            FallbackConfig fallbackConf = operation.getFallback();
             result = new Fallback<>(
                     result,
                     "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(fallbackConf.applyOn()),
-                    getSetOfThrowables(fallbackConf.skipOn()));
+                    getSetOfThrowables(operation.getFallback().applyOn()),
+                    getSetOfThrowables(operation.getFallback().skipOn()));
         }
 
         if (metricsProvider.isEnabled()) {
@@ -376,9 +364,8 @@ public class FaultToleranceInterceptor {
         result = new RequestScopeActivator<>(result, requestContextController);
 
         if (operation.hasBulkhead()) {
-            BulkheadConfig bulkheadConfig = operation.getBulkhead();
-            int size = bulkheadConfig.value();
-            int queueSize = bulkheadConfig.waitingTaskQueue();
+            int size = operation.getBulkhead().value();
+            int queueSize = operation.getBulkhead().waitingTaskQueue();
             result = new FutureThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
                     size, queueSize);
         }
@@ -392,15 +379,14 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasCircuitBreaker()) {
-            CircuitBreakerConfig cbConfig = operation.getCircuitBreaker();
-            long delayInMillis = getTimeInMs(cbConfig.delay(), cbConfig.delayUnit());
+            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(cbConfig.failOn()),
-                    getSetOfThrowables(cbConfig.skipOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
                     delayInMillis,
-                    cbConfig.requestVolumeThreshold(),
-                    cbConfig.failureRatio(),
-                    cbConfig.successThreshold(),
+                    operation.getCircuitBreaker().requestVolumeThreshold(),
+                    operation.getCircuitBreaker().failureRatio(),
+                    operation.getCircuitBreaker().successThreshold(),
                     new SystemStopwatch());
 
             String cbName = operation.hasCircuitBreakerName()
@@ -410,31 +396,29 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            RetryConfig retryConf = operation.getRetry();
-            long maxDurationMs = getTimeInMs(retryConf.maxDuration(), retryConf.durationUnit());
+            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
-            long delayMs = getTimeInMs(retryConf.delay(), retryConf.delayUnit());
+            long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
 
-            long jitterMs = getTimeInMs(retryConf.jitter(), retryConf.jitterDelayUnit());
+            long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
             result = new Retry<>(result,
                     "Retry[" + point + "]",
-                    getSetOfThrowables(retryConf.retryOn()),
-                    getSetOfThrowables(retryConf.abortOn()),
-                    retryConf.maxRetries(),
+                    getSetOfThrowables(operation.getRetry().retryOn()),
+                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(new SimpleBackOff(delayMs, jitter)),
                     new SystemStopwatch());
         }
 
         if (operation.hasFallback()) {
-            FallbackConfig fallbackConf = operation.getFallback();
             result = new Fallback<>(result,
                     "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(fallbackConf.applyOn()),
-                    getSetOfThrowables(fallbackConf.skipOn()));
+                    getSetOfThrowables(operation.getFallback().applyOn()),
+                    getSetOfThrowables(operation.getFallback().skipOn()));
         }
 
         if (metricsProvider.isEnabled()) {
@@ -449,9 +433,8 @@ public class FaultToleranceInterceptor {
     private <V> FallbackFunction<V> prepareFallbackFunction(InterceptionPoint point, FaultToleranceOperation operation) {
         Method fallbackMethod = null;
 
-        FallbackConfig fallbackConfig = operation.getFallback();
-        Class<? extends FallbackHandler<?>> fallback = fallbackConfig.value();
-        String fallbackMethodName = fallbackConfig.fallbackMethod();
+        Class<? extends FallbackHandler<?>> fallback = operation.getFallback().value();
+        String fallbackMethodName = operation.getFallback().fallbackMethod();
 
         if (fallback.equals(org.eclipse.microprofile.faulttolerance.Fallback.DEFAULT.class) && !"".equals(fallbackMethodName)) {
             try {

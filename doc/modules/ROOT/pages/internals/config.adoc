@@ -27,7 +27,7 @@ It may happen that a `FaultToleranceOperation` is created lazily, for special co
 A `FaultToleranceOperation` is created from a `FaultToleranceMethod`.
 A `FaultToleranceMethod` holds, again, a bean class, a descriptor of the guarded method, and the annotation instance for each annotation that is present on the guarded method or the class declaring the method.
 It also knows what annotations have been declared directly on the method, and what annotations have been declared on the class.
-This is because the {microprofile-fault-tolerance} configuration system distinguishes these two cases.
+This is because the {microprofile-fault-tolerance} configuration rules distinguish these two cases.
 
 A `FaultToleranceMethod` must be created in a CDI extension, because it represents the knowledge CDI has about the guarded method.
 Note that CDI extensions may add, remove or modify annotations, so `FaultToleranceMethod` doesn't just hold the annotation instances as present in the class bytecode.
@@ -41,12 +41,14 @@ Then, at application runtime, ``FaultToleranceOperation``s should be created and
 ****
 
 The main difference between `FaultToleranceMethod` and `FaultToleranceOperation` is that `FaultToleranceMethod` holds annotation instances, while `FaultToleranceOperation` holds configuration.
-{microprofile-fault-tolerance} specifies how configuration (MicroProfile Config) overrides the annotation instances.
-{smallrye-fault-tolerance} implements the rules in a way that permits using the annotation type (which is a form of interface), while reading the configuration behind the scenes.
 
 == `@AutoConfig`
 
-This is mainly implemented in the `autoconfig` module.
+As described above, `FaultToleranceMethod` holds annotation instances, while `FaultToleranceOperation` holds configuration.
+Yet, `FaultToleranceOperation` exposes the annotation types (such as `@Fallback`) to anyone who needs the configuration.
+The configuration consumers simply call the annotation methods (such as `fallbackMethod()`), and configuration is handled behind the scenes, following the {microprofile-fault-tolerance} configuration rules.
+
+The infrastructure behind this is present in the `autoconfig` module.
 This module allows creating simple configuration interfaces like this:
 
 [source,java]
@@ -73,12 +75,15 @@ This implementation class has a `static` method called `create` that accepts a `
 It follows that for each guarded method, a new instance must be created.
 If given `FaultToleranceMethod` doesn't contain an instance of particular annotation, `create` simply returns `null`.
 
-The implementation class also overrides all methods from the annotation type, following the {microprofile-fault-tolerance} configuration rules.
-That is, each annotation method is implemented to first consult MicroProfile Config, and only second to consult the annotation instance (which, as we described above, is present on the `FaultToleranceMethod`).
+The implementation class also overrides all methods from the annotation type.
+Each annotation method is implemented to first consult MicroProfile Config, and only second to consult the annotation instance (which, as we described above, is present on the `FaultToleranceMethod`).
 
 The implementation class is supposed to be used just like the annotation type itself.
 In other words, to obtain configured values, call the annotation methods on the config interface instance.
 For example, to obtain the `fallbackMethod` value, with respect to the {microprofile-fault-tolerance} configuration rules, we obtain an instance of `FallbackConfigImpl` and call `fallbackMethod`.
+
+The `FaultToleranceOperation` class holds instances of these config interfaces, and exposes them to configuration consumers.
+It actually only exposes the annotation types, not the full config interface, but that is enough.
 
 == Putting it all together
 

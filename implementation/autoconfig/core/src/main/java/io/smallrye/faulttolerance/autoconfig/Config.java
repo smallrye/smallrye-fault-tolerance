@@ -7,7 +7,13 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 
 public interface Config {
-    // can't be generated, must be implemented (with a default method) in the config interface
+    /**
+     * Defines <i>local</i> validation, that is, validation of the single annotation
+     * the config interface represents. Global validation (such as cross-checking
+     * configuration across multiple annotations) must be done elsewhere.
+     * <p>
+     * Must be implemented (as a {@code default} method) in the config interface.
+     */
     void validate();
 
     // ---
