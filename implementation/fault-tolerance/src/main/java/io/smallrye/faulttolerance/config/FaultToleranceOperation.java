@@ -15,6 +15,12 @@
  */
 package io.smallrye.faulttolerance.config;
 
+import java.lang.annotation.Annotation;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
@@ -23,6 +29,10 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
+import io.smallrye.faulttolerance.api.CustomBackoff;
+import io.smallrye.faulttolerance.api.ExponentialBackoff;
+import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
@@ -43,7 +53,10 @@ public class FaultToleranceOperation {
                 CircuitBreakerNameConfigImpl.create(method),
                 FallbackConfigImpl.create(method),
                 RetryConfigImpl.create(method),
-                TimeoutConfigImpl.create(method));
+                TimeoutConfigImpl.create(method),
+                ExponentialBackoffConfigImpl.create(method),
+                FibonacciBackoffConfigImpl.create(method),
+                CustomBackoffConfigImpl.create(method));
     }
 
     private final Class<?> beanClass;
@@ -68,6 +81,12 @@ public class FaultToleranceOperation {
 
     private final TimeoutConfig timeout;
 
+    private final ExponentialBackoffConfig exponentialBackoff;
+
+    private final FibonacciBackoffConfig fibonacciBackoff;
+
+    private final CustomBackoffConfig customBackoff;
+
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
             AsynchronousConfig asynchronous,
@@ -78,7 +97,10 @@ public class FaultToleranceOperation {
             CircuitBreakerNameConfig circuitBreakerName,
             FallbackConfig fallback,
             RetryConfig retry,
-            TimeoutConfig timeout) {
+            TimeoutConfig timeout,
+            ExponentialBackoffConfig exponentialBackoff,
+            FibonacciBackoffConfig fibonacciBackoff,
+            CustomBackoffConfig customBackoff) {
         this.beanClass = beanClass;
         this.methodDescriptor = methodDescriptor;
 
@@ -92,6 +114,10 @@ public class FaultToleranceOperation {
         this.fallback = fallback;
         this.retry = retry;
         this.timeout = timeout;
+
+        this.exponentialBackoff = exponentialBackoff;
+        this.fibonacciBackoff = fibonacciBackoff;
+        this.customBackoff = customBackoff;
     }
 
     public Class<?> getReturnType() {
@@ -170,6 +196,30 @@ public class FaultToleranceOperation {
         return timeout;
     }
 
+    public boolean hasExponentialBackoff() {
+        return exponentialBackoff != null;
+    }
+
+    public ExponentialBackoff getExponentialBackoff() {
+        return exponentialBackoff;
+    }
+
+    public boolean hasFibonacciBackoff() {
+        return fibonacciBackoff != null;
+    }
+
+    public FibonacciBackoff getFibonacciBackoff() {
+        return fibonacciBackoff;
+    }
+
+    public boolean hasCustomBackoff() {
+        return customBackoff != null;
+    }
+
+    public CustomBackoff getCustomBackoff() {
+        return customBackoff;
+    }
+
     public String getName() {
         return beanClass.getCanonicalName() + "." + methodDescriptor.name;
     }
@@ -196,6 +246,7 @@ public class FaultToleranceOperation {
         if (nonBlocking != null) {
             nonBlocking.validate();
         }
+
         if (bulkhead != null) {
             bulkhead.validate();
         }
@@ -210,6 +261,49 @@ public class FaultToleranceOperation {
         }
         if (timeout != null) {
             timeout.validate();
+        }
+
+        validateRetryBackoff();
+    }
+
+    private void validateRetryBackoff() {
+        Set<Class<? extends Annotation>> backoffAnnotations = new HashSet<>();
+
+        for (Config cfg : Arrays.asList(exponentialBackoff, fibonacciBackoff, customBackoff)) {
+            if (cfg != null) {
+                cfg.validate();
+                if (retry == null) {
+                    throw new FaultToleranceDefinitionException("Invalid @" + cfg.annotationType().getSimpleName()
+                            + " on " + methodDescriptor + ": missing @Retry");
+                }
+                backoffAnnotations.add(cfg.annotationType());
+            }
+        }
+
+        if (backoffAnnotations.size() > 1) {
+            throw new FaultToleranceDefinitionException("More than one backoff defined for " + methodDescriptor
+                    + ": " + backoffAnnotations);
+        }
+
+        if (retry != null) {
+            long retryMaxDuration = Duration.of(retry.maxDuration(), retry.durationUnit()).toMillis();
+            if (retryMaxDuration > 0) {
+                if (exponentialBackoff != null) {
+                    long maxDelay = Duration.of(exponentialBackoff.maxDelay(), exponentialBackoff.maxDelayUnit()).toMillis();
+                    if (retryMaxDuration <= maxDelay) {
+                        throw new FaultToleranceDefinitionException("Invalid @ExponentialBackoff on " + methodDescriptor
+                                + ": @Retry.maxDuration should be greater than maxDelay");
+                    }
+                }
+
+                if (fibonacciBackoff != null) {
+                    long maxDelay = Duration.of(fibonacciBackoff.maxDelay(), fibonacciBackoff.maxDelayUnit()).toMillis();
+                    if (retryMaxDuration <= maxDelay) {
+                        throw new FaultToleranceDefinitionException("Invalid @FibonacciBackoff on " + methodDescriptor
+                                + ": @Retry.maxDuration should be greater than maxDelay");
+                    }
+                }
+            }
         }
     }
 

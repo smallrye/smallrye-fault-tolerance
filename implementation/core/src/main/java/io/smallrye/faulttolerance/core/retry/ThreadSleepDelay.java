@@ -13,8 +13,8 @@ public class ThreadSleepDelay implements SyncDelay {
     }
 
     @Override
-    public void sleep() throws InterruptedException {
-        long delay = backOff.getInMillis();
+    public void sleep(Throwable cause) throws InterruptedException {
+        long delay = backOff.getInMillis(cause);
         if (delay > 0) {
             Thread.sleep(delay);
         }

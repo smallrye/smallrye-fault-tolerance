@@ -13,6 +13,9 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
+import io.smallrye.faulttolerance.api.CustomBackoff;
+import io.smallrye.faulttolerance.api.ExponentialBackoff;
+import io.smallrye.faulttolerance.api.FibonacciBackoff;
 
 /**
  * Created in the CDI extension to capture effective annotations for each
@@ -43,6 +46,9 @@ public class FaultToleranceMethod {
 
     // SmallRye Fault Tolerance API
     public CircuitBreakerName circuitBreakerName;
+    public CustomBackoff customBackoff;
+    public ExponentialBackoff exponentialBackoff;
+    public FibonacciBackoff fibonacciBackoff;
 
     // SmallRye Common
     public Blocking blocking;
@@ -53,7 +59,7 @@ public class FaultToleranceMethod {
     public Set<Class<? extends Annotation>> annotationsPresentDirectly;
 
     public boolean isLegitimate() {
-        // SmallRye annotations (@CircuitBreakerName, @[Non]Blocking)
+        // SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff)
         // alone do _not_ trigger the fault tolerance interceptor,
         // only in combination with other fault tolerance annotations
         return asynchronous != null

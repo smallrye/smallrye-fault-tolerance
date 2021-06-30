@@ -34,7 +34,7 @@ public class TestDelay implements SyncDelay {
     }
 
     @Override
-    public void sleep() throws InterruptedException {
+    public void sleep(Throwable cause) throws InterruptedException {
         startBarrier.open();
         endBarrier.await();
 

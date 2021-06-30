@@ -10,6 +10,8 @@ import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 
+import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
+
 @MessageLogger(projectCode = "SRFTL", length = 5)
 interface CdiLogger extends BasicLogger {
     CdiLogger LOG = Logger.getMessageLogger(CdiLogger.class, CdiLogger.class.getPackage().getName());
@@ -20,4 +22,10 @@ interface CdiLogger extends BasicLogger {
 
     @Message(id = 2, value = "Multiple circuit breakers have the same name '%s': %s")
     DefinitionException multipleCircuitBreakersWithTheSameName(String name, Set<String> useSites);
+
+    @Message(id = 3, value = "Backoff annotation @%s present on method '%s', but @Retry is missing")
+    DefinitionException backoffOnMethodWithoutRetry(String backoffAnnotation, MethodDescriptor method);
+
+    @Message(id = 4, value = "Backoff annotation @%s present on class '%s', but @Retry is missing")
+    DefinitionException backoffOnClassWithoutRetry(String backoffAnnotation, Class<?> clazz);
 }
