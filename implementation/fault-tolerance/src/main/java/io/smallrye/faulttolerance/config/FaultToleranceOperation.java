@@ -15,8 +15,14 @@
  */
 package io.smallrye.faulttolerance.config;
 
+import org.eclipse.microprofile.faulttolerance.Bulkhead;
+import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
+import org.eclipse.microprofile.faulttolerance.Fallback;
+import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
@@ -120,7 +126,7 @@ public class FaultToleranceOperation {
         return bulkhead != null;
     }
 
-    public BulkheadConfig getBulkhead() {
+    public Bulkhead getBulkhead() {
         return bulkhead;
     }
 
@@ -128,7 +134,7 @@ public class FaultToleranceOperation {
         return circuitBreaker != null;
     }
 
-    public CircuitBreakerConfig getCircuitBreaker() {
+    public CircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
     }
 
@@ -136,7 +142,7 @@ public class FaultToleranceOperation {
         return circuitBreakerName != null;
     }
 
-    public CircuitBreakerNameConfig getCircuitBreakerName() {
+    public CircuitBreakerName getCircuitBreakerName() {
         return circuitBreakerName;
     }
 
@@ -144,7 +150,7 @@ public class FaultToleranceOperation {
         return fallback != null;
     }
 
-    public FallbackConfig getFallback() {
+    public Fallback getFallback() {
         return fallback;
     }
 
@@ -152,7 +158,7 @@ public class FaultToleranceOperation {
         return retry != null;
     }
 
-    public RetryConfig getRetry() {
+    public Retry getRetry() {
         return retry;
     }
 
@@ -160,7 +166,7 @@ public class FaultToleranceOperation {
         return timeout != null;
     }
 
-    public TimeoutConfig getTimeout() {
+    public Timeout getTimeout() {
         return timeout;
     }
 
