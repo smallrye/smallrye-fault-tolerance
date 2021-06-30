@@ -58,7 +58,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
                 try {
-                    delay.sleep();
+                    delay.sleep(lastFailure);
                 } catch (InterruptedException e) {
                     ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                     throw e;

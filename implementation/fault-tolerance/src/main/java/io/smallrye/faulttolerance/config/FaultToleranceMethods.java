@@ -17,6 +17,9 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
+import io.smallrye.faulttolerance.api.CustomBackoff;
+import io.smallrye.faulttolerance.api.ExponentialBackoff;
+import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
@@ -37,6 +40,9 @@ public class FaultToleranceMethods {
         result.timeout = getAnnotation(Timeout.class, method, annotationsPresentDirectly);
 
         result.circuitBreakerName = getAnnotation(CircuitBreakerName.class, method, annotationsPresentDirectly);
+        result.customBackoff = getAnnotation(CustomBackoff.class, method, annotationsPresentDirectly);
+        result.exponentialBackoff = getAnnotation(ExponentialBackoff.class, method, annotationsPresentDirectly);
+        result.fibonacciBackoff = getAnnotation(FibonacciBackoff.class, method, annotationsPresentDirectly);
 
         result.blocking = getAnnotation(Blocking.class, method, annotationsPresentDirectly);
         result.nonBlocking = getAnnotation(NonBlocking.class, method, annotationsPresentDirectly);
@@ -80,6 +86,9 @@ public class FaultToleranceMethods {
         result.timeout = getAnnotation(Timeout.class, method, beanClass, annotationsPresentDirectly);
 
         result.circuitBreakerName = getAnnotation(CircuitBreakerName.class, method, beanClass, annotationsPresentDirectly);
+        result.customBackoff = getAnnotation(CustomBackoff.class, method, beanClass, annotationsPresentDirectly);
+        result.exponentialBackoff = getAnnotation(ExponentialBackoff.class, method, beanClass, annotationsPresentDirectly);
+        result.fibonacciBackoff = getAnnotation(FibonacciBackoff.class, method, beanClass, annotationsPresentDirectly);
 
         result.blocking = getAnnotation(Blocking.class, method, beanClass, annotationsPresentDirectly);
         result.nonBlocking = getAnnotation(NonBlocking.class, method, beanClass, annotationsPresentDirectly);

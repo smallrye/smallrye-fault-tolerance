@@ -179,3 +179,76 @@ Otherwise, add a dependency to your application:
 * https://github.com/ReactiveX/RxJava/tree/2.x[RxJava 2]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava2`
 * https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava3`
 * https://projectreactor.io/[Reactor]: `io.smallrye.reactive:smallrye-reactive-converter-reactor`
+
+== Backoff Strategies for `@Retry`
+
+When retrying failed operations, it is often useful to make a delay between retry attempts.
+This delay is also called "backoff".
+The `@Retry` annotation in {microprofile-fault-tolerance} supports a single backoff strategy: constant.
+That is, the delay between all retry attempts is identical (with the exception of a random jitter).
+
+{smallrye-fault-tolerance} offers 3 annotations to specify a different backoff strategy:
+
+* `@ExponentialBackoff`
+* `@FibonacciBackoff`
+* `@CustomBackoff`
+
+One of these annotations may be present on any element (method or class) that also has the `@Retry` annotation.
+For example:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @ExponentialBackoff
+    public void hello() {
+        ...
+    }
+}
+----
+
+It is an error to add a backoff annotation to an element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@ExponentialBackoff` on a method).
+It is also an error to add more than one of these annotations to the same element.
+
+When any one of these annotations is present, it modifies the behavior specified by the `@Retry` annotation.
+The new behavior is as follows:
+
+For `@ExponentialBackoff`, the delays between retry attempts grow exponentially, using a defined `factor`.
+By default, the `factor` is 2, so each delay is 2 * the previous delay.
+For example, if the initial delay (specified by `@Retry`) is 1 second, then the second delay is 2 seconds, third delay is 4 seconds, fourth delay is 8 seconds etc.
+It is possible to define a `maxDelay`, so that this growth has a limit.
+
+For `@FibonacciBackoff`, the delays between retry attempts grow per the Fibonacci sequence.
+For example, if the initial delay (specified by `@Retry`) is 1 second, then the second delay is 2 seconds, third delay is 3 seconds, fourth delay is 5 seconds etc.
+It is possible to define a `maxDelay`, so that this growth has a limit.
+
+Both `@ExponentialBackoff` and `@FibonacciBackoff` also apply jitter, exactly like plain `@Retry`.
+
+Also, since `@Retry` has a default `maxDuration` of 3 minutes and default `maxRetries` of 3, both `@ExponentialBackoff` and `@FibonacciBackoff` define a `maxDelay` of 1 minute.
+If we redefine `maxRetries` to a much higher value and the guarded method keeps failing, the delay would eventually become higher than 1 minute.
+In that case, it will be limited to 1 minute.
+Of course, `maxDelay` can be configured.
+If set to `0`, there's no limit and the delays will grow without bounds.
+
+For `@CustomBackoff`, computing the delays between retry attempts is delegated to a specified implementation of `CustomBackoffStrategy`.
+This is an advanced option.
+
+For more information about these backoff strategies, see the javadoc of the annotations.
+
+=== Configuration
+
+These annotations may be configured using the same mechanism as {microprofile-fault-tolerance} annotations.
+For example, to modify the `factor` of the `@ExponentialBackoff` annotation above, you can use:
+
+[source,properties]
+----
+com.example.MyService/hello/ExponentialBackoff/factor=3
+----
+
+=== Metrics
+
+These annotations do not have any special metrics.
+All `@Retry` metrics are still present and reflect the altered behavior.

@@ -46,25 +46,25 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     }
 
     private CompletionStage<V> doRetry(InvocationContext<CompletionStage<V>> ctx, int attempt,
-            AsyncDelay delay, RunningStopwatch stopwatch, Throwable latestFailure) {
+            AsyncDelay delay, RunningStopwatch stopwatch, Throwable lastFailure) {
         if (attempt == 0) {
             // do not sleep
-            return afterDelay(ctx, attempt, delay, stopwatch, latestFailure);
+            return afterDelay(ctx, attempt, delay, stopwatch, lastFailure);
         } else if (attempt <= maxRetries) {
             LOG.trace("Invocation failed, retrying");
             ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
             CompletableFuture<V> result = new CompletableFuture<>();
 
-            delay.after(() -> {
-                propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, latestFailure), result);
+            delay.after(lastFailure, () -> {
+                propagateCompletion(afterDelay(ctx, attempt, delay, stopwatch, lastFailure), result);
             }, ctx.get(Executor.class));
 
             return result;
         } else {
             ctx.fireEvent(RetryEvents.Finished.MAX_RETRIES_REACHED);
-            if (latestFailure != null) {
-                return failedStage(latestFailure);
+            if (lastFailure != null) {
+                return failedStage(lastFailure);
             } else {
                 return failedStage(new FaultToleranceException(description + " reached max retries"));
             }
@@ -72,11 +72,11 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     }
 
     private CompletionStage<V> afterDelay(InvocationContext<CompletionStage<V>> ctx, int attempt,
-            AsyncDelay delay, RunningStopwatch stopwatch, Throwable latestFailure) {
+            AsyncDelay delay, RunningStopwatch stopwatch, Throwable lastFailure) {
         if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
             ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
-            if (latestFailure != null) {
-                return failedStage(latestFailure);
+            if (lastFailure != null) {
+                return failedStage(lastFailure);
             } else {
                 return failedStage(new FaultToleranceException(description + " reached max retry duration"));
             }

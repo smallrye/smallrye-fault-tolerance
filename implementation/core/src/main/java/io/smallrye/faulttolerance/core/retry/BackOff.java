@@ -8,8 +8,11 @@ package io.smallrye.faulttolerance.core.retry;
  * That is, implementations can hold state, but must take care of its visibility across threads.
  */
 public interface BackOff {
-    /** @return non-negative number */
-    long getInMillis();
+    /**
+     * @param cause exception causing the retry attempt before which the delay occurs
+     * @return non-negative number
+     */
+    long getInMillis(Throwable cause);
 
-    BackOff ZERO = () -> 0;
+    BackOff ZERO = ignored -> 0;
 }

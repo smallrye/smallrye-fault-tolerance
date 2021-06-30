@@ -18,6 +18,7 @@ package io.smallrye.faulttolerance;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -30,6 +31,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.control.RequestContextController;
@@ -43,6 +45,7 @@ import javax.interceptor.InvocationContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
+import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
@@ -61,11 +64,15 @@ import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
+import io.smallrye.faulttolerance.core.retry.BackOff;
 import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
+import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
+import io.smallrye.faulttolerance.core.retry.CustomBackOff;
+import io.smallrye.faulttolerance.core.retry.ExponentialBackOff;
+import io.smallrye.faulttolerance.core.retry.FibonacciBackOff;
 import io.smallrye.faulttolerance.core.retry.Jitter;
 import io.smallrye.faulttolerance.core.retry.RandomJitter;
 import io.smallrye.faulttolerance.core.retry.Retry;
-import io.smallrye.faulttolerance.core.retry.SimpleBackOff;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
 import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
@@ -255,10 +262,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasRetry()) {
             long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
-            long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
-
-            long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
-            Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
+            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new CompletionStageRetry<>(result,
                     "Retry[" + point + "]",
@@ -266,7 +270,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(operation.getRetry().abortOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
-                    () -> new TimerDelay(new SimpleBackOff(delayMs, jitter), timer),
+                    () -> new TimerDelay(backoff.get(), timer),
                     new SystemStopwatch());
         }
 
@@ -326,10 +330,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasRetry()) {
             long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
-            long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
-
-            long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
-            Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
+            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new Retry<>(result,
                     "Retry[" + point + "]",
@@ -337,7 +338,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(operation.getRetry().abortOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
-                    () -> new ThreadSleepDelay(new SimpleBackOff(delayMs, jitter)),
+                    () -> new ThreadSleepDelay(backoff.get()),
                     new SystemStopwatch());
         }
 
@@ -398,10 +399,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasRetry()) {
             long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
-            long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
-
-            long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
-            Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
+            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new Retry<>(result,
                     "Retry[" + point + "]",
@@ -409,7 +407,7 @@ public class FaultToleranceInterceptor {
                     getSetOfThrowables(operation.getRetry().abortOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
-                    () -> new ThreadSleepDelay(new SimpleBackOff(delayMs, jitter)),
+                    () -> new ThreadSleepDelay(backoff.get()),
                     new SystemStopwatch());
         }
 
@@ -428,6 +426,38 @@ public class FaultToleranceInterceptor {
         result = new FutureExecution<>(result, asyncExecutor);
 
         return result;
+    }
+
+    private Supplier<BackOff> prepareRetryBackoff(FaultToleranceOperation operation) {
+        long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
+
+        long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
+        Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
+
+        if (operation.hasExponentialBackoff()) {
+            int factor = operation.getExponentialBackoff().factor();
+            long maxDelay = getTimeInMs(operation.getExponentialBackoff().maxDelay(),
+                    operation.getExponentialBackoff().maxDelayUnit());
+            return () -> new ExponentialBackOff(delayMs, factor, jitter, maxDelay);
+        } else if (operation.hasFibonacciBackoff()) {
+            long maxDelay = getTimeInMs(operation.getFibonacciBackoff().maxDelay(),
+                    operation.getFibonacciBackoff().maxDelayUnit());
+            return () -> new FibonacciBackOff(delayMs, jitter, maxDelay);
+        } else if (operation.hasCustomBackoff()) {
+            Class<? extends CustomBackoffStrategy> strategy = operation.getCustomBackoff().value();
+            return () -> {
+                CustomBackoffStrategy instance;
+                try {
+                    instance = strategy.newInstance();
+                } catch (InstantiationException | IllegalAccessException e) {
+                    throw sneakyThrow(e);
+                }
+                instance.init(delayMs);
+                return new CustomBackOff(instance::nextDelayInMillis);
+            };
+        } else {
+            return () -> new ConstantBackOff(delayMs, jitter);
+        }
     }
 
     private <V> FallbackFunction<V> prepareFallbackFunction(InterceptionPoint point, FaultToleranceOperation operation) {

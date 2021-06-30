@@ -27,10 +27,12 @@ public interface RetryConfig extends Retry, Config {
                     + ": maxDuration shouldn't be lower than 0");
         }
         long maxDuration = Duration.of(maxDuration(), durationUnit()).toMillis();
-        long delay = Duration.of(delay(), delayUnit()).toMillis();
-        if (maxDuration <= delay) {
-            throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + method()
-                    + ": maxDuration should be greater than delay");
+        if (maxDuration > 0) {
+            long delay = Duration.of(delay(), delayUnit()).toMillis();
+            if (maxDuration <= delay) {
+                throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + method()
+                        + ": maxDuration should be greater than delay");
+            }
         }
         if (jitter() < 0) {
             throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + method()
