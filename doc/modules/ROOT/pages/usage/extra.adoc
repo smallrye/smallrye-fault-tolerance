@@ -12,7 +12,7 @@ This is possible in two steps:
 +
 [source,java]
 ----
-@Singleton
+@ApplicationScoped
 public class MyService {
     @CircuitBreaker
     @CircuitBreakerName("hello-cb") // <1>
@@ -27,7 +27,7 @@ public class MyService {
 +
 [source,java]
 ----
-@Singleton
+@ApplicationScoped
 public class Example {
     @Inject
     CircuitBreakerMaintenance maintenance;
@@ -74,7 +74,7 @@ For example:
 +
 [source,java]
 ----
-@Singleton
+@ApplicationScoped
 public class MyService {
     @Retry // <1>
     @Blocking // <2>
@@ -97,7 +97,7 @@ For example:
 +
 [source,java]
 ----
-@Singleton
+@ApplicationScoped
 public class MyService {
     @Retry // <1>
     @NonBlocking // <2>
@@ -128,7 +128,7 @@ For example:
 
 [source,java]
 ----
-@Singleton
+@ApplicationScoped
 @NonBlocking
 public class MyService {
     @Retry
@@ -183,7 +183,7 @@ For example:
 
 [source,java]
 ----
-@Singleton
+@ApplicationScoped
 public class MyService {
     @Retry
     @NonBlocking // <1>
