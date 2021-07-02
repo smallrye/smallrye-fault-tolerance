@@ -157,24 +157,24 @@ public class FaultToleranceExtension implements Extension {
                 for (Class<? extends Annotation> backoffAnnotation : BACKOFF_ANNOTATIONS) {
                     if (annotatedMethod.isAnnotationPresent(backoffAnnotation)
                             && !annotatedMethod.isAnnotationPresent(Retry.class)) {
-                        event.addDefinitionError(LOG.backoffOnMethodWithoutRetry(backoffAnnotation.getSimpleName(),
+                        event.addDefinitionError(LOG.backoffAnnotationWithoutRetry(backoffAnnotation.getSimpleName(),
                                 method.method));
                     }
                     if (annotatedType.isAnnotationPresent(backoffAnnotation)
                             && !annotatedType.isAnnotationPresent(Retry.class)) {
-                        event.addDefinitionError(LOG.backoffOnClassWithoutRetry(backoffAnnotation.getSimpleName(),
+                        event.addDefinitionError(LOG.backoffAnnotationWithoutRetry(backoffAnnotation.getSimpleName(),
                                 annotatedType.getJavaClass()));
                     }
                 }
 
                 if (annotatedMethod.isAnnotationPresent(Blocking.class)
                         && annotatedMethod.isAnnotationPresent(NonBlocking.class)) {
-                    event.addDefinitionError(LOG.blockingNonblockingOnMethod(method.method));
+                    event.addDefinitionError(LOG.bothBlockingNonBlockingPresent(method.method));
                 }
 
                 if (annotatedType.isAnnotationPresent(Blocking.class)
                         && annotatedType.isAnnotationPresent(NonBlocking.class)) {
-                    event.addDefinitionError(LOG.blockingNonblockingOnClass(annotatedType.getJavaClass()));
+                    event.addDefinitionError(LOG.bothBlockingNonBlockingPresent(annotatedType.getJavaClass()));
                 }
             }
         }

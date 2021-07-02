@@ -23,15 +23,13 @@ interface CdiLogger extends BasicLogger {
     @Message(id = 2, value = "Multiple circuit breakers have the same name '%s': %s")
     DefinitionException multipleCircuitBreakersWithTheSameName(String name, Set<String> useSites);
 
-    @Message(id = 3, value = "Backoff annotation @%s present on method '%s', but @Retry is missing")
-    DefinitionException backoffOnMethodWithoutRetry(String backoffAnnotation, MethodDescriptor method);
+    @Message(id = 3, value = "Backoff annotation @%s present on '%s', but @Retry is missing")
+    DefinitionException backoffAnnotationWithoutRetry(String backoffAnnotation, MethodDescriptor method);
 
-    @Message(id = 4, value = "Backoff annotation @%s present on class '%s', but @Retry is missing")
-    DefinitionException backoffOnClassWithoutRetry(String backoffAnnotation, Class<?> clazz);
+    DefinitionException backoffAnnotationWithoutRetry(String backoffAnnotation, Class<?> clazz);
 
-    @Message(id = 5, value = "Both @Blocking and @NonBlocking present on method '%s'")
-    DefinitionException blockingNonblockingOnMethod(MethodDescriptor method);
+    @Message(id = 4, value = "Both @Blocking and @NonBlocking present on '%s'")
+    DefinitionException bothBlockingNonBlockingPresent(MethodDescriptor method);
 
-    @Message(id = 6, value = "Both @Blocking and @NonBlocking present on class '%s'")
-    DefinitionException blockingNonblockingOnClass(Class<?> clazz);
+    DefinitionException bothBlockingNonBlockingPresent(Class<?> clazz);
 }
