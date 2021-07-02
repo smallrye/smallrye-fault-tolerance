@@ -42,6 +42,10 @@ jobs:
           git checkout -b release
           sed -i -e 's|^version: main|version: ${{steps.metadata.outputs.current-version}}|' doc/antora.yml
           sed -i -e 's|smallrye-fault-tolerance-version: .*|smallrye-fault-tolerance-version: '"'"'${{steps.metadata.outputs.current-version}}'"'"'|' doc/antora.yml
+          MP_FT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.microprofile-fault-tolerance -q -DforceStdout)
+          sed -i -e 's|microprofile-fault-tolerance-version: .*|microprofile-fault-tolerance-version: '"'$MP_FT_VERSION'"'|' doc/antora.yml
+          VERTX_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.vertx -q -DforceStdout)
+          sed -i -e 's|vertx4-version: .*|vertx4-version: '"'$VERTX_VERSION'"'|' doc/antora.yml
           git commit -a -m 'Update antora.yml before release'
           mvn -B release:prepare -Prelease -DreleaseVersion=${{steps.metadata.outputs.current-version}} -DdevelopmentVersion=${{steps.metadata.outputs.next-version}} -s maven-settings.xml
           git checkout ${{github.base_ref}}
