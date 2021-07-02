@@ -4,7 +4,9 @@
 
 * `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance};
 * `io.smallrye:smallrye-fault-tolerance-core`: core implementations of fault tolerance strategies;
-* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance}.
+* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance};
+* `io.smallrye:smallrye-fault-tolerance-autoconfig-core`: runtime part of the {smallrye-fault-tolerance} configuration system.
+** (There's also `io.smallrye:smallrye-fault-tolerance-autoconfig-processor`, but that is only used during {smallrye-fault-tolerance} build and isn't required at runtime.)
 
 These artifacts must be always present, together with the following dependencies:
 
