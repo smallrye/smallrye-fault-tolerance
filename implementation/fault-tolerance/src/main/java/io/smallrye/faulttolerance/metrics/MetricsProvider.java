@@ -49,6 +49,7 @@ import org.eclipse.microprofile.metrics.MetricUnits;
 import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
 
+import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
@@ -66,9 +67,12 @@ public class MetricsProvider {
     @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
     boolean metricsEnabled;
 
+    @Inject
+    SpecCompatibility specCompatibility;
+
     public MetricsRecorder create(FaultToleranceOperation operation) {
         if (metricsEnabled) {
-            return new MetricsRecorderImpl(registry.get(), operation);
+            return new MetricsRecorderImpl(registry.get(), specCompatibility, operation);
         } else {
             return MetricsRecorder.NOOP;
         }
@@ -82,14 +86,14 @@ public class MetricsProvider {
         private final MetricRegistry registry;
         private final Tag methodTag;
 
-        MetricsRecorderImpl(MetricRegistry registry, FaultToleranceOperation operation) {
+        MetricsRecorderImpl(MetricRegistry registry, SpecCompatibility specCompatibility, FaultToleranceOperation operation) {
             this.registry = registry;
             this.methodTag = new Tag("method", operation.getName());
 
-            registerMetrics(operation);
+            registerMetrics(specCompatibility, operation);
         }
 
-        private void registerMetrics(FaultToleranceOperation operation) {
+        private void registerMetrics(SpecCompatibility specCompatibility, FaultToleranceOperation operation) {
             // make sure all applicable metrics for given method are registered eagerly
             // we only touch counters and histograms, because gauges are registered eagerly otherwise
 
@@ -136,7 +140,7 @@ public class MetricsProvider {
                 registry.counter(BULKHEAD_CALLS_TOTAL, methodTag, BULKHEAD_RESULT_REJECTED).getCount();
 
                 registry.histogram(BULKHEAD_RUNNING_DURATION_METADATA, methodTag).getCount();
-                if (operation.isAsync() || operation.isAdditionalAsync()) {
+                if (specCompatibility.isOperationTrulyOrPseudoAsynchronous(operation)) {
                     registry.histogram(BULKHEAD_WAITING_DURATION_METADATA, methodTag).getCount();
                 }
             }

@@ -57,12 +57,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <suiteXmlFiles>
-                        <suiteXmlFile>src/test/tck-suite.xml</suiteXmlFile>
-                    </suiteXmlFiles>
-                    <!-- This workaround allows to run a single test using "test"
-                       system property -->
-                    <!-- https://issues.apache.org/jira/browse/SUREFIRE-569 -->
                     <dependenciesToScan>
                         <dependency>org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-tck</dependency>
                     </dependenciesToScan>
@@ -70,6 +64,31 @@
                         <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <suiteXmlFiles>
+                                <suiteXmlFile>src/test/tck-suite.xml</suiteXmlFile>
+                            </suiteXmlFiles>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>non-compatible-mode-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <suiteXmlFiles>
+                                <suiteXmlFile>src/test/tck-suite-non-compatible.xml</suiteXmlFile>
+                            </suiteXmlFiles>
+                            <systemPropertyVariables>
+                                <smallrye.faulttolerance.mp-compatibility>false</smallrye.faulttolerance.mp-compatibility>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

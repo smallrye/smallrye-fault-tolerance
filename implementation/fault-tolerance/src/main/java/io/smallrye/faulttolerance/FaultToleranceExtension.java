@@ -115,6 +115,7 @@ public class FaultToleranceExtension implements Extension {
                 CircuitBreakerMaintenanceImpl.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(RequestContextIntegration.class),
                 RequestContextIntegration.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(SpecCompatibility.class), SpecCompatibility.class.getName());
     }
 
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {
