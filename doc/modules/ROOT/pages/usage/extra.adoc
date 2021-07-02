@@ -58,7 +58,7 @@ In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, wh
 * `@io.smallrye.common.annotation.Blocking`
 * `@io.smallrye.common.annotation.NonBlocking`
 
-These annotations can have multiple meanings, depending on context.
+These annotations are generic and can have multiple meanings, depending on context.
 {smallrye-fault-tolerance} only pays attention to these annotations if:
 
 * they are placed on methods that return `CompletionStage` (the `Future` type can't really be used for non-blocking processing);
@@ -85,11 +85,11 @@ public class MyService {
 ----
 +
 <1> A fault tolerance annotation.
-    If this wouldn't be present, the `@Blocking` annotation would be meaningless.
+If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@Blocking` annotation.
 <2> Using the `@Blocking` annotation, because the method blocks and it is necessary to offload its execution to another thread.
-    With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
+With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
 +
-The thread pool that is used for offloading method calls is the one provided by the runtime that integrates {smallrye-fault-tolerance}.
+The thread pool that is used for offloading method calls is provided by the runtime that integrates {smallrye-fault-tolerance}.
 * `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
 Use this annotation if the method _doesn't_ have blocking logic and you want the execution to stay on the caller thread.
 +
@@ -108,7 +108,7 @@ public class MyService {
 ----
 +
 <1> A fault tolerance annotation.
-If this wouldn't be present, the `@NonBlocking` annotation would be meaningless.
+If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@NonBlocking` annotation.
 <2> Using the `@NonBlocking` annotation, because the method doesn't block and offloading execution to another thread is not necessary.
 With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
 +
@@ -120,6 +120,34 @@ If the execution has to wait in the bulkhead queue, it may later end up on a dif
 +
 If the original thread is an event loop thread and event loop integration is enabled, then the event loop is always used to execute the guarded method.
 In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
+
+Additionally, the `@Blocking` and `@NonBlocking` annotations may be placed on a class.
+In that case, they apply to methods satisfying the same criteria: they return `CompletionStage` and have some fault tolerance strategy (even if that fault tolerance strategy is declared on the class).
+An annotation put on a method has priority over an annotation put on a class.
+For example:
+
+[source,java]
+----
+@Singleton
+@NonBlocking
+public class MyService {
+    @Retry
+    CompletionStage<String> hello() { // <1>
+        ...
+    }
+
+    @Retry
+    @Blocking
+    CompletionStage<String> helloBlocking() { // <2>
+        ...
+    }
+}
+----
+
+<1> Treated as `@NonBlocking`, based on the class annotation.
+<2> Treated as `@Blocking`, the method annotation has priority over the class annotation.
+
+It is an error to put both `@Blocking` and `@NonBlocking` on the same program element.
 
 === Rationale
 
@@ -193,7 +221,7 @@ That is, the delay between all retry attempts is identical (with the exception o
 * `@FibonacciBackoff`
 * `@CustomBackoff`
 
-One of these annotations may be present on any element (method or class) that also has the `@Retry` annotation.
+One of these annotations may be present on any program element (method or class) that also has the `@Retry` annotation.
 For example:
 
 [source,java]
@@ -210,8 +238,8 @@ public class MyService {
 }
 ----
 
-It is an error to add a backoff annotation to an element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@ExponentialBackoff` on a method).
-It is also an error to add more than one of these annotations to the same element.
+It is an error to add a backoff annotation to a program element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@ExponentialBackoff` on a method).
+It is also an error to add more than one of these annotations to the same program element.
 
 When any one of these annotations is present, it modifies the behavior specified by the `@Retry` annotation.
 The new behavior is as follows:

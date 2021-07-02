@@ -25,6 +25,14 @@ public interface Config {
     // defined by Annotation, so for convenience, we expose it here too
     Class<? extends Annotation> annotationType();
 
+    /**
+     * Returns whether the annotation is present on method or not
+     * (in which case, it is present on the class). This is useful
+     * when two annotations conflict, in which case the one on method
+     * has priority over the one on class.
+     */
+    boolean isOnMethod();
+
     // ---
 
     static <A extends Annotation> boolean isEnabled(Class<A> annotationType, MethodDescriptor method) {

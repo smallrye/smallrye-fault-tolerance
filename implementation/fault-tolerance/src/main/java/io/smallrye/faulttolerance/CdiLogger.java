@@ -28,4 +28,10 @@ interface CdiLogger extends BasicLogger {
 
     @Message(id = 4, value = "Backoff annotation @%s present on class '%s', but @Retry is missing")
     DefinitionException backoffOnClassWithoutRetry(String backoffAnnotation, Class<?> clazz);
+
+    @Message(id = 5, value = "Both @Blocking and @NonBlocking present on method '%s'")
+    DefinitionException blockingNonblockingOnMethod(MethodDescriptor method);
+
+    @Message(id = 6, value = "Both @Blocking and @NonBlocking present on class '%s'")
+    DefinitionException blockingNonblockingOnClass(Class<?> clazz);
 }

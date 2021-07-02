@@ -57,6 +57,8 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
+import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
@@ -163,6 +165,16 @@ public class FaultToleranceExtension implements Extension {
                         event.addDefinitionError(LOG.backoffOnClassWithoutRetry(backoffAnnotation.getSimpleName(),
                                 annotatedType.getJavaClass()));
                     }
+                }
+
+                if (annotatedMethod.isAnnotationPresent(Blocking.class)
+                        && annotatedMethod.isAnnotationPresent(NonBlocking.class)) {
+                    event.addDefinitionError(LOG.blockingNonblockingOnMethod(method.method));
+                }
+
+                if (annotatedType.isAnnotationPresent(Blocking.class)
+                        && annotatedType.isAnnotationPresent(NonBlocking.class)) {
+                    event.addDefinitionError(LOG.blockingNonblockingOnClass(annotatedType.getJavaClass()));
                 }
             }
         }

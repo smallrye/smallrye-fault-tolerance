@@ -137,6 +137,13 @@ public class FaultToleranceOperation {
     // whether thread offload is required based on presence or absence of @Blocking and @NonBlocking
     // if the guarded method doesn't return CompletionStage, this is meaningless
     public boolean isThreadOffloadRequired() {
+        if (blocking != null && blocking.isOnMethod()) {
+            return true;
+        }
+        if (nonBlocking != null && nonBlocking.isOnMethod()) {
+            return false;
+        }
+
         if (blocking != null) {
             return true;
         }
