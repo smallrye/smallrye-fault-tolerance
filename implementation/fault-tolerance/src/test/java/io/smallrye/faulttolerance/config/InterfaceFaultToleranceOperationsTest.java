@@ -23,7 +23,7 @@ public class InterfaceFaultToleranceOperationsTest {
         assertThat(pong.isValid()).isTrue();
         Retry retry = pong.getRetry();
         assertThat(retry).isNotNull();
-        assertThat(pong.isAsync()).isFalse();
+        assertThat(pong.hasAsynchronous()).isFalse();
         assertThat(retry.delay()).isEqualTo(1000);
         circuitBreaker = pong.getCircuitBreaker();
         assertThat(circuitBreaker).isNotNull();

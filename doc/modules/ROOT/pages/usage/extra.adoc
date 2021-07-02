@@ -122,7 +122,7 @@ If the original thread is an event loop thread and event loop integration is ena
 In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
 
 Additionally, the `@Blocking` and `@NonBlocking` annotations may be placed on a class.
-In that case, they apply to methods satisfying the same criteria: they return `CompletionStage` and have some fault tolerance strategy (even if that fault tolerance strategy is declared on the class).
+In that case, they apply to methods satisfying the same criteria: must return `CompletionStage` and must have some fault tolerance strategy (even if that fault tolerance strategy is declared on the class).
 An annotation put on a method has priority over an annotation put on a class.
 For example:
 
@@ -166,6 +166,7 @@ In such case, the `@Asynchronous` annotation becomes optional.
 
 We also recommend to avoid `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 
+[[async-types]]
 == Additional Asynchronous Types
 
 {microprofile-fault-tolerance} supports asynchronous fault tolerance for methods that return `CompletionStage`.
@@ -207,6 +208,12 @@ Otherwise, add a dependency to your application:
 * https://github.com/ReactiveX/RxJava/tree/2.x[RxJava 2]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava2`
 * https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava3`
 * https://projectreactor.io/[Reactor]: `io.smallrye.reactive:smallrye-reactive-converter-reactor`
+
+.Quarkus
+****
+In Quarkus, the Mutiny converter library is present by default.
+You can use fault tolerance on methods that return `Uni` out of the box.
+****
 
 == Backoff Strategies for `@Retry`
 
@@ -280,3 +287,73 @@ com.example.MyService/hello/ExponentialBackoff/factor=3
 
 These annotations do not have any special metrics.
 All `@Retry` metrics are still present and reflect the altered behavior.
+
+== Non-compatible Mode
+
+In addition to the <<blocking-nonblocking>> annotations, {smallrye-fault-tolerance} offers a mode where method asynchrony is determined solely from the its return type.
+This mode is *not compatible* with the {microprofile-fault-tolerance} specification (and doesn't pass 2 tests in the TCK).
+
+This mode is disabled by default.
+To enable, set the configuration property `smallrye.faulttolerance.mp-compatibility` to `false`.
+
+.Quarkus
+****
+In Quarkus, the non-compatible mode is enabled by default.
+To restore compatibility, add the following to your `application.properties`:
+
+[source,properties]
+----
+smallrye.faulttolerance.mp-compatibility=true
+----
+
+Note that the non-compatible mode is available since {smallrye-fault-tolerance} 5.2.0 and Quarkus 2.1.0.Final.
+Previous versions are always compatible.
+****
+
+In this mode, methods that
+
+* have some fault tolerance annotation (such as `@Retry`),
+* return `CompletionStage` (or some other <<async-types,async type>>),
+* are _not_ annotated `@Blocking`, `@NonBlocking` or `@Asynchronous`
+
+are not offloaded to a thread pool and still have asynchronous fault tolerance applied.
+(In other words, they are treated as if they were annotated `@NonBlocking`.)
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry
+    CompletionStage<String> hello() { // <1>
+        ...
+    }
+
+    @Retry
+    Uni<String> helloMutiny() { // <2>
+        ...
+    }
+
+    @Retry
+    @Blocking
+    CompletionStage<String> helloBlocking() { // <3>
+        ...
+    }
+}
+----
+
+<1> Executed on the original thread, because the method returns `CompletionStage`.
+It is as if the method was annotated `@NonBlocking`.
+<2> Executed on the original thread, because the method returns an <<async-types,async type>>.
+It is as if the method was annotated `@NonBlocking`.
+<3> The explicit `@Blocking` annotation is honored.
+The method is executed on a thread pool.
+
+Note that the existing annotations still work without a change, both in compatible and non-compatible mode.
+That is, if a method (or class) is annotated `@Asynchronous` or `@Blocking`, execution will be offloaded to a thread pool.
+If a method (or class) is annotated `@NonBlocking`, execution will happen on the original thread (even if `@Asynchronous` is present).
+
+Also note that this mode doesn't affect methods returning `Future`.
+You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool.
+As mentioned in the <<blocking-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.

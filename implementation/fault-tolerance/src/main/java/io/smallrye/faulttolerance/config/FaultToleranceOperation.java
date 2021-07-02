@@ -124,17 +124,18 @@ public class FaultToleranceOperation {
         return methodDescriptor.returnType;
     }
 
-    // whether @Asynchronous is present
-    public boolean isAsync() {
+    public boolean hasAsynchronous() {
         return asynchronous != null;
     }
 
-    // whether @Blocking or @NonBlocking is present
-    public boolean isAdditionalAsync() {
-        return blocking != null || nonBlocking != null;
+    public boolean hasBlocking() {
+        return blocking != null;
     }
 
-    // whether thread offload is required based on presence or absence of @Blocking and @NonBlocking
+    public boolean hasNonBlocking() {
+        return nonBlocking != null;
+    }
+
     // if the guarded method doesn't return CompletionStage, this is meaningless
     public boolean isThreadOffloadRequired() {
         if (blocking != null && blocking.isOnMethod()) {
@@ -151,8 +152,15 @@ public class FaultToleranceOperation {
             return false;
         }
 
-        // no @Blocking or @NonBlocking, we should offload to another thread as that's MP FT default
-        return true;
+        if (asynchronous != null) {
+            return true;
+        }
+
+        // in a spec compatible mode, one of the conditions above always holds
+        // in a spec non-compatible mode, we can just always return `false`
+        // because `isThreadOffloadRequired` is never called when the return type
+        // isn't `CompletionStage`
+        return false;
     }
 
     public boolean hasBulkhead() {

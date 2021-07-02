@@ -121,6 +121,8 @@ public class FaultToleranceInterceptor {
 
     private final CircuitBreakerMaintenanceImpl cbMaintenance;
 
+    private final SpecCompatibility specCompatibility;
+
     @Inject
     public FaultToleranceInterceptor(
             @Intercepted Bean<?> interceptedBean,
@@ -130,7 +132,8 @@ public class FaultToleranceInterceptor {
             MetricsProvider metricsProvider,
             ExecutorHolder executorHolder,
             RequestContextIntegration requestContextIntegration,
-            CircuitBreakerMaintenanceImpl cbMaintenance) {
+            CircuitBreakerMaintenanceImpl cbMaintenance,
+            SpecCompatibility specCompatibility) {
         this.interceptedBean = interceptedBean;
         this.operationProvider = operationProvider;
         this.cache = cache;
@@ -141,6 +144,7 @@ public class FaultToleranceInterceptor {
         timer = executorHolder.getTimer();
         requestContextController = requestContextIntegration.get();
         this.cbMaintenance = cbMaintenance;
+        this.specCompatibility = specCompatibility;
     }
 
     @AroundInvoke
@@ -151,9 +155,9 @@ public class FaultToleranceInterceptor {
 
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
-        if ((operation.isAsync() || operation.isAdditionalAsync()) && AsyncTypes.isKnown(operation.getReturnType())) {
+        if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
             return asyncFlow(operation, interceptionContext, point);
-        } else if (operation.isAsync()) {
+        } else if (specCompatibility.isOperationPseudoAsynchronous(operation)) {
             return futureFlow(operation, interceptionContext, point);
         } else {
             return syncFlow(operation, interceptionContext, point);
@@ -531,8 +535,7 @@ public class FaultToleranceInterceptor {
             }
         }
 
-        if ((operation.isAsync() || operation.isAdditionalAsync()) && AsyncTypes.isKnown(returnType)
-                && operation.isThreadOffloadRequired()) {
+        if (specCompatibility.isOperationTrulyAsynchronous(operation) && operation.isThreadOffloadRequired()) {
             fallbackFunction = new AsyncFallbackFunction(fallbackFunction, asyncExecutor);
         }
 
