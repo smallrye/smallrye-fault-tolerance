@@ -86,12 +86,12 @@ public class MyService {
 +
 <1> A fault tolerance annotation.
 If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@Blocking` annotation.
-<2> Using the `@Blocking` annotation, because the method blocks and it is necessary to offload its execution to another thread.
+<2> Using the `@Blocking` annotation, because the method blocks, and it is necessary to offload its execution to another thread.
 With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
 +
 The thread pool that is used for offloading method calls is provided by the runtime that integrates {smallrye-fault-tolerance}.
 * `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
-Use this annotation if the method _doesn't_ have blocking logic and you want the execution to stay on the caller thread.
+Use this annotation if the method _doesn't_ have blocking logic, and you want the execution to stay on the caller thread.
 +
 For example:
 +
@@ -153,7 +153,7 @@ It is an error to put both `@Blocking` and `@NonBlocking` on the same program el
 
 We believe that the `@Asynchronous` annotation is misnamed, because its meaning is "offload execution to another thread".
 This isn't always appropriate in modern asynchronous programming, where methods are often non-blocking and thread offload is not required.
-We believe that declaring whether the method blocks or not is a better aproach.
+We believe that declaring whether the method blocks or not is a better approach.
 
 At the same time, we designed these annotations to be used by a variety of frameworks, so {smallrye-fault-tolerance} can't eagerly intercept all methods using them.
 We also want to stay compatible with the {microprofile-fault-tolerance} specification as much as possible.
@@ -161,10 +161,10 @@ For these reasons, {smallrye-fault-tolerance} only considers these annotations f
 
 === Recommendation
 
-For methods that use fault tolerance and return `CompletionStage`, we recommend to declare their `@Blocking` or `@NonBlocking` nature.
+For methods that use fault tolerance and return `CompletionStage`, we recommend declaring their `@Blocking` or `@NonBlocking` nature.
 In such case, the `@Asynchronous` annotation becomes optional.
 
-We also recommend to avoid `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
+We also recommend avoiding `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 
 [[async-types]]
 == Additional Asynchronous Types
@@ -263,10 +263,10 @@ It is possible to define a `maxDelay`, so that this growth has a limit.
 Both `@ExponentialBackoff` and `@FibonacciBackoff` also apply jitter, exactly like plain `@Retry`.
 
 Also, since `@Retry` has a default `maxDuration` of 3 minutes and default `maxRetries` of 3, both `@ExponentialBackoff` and `@FibonacciBackoff` define a `maxDelay` of 1 minute.
-If we redefine `maxRetries` to a much higher value and the guarded method keeps failing, the delay would eventually become higher than 1 minute.
+If we redefine `maxRetries` to a much higher value, and the guarded method keeps failing, the delay would eventually become higher than 1 minute.
 In that case, it will be limited to 1 minute.
 Of course, `maxDelay` can be configured.
-If set to `0`, there's no limit and the delays will grow without bounds.
+If set to `0`, there's no limit, and the delays will grow without bounds.
 
 For `@CustomBackoff`, computing the delays between retry attempts is delegated to a specified implementation of `CustomBackoffStrategy`.
 This is an advanced option.
