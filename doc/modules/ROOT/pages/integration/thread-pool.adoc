@@ -15,14 +15,14 @@ This at least allows customizing the `ThreadFactory`.
 == Configuration
 
 If the integrator doesn't provide a thread pool, the default thread pool is used as described above.
-In such case, the following configuration properties are recongized:
+In such case, the following configuration properties are recognized:
 
 - `io.smallrye.faulttolerance.mainThreadPoolSize`: maximum number of threads in the thread pool.
 Defaults to `100`.
 
 - `io.smallrye.faulttolerance.mainThreadPoolQueueSize`: size of the queue that the thread pool should use.
 Can be `> 0`, in which case the queue will be bounded to given size.
-Can be `0`, in which case there will be no queue and the thread pool will reject excess tasks.
+Can be `0`, in which case there will be no queue, and the thread pool will reject excess tasks.
 Can be `-1`, in which case the queue will be unbounded.
 Values `< -1` are an error.
 Defaults to `-1`.

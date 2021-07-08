@@ -1,6 +1,6 @@
 = Introduction
 
-{smallrye-fault-tolerance} is comprised of the following main artifacts:
+{smallrye-fault-tolerance} comprises the following main artifacts:
 
 * `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance};
 * `io.smallrye:smallrye-fault-tolerance-core`: core implementations of fault tolerance strategies;
