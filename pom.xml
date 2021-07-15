@@ -50,7 +50,7 @@
         <version.vertx>4.1.1</version.vertx>
 
         <version.junit-pioneer>1.4.2</version.junit-pioneer>
-        <version.mutiny>0.18.1</version.mutiny>
+        <version.mutiny>0.19.2</version.mutiny>
         <version.rxjava3>3.0.13</version.rxjava3>
         <version.weld-api>3.1.SP4</version.weld-api>
         <version.weld-core>3.1.7.SP1</version.weld-core>
