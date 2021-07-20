@@ -20,7 +20,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-parent</artifactId>
-        <version>5.2.2-SNAPSHOT</version>
+        <version>6.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
@@ -32,8 +32,9 @@
         <module>core</module>
         <module>autoconfig</module>
         <module>fault-tolerance</module>
-        <module>context-propagation</module>
-        <module>tracing-propagation</module>
+        <!-- uncomment when SmallRye Context Propagation updates to jakarta.* -->
+<!--        <module>context-propagation</module>-->
+<!--        <module>tracing-propagation</module>-->
         <module>vertx</module>
     </modules>
 </project>

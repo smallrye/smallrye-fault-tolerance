@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.propagation;
 
-import javax.enterprise.context.ContextNotActiveException;
-import javax.enterprise.context.control.RequestContextController;
+import jakarta.enterprise.context.ContextNotActiveException;
+import jakarta.enterprise.context.control.RequestContextController;
 
 import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 

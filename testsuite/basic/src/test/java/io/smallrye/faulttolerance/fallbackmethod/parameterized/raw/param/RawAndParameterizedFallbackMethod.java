@@ -18,7 +18,7 @@ package io.smallrye.faulttolerance.fallbackmethod.parameterized.raw.param;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.enterprise.context.Dependent;
+import jakarta.enterprise.context.Dependent;
 
 import org.eclipse.microprofile.faulttolerance.Fallback;
 

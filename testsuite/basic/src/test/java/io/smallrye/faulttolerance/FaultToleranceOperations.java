@@ -17,8 +17,8 @@ package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
 
-import javax.enterprise.context.Dependent;
-import javax.inject.Inject;
+import jakarta.enterprise.context.Dependent;
+import jakarta.inject.Inject;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 

@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.internal;
 
 import static io.smallrye.faulttolerance.internal.InternalLogger.LOG;
 
-import javax.enterprise.context.control.RequestContextController;
+import jakarta.enterprise.context.control.RequestContextController;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;

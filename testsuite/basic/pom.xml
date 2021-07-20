@@ -20,7 +20,7 @@
     <parent>
         <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
         <groupId>io.smallrye</groupId>
-        <version>5.2.2-SNAPSHOT</version>
+        <version>6.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-testsuite-basic</artifactId>
@@ -66,13 +66,13 @@
         <dependency>
             <groupId>io.smallrye.reactive</groupId>
             <artifactId>smallrye-reactive-converter-mutiny</artifactId>
-            <version>${version.smallrye-reactive-utils}</version>
+            <version>${version.smallrye-reactive-converter}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.smallrye.reactive</groupId>
             <artifactId>smallrye-reactive-converter-rxjava3</artifactId>
-            <version>${version.smallrye-reactive-utils}</version>
+            <version>${version.smallrye-reactive-converter}</version>
             <scope>test</scope>
         </dependency>
 

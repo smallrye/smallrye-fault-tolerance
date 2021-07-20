@@ -17,7 +17,7 @@ package io.smallrye.faulttolerance.config.extension;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.context.Dependent;
+import jakarta.enterprise.context.Dependent;
 
 @Dependent
 public class UnconfiguredService {

@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.internal;
 
-import javax.enterprise.context.control.RequestContextController;
-import javax.enterprise.inject.spi.CDI;
+import jakarta.enterprise.context.control.RequestContextController;
+import jakarta.enterprise.inject.spi.CDI;
 
 public class DefaultRequestContextControllerProvider implements RequestContextControllerProvider {
     @Override

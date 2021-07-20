@@ -5,7 +5,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletionStage;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;

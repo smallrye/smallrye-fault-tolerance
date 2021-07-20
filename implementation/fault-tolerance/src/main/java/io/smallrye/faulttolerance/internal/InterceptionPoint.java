@@ -3,7 +3,7 @@ package io.smallrye.faulttolerance.internal;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
-import javax.interceptor.InvocationContext;
+import jakarta.interceptor.InvocationContext;
 
 public class InterceptionPoint {
     private final String name;

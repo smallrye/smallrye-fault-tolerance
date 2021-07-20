@@ -6,8 +6,8 @@ import static org.awaitility.Awaitility.await;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.enterprise.context.control.RequestContextController;
-import javax.inject.Inject;
+import jakarta.enterprise.context.control.RequestContextController;
+import jakarta.inject.Inject;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;

@@ -2,9 +2,9 @@ package io.smallrye.faulttolerance;
 
 import java.util.Set;
 
-import javax.enterprise.inject.spi.BeanManager;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 @Singleton
 public class DefaultExistingCircuitBreakerNames implements ExistingCircuitBreakerNames {

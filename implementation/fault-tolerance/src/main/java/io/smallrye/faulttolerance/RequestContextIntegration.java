@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance;
 
-import javax.enterprise.context.control.RequestContextController;
-import javax.inject.Singleton;
+import jakarta.enterprise.context.control.RequestContextController;
+import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.internal.RequestContextControllerProvider;
 

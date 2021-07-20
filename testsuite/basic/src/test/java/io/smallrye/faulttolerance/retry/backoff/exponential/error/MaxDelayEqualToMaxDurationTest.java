@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.retry.backoff.exponential.error;
 
-import javax.enterprise.inject.spi.DefinitionException;
+import jakarta.enterprise.inject.spi.DefinitionException;
 
 import org.junit.jupiter.api.Test;
 
