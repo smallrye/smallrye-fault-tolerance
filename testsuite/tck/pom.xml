@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
-        <version>5.2.2-SNAPSHOT</version>
+        <version>6.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-tck</artifactId>
@@ -36,13 +36,6 @@
             <groupId>org.jboss.weld</groupId>
             <artifactId>weld-core-impl</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <!-- remove once Weld moves to Jakarta dependencies -->
-                <exclusion>
-                    <groupId>javax.enterprise</groupId>
-                    <artifactId>cdi-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jboss.arquillian.container</groupId>

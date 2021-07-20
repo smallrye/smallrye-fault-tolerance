@@ -15,7 +15,7 @@
  */
 package io.smallrye.faulttolerance.fallback.retry.metrics;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;

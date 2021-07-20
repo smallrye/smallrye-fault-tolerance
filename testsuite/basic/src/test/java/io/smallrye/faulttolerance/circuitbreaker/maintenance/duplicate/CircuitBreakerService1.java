@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.circuitbreaker.maintenance.duplicate;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 

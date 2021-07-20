@@ -15,8 +15,8 @@
  */
 package io.smallrye.faulttolerance.async.requestcontext;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.RequestScoped;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.RequestScoped;
 
 @RequestScoped
 public class RequestFoo {

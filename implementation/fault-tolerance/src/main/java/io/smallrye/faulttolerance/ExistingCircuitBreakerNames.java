@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
 /**
  * An integrator is allowed to provide a custom implementation of {@link ExistingCircuitBreakerNames}. The bean

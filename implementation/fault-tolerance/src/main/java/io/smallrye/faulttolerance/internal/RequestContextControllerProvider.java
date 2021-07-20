@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.internal;
 
 import java.util.ServiceLoader;
 
-import javax.enterprise.context.control.RequestContextController;
+import jakarta.enterprise.context.control.RequestContextController;
 
 /**
  * This is <b>not</b> a public SPI, it's only meant to be used internally.
