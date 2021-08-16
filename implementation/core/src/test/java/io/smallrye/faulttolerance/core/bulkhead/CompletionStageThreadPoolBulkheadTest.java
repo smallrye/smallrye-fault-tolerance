@@ -3,18 +3,13 @@ package io.smallrye.faulttolerance.core.bulkhead;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
+import java.util.concurrent.*;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.AfterEach;
@@ -132,7 +127,7 @@ public class CompletionStageThreadPoolBulkheadTest {
     }
 
     @Test
-    public void shouldLetMaxPlus1After1Failed() throws Exception {
+    public void shouldLetMaxPlus1After1Failed() {
         RuntimeException error = new RuntimeException("forced");
 
         Barrier delayBarrier = Barrier.noninterruptible();
@@ -170,7 +165,7 @@ public class CompletionStageThreadPoolBulkheadTest {
     }
 
     @Test
-    public void shouldLetMaxPlus1After1FailedCompletionStage() throws Exception {
+    public void shouldLetMaxPlus1After1FailedCompletionStage() {
         RuntimeException error = new RuntimeException("forced");
 
         Barrier delayBarrier = Barrier.noninterruptible();
@@ -226,42 +221,31 @@ public class CompletionStageThreadPoolBulkheadTest {
         party.organizer().waitForAll();
 
         CompletionStage<String> secondResult = bulkhead.apply(new InvocationContext<>(null));
-        waitUntilQueueSize(bulkhead, 1, 100);
+        waitUntilQueueSize(bulkhead, 1, 150);
 
         party.organizer().disband();
 
         assertThat(firstResult.toCompletableFuture().get()).isEqualTo("shouldNotStartNextIfCSInProgress");
         assertThat(secondResult.toCompletableFuture().get()).isEqualTo("shouldNotStartNextIfCSInProgress");
-        assertThat(bulkhead.getQueueSize()).isEqualTo(0);
+        assertThat(bulkhead.getQueueSize()).isZero();
     }
 
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private static <V> void waitUntilQueueSize(CompletionStageThreadPoolBulkhead<V> bulkhead, int size, long timeout)
-            throws Exception {
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < timeout) {
-            Thread.sleep(50);
-            if (bulkhead.getQueueSize() == size) {
-                return;
-            }
-        }
-        fail("queue not reached size " + size + " in " + timeout + " [ms]");
+    private static <V> void waitUntilQueueSize(CompletionStageThreadPoolBulkhead<V> bulkhead, int size, long timeout) {
+        await().atMost(Duration.ofMillis(timeout)).until(() -> bulkhead.getQueueSize() == size);
     }
 
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private static <V> CompletionStage<V> getSingleFinishedResult(List<CompletionStage<V>> results, long timeout)
-            throws Exception {
-        long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < timeout) {
-            Thread.sleep(50);
-            for (CompletionStage<V> result : results) {
-                if (result.toCompletableFuture().isDone()) {
-                    return result;
-                }
+    private static <V> CompletionStage<V> getSingleFinishedResult(List<CompletionStage<V>> results, long timeout) {
+        return await().atMost(Duration.ofMillis(timeout))
+                .until(() -> getSingleFinishedResult(results), Optional::isPresent)
+                .get();
+    }
+
+    private static <V> Optional<CompletionStage<V>> getSingleFinishedResult(List<CompletionStage<V>> results) {
+        for (CompletionStage<V> result : results) {
+            if (result.toCompletableFuture().isDone()) {
+                return Optional.of(result);
             }
         }
-        throw new AssertionError("No thread finished in " + timeout + " ms");
+        return Optional.empty();
     }
 }
