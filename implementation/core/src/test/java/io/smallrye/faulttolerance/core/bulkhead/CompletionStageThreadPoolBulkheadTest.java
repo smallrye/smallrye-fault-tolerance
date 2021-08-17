@@ -9,7 +9,14 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.AfterEach;
@@ -221,7 +228,7 @@ public class CompletionStageThreadPoolBulkheadTest {
         party.organizer().waitForAll();
 
         CompletionStage<String> secondResult = bulkhead.apply(new InvocationContext<>(null));
-        waitUntilQueueSize(bulkhead, 1, 150);
+        waitUntilQueueSize(bulkhead, 1, 100);
 
         party.organizer().disband();
 
@@ -231,7 +238,9 @@ public class CompletionStageThreadPoolBulkheadTest {
     }
 
     private static <V> void waitUntilQueueSize(CompletionStageThreadPoolBulkhead<V> bulkhead, int size, long timeout) {
-        await().atMost(Duration.ofMillis(timeout)).until(() -> bulkhead.getQueueSize() == size);
+        await().pollInterval(Duration.ofMillis(10))
+                .atMost(Duration.ofMillis(timeout))
+                .until(() -> bulkhead.getQueueSize() == size);
     }
 
     private static <V> CompletionStage<V> getSingleFinishedResult(List<CompletionStage<V>> results, long timeout) {
