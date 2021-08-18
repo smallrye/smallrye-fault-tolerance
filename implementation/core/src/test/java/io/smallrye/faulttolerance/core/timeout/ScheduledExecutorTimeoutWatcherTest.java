@@ -77,8 +77,8 @@ public class ScheduledExecutorTimeoutWatcherTest {
 
     private static void assertThatWithin(int timeoutMs, String message, Supplier<Boolean> test) {
         await(message).pollInterval(Duration.ofMillis(50))
-               .atMost(Duration.ofMillis(timeoutMs))
-               .until(test::get);
+                .atMost(Duration.ofMillis(timeoutMs))
+                .until(test::get);
     }
 
     private Thread run(AtomicBoolean interruptionFlag) {
