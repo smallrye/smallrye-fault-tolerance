@@ -4,10 +4,12 @@ import static io.smallrye.faulttolerance.core.util.TestThread.runOnTestThread;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -210,36 +212,24 @@ public class FutureThreadPoolBulkheadTest {
         }
     }
 
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private void waitUntilQueueSize(FutureThreadPoolBulkhead<String> bulkhead, int size, long timeoutMs)
-            throws InterruptedException {
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(50);
-            if (bulkhead.getQueueSize() == size) {
-                return;
-            }
-        }
-        fail("queue not filled in in " + timeoutMs + " [ms], queue size: " + bulkhead.getQueueSize());
-
+    private void waitUntilQueueSize(FutureThreadPoolBulkhead<String> bulkhead, int size, long timeoutMs) {
+        await().pollInterval(Duration.ofMillis(10))
+                .atMost(Duration.ofMillis(timeoutMs))
+                .until(() -> bulkhead.getQueueSize() == size);
     }
 
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private <V> TestThread<Future<V>> getSingleFinishedThread(List<TestThread<Future<V>>> threads, long timeout)
-            throws InterruptedException {
-        long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < timeout) {
-            Thread.sleep(50);
-            for (TestThread<Future<V>> thread : threads) {
-                if (thread.isDone()) {
-                    return thread;
-                }
-            }
-        }
-        fail("No thread finished in " + timeout + " ms");
-        throw new AssertionError(); // dead code
+    private <V> TestThread<Future<V>> getSingleFinishedThread(List<TestThread<Future<V>>> threads, long timeout) {
+        return await().atMost(Duration.ofMillis(timeout))
+                .until(() -> getSingleFinishedResult(threads), Optional::isPresent)
+                .get();
     }
 
+    private static <V> Optional<TestThread<Future<V>>> getSingleFinishedResult(List<TestThread<Future<V>>> threads) {
+        for (TestThread<Future<V>> thread : threads) {
+            if (thread.isDone()) {
+                return Optional.of(thread);
+            }
+        }
+        return Optional.empty();
+    }
 }
