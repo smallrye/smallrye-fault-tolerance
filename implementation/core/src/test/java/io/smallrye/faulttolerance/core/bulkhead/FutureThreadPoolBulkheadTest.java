@@ -4,16 +4,13 @@ import static io.smallrye.faulttolerance.core.util.TestThread.runOnTestThread;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
+import java.util.concurrent.*;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.AfterEach;
@@ -83,7 +80,7 @@ public class FutureThreadPoolBulkheadTest {
         for (int i = 0; i < 5; i++) {
             threads.add(runOnTestThread(bulkhead));
         }
-        waitUntilQueueSize(bulkhead, 3, 500);
+        waitUntilQueueSize(bulkhead, 3, Duration.ofMillis(500));
 
         assertThatThrownBy(() -> bulkhead.apply(new InvocationContext<>(null)))
                 .isInstanceOf(BulkheadException.class);
@@ -115,7 +112,7 @@ public class FutureThreadPoolBulkheadTest {
 
         delayBarrier.open();
 
-        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 1000L);
+        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, Duration.ofSeconds(1));
         threads.remove(finishedThread);
         assertThat(finishedThread.await().get()).isEqualTo("shouldLetMaxPlus1After1Left");
 
@@ -150,7 +147,7 @@ public class FutureThreadPoolBulkheadTest {
         letOneInSemaphore.release();
         finishedThreadsCount.acquire();
 
-        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, 1000L);
+        TestThread<Future<String>> finishedThread = getSingleFinishedThread(threads, Duration.ofSeconds(1));
         assertThatThrownBy(finishedThread::await).isEqualTo(error);
         threads.remove(finishedThread);
 
@@ -192,16 +189,16 @@ public class FutureThreadPoolBulkheadTest {
 
         threads.add(runOnTestThread(bulkhead));
 
-        waitUntilQueueSize(bulkhead, 3, 1000);
+        waitUntilQueueSize(bulkhead, 3, Duration.ofSeconds(1));
 
         TestThread<Future<String>> failedThread = runOnTestThread(bulkhead);
         assertThatThrownBy(failedThread::await).isInstanceOf(BulkheadException.class);
 
         threads.remove(4).interrupt(); // cancel and remove from the list
-        waitUntilQueueSize(bulkhead, 2, 1000);
+        waitUntilQueueSize(bulkhead, 2, Duration.ofSeconds(1));
 
         threads.add(runOnTestThread(bulkhead));
-        waitUntilQueueSize(bulkhead, 3, 1000);
+        waitUntilQueueSize(bulkhead, 3, Duration.ofSeconds(1));
 
         party.organizer().disband();
 
@@ -210,36 +207,27 @@ public class FutureThreadPoolBulkheadTest {
         }
     }
 
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private void waitUntilQueueSize(FutureThreadPoolBulkhead<String> bulkhead, int size, long timeoutMs)
+    private void waitUntilQueueSize(FutureThreadPoolBulkhead<String> bulkhead, int size, Duration timeout)
             throws InterruptedException {
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            Thread.sleep(50);
-            if (bulkhead.getQueueSize() == size) {
-                return;
-            }
-        }
-        fail("queue not filled in in " + timeoutMs + " [ms], queue size: " + bulkhead.getQueueSize());
-
+        await().pollInterval(Duration.ofMillis(50))
+                .atMost(timeout)
+                .until(() -> bulkhead.getQueueSize() == size);
     }
 
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private <V> TestThread<Future<V>> getSingleFinishedThread(List<TestThread<Future<V>>> threads, long timeout)
+    private <V> TestThread<Future<V>> getSingleFinishedThread(List<TestThread<Future<V>>> threads, Duration timeout)
             throws InterruptedException {
-        long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < timeout) {
-            Thread.sleep(50);
-            for (TestThread<Future<V>> thread : threads) {
-                if (thread.isDone()) {
-                    return thread;
-                }
+        return await().atMost(timeout)
+                .until(() -> getSingleFinishedThread(threads), Optional::isPresent)
+                .get();
+    }
+
+    private static <V> Optional<TestThread<Future<V>>> getSingleFinishedThread(List<TestThread<Future<V>>> threads) {
+        for (TestThread<Future<V>> thread : threads) {
+            if (thread.isDone()) {
+                return Optional.of(thread);
             }
         }
-        fail("No thread finished in " + timeout + " ms");
-        throw new AssertionError(); // dead code
+        return Optional.empty();
     }
 
 }
