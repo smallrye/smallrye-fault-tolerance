@@ -1,13 +1,13 @@
 package io.smallrye.faulttolerance.core.timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +50,10 @@ public class ScheduledExecutorTimeoutWatcherTest {
         assertThat(execution.hasFinished()).isFalse();
         assertThat(execution.hasTimedOut()).isTrue();
 
-        assertThatWithin(100, "watch not running", () -> !watch.isRunning());
+        await("watch not running")
+                .atMost(Duration.ofMillis(100))
+                .pollInterval(Duration.ofMillis(50))
+                .until(() -> !watch.isRunning());
     }
 
     @Test
@@ -71,24 +74,10 @@ public class ScheduledExecutorTimeoutWatcherTest {
         assertThat(execution.isRunning()).isFalse();
         assertThat(execution.hasFinished()).isTrue();
         assertThat(execution.hasTimedOut()).isFalse();
-        assertThatWithin(100, "watch not running", () -> !watch.isRunning());
-    }
-
-    // TODO waiting for a condition in a unit test shouldn't really be needed
-    //  ultimately, we should use Awaitility for waiting for a condition in a test, not home-grown utils like this
-    private static void assertThatWithin(int timeoutMs, String message, Supplier<Boolean> test) {
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Interrupted waiting for " + message);
-            }
-            if (test.get()) {
-                return;
-            }
-        }
-        fail(message + " not satisfied in " + timeoutMs + "ms");
+        await("watch not running")
+                .atMost(Duration.ofMillis(100))
+                .pollInterval(Duration.ofMillis(50))
+                .until(() -> !watch.isRunning());
     }
 
     private Thread run(AtomicBoolean interruptionFlag) {
