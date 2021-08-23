@@ -10,8 +10,8 @@ public class SetOfThrowables {
     public static final SetOfThrowables ALL = new SetOfThrowables(Collections.singleton(Throwable.class));
 
     /**
-     * @param classes classes to include
-     * @return a set of throwables without any additional constraints.
+     * @param classes classes to include in the set
+     * @return a set of throwables
      */
     public static SetOfThrowables create(List<Class<? extends Throwable>> classes) {
         Set<Class<? extends Throwable>> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -27,8 +27,8 @@ public class SetOfThrowables {
 
     /**
      * @param searchedFor a class to check
-     * @return whether {@code searchedFor} is a subtype of (at least) one of the types in this set.
-     *         Note that subtyping is a reflexive relation, so a type is always a subtype of itself.
+     * @return whether {@code searchedFor} is a subtype of (at least) one of the types in this set
+     *         (note that subtyping is a reflexive relation, so a type is always a subtype of itself)
      */
     public boolean includes(Class<? extends Throwable> searchedFor) {
         for (Class<? extends Throwable> clazz : classes) {

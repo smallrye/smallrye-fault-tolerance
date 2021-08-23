@@ -143,7 +143,7 @@ public class FaultToleranceOperation {
         return nonBlocking != null;
     }
 
-    // if the guarded method doesn't return CompletionStage, this is meaningless
+    // if the guarded method doesn't return `CompletionStage`, this is meaningless
     public boolean isThreadOffloadRequired() {
         if (blocking != null && blocking.isOnMethod()) {
             return true;

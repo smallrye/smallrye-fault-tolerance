@@ -158,7 +158,7 @@ public class FaultToleranceInterceptor {
         if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
             return asyncFlow(operation, interceptionContext, point);
         } else if (specCompatibility.isOperationPseudoAsynchronous(operation)) {
-            return futureFlow(operation, interceptionContext, point);
+            return pseudoAsyncFlow(operation, interceptionContext, point);
         } else {
             return syncFlow(operation, interceptionContext, point);
         }
@@ -177,20 +177,21 @@ public class FaultToleranceInterceptor {
         }
     }
 
+    private <T> Future<T> pseudoAsyncFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
+            InterceptionPoint point) throws Exception {
+        FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point,
+                () -> preparePseudoAsyncStrategy(operation, point));
+
+        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(interceptionContext);
+
+        return strategy.apply(ctx);
+    }
+
     private <T> T syncFlow(FaultToleranceOperation operation, InvocationContext interceptionContext, InterceptionPoint point)
             throws Exception {
         FaultToleranceStrategy<T> strategy = cache.getStrategy(point, () -> prepareSyncStrategy(operation, point));
 
         io.smallrye.faulttolerance.core.InvocationContext<T> ctx = invocationContext(interceptionContext);
-
-        return strategy.apply(ctx);
-    }
-
-    private <T> Future<T> futureFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
-            InterceptionPoint point) throws Exception {
-        FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point, () -> prepareFutureStrategy(operation, point));
-
-        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(interceptionContext);
 
         return strategy.apply(ctx);
     }
@@ -298,71 +299,7 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    private <T> FaultToleranceStrategy<T> prepareSyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
-        FaultToleranceStrategy<T> result = invocation();
-
-        if (operation.hasBulkhead()) {
-            result = new SemaphoreBulkhead<>(result,
-                    "Bulkhead[" + point + "]",
-                    operation.getBulkhead().value());
-        }
-
-        if (operation.hasTimeout()) {
-            long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new Timeout<>(result, "Timeout[" + point + "]",
-                    timeoutMs,
-                    new TimerTimeoutWatcher(timer));
-        }
-
-        if (operation.hasCircuitBreaker()) {
-            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
-            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
-                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
-                    delayInMillis,
-                    operation.getCircuitBreaker().requestVolumeThreshold(),
-                    operation.getCircuitBreaker().failureRatio(),
-                    operation.getCircuitBreaker().successThreshold(),
-                    new SystemStopwatch());
-
-            String cbName = operation.hasCircuitBreakerName()
-                    ? operation.getCircuitBreakerName().value()
-                    : UUID.randomUUID().toString();
-            cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
-        }
-
-        if (operation.hasRetry()) {
-            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
-
-            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
-
-            result = new Retry<>(result,
-                    "Retry[" + point + "]",
-                    getSetOfThrowables(operation.getRetry().retryOn()),
-                    getSetOfThrowables(operation.getRetry().abortOn()),
-                    operation.getRetry().maxRetries(),
-                    maxDurationMs,
-                    () -> new ThreadSleepDelay(backoff.get()),
-                    new SystemStopwatch());
-        }
-
-        if (operation.hasFallback()) {
-            result = new Fallback<>(
-                    result,
-                    "Fallback[" + point + "]",
-                    prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(operation.getFallback().applyOn()),
-                    getSetOfThrowables(operation.getFallback().skipOn()));
-        }
-
-        if (metricsProvider.isEnabled()) {
-            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false);
-        }
-
-        return result;
-    }
-
-    private <T> FaultToleranceStrategy<Future<T>> prepareFutureStrategy(FaultToleranceOperation operation,
+    private <T> FaultToleranceStrategy<Future<T>> preparePseudoAsyncStrategy(FaultToleranceOperation operation,
             InterceptionPoint point) {
         FaultToleranceStrategy<Future<T>> result = invocation();
 
@@ -428,6 +365,70 @@ public class FaultToleranceInterceptor {
         }
 
         result = new FutureExecution<>(result, asyncExecutor);
+
+        return result;
+    }
+
+    private <T> FaultToleranceStrategy<T> prepareSyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
+        FaultToleranceStrategy<T> result = invocation();
+
+        if (operation.hasBulkhead()) {
+            result = new SemaphoreBulkhead<>(result,
+                    "Bulkhead[" + point + "]",
+                    operation.getBulkhead().value());
+        }
+
+        if (operation.hasTimeout()) {
+            long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
+            result = new Timeout<>(result, "Timeout[" + point + "]",
+                    timeoutMs,
+                    new TimerTimeoutWatcher(timer));
+        }
+
+        if (operation.hasCircuitBreaker()) {
+            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
+            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
+                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
+                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
+                    delayInMillis,
+                    operation.getCircuitBreaker().requestVolumeThreshold(),
+                    operation.getCircuitBreaker().failureRatio(),
+                    operation.getCircuitBreaker().successThreshold(),
+                    new SystemStopwatch());
+
+            String cbName = operation.hasCircuitBreakerName()
+                    ? operation.getCircuitBreakerName().value()
+                    : UUID.randomUUID().toString();
+            cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
+        }
+
+        if (operation.hasRetry()) {
+            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
+
+            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
+
+            result = new Retry<>(result,
+                    "Retry[" + point + "]",
+                    getSetOfThrowables(operation.getRetry().retryOn()),
+                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    operation.getRetry().maxRetries(),
+                    maxDurationMs,
+                    () -> new ThreadSleepDelay(backoff.get()),
+                    new SystemStopwatch());
+        }
+
+        if (operation.hasFallback()) {
+            result = new Fallback<>(
+                    result,
+                    "Fallback[" + point + "]",
+                    prepareFallbackFunction(point, operation),
+                    getSetOfThrowables(operation.getFallback().applyOn()),
+                    getSetOfThrowables(operation.getFallback().skipOn()));
+        }
+
+        if (metricsProvider.isEnabled()) {
+            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false);
+        }
 
         return result;
     }
@@ -536,6 +537,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (specCompatibility.isOperationTrulyAsynchronous(operation) && operation.isThreadOffloadRequired()) {
+            //noinspection rawtypes,unchecked
             fallbackFunction = new AsyncFallbackFunction(fallbackFunction, asyncExecutor);
         }
 
