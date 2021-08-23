@@ -41,13 +41,13 @@ public interface Config {
 
         org.eclipse.microprofile.config.Config config = ConfigProvider.getConfig();
 
-        Optional<String> onMethod = config.getOptionalValue(method.declaringClass.getName() +
+        Optional<String> onMethod = config.getOptionalValue(method.declaringClass.binaryName +
                 "/" + method.name + "/" + annotationType.getSimpleName() + "/enabled", String.class);
         if (onMethod.isPresent()) {
             return Boolean.parseBoolean(onMethod.get());
         }
 
-        Optional<String> onClass = config.getOptionalValue(method.declaringClass.getName() +
+        Optional<String> onClass = config.getOptionalValue(method.declaringClass.binaryName +
                 "/" + annotationType.getSimpleName() + "/enabled", String.class);
         if (onClass.isPresent()) {
             return Boolean.parseBoolean(onClass.get());

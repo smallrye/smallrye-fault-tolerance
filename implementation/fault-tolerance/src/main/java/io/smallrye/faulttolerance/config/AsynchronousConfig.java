@@ -10,7 +10,14 @@ import io.smallrye.faulttolerance.autoconfig.Config;
 public interface AsynchronousConfig extends Asynchronous, Config {
     @Override
     default void validate() {
-        if (!AsyncValidation.isAcceptableReturnType(method().returnType)) {
+        Class<?> returnType;
+        try {
+            returnType = method().returnType();
+        } catch (ClassNotFoundException e) {
+            throw new FaultToleranceDefinitionException(e);
+        }
+
+        if (!AsyncValidation.isAcceptableReturnType(returnType)) {
             throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method()
                     + ": must return java.util.concurrent.Future or " + AsyncValidation.describeKnownAsyncTypes());
         }

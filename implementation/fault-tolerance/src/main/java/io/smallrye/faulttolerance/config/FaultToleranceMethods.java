@@ -22,6 +22,7 @@ import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
+import io.smallrye.faulttolerance.autoconfig.TypeName;
 
 public class FaultToleranceMethods {
     public static FaultToleranceMethod create(AnnotatedMethod<?> method) {
@@ -29,7 +30,7 @@ public class FaultToleranceMethods {
 
         FaultToleranceMethod result = new FaultToleranceMethod();
 
-        result.beanClass = method.getDeclaringType().getJavaClass();
+        result.beanClass = createTypeName(method.getDeclaringType().getJavaClass());
         result.method = createMethodDescriptor(method);
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, annotationsPresentDirectly);
@@ -54,10 +55,15 @@ public class FaultToleranceMethods {
 
     private static MethodDescriptor createMethodDescriptor(AnnotatedMethod<?> cdiMethod) {
         MethodDescriptor result = new MethodDescriptor();
-        result.declaringClass = cdiMethod.getJavaMember().getDeclaringClass();
+        result.declaringClass = createTypeName(cdiMethod.getJavaMember().getDeclaringClass());
         result.name = cdiMethod.getJavaMember().getName();
-        result.parameterTypes = cdiMethod.getJavaMember().getParameterTypes();
-        result.returnType = cdiMethod.getJavaMember().getReturnType();
+        Class<?>[] parameterTypes = cdiMethod.getJavaMember().getParameterTypes();
+        TypeName[] parameterTypeNames = new TypeName[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; i++) {
+            parameterTypeNames[i] = createTypeName(parameterTypes[i]);
+        }
+        result.parameterTypes = parameterTypeNames;
+        result.returnType = createTypeName(cdiMethod.getJavaMember().getReturnType());
         return result;
     }
 
@@ -70,12 +76,14 @@ public class FaultToleranceMethods {
         return cdiMethod.getDeclaringType().getAnnotation(annotationType);
     }
 
+    // ---
+
     public static FaultToleranceMethod create(Class<?> beanClass, Method method) {
         Set<Class<? extends Annotation>> annotationsPresentDirectly = new HashSet<>();
 
         FaultToleranceMethod result = new FaultToleranceMethod();
 
-        result.beanClass = beanClass;
+        result.beanClass = createTypeName(beanClass);
         result.method = createMethodDescriptor(method);
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, beanClass, annotationsPresentDirectly);
@@ -100,10 +108,15 @@ public class FaultToleranceMethods {
 
     private static MethodDescriptor createMethodDescriptor(Method reflectiveMethod) {
         MethodDescriptor result = new MethodDescriptor();
-        result.declaringClass = reflectiveMethod.getDeclaringClass();
+        result.declaringClass = createTypeName(reflectiveMethod.getDeclaringClass());
         result.name = reflectiveMethod.getName();
-        result.parameterTypes = reflectiveMethod.getParameterTypes();
-        result.returnType = reflectiveMethod.getReturnType();
+        Class<?>[] parameterTypes = reflectiveMethod.getParameterTypes();
+        TypeName[] parameterTypeNames = new TypeName[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; i++) {
+            parameterTypeNames[i] = createTypeName(parameterTypes[i]);
+        }
+        result.parameterTypes = parameterTypeNames;
+        result.returnType = createTypeName(reflectiveMethod.getReturnType());
         return result;
     }
 
@@ -125,5 +138,13 @@ public class FaultToleranceMethods {
             clazz = clazz.getSuperclass();
         }
         return null;
+    }
+
+    // ---
+
+    private static TypeName createTypeName(Class<?> clazz) {
+        TypeName result = new TypeName();
+        result.binaryName = clazz.getName();
+        return result;
     }
 }

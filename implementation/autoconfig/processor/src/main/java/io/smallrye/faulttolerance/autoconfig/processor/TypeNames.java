@@ -14,6 +14,8 @@ final class TypeNames {
             ClassName.get(Class.class), WildcardTypeName.subtypeOf(ClassName.get(Annotation.class)));
     static final TypeName STRING = ClassName.get(String.class);
 
+    static final TypeName CLASS_NOT_FOUND_EXCEPTION = ClassName.get(ClassNotFoundException.class);
+
     static final TypeName MP_CONFIG = ClassName.get("org.eclipse.microprofile.config", "Config");
     static final TypeName MP_CONFIG_PROVIDER = ClassName.get("org.eclipse.microprofile.config", "ConfigProvider");
 

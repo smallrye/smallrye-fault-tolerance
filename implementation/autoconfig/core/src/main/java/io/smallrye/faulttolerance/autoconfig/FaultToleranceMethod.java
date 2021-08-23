@@ -33,7 +33,7 @@ import io.smallrye.faulttolerance.api.FibonacciBackoff;
  * bytecode (because CDI extensions may add, remove or modify annotations).
  */
 public class FaultToleranceMethod {
-    public Class<?> beanClass;
+    public TypeName beanClass;
     public MethodDescriptor method;
 
     // MicroProfile Fault Tolerance API
@@ -68,5 +68,9 @@ public class FaultToleranceMethod {
                 || fallback != null
                 || retry != null
                 || timeout != null;
+    }
+
+    public Class<?> beanClass() throws ClassNotFoundException {
+        return beanClass.loadFromTCCL();
     }
 }

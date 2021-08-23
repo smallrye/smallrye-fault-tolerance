@@ -44,24 +44,30 @@ import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 public class FaultToleranceOperation {
 
     public static FaultToleranceOperation create(FaultToleranceMethod method) {
-        return new FaultToleranceOperation(method.beanClass, method.method,
-                AsynchronousConfigImpl.create(method),
-                BlockingConfigImpl.create(method),
-                NonBlockingConfigImpl.create(method),
-                BulkheadConfigImpl.create(method),
-                CircuitBreakerConfigImpl.create(method),
-                CircuitBreakerNameConfigImpl.create(method),
-                FallbackConfigImpl.create(method),
-                RetryConfigImpl.create(method),
-                TimeoutConfigImpl.create(method),
-                ExponentialBackoffConfigImpl.create(method),
-                FibonacciBackoffConfigImpl.create(method),
-                CustomBackoffConfigImpl.create(method));
+        try {
+            return new FaultToleranceOperation(method.beanClass(), method.method,
+                    AsynchronousConfigImpl.create(method),
+                    BlockingConfigImpl.create(method),
+                    NonBlockingConfigImpl.create(method),
+                    BulkheadConfigImpl.create(method),
+                    CircuitBreakerConfigImpl.create(method),
+                    CircuitBreakerNameConfigImpl.create(method),
+                    FallbackConfigImpl.create(method),
+                    RetryConfigImpl.create(method),
+                    TimeoutConfigImpl.create(method),
+                    ExponentialBackoffConfigImpl.create(method),
+                    FibonacciBackoffConfigImpl.create(method),
+                    CustomBackoffConfigImpl.create(method));
+        } catch (ClassNotFoundException e) {
+            throw new FaultToleranceDefinitionException(e);
+        }
     }
 
     private final Class<?> beanClass;
 
     private final MethodDescriptor methodDescriptor;
+
+    private final Class<?> methodReturnType;
 
     private final AsynchronousConfig asynchronous;
 
@@ -100,9 +106,10 @@ public class FaultToleranceOperation {
             TimeoutConfig timeout,
             ExponentialBackoffConfig exponentialBackoff,
             FibonacciBackoffConfig fibonacciBackoff,
-            CustomBackoffConfig customBackoff) {
+            CustomBackoffConfig customBackoff) throws ClassNotFoundException {
         this.beanClass = beanClass;
         this.methodDescriptor = methodDescriptor;
+        this.methodReturnType = methodDescriptor.returnType();
 
         this.asynchronous = asynchronous;
         this.blocking = blocking;
@@ -121,7 +128,7 @@ public class FaultToleranceOperation {
     }
 
     public Class<?> getReturnType() {
-        return methodDescriptor.returnType;
+        return methodReturnType;
     }
 
     public boolean hasAsynchronous() {

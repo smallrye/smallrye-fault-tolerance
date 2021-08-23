@@ -18,10 +18,10 @@ public interface FallbackConfig extends Fallback, Config {
     default void validate() {
         final String INVALID_FALLBACK_ON = "Invalid @Fallback on ";
 
-        Method guardedMethod = null;
+        Method guardedMethod;
         try {
             guardedMethod = method().reflect();
-        } catch (NoSuchMethodException e) {
+        } catch (NoSuchMethodException | ClassNotFoundException e) {
             throw new FaultToleranceDefinitionException(e);
         }
 

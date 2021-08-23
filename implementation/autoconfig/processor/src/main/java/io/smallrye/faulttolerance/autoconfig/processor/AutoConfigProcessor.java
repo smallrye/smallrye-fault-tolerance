@@ -143,7 +143,8 @@ public class AutoConfigProcessor extends AbstractProcessor {
                 .addMethod(MethodSpec.constructorBuilder()
                         .addModifiers(Modifier.PRIVATE)
                         .addParameter(TypeNames.FAULT_TOLERANCE_METHOD, "method")
-                        .addStatement("this.beanClass = method.beanClass")
+                        .addException(TypeNames.CLASS_NOT_FOUND_EXCEPTION)
+                        .addStatement("this.beanClass = method.beanClass()")
                         .addStatement("this.method = method.method")
                         .addStatement("this.instance = method.$1L", firstToLowerCase(
                                 annotationDeclaration.getSimpleName().toString()))
@@ -153,6 +154,7 @@ public class AutoConfigProcessor extends AbstractProcessor {
                         .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                         .returns(configImplClassName)
                         .addParameter(TypeNames.FAULT_TOLERANCE_METHOD, "method")
+                        .addException(TypeNames.CLASS_NOT_FOUND_EXCEPTION)
                         .beginControlFlow("if (method.$L == null)",
                                 firstToLowerCase(annotationDeclaration.getSimpleName().toString()))
                         .addStatement("return null")
@@ -206,14 +208,14 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                 .returns(TypeNames.STRING)
                                 .addParameter(TypeNames.STRING, "key")
                                 .addStatement(
-                                        "return method.declaringClass.getName() + $1S + method.name + $1S + $2S + $1S + key",
+                                        "return method.declaringClass.binaryName + $1S + method.name + $1S + $2S + $1S + key",
                                         "/", annotationDeclaration.getSimpleName())
                                 .build(),
                         MethodSpec.methodBuilder("getConfigKeyForClass")
                                 .addModifiers(Modifier.PRIVATE)
                                 .returns(TypeNames.STRING)
                                 .addParameter(TypeNames.STRING, "key")
-                                .addStatement("return method.declaringClass.getName() + $1S + $2S + $1S + key",
+                                .addStatement("return method.declaringClass.binaryName + $1S + $2S + $1S + key",
                                         "/", annotationDeclaration.getSimpleName())
                                 .build())
                         : Collections.emptyList())
