@@ -16,6 +16,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.BeforeRetryAnnotation;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -36,6 +37,7 @@ public class FaultToleranceMethods {
         result.bulkhead = getAnnotation(Bulkhead.class, method, annotationsPresentDirectly);
         result.circuitBreaker = getAnnotation(CircuitBreaker.class, method, annotationsPresentDirectly);
         result.fallback = getAnnotation(Fallback.class, method, annotationsPresentDirectly);
+        result.beforeRetryAnnotation = getAnnotation(BeforeRetryAnnotation.class, method, annotationsPresentDirectly);
         result.retry = getAnnotation(Retry.class, method, annotationsPresentDirectly);
         result.timeout = getAnnotation(Timeout.class, method, annotationsPresentDirectly);
 
@@ -82,6 +84,8 @@ public class FaultToleranceMethods {
         result.bulkhead = getAnnotation(Bulkhead.class, method, beanClass, annotationsPresentDirectly);
         result.circuitBreaker = getAnnotation(CircuitBreaker.class, method, beanClass, annotationsPresentDirectly);
         result.fallback = getAnnotation(Fallback.class, method, beanClass, annotationsPresentDirectly);
+        result.beforeRetryAnnotation = getAnnotation(BeforeRetryAnnotation.class, method, beanClass,
+                annotationsPresentDirectly);
         result.retry = getAnnotation(Retry.class, method, beanClass, annotationsPresentDirectly);
         result.timeout = getAnnotation(Timeout.class, method, beanClass, annotationsPresentDirectly);
 

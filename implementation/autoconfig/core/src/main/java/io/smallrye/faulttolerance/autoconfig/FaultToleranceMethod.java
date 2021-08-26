@@ -12,6 +12,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.BeforeRetryAnnotation;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -41,6 +42,7 @@ public class FaultToleranceMethod {
     public Bulkhead bulkhead;
     public CircuitBreaker circuitBreaker;
     public Fallback fallback;
+    public BeforeRetryAnnotation beforeRetryAnnotation;
     public Retry retry;
     public Timeout timeout;
 

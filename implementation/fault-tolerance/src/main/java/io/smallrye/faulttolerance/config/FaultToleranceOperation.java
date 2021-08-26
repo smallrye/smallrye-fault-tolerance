@@ -28,6 +28,7 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
+import io.smallrye.faulttolerance.api.BeforeRetryAnnotation;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -53,6 +54,7 @@ public class FaultToleranceOperation {
                 CircuitBreakerNameConfigImpl.create(method),
                 FallbackConfigImpl.create(method),
                 RetryConfigImpl.create(method),
+                BeforeRetryConfigImpl.create(method),
                 TimeoutConfigImpl.create(method),
                 ExponentialBackoffConfigImpl.create(method),
                 FibonacciBackoffConfigImpl.create(method),
@@ -79,6 +81,8 @@ public class FaultToleranceOperation {
 
     private final RetryConfig retry;
 
+    private final BeforeRetryConfig beforeRetry;
+
     private final TimeoutConfig timeout;
 
     private final ExponentialBackoffConfig exponentialBackoff;
@@ -97,6 +101,7 @@ public class FaultToleranceOperation {
             CircuitBreakerNameConfig circuitBreakerName,
             FallbackConfig fallback,
             RetryConfig retry,
+            BeforeRetryConfig beforeRetry,
             TimeoutConfig timeout,
             ExponentialBackoffConfig exponentialBackoff,
             FibonacciBackoffConfig fibonacciBackoff,
@@ -113,6 +118,7 @@ public class FaultToleranceOperation {
         this.circuitBreakerName = circuitBreakerName;
         this.fallback = fallback;
         this.retry = retry;
+        this.beforeRetry = beforeRetry;
         this.timeout = timeout;
 
         this.exponentialBackoff = exponentialBackoff;
@@ -193,6 +199,14 @@ public class FaultToleranceOperation {
 
     public Fallback getFallback() {
         return fallback;
+    }
+
+    public boolean hasBeforeRetry() {
+        return beforeRetry != null;
+    }
+
+    public BeforeRetryAnnotation getBeforeRetry() {
+        return beforeRetry;
     }
 
     public boolean hasRetry() {

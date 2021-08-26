@@ -51,6 +51,8 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
+import io.smallrye.faulttolerance.core.before.retry.BeforeRetry;
+import io.smallrye.faulttolerance.core.before.retry.BeforeRetryFunction;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
@@ -332,6 +334,10 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
+            if (operation.hasBeforeRetry()) {
+                result = new BeforeRetry<>(result, prepareBeforeRetryFunction(point, operation));
+            }
+
             long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
@@ -360,6 +366,47 @@ public class FaultToleranceInterceptor {
         }
 
         return result;
+    }
+
+    private static <V> BeforeRetryFunction<V> prepareBeforeRetryFunction(InterceptionPoint point,
+            FaultToleranceOperation operation) {
+        Method beforeRetryMethod;
+
+        String beforeRetryMethodName = operation.getBeforeRetry().beforeRetryMethod();
+
+        if (!"".equals(beforeRetryMethodName)) {
+            try {
+                Method method = point.method();
+                beforeRetryMethod = SecurityActions.getDeclaredMethod(point.beanClass(), method.getDeclaringClass(),
+                        beforeRetryMethodName, method.getGenericParameterTypes());
+                if (beforeRetryMethod == null) {
+                    throw new FaultToleranceException("Could not obtain BeforeRetry method " + beforeRetryMethodName);
+                }
+                SecurityActions.setAccessible(beforeRetryMethod);
+            } catch (PrivilegedActionException e) {
+                throw new FaultToleranceException("Could not obtain BeforeRetry method", e);
+            }
+        } else {
+            throw new FaultToleranceException("Could not obtain BeforeRetry method");
+        }
+
+        return invocationContext -> {
+            InvocationContext interceptionContext = invocationContext.get(InvocationContext.class);
+            try {
+                beforeRetryMethod.invoke(interceptionContext.getTarget(),
+                        interceptionContext.getParameters());
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new FaultToleranceException("Error during BeforeRetry method invocation", cause);
+            } catch (Exception e) {
+                throw e;
+            } catch (Throwable e) {
+                throw new FaultToleranceException("Error during BeforeRetry method invocation", e);
+            }
+        };
     }
 
     private <T> FaultToleranceStrategy<Future<T>> prepareFutureStrategy(FaultToleranceOperation operation,
