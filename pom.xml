@@ -58,7 +58,7 @@
         <version.awaitility>4.1.0</version.awaitility>
         <version.junit-jupiter>5.8.1</version.junit-jupiter>
         <version.junit-pioneer>1.4.2</version.junit-pioneer>
-        <version.mutiny>1.0.0</version.mutiny>
+        <version.mutiny>1.1.0</version.mutiny>
         <version.rxjava3>3.1.1</version.rxjava3>
         <version.testng>6.14.3</version.testng>
         <version.weld-api>3.1.SP4</version.weld-api>
