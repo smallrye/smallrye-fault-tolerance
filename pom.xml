@@ -47,7 +47,7 @@
         <version.smallrye-metrics>3.0.3</version.smallrye-metrics>
         <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>1.2.2</version.smallrye-context-propagation>
-        <version.smallrye-common>1.6.0</version.smallrye-common>
+        <version.smallrye-common>1.7.1</version.smallrye-common>
         <version.smallrye-reactive-utils>2.6.0</version.smallrye-reactive-utils>
         <version.opentracing>0.33.0</version.opentracing>
         <version.vertx>4.1.5</version.vertx>
