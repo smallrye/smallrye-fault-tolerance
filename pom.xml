@@ -59,7 +59,7 @@
         <version.junit-jupiter>5.8.1</version.junit-jupiter>
         <version.junit-pioneer>1.4.2</version.junit-pioneer>
         <version.mutiny>1.1.1</version.mutiny>
-        <version.rxjava3>3.1.1</version.rxjava3>
+        <version.rxjava3>3.1.2</version.rxjava3>
         <version.testng>6.14.3</version.testng>
         <version.weld-api>3.1.SP4</version.weld-api>
         <version.weld-core>3.1.8.Final</version.weld-core>
