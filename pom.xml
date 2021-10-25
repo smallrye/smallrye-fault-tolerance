@@ -55,7 +55,7 @@
         <version.arquillian>1.6.0.Final</version.arquillian>
         <version.arquillian-weld>2.1.0.Final</version.arquillian-weld>
         <version.assertj>3.21.0</version.assertj>
-        <version.awaitility>4.1.0</version.awaitility>
+        <version.awaitility>4.1.1</version.awaitility>
         <version.junit-jupiter>5.8.1</version.junit-jupiter>
         <version.junit-pioneer>1.4.2</version.junit-pioneer>
         <version.mutiny>1.1.2</version.mutiny>
