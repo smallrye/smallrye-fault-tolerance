@@ -38,7 +38,7 @@
         <version.jboss-logging>3.4.2.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
         <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
-        <version.microprofile-config-api>2.0</version.microprofile-config-api>
+        <version.microprofile-config-api>3.0.1</version.microprofile-config-api>
         <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.2</version.microprofile-context-propagation-api>
         <!-- smallrye-config is purely used for testing -->
