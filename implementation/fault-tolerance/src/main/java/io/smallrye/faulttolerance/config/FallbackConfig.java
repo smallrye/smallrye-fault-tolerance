@@ -63,7 +63,8 @@ public interface FallbackConfig extends Fallback, Config {
                     }
                 }
             }
-            if (fallbackType == null || !guardedMethod.getGenericReturnType().equals(fallbackType)) {
+            Type boxedReturnType = FallbackValidation.box(guardedMethod.getGenericReturnType());
+            if (!boxedReturnType.equals(fallbackType)) {
                 throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
                         + ": fallback handler's type " + fallbackType + " is not the same as method's return type");
             }
