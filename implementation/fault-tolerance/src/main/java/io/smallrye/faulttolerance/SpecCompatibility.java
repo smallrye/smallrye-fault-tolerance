@@ -40,4 +40,8 @@ public class SpecCompatibility {
     public boolean isOperationTrulyOrPseudoAsynchronous(FaultToleranceOperation operation) {
         return isOperationTrulyAsynchronous(operation) || isOperationPseudoAsynchronous(operation);
     }
+
+    public boolean inspectExceptionCauseChain() {
+        return !compatible;
+    }
 }

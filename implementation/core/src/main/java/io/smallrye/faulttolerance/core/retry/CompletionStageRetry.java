@@ -16,16 +16,16 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     private final Supplier<AsyncDelay> delayBetweenRetries;
 
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            SetOfThrowables retryOn, SetOfThrowables abortOn, long maxRetries, long maxTotalDurationInMillis,
+            ExceptionDecision exceptionDecision, long maxRetries, long maxTotalDurationInMillis,
             Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         // the SyncDelay.NONE is ignored here, we have our own AsyncDelay
-        super(delegate, description, retryOn, abortOn, maxRetries, maxTotalDurationInMillis, SyncDelay.NONE, stopwatch);
+        super(delegate, description, exceptionDecision, maxRetries, maxTotalDurationInMillis, SyncDelay.NONE, stopwatch);
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
     }
 

@@ -6,7 +6,6 @@ import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Collections;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -21,11 +20,12 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class CompletionStageCircuitBreakerTest {
-    private static final SetOfThrowables testException = SetOfThrowables.create(Collections.singletonList(TestException.class));
+    private static final SetOfThrowables testException = SetOfThrowables.create(TestException.class);
 
     private TestStopwatch stopwatch;
 
@@ -48,7 +48,7 @@ public class CompletionStageCircuitBreakerTest {
     public void test1() throws Exception {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
-                testException, SetOfThrowables.EMPTY,
+                new ExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
@@ -101,7 +101,7 @@ public class CompletionStageCircuitBreakerTest {
     public void test2() throws Exception {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
-                testException, SetOfThrowables.EMPTY,
+                new ExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
@@ -136,7 +136,7 @@ public class CompletionStageCircuitBreakerTest {
 
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
-                testException, SetOfThrowables.EMPTY,
+                new ExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch);
 
         assertThatThrownBy(cb.apply(eventuallyFailingWith(exception)).toCompletableFuture()::get)

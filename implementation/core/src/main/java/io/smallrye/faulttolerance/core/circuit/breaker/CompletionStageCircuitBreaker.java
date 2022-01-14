@@ -11,14 +11,14 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionStage<V>> {
 
     public CompletionStageCircuitBreaker(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            SetOfThrowables failOn, SetOfThrowables skipOn, long delayInMillis, int requestVolumeThreshold, double failureRatio,
+            ExceptionDecision exceptionDecision, long delayInMillis, int requestVolumeThreshold, double failureRatio,
             int successThreshold, Stopwatch stopwatch) {
-        super(delegate, description, failOn, skipOn, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold,
+        super(delegate, description, exceptionDecision, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold,
                 stopwatch);
     }
 
