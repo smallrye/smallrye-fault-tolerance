@@ -12,25 +12,23 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class Retry<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
     final String description;
 
-    final SetOfThrowables retryOn;
-    final SetOfThrowables abortOn;
+    private final ExceptionDecision exceptionDecision;
     final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
     final long maxTotalDurationInMillis;
     private final Supplier<SyncDelay> delayBetweenRetries;
     final Stopwatch stopwatch;
 
-    public Retry(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables retryOn, SetOfThrowables abortOn,
+    public Retry(FaultToleranceStrategy<V> delegate, String description, ExceptionDecision exceptionDecision,
             long maxRetries, long maxTotalDurationInMillis, Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
-        this.retryOn = checkNotNull(retryOn, "Set of retry-on throwables must be set");
-        this.abortOn = checkNotNull(abortOn, "Set of abort-on throwables must be set");
+        this.exceptionDecision = checkNotNull(exceptionDecision, "Exception decision must be set");
         this.maxRetries = maxRetries < 0 ? Long.MAX_VALUE : maxRetries;
         this.maxTotalDurationInMillis = maxTotalDurationInMillis <= 0 ? Long.MAX_VALUE : maxTotalDurationInMillis;
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
@@ -124,8 +122,6 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     }
 
     boolean shouldAbortRetrying(Throwable e) {
-        // specifying `abortOn` is only useful when it's more specific than `retryOn`;
-        // otherwise, if the exception isn't present in `retryOn`, it's always an abort
-        return abortOn.includes(e.getClass()) || !retryOn.includes(e.getClass());
+        return exceptionDecision.isConsideredExpected(e);
     }
 }

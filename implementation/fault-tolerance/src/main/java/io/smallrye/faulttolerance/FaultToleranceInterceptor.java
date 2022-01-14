@@ -82,6 +82,7 @@ import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.AsyncTypesConversion;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
@@ -249,8 +250,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
-                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
+                    createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
@@ -270,8 +270,7 @@ public class FaultToleranceInterceptor {
 
             result = new CompletionStageRetry<>(result,
                     "Retry[" + point + "]",
-                    getSetOfThrowables(operation.getRetry().retryOn()),
-                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new TimerDelay(backoff.get(), timer),
@@ -283,8 +282,7 @@ public class FaultToleranceInterceptor {
                     result,
                     "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(operation.getFallback().applyOn()),
-                    getSetOfThrowables(operation.getFallback().skipOn()));
+                    createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }
 
         if (metricsProvider.isEnabled()) {
@@ -317,8 +315,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
-                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
+                    createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
@@ -338,8 +335,7 @@ public class FaultToleranceInterceptor {
 
             result = new Retry<>(result,
                     "Retry[" + point + "]",
-                    getSetOfThrowables(operation.getRetry().retryOn()),
-                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
@@ -351,8 +347,7 @@ public class FaultToleranceInterceptor {
                     result,
                     "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(operation.getFallback().applyOn()),
-                    getSetOfThrowables(operation.getFallback().skipOn()));
+                    createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }
 
         if (metricsProvider.isEnabled()) {
@@ -386,8 +381,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
-                    getSetOfThrowables(operation.getCircuitBreaker().failOn()),
-                    getSetOfThrowables(operation.getCircuitBreaker().skipOn()),
+                    createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
@@ -407,8 +401,7 @@ public class FaultToleranceInterceptor {
 
             result = new Retry<>(result,
                     "Retry[" + point + "]",
-                    getSetOfThrowables(operation.getRetry().retryOn()),
-                    getSetOfThrowables(operation.getRetry().abortOn()),
+                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
@@ -419,8 +412,7 @@ public class FaultToleranceInterceptor {
             result = new Fallback<>(result,
                     "Fallback[" + point + "]",
                     prepareFallbackFunction(point, operation),
-                    getSetOfThrowables(operation.getFallback().applyOn()),
-                    getSetOfThrowables(operation.getFallback().skipOn()));
+                    createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }
 
         if (metricsProvider.isEnabled()) {
@@ -546,7 +538,13 @@ public class FaultToleranceInterceptor {
         return Duration.of(time, unit).toMillis();
     }
 
-    private SetOfThrowables getSetOfThrowables(Class<? extends Throwable>[] throwableClasses) {
+    private ExceptionDecision createExceptionDecision(Class<? extends Throwable>[] consideredExpected,
+            Class<? extends Throwable>[] consideredFailure) {
+        return new ExceptionDecision(createSetOfThrowables(consideredFailure),
+                createSetOfThrowables(consideredExpected), specCompatibility.inspectExceptionCauseChain());
+    }
+
+    private SetOfThrowables createSetOfThrowables(Class<? extends Throwable>[] throwableClasses) {
         if (throwableClasses == null) {
             return SetOfThrowables.EMPTY;
         }

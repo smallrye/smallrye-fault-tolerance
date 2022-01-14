@@ -6,23 +6,21 @@ import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class Fallback<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
     final String description;
 
     final FallbackFunction<V> fallback;
-    final SetOfThrowables applyOn;
-    final SetOfThrowables skipOn;
+    private final ExceptionDecision exceptionDecision;
 
     public Fallback(FaultToleranceStrategy<V> delegate, String description, FallbackFunction<V> fallback,
-            SetOfThrowables applyOn, SetOfThrowables skipOn) {
+            ExceptionDecision exceptionDecision) {
         this.delegate = checkNotNull(delegate, "Fallback delegate must be set");
         this.description = checkNotNull(description, "Fallback description must be set");
         this.fallback = checkNotNull(fallback, "Fallback function must be set");
-        this.applyOn = checkNotNull(applyOn, "Set of apply-on throwables must be set");
-        this.skipOn = checkNotNull(skipOn, "Set of skip-on throwables must be set");
+        this.exceptionDecision = checkNotNull(exceptionDecision, "Exception decision must be set");
     }
 
     @Override
@@ -60,6 +58,6 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
     }
 
     boolean shouldSkipFallback(Throwable e) {
-        return skipOn.includes(e.getClass()) || !applyOn.includes(e.getClass());
+        return exceptionDecision.isConsideredExpected(e);
     }
 }

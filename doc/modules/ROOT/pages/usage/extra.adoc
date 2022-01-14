@@ -290,8 +290,8 @@ All `@Retry` metrics are still present and reflect the altered behavior.
 
 == Non-compatible Mode
 
-In addition to the <<blocking-nonblocking>> annotations, {smallrye-fault-tolerance} offers a mode where method asynchrony is determined solely from the its return type.
-This mode is *not compatible* with the {microprofile-fault-tolerance} specification (and doesn't pass 2 tests in the TCK).
+{smallrye-fault-tolerance} offers a mode where certain features are improved beyond specification, as described below.
+This mode is *not compatible* with the {microprofile-fault-tolerance} specification (and doesn't necessarily pass the entire TCK).
 
 This mode is disabled by default.
 To enable, set the configuration property `smallrye.faulttolerance.mp-compatibility` to `false`.
@@ -310,7 +310,10 @@ Note that the non-compatible mode is available since {smallrye-fault-tolerance} 
 Previous versions are always compatible.
 ****
 
-In this mode, methods that
+=== Determining Method Asynchrony from Return Type
+
+In addition to the <<blocking-nonblocking>> annotations, in the non-compatible mode, method asynchrony is determined solely from its return type.
+That is, methods that
 
 * have some fault tolerance annotation (such as `@Retry`),
 * return `CompletionStage` (or some other <<async-types,async type>>),
@@ -354,6 +357,65 @@ Note that the existing annotations still work without a change, both in compatib
 That is, if a method (or class) is annotated `@Asynchronous` or `@Blocking`, execution will be offloaded to a thread pool.
 If a method (or class) is annotated `@NonBlocking`, execution will happen on the original thread (even if `@Asynchronous` is present).
 
-Also note that this mode doesn't affect methods returning `Future`.
+Also note that this doesn't affect methods returning `Future`.
 You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool.
 As mentioned in the <<blocking-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
+
+=== Inspecting Exception Cause Chains
+
+The `@CircuitBreaker`, `@Fallback` and `@Retry` annotations can be used to specify that certain exceptions should be treated as failures and others as successes.
+This is limited to inspecting the actual exception that was thrown.
+However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+
+In the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
+To be specific, in case a `@Fallback` method throws an exception, the decision process is:
+
+1. if the exception is assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown;
+2. otherwise, if the exception is assignable to one of the `applyOn` exceptions, fallback is applied;
+3. otherwise, if the cause chain of the exception contains an exception assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown;
+4. otherwise, if the cause chain of the exception contains an exception assignable to one of the `applyOn` exceptions, fallback is applied;
+5. otherwise, the exception is rethrown.
+
+For example, say we have this method:
+
+[source, java]
+----
+@Fallback(fallbackMethod = "fallback",
+    skipOn = ExpectedOutcomeException.class,
+    applyOn = IOException.class)
+public Result doSomething() {
+    ...
+}
+
+public Result fallback() {
+    ...
+}
+----
+
+If `doSomething` throws an `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
+If `doSomething` throws an `IOException`, fallback is applied.
+If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
+If `doSomething` throws a `WrapperException` whose cause is `IOException`, fallback is applied.
+
+Comparing with the `@Fallback` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
+Note that these steps are executed if and only if the thrown exception matches neither `skipOn` nor `applyOn`.
+If the thrown exception matches either of them, the cause chain is not inspected at all.
+
+Similar behavior applies to `@CircuitBreaker` and `@Retry`.
+All 3 annotations follow the same principle: exceptions considered success have priority over those considered failure.
+
+|===
+| Fault Tolerance annotation | Exception is first tested against | and then against
+
+| `@Fallback`
+| `skipOn`
+| `applyOn`
+
+| `@CircuitBreaker`
+| `skipOn`
+| `failOn`
+
+| `@Retry`
+| `abortOn`
+| `retryOn`
+|===
