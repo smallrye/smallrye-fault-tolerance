@@ -2,9 +2,9 @@
 
 {smallrye-fault-tolerance} comprises the following main artifacts:
 
-* `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance};
+* `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance}, including a programmatic API;
 * `io.smallrye:smallrye-fault-tolerance-core`: core implementations of fault tolerance strategies;
-* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance};
+* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance} with {smallrye-fault-tolerance} extensions, including a programmatic API;
 * `io.smallrye:smallrye-fault-tolerance-autoconfig-core`: runtime part of the {smallrye-fault-tolerance} configuration system.
 ** (There's also `io.smallrye:smallrye-fault-tolerance-autoconfig-processor`, but that is only used during {smallrye-fault-tolerance} build and isn't required at runtime.)
 
@@ -28,3 +28,9 @@ The remaining integration concerns are described in the following sections:
 * xref:integration/context-propagation.adoc[enabling Context Propagation] for `@Asynchronous` methods;
 * xref:integration/opentracing.adoc[enabling OpenTracing integration] with Context Propagation;
 * xref:integration/event-loop.adoc[integrating an event loop] for non-blocking method invocations.
+
+== Standalone Implementation of the Programmatic API
+
+A completely standalone implementation of the programmatic API exists in the `io.smallrye:smallrye-fault-tolerance-standalone` artifact.
+This is supposed to be used in a non-CDI environment.
+Runtimes that integrate {smallrye-fault-tolerance} typically do so using CDI, and so should ignore this artifact.

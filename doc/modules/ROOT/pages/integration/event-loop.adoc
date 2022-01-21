@@ -10,7 +10,7 @@ The integrator must implement the `EventLoop` interface, which lets {smallrye-fa
 Implementations are discovered through `ServiceLoader`, so the corresponding `META-INF/services/\...` file must also exist.
 
 At most one implementation of `EventLoop` may be present at runtime.
-{smallrye-fault-tolerance} will use it to execute `@NonBlocking` guarded methods when the caller was originally on an event loop thread.
+{smallrye-fault-tolerance} will use it to execute non-blocking guarded methods when the caller was originally on an event loop thread.
 This is important in case of:
 
 - retries, when there's a delay between retry attempts (the delay must not block);

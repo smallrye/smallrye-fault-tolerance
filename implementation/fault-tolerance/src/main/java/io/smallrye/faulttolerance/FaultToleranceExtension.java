@@ -116,6 +116,8 @@ public class FaultToleranceExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(RequestContextIntegration.class),
                 RequestContextIntegration.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(SpecCompatibility.class), SpecCompatibility.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(CdiFaultToleranceSpi.Dependencies.class),
+                CdiFaultToleranceSpi.Dependencies.class.getName());
     }
 
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {
