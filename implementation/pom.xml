@@ -35,5 +35,7 @@
         <module>context-propagation</module>
         <module>tracing-propagation</module>
         <module>vertx</module>
+
+        <module>standalone</module>
     </modules>
 </project>

@@ -2,6 +2,7 @@
 * Usage
 ** xref:usage/basic.adoc[Basic Usage]
 ** xref:usage/extra.adoc[Extra Features]
+** xref:usage/programmatic-api.adoc[Programmatic API]
 * Integration
 ** xref:integration/intro.adoc[Introduction]
 ** xref:integration/thread-pool.adoc[Thread Pool]

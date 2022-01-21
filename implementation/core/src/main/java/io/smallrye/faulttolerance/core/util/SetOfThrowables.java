@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.util;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class SetOfThrowables {
@@ -25,7 +25,7 @@ public class SetOfThrowables {
      * @param classes throwable classes to include in the set
      * @return a set of throwable classes
      */
-    public static SetOfThrowables create(List<Class<? extends Throwable>> classes) {
+    public static SetOfThrowables create(Collection<Class<? extends Throwable>> classes) {
         Set<Class<? extends Throwable>> set = new HashSet<>(classes);
         return new SetOfThrowables(set);
     }
