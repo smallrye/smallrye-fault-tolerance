@@ -51,6 +51,7 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
+import io.smallrye.faulttolerance.core.async.types.AsyncTypesConversion;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
@@ -84,7 +85,6 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
-import io.smallrye.faulttolerance.internal.AsyncTypesConversion;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
@@ -174,7 +174,7 @@ public class FaultToleranceInterceptor {
         try {
             return strategy.apply(ctx);
         } catch (Exception e) {
-            return AsyncTypes.get(operation.getReturnType()).fromCompletionStage(failedStage(e));
+            return AsyncTypes.get(operation.getReturnType()).fromCompletionStage(() -> failedStage(e));
         }
     }
 

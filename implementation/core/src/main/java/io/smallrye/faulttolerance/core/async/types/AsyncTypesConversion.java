@@ -1,20 +1,18 @@
-package io.smallrye.faulttolerance.internal;
+package io.smallrye.faulttolerance.core.async.types;
 
-import static io.smallrye.faulttolerance.internal.InternalLogger.LOG;
-
-import java.util.concurrent.CompletionStage;
+import static io.smallrye.faulttolerance.core.async.types.AsyncTypesLogger.LOG;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.reactive.converters.ReactiveTypeConverter;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class AsyncTypesConversion {
     public static class ToCompletionStage implements FaultToleranceStrategy {
         private final FaultToleranceStrategy delegate;
-        private final ReactiveTypeConverter converter;
+        private final AsyncTypeConverter converter;
 
-        public ToCompletionStage(FaultToleranceStrategy delegate, ReactiveTypeConverter converter) {
+        public ToCompletionStage(FaultToleranceStrategy delegate, AsyncTypeConverter converter) {
             this.delegate = delegate;
             this.converter = converter;
         }
@@ -23,8 +21,7 @@ public class AsyncTypesConversion {
         public Object apply(InvocationContext ctx) throws Exception {
             LOG.trace("AsyncTypesConversion.ToCompletionStage started");
             try {
-                Object result = delegate.apply(ctx);
-                return converter.toCompletionStage(result);
+                return converter.toCompletionStage(delegate.apply(ctx));
             } finally {
                 LOG.trace("AsyncTypesConversion.ToCompletionStage finished");
             }
@@ -33,9 +30,9 @@ public class AsyncTypesConversion {
 
     public static class FromCompletionStage implements FaultToleranceStrategy {
         private final FaultToleranceStrategy delegate;
-        private final ReactiveTypeConverter converter;
+        private final AsyncTypeConverter converter;
 
-        public FromCompletionStage(FaultToleranceStrategy delegate, ReactiveTypeConverter converter) {
+        public FromCompletionStage(FaultToleranceStrategy delegate, AsyncTypeConverter converter) {
             this.delegate = delegate;
             this.converter = converter;
         }
@@ -44,8 +41,13 @@ public class AsyncTypesConversion {
         public Object apply(InvocationContext ctx) throws Exception {
             LOG.trace("AsyncTypesConversion.FromCompletionStage started");
             try {
-                CompletionStage result = (CompletionStage) delegate.apply(ctx);
-                return converter.fromCompletionStage(result);
+                return converter.fromCompletionStage(() -> {
+                    try {
+                        return delegate.apply(ctx);
+                    } catch (Exception e) {
+                        throw sneakyThrow(e);
+                    }
+                });
             } finally {
                 LOG.trace("AsyncTypesConversion.FromCompletionStage finished");
             }

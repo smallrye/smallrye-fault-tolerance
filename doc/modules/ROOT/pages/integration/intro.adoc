@@ -14,7 +14,6 @@ These artifacts must be always present, together with the following dependencies
 * `org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-api`;
 * `org.eclipse.microprofile.config:microprofile-config-api` and some implementation;
 * `org.eclipse.microprofile.metrics:microprofile-metrics-api` and some implementation (implementation is only required if fault tolerance metrics are enabled);
-* `io.smallrye.reactive:smallrye-reactive-converter-api`;
 * `org.jboss.logging:jboss-logging`.
 
 Some other artifacts are provided to facilitate additional integrations.

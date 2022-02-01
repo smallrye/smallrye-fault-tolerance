@@ -30,11 +30,14 @@
 
     <modules>
         <module>core</module>
+        <module>mutiny</module>
+        <module>rxjava3</module>
+        <module>vertx</module>
+
         <module>autoconfig</module>
         <module>fault-tolerance</module>
         <module>context-propagation</module>
         <module>tracing-propagation</module>
-        <module>vertx</module>
 
         <module>standalone</module>
     </modules>

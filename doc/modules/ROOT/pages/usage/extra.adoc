@@ -175,10 +175,9 @@ We also recommend avoiding `@Asynchronous` methods that return `Future`, because
 
 * Mutiny: `Uni`
 * RxJava: `Single`, `Maybe`, `Completable`
-* Reactor: `Mono`
 
 These types are treated just like `CompletionStage`, so everything that works for `CompletionStage` works for these types as well.
-Stream-like types (`Multi`, `Observable`, `Flowable`, `Flux`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
+Stream-like types (`Multi`, `Observable`, `Flowable`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
 
 For example:
 
@@ -198,16 +197,13 @@ public class MyService {
 <2> Returning the `Uni` type from Mutiny.
     This shows that whatever works for `CompletionStage` also works for the other async types.
 
-The implementation is based on the https://github.com/smallrye/smallrye-reactive-utils/tree/main/reactive-converters[SmallRye Reactive Converters] project.
+The implementation internally converts the async types to a `CompletionStage` and back.
 This means that to be able to use any particular asynchronous type, the corresponding converter library must be present.
 It is possible that the runtime you use already provides the correct integration.
 Otherwise, add a dependency to your application:
 
-* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye.reactive:smallrye-reactive-converter-mutiny`
-* https://github.com/ReactiveX/RxJava/tree/1.x[RxJava 1]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava1`
-* https://github.com/ReactiveX/RxJava/tree/2.x[RxJava 2]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava2`
-* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava3`
-* https://projectreactor.io/[Reactor]: `io.smallrye.reactive:smallrye-reactive-converter-reactor`
+* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye:smallrye-fault-tolerance-mutiny`
+* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye:smallrye-fault-tolerance-rxjava3`
 
 .Quarkus
 ****
