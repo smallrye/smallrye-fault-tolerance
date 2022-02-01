@@ -4,7 +4,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.Future;
 
 import io.smallrye.faulttolerance.AsyncTypes;
-import io.smallrye.reactive.converters.ReactiveTypeConverter;
+import io.smallrye.faulttolerance.core.async.types.AsyncTypeConverter;
 
 final class AsyncValidation {
     static boolean isAcceptableReturnType(Class<?> returnType) {
@@ -13,7 +13,7 @@ final class AsyncValidation {
 
     static String describeKnownAsyncTypes() {
         StringJoiner result = new StringJoiner(" or ");
-        for (ReactiveTypeConverter<?> converter : AsyncTypes.allKnown()) {
+        for (AsyncTypeConverter<?, ?> converter : AsyncTypes.allKnown()) {
             result.add(converter.type().getName());
         }
         return result.toString();
