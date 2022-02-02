@@ -198,7 +198,9 @@ public class MyService {
     This shows that whatever works for `CompletionStage` also works for the other async types.
 
 The implementation internally converts the async types to a `CompletionStage` and back.
-This means that to be able to use any particular asynchronous type, the corresponding converter library must be present.
+This means that to be able to use any particular asynchronous type, the corresponding converter must be present.
+{smallrye-fault-tolerance} provides support libraries for popular asynchronous types, and these support libraries include the corresponding converters.
+
 It is possible that the runtime you use already provides the correct integration.
 Otherwise, add a dependency to your application:
 
@@ -207,7 +209,7 @@ Otherwise, add a dependency to your application:
 
 .Quarkus
 ****
-In Quarkus, the Mutiny converter library is present by default.
+In Quarkus, the Mutiny support library is present by default.
 You can use fault tolerance on methods that return `Uni` out of the box.
 ****
 

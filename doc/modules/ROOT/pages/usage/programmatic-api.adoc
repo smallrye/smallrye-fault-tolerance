@@ -254,6 +254,41 @@ Which one do you want to call depends on the type used to represent the action.
 | `adaptRunnable(Runnable)` -> `Runnable`
 |===
 
+== Mutiny Support
+
+In addition to the `FaultTolerance` interface, which provides support for guarding synchronous actions and asynchronous actions using `CompletionStage`, there's a special programmatic API entrypoint for asynchronous actions using the Mutiny library.
+It is enough to include the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny`, as described in xref:usage/extra.adoc#async-types[Additional Asynchronous Types].
+
+This entrypoint is called `MutinyFaultTolerance` and it includes static factory methods for creating a `Callable<Uni<T>>`, `Supplier<Uni<T>` and `FaultTolerance<Uni<T>>`.
+Guarding a `Multi` is not supported.
+
+These factory methods return the common fault tolerance builder, which is supposed to be used just like the builder used when guarding an async action of type `CompletionStage<T>`.
+For example:
+
+[source, java]
+----
+public class MyService {
+    private final Supplier<Uni<String>> guard = MutinyFaultTolerance.createSupplier(() -> externalService.hello()) // <1>
+        .withTimeout().duration(5, ChronoUnit.SECONDS).done()
+        .withFallback().handler(() -> Uni.createFrom().item("fallback")).done()
+        .build();
+
+    public Uni<String> hello() {
+        return guard.get();
+    }
+}
+----
+
+<1> The call to `externalService.hello()` is supposed to return `Uni<String>`.
+
+Note that the `Uni` type is lazy, so the action itself won't execute until the guarded `Uni` is subscribed to.
+
+.Quarkus
+****
+In Quarkus, the Mutiny support library is present by default.
+You can use `MutinyFaultTolerance` out of the box.
+****
+
 == Configuration and Metrics
 
 As mentioned above, with the single exception of `MP_Fault_Tolerance_NonFallback_Enabled`, there is no external configuration support.
@@ -264,19 +299,4 @@ This will change in the future, though possibly only in the CDI implementation.
 
 == Integration Concerns
 
-=== Standalone Implementation
-
-The standalone implementation provides no integration points.
-It is, as the name suggests, completely standalone.
-
-At the moment, it is not possible to change the thread pool to which actions are offloaded.
-A single cached thread pool, obtained using `Executors.newCachedThreadPool()`, is used for all thread offloads.
-
-Users of the standalone implementation that also use an event loop based library, such as Vert.x, may integrate the event loop support as described in xref:integration/event-loop.adoc[Event Loop].
-
-=== CDI implementation
-
-The CDI implementation will use the thread pool an integrator provides (see xref:integration/thread-pool.adoc[Thread Pool]).
-This also extends to the context propagation integration (see xref:integration/context-propagation.adoc[Context Propagation]).
-
-It will also use the event loop support, if integrator provides one (see xref:integration/event-loop.adoc[Event Loop]).
+Integration concerns, which are particularly interesting for users of the standalone implementation, are xref:integration/programmatic-api.adoc[described] in the integration section.

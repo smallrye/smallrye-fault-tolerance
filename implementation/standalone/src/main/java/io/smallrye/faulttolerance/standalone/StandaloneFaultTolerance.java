@@ -19,6 +19,8 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
+import io.smallrye.faulttolerance.core.async.types.AsyncTypes;
+import io.smallrye.faulttolerance.core.async.types.AsyncTypesConversion;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
@@ -69,6 +71,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
         private final EventLoop eventLoop;
         private final StandaloneCircuitBreakerMaintenance cbMaintenance;
         private final boolean isAsync;
+        private final Class<?> asyncType; // ignored when isAsync == false
         private final Function<FaultTolerance<T>, R> finisher;
 
         private BulkheadBuilderImpl<T, R> bulkheadBuilder;
@@ -79,7 +82,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
         private boolean offloadToAnotherThread;
 
         BuilderImpl(boolean ftEnabled, Executor executor, Timer timer, EventLoop eventLoop,
-                StandaloneCircuitBreakerMaintenance cbMaintenance, boolean isAsync,
+                StandaloneCircuitBreakerMaintenance cbMaintenance, boolean isAsync, Class<?> asyncType,
                 Function<FaultTolerance<T>, R> finisher) {
             this.ftEnabled = ftEnabled;
             this.executor = executor;
@@ -87,6 +90,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             this.eventLoop = eventLoop;
             this.cbMaintenance = cbMaintenance;
             this.isAsync = isAsync;
+            this.asyncType = asyncType;
             this.finisher = finisher;
         }
 
@@ -180,8 +184,26 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             return result;
         }
 
-        private FaultToleranceStrategy<CompletionStage<T>> buildAsyncStrategy() {
-            FaultToleranceStrategy<CompletionStage<T>> result = invocation();
+        private FaultToleranceStrategy<Object> buildAsyncStrategy() {
+            // FaultToleranceStrategy expects that the input type and output type are the same, which
+            // isn't true for the conversion strategies used below (even though the entire chain does
+            // retain the type, the conversions are only intermediate)
+            // that's why we use raw types here, to work around this design choice
+
+            FaultToleranceStrategy result = invocation();
+
+            result = new AsyncTypesConversion.ToCompletionStage(result, AsyncTypes.get(asyncType));
+
+            result = buildCompletionStageChain(result);
+
+            result = new AsyncTypesConversion.FromCompletionStage(result, AsyncTypes.get(asyncType));
+
+            return result;
+        }
+
+        private FaultToleranceStrategy<CompletionStage<T>> buildCompletionStageChain(
+                FaultToleranceStrategy<CompletionStage<T>> invocation) {
+            FaultToleranceStrategy<CompletionStage<T>> result = invocation;
 
             // thread offload is always enabled
             Executor executor = offloadToAnotherThread ? this.executor : DirectExecutor.INSTANCE;
@@ -221,8 +243,8 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
 
             // fallback is always enabled
             if (fallbackBuilder != null) {
-                FallbackFunction<CompletionStage<T>> fallbackFunction = ctx -> (CompletionStage<T>) fallbackBuilder.handler
-                        .apply(ctx.failure);
+                FallbackFunction<CompletionStage<T>> fallbackFunction = ctx -> AsyncTypes.toCompletionStageIfRequired(
+                        fallbackBuilder.handler.apply(ctx.failure), asyncType);
                 result = new CompletionStageFallback<>(result, "unknown", fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn));
             }

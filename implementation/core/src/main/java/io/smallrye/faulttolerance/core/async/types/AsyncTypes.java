@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance;
+package io.smallrye.faulttolerance.core.async.types;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -6,9 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
 
-import io.smallrye.faulttolerance.core.async.types.AsyncTypeConverter;
-
-// TODO reduce statics?
 public class AsyncTypes {
     private static final Map<Class<?>, AsyncTypeConverter<?, ?>> registry;
 

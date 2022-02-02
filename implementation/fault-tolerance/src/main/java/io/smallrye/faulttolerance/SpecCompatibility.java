@@ -8,6 +8,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.core.async.types.AsyncTypes;
 
 @Singleton
 public class SpecCompatibility {
