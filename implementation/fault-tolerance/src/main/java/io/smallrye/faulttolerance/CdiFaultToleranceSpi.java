@@ -1,6 +1,5 @@
 package io.smallrye.faulttolerance;
 
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
@@ -66,15 +65,14 @@ public class CdiFaultToleranceSpi implements FaultToleranceSpi {
     public <T, R> FaultTolerance.Builder<T, R> newBuilder(Function<FaultTolerance<T>, R> finisher) {
         Dependencies deps = getDependencies();
         return new CdiFaultTolerance.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
-                deps.cbMaintenance, false, finisher);
+                deps.cbMaintenance, false, null, finisher);
     }
 
     @Override
-    public <T, R> FaultTolerance.Builder<CompletionStage<T>, R> newAsyncBuilder(
-            Function<FaultTolerance<CompletionStage<T>>, R> finisher) {
+    public <T, R> FaultTolerance.Builder<T, R> newAsyncBuilder(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
         Dependencies deps = getDependencies();
         return new CdiFaultTolerance.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
-                deps.cbMaintenance, true, finisher);
+                deps.cbMaintenance, true, asyncType, finisher);
     }
 
     @Override

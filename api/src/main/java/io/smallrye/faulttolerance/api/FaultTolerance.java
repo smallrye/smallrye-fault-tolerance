@@ -110,7 +110,7 @@ public interface FaultTolerance<T> {
      */
     static <T> Builder<CompletionStage<T>, Callable<CompletionStage<T>>> createAsyncCallable(
             Callable<CompletionStage<T>> action) {
-        return FaultToleranceSpiAccess.createAsync(ft -> ft.adaptCallable(action));
+        return FaultToleranceSpiAccess.createAsync(CompletionStage.class, ft -> ft.adaptCallable(action));
     }
 
     /**
@@ -119,7 +119,7 @@ public interface FaultTolerance<T> {
      */
     static <T> Builder<CompletionStage<T>, Supplier<CompletionStage<T>>> createAsyncSupplier(
             Supplier<CompletionStage<T>> action) {
-        return FaultToleranceSpiAccess.createAsync(ft -> ft.adaptSupplier(action));
+        return FaultToleranceSpiAccess.createAsync(CompletionStage.class, ft -> ft.adaptSupplier(action));
     }
 
     /**
@@ -127,7 +127,7 @@ public interface FaultTolerance<T> {
      * The {@code action} is asynchronous and may be offloaded to another thread.
      */
     static Builder<CompletionStage<Void>, Runnable> createAsyncRunnable(Runnable action) {
-        return FaultToleranceSpiAccess.createAsync(ft -> ft.adaptRunnable(action));
+        return FaultToleranceSpiAccess.createAsync(CompletionStage.class, ft -> ft.adaptRunnable(action));
     }
 
     /**
@@ -139,7 +139,7 @@ public interface FaultTolerance<T> {
      * {@code FaultTolerance.&lt;String>createAsync()}.
      */
     static <T> Builder<CompletionStage<T>, FaultTolerance<CompletionStage<T>>> createAsync() {
-        return FaultToleranceSpiAccess.createAsync(Function.identity());
+        return FaultToleranceSpiAccess.createAsync(CompletionStage.class, Function.identity());
     }
 
     /**

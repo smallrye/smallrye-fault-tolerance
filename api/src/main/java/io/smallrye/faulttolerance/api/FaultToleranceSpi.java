@@ -1,6 +1,5 @@
 package io.smallrye.faulttolerance.api;
 
-import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 import io.smallrye.common.annotation.Experimental;
@@ -17,8 +16,7 @@ public interface FaultToleranceSpi {
 
     <T, R> FaultTolerance.Builder<T, R> newBuilder(Function<FaultTolerance<T>, R> finisher);
 
-    <T, R> FaultTolerance.Builder<CompletionStage<T>, R> newAsyncBuilder(
-            Function<FaultTolerance<CompletionStage<T>>, R> finisher);
+    <T, R> FaultTolerance.Builder<T, R> newAsyncBuilder(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher);
 
     CircuitBreakerMaintenance circuitBreakerMaintenance();
 }

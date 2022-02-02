@@ -51,6 +51,7 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
+import io.smallrye.faulttolerance.core.async.types.AsyncTypes;
 import io.smallrye.faulttolerance.core.async.types.AsyncTypesConversion;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
