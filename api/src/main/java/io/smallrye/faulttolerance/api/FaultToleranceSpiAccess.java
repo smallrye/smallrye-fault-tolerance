@@ -15,16 +15,8 @@ public final class FaultToleranceSpiAccess {
         private static final FaultToleranceSpi INSTANCE = instantiateSpi();
     }
 
-    public static <T, R> FaultTolerance.Builder<T, R> create(Function<FaultTolerance<T>, R> finisher) {
-        return Holder.INSTANCE.newBuilder(finisher);
-    }
-
-    public static <T, R> FaultTolerance.Builder<T, R> createAsync(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
-        return Holder.INSTANCE.newAsyncBuilder(asyncType, finisher);
-    }
-
-    static CircuitBreakerMaintenance circuitBreakerMaintenance() {
-        return Holder.INSTANCE.circuitBreakerMaintenance();
+    public static FaultToleranceSpi get() {
+        return Holder.INSTANCE;
     }
 
     private static FaultToleranceSpi instantiateSpi() {
