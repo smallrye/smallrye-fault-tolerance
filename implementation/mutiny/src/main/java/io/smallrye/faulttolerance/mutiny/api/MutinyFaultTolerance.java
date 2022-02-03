@@ -26,7 +26,7 @@ public interface MutinyFaultTolerance {
      * obtained from the resulting {@code Callable} is subscribed to.
      */
     static <T> FaultTolerance.Builder<Uni<T>, Callable<Uni<T>>> createCallable(Callable<Uni<T>> action) {
-        return FaultToleranceSpiAccess.createAsync(Uni.class, ft -> ft.adaptCallable(action));
+        return FaultToleranceSpiAccess.get().newAsyncBuilder(Uni.class, ft -> ft.adaptCallable(action));
     }
 
     /**
@@ -37,7 +37,7 @@ public interface MutinyFaultTolerance {
      * obtained from the resulting {@code Supplier} is subscribed to.
      */
     static <T> FaultTolerance.Builder<Uni<T>, Supplier<Uni<T>>> createSupplier(Supplier<Uni<T>> action) {
-        return FaultToleranceSpiAccess.createAsync(Uni.class, ft -> ft.adaptSupplier(action));
+        return FaultToleranceSpiAccess.get().newAsyncBuilder(Uni.class, ft -> ft.adaptSupplier(action));
     }
 
     /**
@@ -54,6 +54,6 @@ public interface MutinyFaultTolerance {
      * {@code MutinyFaultTolerance.&lt;String>create()}.
      */
     static <T> FaultTolerance.Builder<Uni<T>, FaultTolerance<Uni<T>>> create() {
-        return FaultToleranceSpiAccess.createAsync(Uni.class, Function.identity());
+        return FaultToleranceSpiAccess.get().newAsyncBuilder(Uni.class, Function.identity());
     }
 }
