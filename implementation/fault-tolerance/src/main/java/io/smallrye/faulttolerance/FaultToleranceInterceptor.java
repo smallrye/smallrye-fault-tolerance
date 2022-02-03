@@ -237,20 +237,18 @@ public class FaultToleranceInterceptor {
         if (operation.hasBulkhead()) {
             int size = operation.getBulkhead().value();
             int queueSize = operation.getBulkhead().waitingTaskQueue();
-            result = new CompletionStageThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
-                    size, queueSize);
+            result = new CompletionStageThreadPoolBulkhead<>(result, point.toString(), size, queueSize);
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new CompletionStageTimeout<>(result, "Timeout[" + point + "]",
-                    timeoutMs,
+            result = new CompletionStageTimeout<>(result, point.toString(), timeoutMs,
                     new TimerTimeoutWatcher(timer));
         }
 
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
-            result = new CompletionStageCircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
+            result = new CompletionStageCircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
                     operation.getCircuitBreaker().requestVolumeThreshold(),
@@ -269,8 +267,7 @@ public class FaultToleranceInterceptor {
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
-            result = new CompletionStageRetry<>(result,
-                    "Retry[" + point + "]",
+            result = new CompletionStageRetry<>(result, point.toString(),
                     createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
@@ -279,9 +276,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasFallback()) {
-            result = new CompletionStageFallback<>(
-                    result,
-                    "Fallback[" + point + "]",
+            result = new CompletionStageFallback<>(result, point.toString(),
                     prepareFallbackFunction(point, operation),
                     createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }
@@ -301,21 +296,18 @@ public class FaultToleranceInterceptor {
         FaultToleranceStrategy<T> result = invocation();
 
         if (operation.hasBulkhead()) {
-            result = new SemaphoreBulkhead<>(result,
-                    "Bulkhead[" + point + "]",
-                    operation.getBulkhead().value());
+            result = new SemaphoreBulkhead<>(result, point.toString(), operation.getBulkhead().value());
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new Timeout<>(result, "Timeout[" + point + "]",
-                    timeoutMs,
+            result = new Timeout<>(result, point.toString(), timeoutMs,
                     new TimerTimeoutWatcher(timer));
         }
 
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
-            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
+            result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
                     operation.getCircuitBreaker().requestVolumeThreshold(),
@@ -334,8 +326,7 @@ public class FaultToleranceInterceptor {
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
-            result = new Retry<>(result,
-                    "Retry[" + point + "]",
+            result = new Retry<>(result, point.toString(),
                     createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
@@ -344,9 +335,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasFallback()) {
-            result = new Fallback<>(
-                    result,
-                    "Fallback[" + point + "]",
+            result = new Fallback<>(result, point.toString(),
                     prepareFallbackFunction(point, operation),
                     createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }
@@ -367,21 +356,19 @@ public class FaultToleranceInterceptor {
         if (operation.hasBulkhead()) {
             int size = operation.getBulkhead().value();
             int queueSize = operation.getBulkhead().waitingTaskQueue();
-            result = new FutureThreadPoolBulkhead<>(result, "Bulkhead[" + point + "]",
-                    size, queueSize);
+            result = new FutureThreadPoolBulkhead<>(result, point.toString(), size, queueSize);
         }
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            Timeout<Future<T>> timeout = new Timeout<>(result, "Timeout[" + point + "]",
-                    timeoutMs,
+            Timeout<Future<T>> timeout = new Timeout<>(result, point.toString(), timeoutMs,
                     new TimerTimeoutWatcher(timer));
             result = new AsyncTimeout<>(timeout, asyncExecutor);
         }
 
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
-            result = new CircuitBreaker<>(result, "CircuitBreaker[" + point + "]",
+            result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
                     operation.getCircuitBreaker().requestVolumeThreshold(),
@@ -400,8 +387,7 @@ public class FaultToleranceInterceptor {
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
-            result = new Retry<>(result,
-                    "Retry[" + point + "]",
+            result = new Retry<>(result, point.toString(),
                     createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
@@ -410,8 +396,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasFallback()) {
-            result = new Fallback<>(result,
-                    "Fallback[" + point + "]",
+            result = new Fallback<>(result, point.toString(),
                     prepareFallbackFunction(point, operation),
                     createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }

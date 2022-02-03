@@ -74,6 +74,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
         private final Class<?> asyncType; // ignored when isAsync == false
         private final Function<FaultTolerance<T>, R> finisher;
 
+        private String description;
         private BulkheadBuilderImpl<T, R> bulkheadBuilder;
         private CircuitBreakerBuilderImpl<T, R> circuitBreakerBuilder;
         private FallbackBuilderImpl<T, R> fallbackBuilder;
@@ -92,6 +93,14 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             this.isAsync = isAsync;
             this.asyncType = asyncType;
             this.finisher = finisher;
+
+            this.description = UUID.randomUUID().toString();
+        }
+
+        @Override
+        public Builder<T, R> withDescription(String value) {
+            this.description = Preconditions.checkNotNull(value, "Description must be set");
+            return this;
         }
 
         @Override
@@ -144,16 +153,16 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             FaultToleranceStrategy<T> result = invocation();
 
             if (ftEnabled && bulkheadBuilder != null) {
-                result = new SemaphoreBulkhead<>(result, "unknown", bulkheadBuilder.limit);
+                result = new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit);
             }
 
             if (ftEnabled && timeoutBuilder != null) {
-                result = new Timeout<>(result, "unknown", timeoutBuilder.durationInMillis,
+                result = new Timeout<>(result, description, timeoutBuilder.durationInMillis,
                         new TimerTimeoutWatcher(timer));
             }
 
             if (ftEnabled && circuitBreakerBuilder != null) {
-                result = new CircuitBreaker<>(result, "unknown",
+                result = new CircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn),
                         circuitBreakerBuilder.delayInMillis,
                         circuitBreakerBuilder.requestVolumeThreshold,
@@ -168,7 +177,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             if (ftEnabled && retryBuilder != null) {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
-                result = new Retry<>(result, "unknown",
+                result = new Retry<>(result, description,
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn), retryBuilder.maxRetries,
                         retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
                         new SystemStopwatch());
@@ -177,7 +186,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             // fallback is always enabled
             if (fallbackBuilder != null) {
                 FallbackFunction<T> fallbackFunction = ctx -> fallbackBuilder.handler.apply(ctx.failure);
-                result = new Fallback<>(result, "unknown", fallbackFunction,
+                result = new Fallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn));
             }
 
@@ -210,17 +219,17 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             result = new CompletionStageExecution<>(result, executor);
 
             if (ftEnabled && bulkheadBuilder != null) {
-                result = new CompletionStageThreadPoolBulkhead<>(result, "unknown", bulkheadBuilder.limit,
+                result = new CompletionStageThreadPoolBulkhead<>(result, description, bulkheadBuilder.limit,
                         bulkheadBuilder.queueSize);
             }
 
             if (ftEnabled && timeoutBuilder != null) {
-                result = new CompletionStageTimeout<>(result, "unknown", timeoutBuilder.durationInMillis,
+                result = new CompletionStageTimeout<>(result, description, timeoutBuilder.durationInMillis,
                         new TimerTimeoutWatcher(timer));
             }
 
             if (ftEnabled && circuitBreakerBuilder != null) {
-                result = new CompletionStageCircuitBreaker<>(result, "unknown",
+                result = new CompletionStageCircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn),
                         circuitBreakerBuilder.delayInMillis,
                         circuitBreakerBuilder.requestVolumeThreshold,
@@ -228,14 +237,13 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.successThreshold,
                         new SystemStopwatch());
 
-                String cbName = circuitBreakerBuilder.name != null ? circuitBreakerBuilder.name : UUID.randomUUID().toString();
-                cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
+                cbMaintenance.register(description, (CircuitBreaker<?>) result);
             }
 
             if (ftEnabled && retryBuilder != null) {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
-                result = new CompletionStageRetry<>(result, "unknown",
+                result = new CompletionStageRetry<>(result, description,
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn), retryBuilder.maxRetries,
                         retryBuilder.maxDurationInMillis, () -> new TimerDelay(backoff.get(), timer),
                         new SystemStopwatch());
@@ -245,7 +253,7 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             if (fallbackBuilder != null) {
                 FallbackFunction<CompletionStage<T>> fallbackFunction = ctx -> AsyncTypes.toCompletionStageIfRequired(
                         fallbackBuilder.handler.apply(ctx.failure), asyncType);
-                result = new CompletionStageFallback<>(result, "unknown", fallbackFunction,
+                result = new CompletionStageFallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn));
             }
 
