@@ -23,7 +23,7 @@ public class StandaloneTimeoutTest {
         long time = timed(() -> {
             assertThat(guarded.call()).isEqualTo("fallback");
         });
-        assertThat(time).isCloseTo(1000, withinPercentage(20));
+        assertThat(time).isCloseTo(1000, withinPercentage(50));
     }
 
     public String action() throws InterruptedException {

@@ -29,7 +29,7 @@ public class StandaloneTimeoutAsyncTest {
                     .succeedsWithin(5, TimeUnit.SECONDS)
                     .isEqualTo("fallback");
         });
-        assertThat(time).isCloseTo(1000, withinPercentage(20));
+        assertThat(time).isCloseTo(1000, withinPercentage(50));
     }
 
     public CompletionStage<String> action() throws InterruptedException {
