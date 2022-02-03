@@ -237,6 +237,19 @@ public interface FaultTolerance<T> {
      */
     interface Builder<T, R> {
         /**
+         * Assigns a description to the resulting set of configured fault tolerance strategies. The description
+         * is used in logging messages and exception messages.
+         * <p>
+         * The description may be an arbitrary string. Duplicates are permitted.
+         * <p>
+         * If no description is set, a random UUID is used.
+         *
+         * @param value a description, must not be {@code null}
+         * @return this fault tolerance builder
+         */
+        Builder<T, R> withDescription(String value);
+
+        /**
          * Adds a bulkhead strategy. In this API, bulkhead is a simple concurrency limiter.
          *
          * @return a builder to configure the bulkhead strategy
