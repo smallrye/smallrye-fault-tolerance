@@ -12,6 +12,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.FaultToleranceSpi;
+import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.timer.Timer;
 
@@ -64,14 +65,14 @@ public class CdiFaultToleranceSpi implements FaultToleranceSpi {
     @Override
     public <T, R> FaultTolerance.Builder<T, R> newBuilder(Function<FaultTolerance<T>, R> finisher) {
         Dependencies deps = getDependencies();
-        return new CdiFaultTolerance.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
+        return new FaultToleranceImpl.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
                 deps.cbMaintenance, false, null, finisher);
     }
 
     @Override
     public <T, R> FaultTolerance.Builder<T, R> newAsyncBuilder(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
         Dependencies deps = getDependencies();
-        return new CdiFaultTolerance.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
+        return new FaultToleranceImpl.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
                 deps.cbMaintenance, true, asyncType, finisher);
     }
 
