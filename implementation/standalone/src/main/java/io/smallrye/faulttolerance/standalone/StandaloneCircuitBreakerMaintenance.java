@@ -3,14 +3,15 @@ package io.smallrye.faulttolerance.standalone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
+import io.smallrye.faulttolerance.core.apiimpl.CircuitBreakerMaintenanceInternal;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 
-class StandaloneCircuitBreakerMaintenance implements CircuitBreakerMaintenance {
+class StandaloneCircuitBreakerMaintenance implements CircuitBreakerMaintenanceInternal {
     private final ConcurrentMap<String, CircuitBreaker<?>> registry = new ConcurrentHashMap<>();
 
-    void register(String circuitBreakerName, CircuitBreaker<?> circuitBreaker) {
+    @Override
+    public void register(String circuitBreakerName, CircuitBreaker<?> circuitBreaker) {
         registry.putIfAbsent(circuitBreakerName, circuitBreaker);
     }
 

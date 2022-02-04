@@ -6,12 +6,12 @@ import java.util.concurrent.ConcurrentMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
+import io.smallrye.faulttolerance.core.apiimpl.CircuitBreakerMaintenanceInternal;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 
 @Singleton
-public class CircuitBreakerMaintenanceImpl implements CircuitBreakerMaintenance {
+public class CircuitBreakerMaintenanceImpl implements CircuitBreakerMaintenanceInternal {
     private final ConcurrentMap<String, CircuitBreaker<?>> registry = new ConcurrentHashMap<>();
 
     private final ExistingCircuitBreakerNames existingCircuitBreakerNames;
@@ -21,7 +21,8 @@ public class CircuitBreakerMaintenanceImpl implements CircuitBreakerMaintenance 
         this.existingCircuitBreakerNames = existingCircuitBreakerNames;
     }
 
-    void register(String circuitBreakerName, CircuitBreaker<?> circuitBreaker) {
+    @Override
+    public void register(String circuitBreakerName, CircuitBreaker<?> circuitBreaker) {
         registry.putIfAbsent(circuitBreakerName, circuitBreaker);
     }
 

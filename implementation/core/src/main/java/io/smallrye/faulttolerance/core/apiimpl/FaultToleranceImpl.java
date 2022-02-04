@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.standalone;
+package io.smallrye.faulttolerance.core.apiimpl;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 
@@ -10,9 +10,11 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
@@ -50,26 +52,28 @@ import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-// this is mostly a copy of CdiFaultTolerance and they must be kept in sync
-class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
+public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
     private final FaultToleranceStrategy<T> strategy;
+    private final EventHandlers eventHandlers;
 
-    StandaloneFaultTolerance(FaultToleranceStrategy<T> strategy) {
+    FaultToleranceImpl(FaultToleranceStrategy<T> strategy, EventHandlers eventHandlers) {
         this.strategy = strategy;
+        this.eventHandlers = eventHandlers;
     }
 
     @Override
     public T call(Callable<T> action) throws Exception {
         InvocationContext<T> ctx = new InvocationContext<>(action);
+        eventHandlers.register(ctx);
         return strategy.apply(ctx);
     }
 
-    static class BuilderImpl<T, R> implements Builder<T, R> {
+    public static final class BuilderImpl<T, R> implements Builder<T, R> {
         private final boolean ftEnabled;
         private final Executor executor;
         private final Timer timer;
         private final EventLoop eventLoop;
-        private final StandaloneCircuitBreakerMaintenance cbMaintenance;
+        private final CircuitBreakerMaintenanceInternal cbMaintenance;
         private final boolean isAsync;
         private final Class<?> asyncType; // ignored when isAsync == false
         private final Function<FaultTolerance<T>, R> finisher;
@@ -82,8 +86,8 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
         private TimeoutBuilderImpl<T, R> timeoutBuilder;
         private boolean offloadToAnotherThread;
 
-        BuilderImpl(boolean ftEnabled, Executor executor, Timer timer, EventLoop eventLoop,
-                StandaloneCircuitBreakerMaintenance cbMaintenance, boolean isAsync, Class<?> asyncType,
+        public BuilderImpl(boolean ftEnabled, Executor executor, Timer timer, EventLoop eventLoop,
+                CircuitBreakerMaintenanceInternal cbMaintenance, boolean isAsync, Class<?> asyncType,
                 Function<FaultTolerance<T>, R> finisher) {
             this.ftEnabled = ftEnabled;
             this.executor = executor;
@@ -140,11 +144,25 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
 
         @Override
         public R build() {
+            EventHandlers eventHandlers = new EventHandlers(
+                    bulkheadBuilder != null ? bulkheadBuilder.onAccepted : null,
+                    bulkheadBuilder != null ? bulkheadBuilder.onRejected : null,
+                    bulkheadBuilder != null ? bulkheadBuilder.onFinished : null,
+                    circuitBreakerBuilder != null ? circuitBreakerBuilder.onStateChange : null,
+                    circuitBreakerBuilder != null ? circuitBreakerBuilder.onSuccess : null,
+                    circuitBreakerBuilder != null ? circuitBreakerBuilder.onFailure : null,
+                    circuitBreakerBuilder != null ? circuitBreakerBuilder.onPrevented : null,
+                    retryBuilder != null ? retryBuilder.onRetry : null,
+                    retryBuilder != null ? retryBuilder.onSuccess : null,
+                    retryBuilder != null ? retryBuilder.onFailure : null,
+                    timeoutBuilder != null ? timeoutBuilder.onTimeout : null,
+                    timeoutBuilder != null ? timeoutBuilder.onFinished : null);
+
             FaultTolerance<T> result;
             if (isAsync) {
-                result = new StandaloneFaultTolerance(buildAsyncStrategy());
+                result = new FaultToleranceImpl(buildAsyncStrategy(), eventHandlers);
             } else {
-                result = new StandaloneFaultTolerance<>(buildSyncStrategy());
+                result = new FaultToleranceImpl<>(buildSyncStrategy(), eventHandlers);
             }
             return finisher.apply(result);
         }
@@ -308,6 +326,10 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             private int limit = 10;
             private int queueSize = 10;
 
+            private Runnable onAccepted;
+            private Runnable onRejected;
+            private Runnable onFinished;
+
             BulkheadBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
             }
@@ -329,6 +351,24 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             }
 
             @Override
+            public BulkheadBuilder<T, R> onAccepted(Runnable callback) {
+                this.onAccepted = Preconditions.checkNotNull(callback, "Accepted callback must be set");
+                return this;
+            }
+
+            @Override
+            public BulkheadBuilder<T, R> onRejected(Runnable callback) {
+                this.onRejected = Preconditions.checkNotNull(callback, "Rejected callback must be set");
+                return this;
+            }
+
+            @Override
+            public BulkheadBuilder<T, R> onFinished(Runnable callback) {
+                this.onFinished = Preconditions.checkNotNull(callback, "Finished callback must be set");
+                return this;
+            }
+
+            @Override
             public Builder<T, R> done() {
                 parent.bulkheadBuilder = this;
                 return parent;
@@ -346,6 +386,11 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             private int successThreshold = 1;
 
             private String name; // unnamed by default
+
+            private Consumer<CircuitBreakerState> onStateChange;
+            private Runnable onSuccess;
+            private Runnable onFailure;
+            private Runnable onPrevented;
 
             CircuitBreakerBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
@@ -393,6 +438,30 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             @Override
             public CircuitBreakerBuilder<T, R> name(String value) {
                 this.name = Preconditions.checkNotNull(value, "Circuit breaker name must be set");
+                return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder<T, R> onStateChange(Consumer<CircuitBreakerState> callback) {
+                this.onStateChange = Preconditions.checkNotNull(callback, "On state change callback must be set");
+                return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder<T, R> onSuccess(Runnable callback) {
+                this.onSuccess = Preconditions.checkNotNull(callback, "On success callback must be set");
+                return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder<T, R> onFailure(Runnable callback) {
+                this.onFailure = Preconditions.checkNotNull(callback, "On failure callback must be set");
+                return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder<T, R> onPrevented(Runnable callback) {
+                this.onPrevented = Preconditions.checkNotNull(callback, "On prevented callback must be set");
                 return this;
             }
 
@@ -462,6 +531,10 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             private FibonacciBackoffBuilderImpl<T, R> fibonacciBackoffBuilder;
             private CustomBackoffBuilderImpl<T, R> customBackoffBuilder;
 
+            private Runnable onRetry;
+            private Runnable onSuccess;
+            private Runnable onFailure;
+
             RetryBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
             }
@@ -524,6 +597,24 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
             @Override
             public CustomBackoffBuilder<T, R> withCustomBackoff() {
                 return new CustomBackoffBuilderImpl<>(this);
+            }
+
+            @Override
+            public RetryBuilder<T, R> onRetry(Runnable callback) {
+                this.onRetry = Preconditions.checkNotNull(callback, "Retry callback must be set");
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T, R> onSuccess(Runnable callback) {
+                this.onSuccess = Preconditions.checkNotNull(callback, "Success callback must be set");
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T, R> onFailure(Runnable callback) {
+                this.onFailure = Preconditions.checkNotNull(callback, "Failure callback must be set");
+                return this;
             }
 
             @Override
@@ -633,6 +724,9 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
 
             private long durationInMillis = 1000;
 
+            private Runnable onTimeout;
+            private Runnable onFinished;
+
             TimeoutBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
             }
@@ -643,6 +737,18 @@ class StandaloneFaultTolerance<T> implements FaultTolerance<T> {
                 Preconditions.checkNotNull(unit, "Timeout duration unit must be set");
 
                 this.durationInMillis = getTimeInMs(value, unit);
+                return this;
+            }
+
+            @Override
+            public TimeoutBuilder<T, R> onTimeout(Runnable callback) {
+                this.onTimeout = Preconditions.checkNotNull(callback, "Timeout callback must be set");
+                return this;
+            }
+
+            @Override
+            public TimeoutBuilder<T, R> onFinished(Runnable callback) {
+                this.onFinished = Preconditions.checkNotNull(callback, "Finished callback must be set");
                 return this;
             }
 

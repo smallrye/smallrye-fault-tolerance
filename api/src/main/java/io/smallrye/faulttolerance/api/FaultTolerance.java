@@ -358,6 +358,38 @@ public interface FaultTolerance<T> {
             BulkheadBuilder<T, R> queueSize(int value);
 
             /**
+             * Sets a callback that will be invoked when this bulkhead accepts an invocation.
+             * In case of asynchronous actions, accepting into bulkhead doesn't mean the action
+             * is immediately invoked; the invocation is first put into a queue and may wait there.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the accepted callback, must not be {@code null}
+             * @return this bulkhead builder
+             */
+            BulkheadBuilder<T, R> onAccepted(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when this bulkhead rejects an invocation.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the rejected callback, must not be {@code null}
+             * @return this bulkhead builder
+             */
+            BulkheadBuilder<T, R> onRejected(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when a finished invocation leaves this bulkhead.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the finished callback, must not be {@code null}
+             * @return this bulkhead builder
+             */
+            BulkheadBuilder<T, R> onFinished(Runnable callback);
+
+            /**
              * Returns the original fault tolerance builder.
              *
              * @return the original fault tolerance builder
@@ -455,13 +487,55 @@ public interface FaultTolerance<T> {
 
             /**
              * Sets a circuit breaker name. Required to use the {@link CircuitBreakerMaintenance} methods
-             * that accept a name parameter. Defaults to unnamed.
+             * that accept a name parameter. Defaults to unnamed. It is an error to use the same name
+             * for multiple circuit breakers.
              *
              * @param value the circuit breaker name, must not be {@code null}
              * @return this circuit breaker builder
              * @see CircuitBreakerName @CircuitBreakerName
              */
             CircuitBreakerBuilder<T, R> name(String value);
+
+            /**
+             * Sets a callback that will be invoked upon each state change of this circuit breaker.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the state change callback, must not be {@code null}
+             * @return this circuit breaker builder
+             */
+            CircuitBreakerBuilder<T, R> onStateChange(Consumer<CircuitBreakerState> callback);
+
+            /**
+             * Sets a callback that will be invoked when this circuit breaker treats a finished invocation as success.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the success callback, must not be {@code null}
+             * @return this circuit breaker builder
+             */
+            CircuitBreakerBuilder<T, R> onSuccess(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when this circuit breaker treats a finished invocation as failure.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the failure callback, must not be {@code null}
+             * @return this circuit breaker builder
+             */
+            CircuitBreakerBuilder<T, R> onFailure(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when this circuit breaker prevents an invocation, because it is
+             * in the open or half-open state.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the prevented callback, must not be {@code null}
+             * @return this circuit breaker builder
+             */
+            CircuitBreakerBuilder<T, R> onPrevented(Runnable callback);
 
             /**
              * Returns the original fault tolerance builder.
@@ -674,6 +748,39 @@ public interface FaultTolerance<T> {
             CustomBackoffBuilder<T, R> withCustomBackoff();
 
             /**
+             * Sets a callback that will be invoked when a retry is attempted.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the retried callback, must not be {@code null}
+             * @return this retry builder
+             */
+            RetryBuilder<T, R> onRetry(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when this retry strategy treats a finished invocation as success,
+             * regardless of whether a retry was attempted or not.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the retried callback, must not be {@code null}
+             * @return this retry builder
+             */
+            RetryBuilder<T, R> onSuccess(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when this retry strategy treats a finished invocation as failure,
+             * and no more retries will be attempted. The failure may be caused by depleting the maximum
+             * number of retries or the maximum duration, or by an exception that is not retryable.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the retried callback, must not be {@code null}
+             * @return this retry builder
+             */
+            RetryBuilder<T, R> onFailure(Runnable callback);
+
+            /**
              * Returns the original fault tolerance builder.
              *
              * @return the original fault tolerance builder
@@ -796,6 +903,26 @@ public interface FaultTolerance<T> {
              * @see Timeout#unit() @Timeout.unit
              */
             TimeoutBuilder<T, R> duration(long value, ChronoUnit unit);
+
+            /**
+             * Sets a callback that will be invoked when an invocation times out.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the timeout callback, must not be {@code null}
+             * @return this timeout builder
+             */
+            TimeoutBuilder<T, R> onTimeout(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when an invocation finishes before the timeout.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the finished callback, must not be {@code null}
+             * @return this timeout builder
+             */
+            TimeoutBuilder<T, R> onFinished(Runnable callback);
 
             /**
              * Returns the original fault tolerance builder.

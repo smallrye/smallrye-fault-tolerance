@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.api;
 
 import java.util.ServiceLoader;
-import java.util.function.Function;
 
 import io.smallrye.common.annotation.Experimental;
 
