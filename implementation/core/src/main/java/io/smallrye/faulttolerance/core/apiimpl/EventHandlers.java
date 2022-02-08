@@ -8,12 +8,14 @@ import io.smallrye.faulttolerance.core.bulkhead.BulkheadEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.retry.RetryEvents;
 import io.smallrye.faulttolerance.core.timeout.TimeoutEvents;
+import io.smallrye.faulttolerance.core.util.Callbacks;
 
 final class EventHandlers {
     private final Runnable bulkheadOnAccepted;
     private final Runnable bulkheadOnRejected;
     private final Runnable bulkheadOnFinished;
 
+    private final Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler;
     private final Consumer<CircuitBreakerState> circuitBreakerOnStateChange;
     private final Runnable circuitBreakerOnSuccess;
     private final Runnable circuitBreakerOnFailure;
@@ -27,47 +29,23 @@ final class EventHandlers {
     private final Runnable timeoutOnFinished;
 
     EventHandlers(Runnable bulkheadOnAccepted, Runnable bulkheadOnRejected, Runnable bulkheadOnFinished,
+            Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler,
             Consumer<CircuitBreakerState> circuitBreakerOnStateChange, Runnable circuitBreakerOnSuccess,
             Runnable circuitBreakerOnFailure, Runnable circuitBreakerOnPrevented, Runnable retryOnRetry,
             Runnable retryOnSuccess, Runnable retryOnFailure, Runnable timeoutOnTimeout, Runnable timeoutOnFinished) {
-        this.bulkheadOnAccepted = wrap(bulkheadOnAccepted);
-        this.bulkheadOnRejected = wrap(bulkheadOnRejected);
-        this.bulkheadOnFinished = wrap(bulkheadOnFinished);
-        this.circuitBreakerOnStateChange = wrap(circuitBreakerOnStateChange);
-        this.circuitBreakerOnSuccess = wrap(circuitBreakerOnSuccess);
-        this.circuitBreakerOnFailure = wrap(circuitBreakerOnFailure);
-        this.circuitBreakerOnPrevented = wrap(circuitBreakerOnPrevented);
-        this.retryOnRetry = wrap(retryOnRetry);
-        this.retryOnSuccess = wrap(retryOnSuccess);
-        this.retryOnFailure = wrap(retryOnFailure);
-        this.timeoutOnTimeout = wrap(timeoutOnTimeout);
-        this.timeoutOnFinished = wrap(timeoutOnFinished);
-    }
-
-    private static <T> Consumer<T> wrap(Consumer<T> callback) {
-        if (callback == null) {
-            return null;
-        }
-
-        return value -> {
-            try {
-                callback.accept(value);
-            } catch (Exception ignored) {
-            }
-        };
-    }
-
-    private static Runnable wrap(Runnable callback) {
-        if (callback == null) {
-            return null;
-        }
-
-        return () -> {
-            try {
-                callback.run();
-            } catch (Exception ignored) {
-            }
-        };
+        this.bulkheadOnAccepted = Callbacks.wrap(bulkheadOnAccepted);
+        this.bulkheadOnRejected = Callbacks.wrap(bulkheadOnRejected);
+        this.bulkheadOnFinished = Callbacks.wrap(bulkheadOnFinished);
+        this.cbMaintenanceEventHandler = Callbacks.wrap(cbMaintenanceEventHandler);
+        this.circuitBreakerOnStateChange = Callbacks.wrap(circuitBreakerOnStateChange);
+        this.circuitBreakerOnSuccess = Callbacks.wrap(circuitBreakerOnSuccess);
+        this.circuitBreakerOnFailure = Callbacks.wrap(circuitBreakerOnFailure);
+        this.circuitBreakerOnPrevented = Callbacks.wrap(circuitBreakerOnPrevented);
+        this.retryOnRetry = Callbacks.wrap(retryOnRetry);
+        this.retryOnSuccess = Callbacks.wrap(retryOnSuccess);
+        this.retryOnFailure = Callbacks.wrap(retryOnFailure);
+        this.timeoutOnTimeout = Callbacks.wrap(timeoutOnTimeout);
+        this.timeoutOnFinished = Callbacks.wrap(timeoutOnFinished);
     }
 
     void register(InvocationContext<?> ctx) {
@@ -90,6 +68,9 @@ final class EventHandlers {
             });
         }
 
+        if (cbMaintenanceEventHandler != null) {
+            ctx.registerEventHandler(CircuitBreakerEvents.StateTransition.class, cbMaintenanceEventHandler);
+        }
         if (circuitBreakerOnStateChange != null) {
             ctx.registerEventHandler(CircuitBreakerEvents.StateTransition.class, event -> {
                 CircuitBreakerState targetState = event.targetState;

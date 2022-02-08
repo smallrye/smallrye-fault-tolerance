@@ -57,6 +57,7 @@ import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhea
 import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
+import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
@@ -170,7 +171,7 @@ public class FaultToleranceInterceptor {
             InterceptionPoint point) {
         FaultToleranceStrategy<Object> strategy = cache.getStrategy(point, () -> prepareAsyncStrategy(operation, point));
 
-        io.smallrye.faulttolerance.core.InvocationContext<Object> ctx = invocationContext(interceptionContext);
+        io.smallrye.faulttolerance.core.InvocationContext<Object> ctx = invocationContext(operation, interceptionContext);
 
         try {
             return strategy.apply(ctx);
@@ -183,7 +184,7 @@ public class FaultToleranceInterceptor {
             throws Exception {
         FaultToleranceStrategy<T> strategy = cache.getStrategy(point, () -> prepareSyncStrategy(operation, point));
 
-        io.smallrye.faulttolerance.core.InvocationContext<T> ctx = invocationContext(interceptionContext);
+        io.smallrye.faulttolerance.core.InvocationContext<T> ctx = invocationContext(operation, interceptionContext);
 
         return strategy.apply(ctx);
     }
@@ -192,17 +193,23 @@ public class FaultToleranceInterceptor {
             InterceptionPoint point) throws Exception {
         FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point, () -> prepareFutureStrategy(operation, point));
 
-        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(interceptionContext);
+        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(operation, interceptionContext);
 
         return strategy.apply(ctx);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> io.smallrye.faulttolerance.core.InvocationContext<T> invocationContext(InvocationContext interceptionContext) {
+    private <T> io.smallrye.faulttolerance.core.InvocationContext<T> invocationContext(FaultToleranceOperation operation,
+            InvocationContext interceptionContext) {
         io.smallrye.faulttolerance.core.InvocationContext<T> result = new io.smallrye.faulttolerance.core.InvocationContext<>(
                 () -> (T) interceptionContext.proceed());
 
         result.set(InvocationContext.class, interceptionContext);
+
+        if (operation.hasCircuitBreaker() && operation.hasCircuitBreakerName()) {
+            result.registerEventHandler(CircuitBreakerEvents.StateTransition.class,
+                    cbMaintenance.stateTransitionEventHandler(operation.getCircuitBreakerName().value()));
+        }
 
         return result;
     }

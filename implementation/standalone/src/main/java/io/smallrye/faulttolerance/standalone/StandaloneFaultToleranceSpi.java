@@ -7,6 +7,7 @@ import java.util.function.Function;
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.FaultToleranceSpi;
+import io.smallrye.faulttolerance.core.apiimpl.BasicCircuitBreakerMaintenanceImpl;
 import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.timer.Timer;
@@ -20,7 +21,7 @@ public class StandaloneFaultToleranceSpi implements FaultToleranceSpi {
         final Timer timer = new Timer(executor);
         final EventLoop eventLoop = EventLoop.get();
 
-        final StandaloneCircuitBreakerMaintenance cbMaintenance = new StandaloneCircuitBreakerMaintenance();
+        final BasicCircuitBreakerMaintenanceImpl cbMaintenance = new BasicCircuitBreakerMaintenanceImpl();
     }
 
     static class DependenciesHolder {
