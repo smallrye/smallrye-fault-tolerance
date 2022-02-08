@@ -224,6 +224,22 @@ At the same time, this would _not_ be safe to do for all unnamed circuit breaker
 Therefore, all circuit breakers created using the programmatic API must be given a name when `CircuitBreakerMaintenance` is supposed to affect them.
 Note that duplicate names are not permitted and lead to an error, so lifecycle of the circuit breaker must be carefully considered.
 
+=== Event Listeners
+
+The programmatic API has one feature that the declarative API doesn't have: ability to observe certain events.
+For example, when configuring a circuit breaker, it is possible to register a callback for circuit breaker state changes or for a situation when an open circuit breaker prevents an invocation.
+When configuring a timeout, it is possible to register a callback for when the invocation times out, etc. etc.
+For example:
+
+[source,java]
+----
+private static final FaultTolerance<String> guard = FaultTolerance.<String>create()
+    .withTimeout().duration(5, ChronoUnit.SECONDS).onTimeout(() -> ...).done() // <1>
+    .build();
+----
+
+<1> The `onTimeout` method takes a `Runnable` that will later be executed whenever an invocation guarded by `guard` times out.
+
 === Summary of `FaultTolerance` Methods
 
 There's a number of static `create*` methods on the `FaultTolerance` interface.

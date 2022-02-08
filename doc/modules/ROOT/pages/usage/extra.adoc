@@ -43,12 +43,15 @@ public class Example {
 <1> Obtains current circuit breaker state.
 <2> Resets all circuit breakers to the initial state.
 
-The `CircuitBreakerMaintenance` interface provides 3 methods:
+The `CircuitBreakerMaintenance` interface provides 4 methods:
 
 . `currentState(name)`: returns current state of given circuit breaker.
   The return type `CircuitBreakerState` is an `enum` with 3 values: `CLOSED`, `OPEN`, `HALF_OPEN`.
+- `onStateChange(name, callback)`: registers a callback that will be called when given circuit breaker changes state.
 . `reset(name)`: resets given circuit breaker to the initial state.
 . `resetAll()`: resets all circuit breakers in the application to the initial state.
+
+See the javadoc of those methods for more information.
 
 [[blocking-nonblocking]]
 == @Blocking and @NonBlocking
