@@ -6,6 +6,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.inject.Inject;
 
@@ -31,41 +32,41 @@ public class CircuitBreakerMaintenanceTest {
     }
 
     @Test
-    public void readCircuitBreakerState() {
-        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
+    public void readAndObserveCircuitBreakerState() throws Exception {
+        AtomicInteger stateChanges = new AtomicInteger();
+        cb.onStateChange("hello", ignored -> {
+            stateChanges.incrementAndGet();
+        });
 
-        for (int i = 0; i < HelloService.THRESHOLD; i++) {
-            assertThatThrownBy(() -> {
-                helloService.hello(new IOException());
-            }).isExactlyInstanceOf(IOException.class);
-        }
+        testCircuitBreaker(() -> {
+            await().atMost(HelloService.DELAY * 2, TimeUnit.MILLISECONDS)
+                    .ignoreException(CircuitBreakerOpenException.class)
+                    .untilAsserted(() -> {
+                        assertThat(helloService.hello(null)).isEqualTo(HelloService.OK);
+                    });
+        });
 
-        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.OPEN);
-
-        await().atMost(HelloService.DELAY * 2, TimeUnit.MILLISECONDS)
-                .ignoreException(CircuitBreakerOpenException.class)
-                .untilAsserted(() -> {
-                    assertThat(helloService.hello(null)).isEqualTo(HelloService.OK);
-                });
-
-        assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
+        // 1. closed -> open
+        // 2. open -> half-open
+        // 3. half-open -> closed
+        assertThat(stateChanges).hasValue(3);
     }
 
     @Test
     public void resetCircuitBreaker() throws Exception {
-        testCircuitBreakerReset(() -> {
+        testCircuitBreaker(() -> {
             cb.reset("hello");
         });
     }
 
     @Test
     public void resetAllCircuitBreakers() throws Exception {
-        testCircuitBreakerReset(() -> {
+        testCircuitBreaker(() -> {
             cb.resetAll();
         });
     }
 
-    private void testCircuitBreakerReset(Runnable resetFunction) throws Exception {
+    private void testCircuitBreaker(Runnable resetFunction) throws Exception {
         assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
 
         for (int i = 0; i < HelloService.THRESHOLD; i++) {

@@ -4,8 +4,10 @@ import static io.smallrye.faulttolerance.core.Invocation.invocation;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
@@ -26,6 +28,7 @@ import io.smallrye.faulttolerance.core.async.types.AsyncTypesConversion;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
+import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
@@ -49,20 +52,43 @@ import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.Initializer;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
     private final FaultToleranceStrategy<T> strategy;
     private final EventHandlers eventHandlers;
+    private final Initializer initializer;
 
-    FaultToleranceImpl(FaultToleranceStrategy<T> strategy, EventHandlers eventHandlers) {
+    // Circuit breakers created using the programmatic API are registered with `CircuitBreakerMaintenance`
+    // in two phases:
+    //
+    // 1. The name is registered eagerly, during `BuilderImpl.build()`, so that `CircuitBreakerMaintenance` methods
+    //    may be called immediately after building the `FaultTolerance` instance. A single name may be registered
+    //    multiple times.
+    // 2. The circuit breaker instance is registered lazily, during `FaultToleranceImpl.call()`, so that
+    //    a `FaultTolerance` instance that is created but never used doesn't prevent an actually useful
+    //    circuit breaker from being registered later. Only one circuit breaker may be registered
+    //    for given name.
+    //
+    // Lazy registration of circuit breakers exists to allow normal-scoped CDI beans to declare `FaultTolerance`
+    // fields that are assigned inline (which effectively means in a constructor). Normal-scoped beans always
+    // have a client proxy, whose class inherits from the bean class and calls the superclass's zero-parameter
+    // constructor. This leads to the client proxy instance also having an instance of `FaultTolerance`,
+    // but that instance is never used. The useful `FaultTolerance` instance is held by the actual bean instance,
+    // which is created lazily, on the first method invocation on the client proxy.
+
+    FaultToleranceImpl(FaultToleranceStrategy<T> strategy, EventHandlers eventHandlers, Initializer initializer) {
         this.strategy = strategy;
         this.eventHandlers = eventHandlers;
+        this.initializer = initializer;
     }
 
     @Override
     public T call(Callable<T> action) throws Exception {
+        initializer.runOnce();
+
         InvocationContext<T> ctx = new InvocationContext<>(action);
         eventHandlers.register(ctx);
         return strategy.apply(ctx);
@@ -73,7 +99,7 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
         private final Executor executor;
         private final Timer timer;
         private final EventLoop eventLoop;
-        private final CircuitBreakerMaintenanceInternal cbMaintenance;
+        private final BasicCircuitBreakerMaintenanceImpl cbMaintenance;
         private final boolean isAsync;
         private final Class<?> asyncType; // ignored when isAsync == false
         private final Function<FaultTolerance<T>, R> finisher;
@@ -87,7 +113,7 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
         private boolean offloadToAnotherThread;
 
         public BuilderImpl(boolean ftEnabled, Executor executor, Timer timer, EventLoop eventLoop,
-                CircuitBreakerMaintenanceInternal cbMaintenance, boolean isAsync, Class<?> asyncType,
+                BasicCircuitBreakerMaintenanceImpl cbMaintenance, boolean isAsync, Class<?> asyncType,
                 Function<FaultTolerance<T>, R> finisher) {
             this.ftEnabled = ftEnabled;
             this.executor = executor;
@@ -144,10 +170,15 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
         @Override
         public R build() {
+            Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler = null;
+            if (circuitBreakerBuilder != null && circuitBreakerBuilder.name != null) {
+                cbMaintenanceEventHandler = cbMaintenance.stateTransitionEventHandler(circuitBreakerBuilder.name);
+            }
             EventHandlers eventHandlers = new EventHandlers(
                     bulkheadBuilder != null ? bulkheadBuilder.onAccepted : null,
                     bulkheadBuilder != null ? bulkheadBuilder.onRejected : null,
                     bulkheadBuilder != null ? bulkheadBuilder.onFinished : null,
+                    cbMaintenanceEventHandler,
                     circuitBreakerBuilder != null ? circuitBreakerBuilder.onStateChange : null,
                     circuitBreakerBuilder != null ? circuitBreakerBuilder.onSuccess : null,
                     circuitBreakerBuilder != null ? circuitBreakerBuilder.onFailure : null,
@@ -158,16 +189,14 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                     timeoutBuilder != null ? timeoutBuilder.onTimeout : null,
                     timeoutBuilder != null ? timeoutBuilder.onFinished : null);
 
-            FaultTolerance<T> result;
-            if (isAsync) {
-                result = new FaultToleranceImpl(buildAsyncStrategy(), eventHandlers);
-            } else {
-                result = new FaultToleranceImpl<>(buildSyncStrategy(), eventHandlers);
-            }
+            List<Runnable> initActions = new ArrayList<>();
+            FaultToleranceStrategy<T> strategy = isAsync ? buildAsyncStrategy(initActions) : buildSyncStrategy(initActions);
+
+            FaultTolerance<T> result = new FaultToleranceImpl<>(strategy, eventHandlers, new Initializer(initActions));
             return finisher.apply(result);
         }
 
-        private FaultToleranceStrategy<T> buildSyncStrategy() {
+        private FaultToleranceStrategy<T> buildSyncStrategy(List<Runnable> initActions) {
             FaultToleranceStrategy<T> result = invocation();
 
             if (ftEnabled && bulkheadBuilder != null) {
@@ -188,8 +217,14 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.successThreshold,
                         new SystemStopwatch());
 
-                String cbName = circuitBreakerBuilder.name != null ? circuitBreakerBuilder.name : UUID.randomUUID().toString();
-                cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
+                if (circuitBreakerBuilder.name != null) {
+                    cbMaintenance.registerName(circuitBreakerBuilder.name);
+
+                    CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
+                    initActions.add(() -> {
+                        cbMaintenance.register(circuitBreakerBuilder.name, circuitBreaker);
+                    });
+                }
             }
 
             if (ftEnabled && retryBuilder != null) {
@@ -211,7 +246,7 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             return result;
         }
 
-        private FaultToleranceStrategy<Object> buildAsyncStrategy() {
+        private FaultToleranceStrategy<T> buildAsyncStrategy(List<Runnable> initActions) {
             // FaultToleranceStrategy expects that the input type and output type are the same, which
             // isn't true for the conversion strategies used below (even though the entire chain does
             // retain the type, the conversions are only intermediate)
@@ -221,7 +256,7 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             result = new AsyncTypesConversion.ToCompletionStage(result, AsyncTypes.get(asyncType));
 
-            result = buildCompletionStageChain(result);
+            result = buildCompletionStageChain(result, initActions);
 
             result = new AsyncTypesConversion.FromCompletionStage(result, AsyncTypes.get(asyncType));
 
@@ -229,7 +264,7 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
         }
 
         private FaultToleranceStrategy<CompletionStage<T>> buildCompletionStageChain(
-                FaultToleranceStrategy<CompletionStage<T>> invocation) {
+                FaultToleranceStrategy<CompletionStage<T>> invocation, List<Runnable> initActions) {
             FaultToleranceStrategy<CompletionStage<T>> result = invocation;
 
             // thread offload is always enabled
@@ -255,7 +290,14 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.successThreshold,
                         new SystemStopwatch());
 
-                cbMaintenance.register(description, (CircuitBreaker<?>) result);
+                if (circuitBreakerBuilder.name != null) {
+                    cbMaintenance.registerName(circuitBreakerBuilder.name);
+
+                    CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
+                    initActions.add(() -> {
+                        cbMaintenance.register(circuitBreakerBuilder.name, circuitBreaker);
+                    });
+                }
             }
 
             if (ftEnabled && retryBuilder != null) {

@@ -64,11 +64,11 @@ Let's take a look at a simple example:
 [source,java]
 ----
 public class MyService {
-    public String hello() throws Exception {
-        FaultTolerance<String> guarded = FaultTolerance.<String>create() // <1>
-            .withFallback().handler(() -> "fallback").done() // <2>
-            .build(); // <3>
+    private static final FaultTolerance<String> guarded = FaultTolerance.<String>create() // <1>
+        .withFallback().handler(() -> "fallback").done() // <2>
+        .build(); // <3>
 
+    public String hello() throws Exception {
         return guarded.call(() -> externalService.hello()); // <4>
     }
 }
@@ -94,12 +94,12 @@ Unlike the declarative API, the programmatic API doesn't support asynchronous ac
 [source,java]
 ----
 public class MyService {
-    public CompletionStage<String> hello() throws Exception {
-        FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String>createAsync() // <1>
-            .withBulkhead().done() // <2>
-            .withThreadOffload(true) // <3>
-            .build();
+    private static final FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String>createAsync() // <1>
+        .withBulkhead().done() // <2>
+        .withThreadOffload(true) // <3>
+        .build();
 
+    public CompletionStage<String> hello() throws Exception {
         return guarded.call(() -> externalService.hello()); // <4>
     }
 }
@@ -178,12 +178,12 @@ If that is not necessary, you can create a `Callable`, `Supplier` or `Runnable` 
 [source, java]
 ----
 public class MyService {
-    private final Callable<String> guard = FaultTolerance.createCallable(externalService::hello) // <1>
+    private static final Callable<String> guard = FaultTolerance.createCallable(() -> externalService.hello()) // <1>
         .withTimeout().duration(5, ChronoUnit.SECONDS).done()
         .build();
 
     public String hello() throws Exception {
-        guard.call(); // <2>
+        return guard.call(); // <2>
     }
 }
 ----
@@ -209,6 +209,20 @@ If, on the other hand, you use different `FaultTolerance` objects for guarding d
 If you use the `adapt*` methods, the resulting `Callable`, `Supplier` or `Runnable` objects will guard the underlying action using the original `FaultTolerance` instance, so stateful strategies will be shared.
 
 If you use the `create*` methods that directly return `Callable`, `Supplier` or `Runnable`, each such creation will have its own `FaultTolerance` instance under the hood, so stateful strategies will _not_ be shared.
+
+==== Circuit Breaker Maintenance
+
+The `CircuitBreakerMaintenance` API, accessed through `FaultTolerance.circuitBreakerMaintenance()` or by injection in the CDI implementation, can be used to manipulate all named circuit breakers.
+A circuit breaker is given a name by calling `withCircuitBreaker().name("\...")` on the fault tolerance builder, or using the `@CircuitBreakerName` annotation in the declarative API.
+
+Additionally, `CircuitBreakerMaintenance.resetAll()` will also reset all unnamed circuit breakers declared using the `@CicruitBreaker` annotation.
+For this to work, all unnamed circuit breakers have to be remembered.
+This is safe in case of the declarative, annotation-based API, because the number of such declared circuit breakers is fixed.
+At the same time, this would _not_ be safe to do for all unnamed circuit breakers created using the programmatic API, as their number is potentially unbounded.
+(In other words, remembering all unnamed circuit breakers created using the programmatic API would easily lead to a memory leak.)
+
+Therefore, all circuit breakers created using the programmatic API must be given a name when `CircuitBreakerMaintenance` is supposed to affect them.
+Note that duplicate names are not permitted and lead to an error, so lifecycle of the circuit breaker must be carefully considered.
 
 === Summary of `FaultTolerance` Methods
 

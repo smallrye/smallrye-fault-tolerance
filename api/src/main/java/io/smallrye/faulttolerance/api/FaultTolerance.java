@@ -486,9 +486,15 @@ public interface FaultTolerance<T> {
             CircuitBreakerBuilder<T, R> successThreshold(int value);
 
             /**
-             * Sets a circuit breaker name. Required to use the {@link CircuitBreakerMaintenance} methods
-             * that accept a name parameter. Defaults to unnamed. It is an error to use the same name
-             * for multiple circuit breakers.
+             * Sets a circuit breaker name. Required to use the {@link CircuitBreakerMaintenance} methods.
+             * Defaults to unnamed. It is an error to use the same name for multiple circuit breakers.
+             * <p>
+             * If a circuit breaker is not given a name, its state will <em>not</em> be affected
+             * by {@link CircuitBreakerMaintenance#resetAll()}. This is unlike unnamed circuit breakers
+             * declared using {@code @CircuitBreaker}, because there's a fixed number of circuit breakers
+             * created using the declarative API, but a potentially unbounded number of circuit breakers
+             * created using the programmatic API. In other words, automatically remembering all
+             * circuit breakers created using the programmatic API would easily lead to a memory leak.
              *
              * @param value the circuit breaker name, must not be {@code null}
              * @return this circuit breaker builder
