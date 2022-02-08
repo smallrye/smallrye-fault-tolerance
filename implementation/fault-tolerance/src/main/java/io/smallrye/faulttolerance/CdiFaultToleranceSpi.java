@@ -18,7 +18,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 public class CdiFaultToleranceSpi implements FaultToleranceSpi {
     @Singleton
-    static class Dependencies {
+    public static class Dependencies {
         @Inject
         @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true")
         boolean ftEnabled;
