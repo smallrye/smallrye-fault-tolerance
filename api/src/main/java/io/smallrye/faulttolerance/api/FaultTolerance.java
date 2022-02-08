@@ -32,7 +32,8 @@ import io.smallrye.common.annotation.Experimental;
  * <p>
  * The {@code create*} and {@code createAsync*} methods return a builder that allows configuring all fault tolerance
  * strategies. Order of builder method invocations does not matter, the fault tolerance strategies are always applied
- * in a predefined order: fallback > retry > circuit breaker > timeout > bulkhead > thread offload > guarded action.
+ * in a predefined order: fallback &gt; retry &gt; circuit breaker &gt; timeout &gt; bulkhead &gt; thread offload &gt;
+ * guarded action.
  * <p>
  * Two styles of usage are possible. The {@link #createCallable(Callable)} and {@link #createAsyncCallable(Callable)}
  * methods return a builder that, at the end, returns a {@code Callable}. This is convenient in case you only want to
@@ -340,7 +341,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the concurrency limit the bulkhead will enforce. Defaults to 10.
              *
-             * @param value the concurrency limit, must be >= 1
+             * @param value the concurrency limit, must be &gt;= 1
              * @return this bulkhead builder
              */
             BulkheadBuilder<T, R> limit(int value);
@@ -351,7 +352,7 @@ public interface FaultTolerance<T> {
              * May only be called if the builder configures fault tolerance for asynchronous actions. In other words,
              * if the builder was not created using {@code createAsync}, this method throws an exception.
              *
-             * @param value the queue size, must be >= 1
+             * @param value the queue size, must be &gt;= 1
              * @return this bulkhead builder
              */
             BulkheadBuilder<T, R> queueSize(int value);
@@ -448,7 +449,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the delay after which an open circuit moves to half-open. Defaults to 5 seconds.
              *
-             * @param value the delay length, must be >= 0
+             * @param value the delay length, must be &gt;= 0
              * @param unit the delay unit, must not be {@code null}
              * @return this circuit breaker builder
              * @see CircuitBreaker#delay() @CircuitBreaker.delay
@@ -459,7 +460,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the size of the circuit breaker's rolling window.
              *
-             * @param value the size of the circuit breaker's rolling window, must be >= 1
+             * @param value the size of the circuit breaker's rolling window, must be &gt;= 1
              * @return this circuit breaker builder
              * @see CircuitBreaker#requestVolumeThreshold() @CircuitBreaker.requestVolumeThreshold
              */
@@ -468,7 +469,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the failure ratio that, once reached, will move a closed circuit breaker to open. Defaults to 0.5.
              *
-             * @param value the failure ratio, must be >= 0 and <= 1
+             * @param value the failure ratio, must be &gt;= 0 and &lt;= 1
              * @return this circuit breaker builder
              * @see CircuitBreaker#failureRatio() @CircuitBreaker.failureRatio
              */
@@ -478,7 +479,7 @@ public interface FaultTolerance<T> {
              * Sets the number of successful executions that, once reached, will move a half-open circuit breaker
              * to closed. Defaults to 1.
              *
-             * @param value the number of successful executions, must be >= 1
+             * @param value the number of successful executions, must be &gt;= 1
              * @return this circuit breaker builder
              * @see CircuitBreaker#successThreshold() @CircuitBreaker.successThreshold
              */
@@ -638,7 +639,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the maximum number of retries. Defaults to 3.
              *
-             * @param value the maximum number of retries, must be >= -1.
+             * @param value the maximum number of retries, must be &gt;= -1.
              * @return this retry builder
              * @see Retry#maxRetries() @Retry.maxRetries
              */
@@ -647,7 +648,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the delay between retries. Defaults to 0.
              *
-             * @param value the delay length, must be >= 0
+             * @param value the delay length, must be &gt;= 0
              * @param unit the delay unit, must not be {@code null}
              * @return this retry builder
              * @see Retry#delay() @Retry.delay
@@ -658,7 +659,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the maximum duration of all invocations, including possible retries. Defaults to 3 minutes.
              *
-             * @param value the maximum duration length, must be >= 0
+             * @param value the maximum duration length, must be &gt;= 0
              * @param unit the maximum duration unit, must not be {@code null}
              * @return this retry builder
              * @see Retry#maxDuration() @Retry.maxDuration
@@ -670,7 +671,7 @@ public interface FaultTolerance<T> {
              * Sets the jitter bound. Random value in the range from {@code -jitter} to {@code +jitter} will be added
              * to the delay between retry attempts. Defaults to 200 millis.
              *
-             * @param value the jitter bound length, must be >= 0
+             * @param value the jitter bound length, must be &gt;= 0
              * @param unit the jitter bound unit, must not be {@code null}
              * @return this retry builder
              * @see Retry#jitter() @Retry.jitter
@@ -806,7 +807,7 @@ public interface FaultTolerance<T> {
                 /**
                  * Sets the multiplicative factor used to determine delay between retries. Defaults to 2.
                  *
-                 * @param value the multiplicative factor, must be >= 1
+                 * @param value the multiplicative factor, must be &gt;= 1
                  * @return this exponential backoff builder
                  * @see ExponentialBackoff#factor() @ExponentialBackoff.factor
                  */
@@ -815,7 +816,7 @@ public interface FaultTolerance<T> {
                 /**
                  * Sets the maximum delay between retries. Defaults to 1 minute.
                  *
-                 * @param value the maximum delay, must be >= 0
+                 * @param value the maximum delay, must be &gt;= 0
                  * @param unit the maximum delay unit, must not be {@code null}
                  * @return this exponential backoff builder
                  * @see ExponentialBackoff#maxDelay() @ExponentialBackoff.maxDelay
@@ -845,7 +846,7 @@ public interface FaultTolerance<T> {
                 /**
                  * Sets the maximum delay between retries. Defaults to 1 minute.
                  *
-                 * @param value the maximum delay, must be >= 0
+                 * @param value the maximum delay, must be &gt;= 0
                  * @param unit the maximum delay unit, must not be {@code null}
                  * @return this fibonacci backoff builder
                  * @see FibonacciBackoff#maxDelay() @FibonacciBackoff.maxDelay
@@ -901,7 +902,7 @@ public interface FaultTolerance<T> {
             /**
              * Sets the timeout duration. Defaults to 1 second.
              *
-             * @param value the timeout length, must be >= 0
+             * @param value the timeout length, must be &gt;= 0
              * @param unit the timeout unit, must not be {@code null}
              * @return this timeout builder
              * @see Timeout#value() @Timeout.value
