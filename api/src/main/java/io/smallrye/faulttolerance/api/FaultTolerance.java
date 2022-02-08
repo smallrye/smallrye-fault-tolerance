@@ -32,8 +32,7 @@ import io.smallrye.common.annotation.Experimental;
  * <p>
  * The {@code create*} and {@code createAsync*} methods return a builder that allows configuring all fault tolerance
  * strategies. Order of builder method invocations does not matter, the fault tolerance strategies are always applied
- * in a predefined order: fallback &#10148; retry &#10148; circuit breaker &#10148; timeout &#10148; bulkhead &#10148;
- * thread offload &#10148; guarded action.
+ * in a predefined order: fallback > retry > circuit breaker > timeout > bulkhead > thread offload > guarded action.
  * <p>
  * Two styles of usage are possible. The {@link #createCallable(Callable)} and {@link #createAsyncCallable(Callable)}
  * methods return a builder that, at the end, returns a {@code Callable}. This is convenient in case you only want to
