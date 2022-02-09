@@ -120,6 +120,10 @@ In the example above, we assume the `externalService.hello()` call is blocking, 
 If we didn't configure `withThreadOffload`, however, the execution would continue on the original thread.
 This is often desired for non-blocking actions, which are very common in modern reactive architectures.
 
+Also note that in this example, we configured multiple fault tolerance strategies: bulkhead and thread offload.
+When that happens, the fault tolerance strategies are ordered according to the MicroProfile Fault Tolerance specification, just like in the declarative API.
+Order of all the `with*` method invocations doesn’t matter.
+
 === Synchronous vs. Asynchronous
 
 What's the difference between `FaultTolerance.<CompletionStage<String>>create()` and `FaultTolerance.<String>createAsync()`?
@@ -210,7 +214,7 @@ If you use the `adapt*` methods, the resulting `Callable`, `Supplier` or `Runnab
 
 If you use the `create*` methods that directly return `Callable`, `Supplier` or `Runnable`, each such creation will have its own `FaultTolerance` instance under the hood, so stateful strategies will _not_ be shared.
 
-==== Circuit Breaker Maintenance
+=== Circuit Breaker Maintenance
 
 The `CircuitBreakerMaintenance` API, accessed through `FaultTolerance.circuitBreakerMaintenance()` or by injection in the CDI implementation, can be used to manipulate all named circuit breakers.
 A circuit breaker is given a name by calling `withCircuitBreaker().name("\...")` on the fault tolerance builder, or using the `@CircuitBreakerName` annotation in the declarative API.
@@ -239,6 +243,8 @@ private static final FaultTolerance<String> guard = FaultTolerance.<String>creat
 ----
 
 <1> The `onTimeout` method takes a `Runnable` that will later be executed whenever an invocation guarded by `guard` times out.
+
+All event listeners registered like this must run quickly and must not throw exceptions.
 
 === Summary of `FaultTolerance` Methods
 
