@@ -11,7 +11,8 @@ public class AsyncTypes {
 
     static {
         Map<Class<?>, AsyncTypeConverter<?, ?>> map = new HashMap<>();
-        for (AsyncTypeConverter<?, ?> converter : ServiceLoader.load(AsyncTypeConverter.class)) {
+        for (AsyncTypeConverter<?, ?> converter : ServiceLoader.load(AsyncTypeConverter.class,
+                AsyncTypes.class.getClassLoader())) {
             map.put(converter.type(), converter);
         }
         registry = Collections.unmodifiableMap(map);
