@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.async.types;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,11 +13,17 @@ public class AsyncTypes {
 
     static {
         Map<Class<?>, AsyncTypeConverter<?, ?>> map = new HashMap<>();
-        for (AsyncTypeConverter<?, ?> converter : ServiceLoader.load(AsyncTypeConverter.class,
-                AsyncTypes.class.getClassLoader())) {
+        Iterable<AsyncTypeConverter> converters = (System.getSecurityManager() != null)
+                ? AccessController.doPrivileged((PrivilegedAction<Iterable<AsyncTypeConverter>>) AsyncTypes::loadConverters)
+                : loadConverters();
+        for (AsyncTypeConverter<?, ?> converter : converters) {
             map.put(converter.type(), converter);
         }
         registry = Collections.unmodifiableMap(map);
+    }
+
+    private static ServiceLoader<AsyncTypeConverter> loadConverters() {
+        return ServiceLoader.load(AsyncTypeConverter.class, AsyncTypeConverter.class.getClassLoader());
     }
 
     public static boolean isKnown(Class<?> type) {
