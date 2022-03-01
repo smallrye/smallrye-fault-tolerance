@@ -9,6 +9,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -447,6 +448,19 @@ public interface FaultTolerance<T> {
             }
 
             /**
+             * Sets a predicate to determine when an exception should be considered failure
+             * by the circuit breaker. This is a more general variant of {@link #failOn(Collection) failOn}.
+             * Note that there is no generalized {@link #skipOn(Collection) skipOn}, because all exceptions
+             * that do not match this predicate are implicitly considered success.
+             * <p>
+             * If this method is called, {@code failOn} and {@code skipOn} may not be called.
+             *
+             * @param value the predicate, must not be {@code null}
+             * @return this circuit breaker builder
+             */
+            CircuitBreakerBuilder<T, R> when(Predicate<Throwable> value);
+
+            /**
              * Sets the delay after which an open circuit moves to half-open. Defaults to 5 seconds.
              *
              * @param value the delay length, must be &gt;= 0
@@ -618,6 +632,19 @@ public interface FaultTolerance<T> {
             }
 
             /**
+             * Sets a predicate to determine when an exception should be considered failure
+             * and fallback should be applied. This is a more general variant of {@link #applyOn(Collection) applyOn}.
+             * Note that there is no generalized {@link #skipOn(Collection) skipOn}, because all exceptions
+             * that do not match this predicate are implicitly considered success.
+             * <p>
+             * If this method is called, {@code applyOn} and {@code skipOn} may not be called.
+             *
+             * @param value the predicate, must not be {@code null}
+             * @return this fallback builder
+             */
+            FallbackBuilder<T, R> when(Predicate<Throwable> value);
+
+            /**
              * Returns the original fault tolerance builder.
              *
              * @return the original fault tolerance builder
@@ -716,6 +743,19 @@ public interface FaultTolerance<T> {
             default RetryBuilder<T, R> abortOn(Class<? extends Throwable> value) {
                 return abortOn(Collections.singleton(Objects.requireNonNull(value)));
             }
+
+            /**
+             * Sets a predicate to determine when an exception should be considered failure
+             * and retry should be attempted. This is a more general variant of {@link #retryOn(Collection) retryOn}.
+             * Note that there is no generalized {@link #abortOn(Collection) abortOn}, because all exceptions
+             * that do not match this predicate are implicitly considered success.
+             * <p>
+             * If this method is called, {@code retryOn} and {@code abortOn} may not be called.
+             *
+             * @param value the predicate, must not be {@code null}
+             * @return this fallback builder
+             */
+            RetryBuilder<T, R> when(Predicate<Throwable> value);
 
             /**
              * Configures retry to use an exponential backoff instead of the default constant backoff.

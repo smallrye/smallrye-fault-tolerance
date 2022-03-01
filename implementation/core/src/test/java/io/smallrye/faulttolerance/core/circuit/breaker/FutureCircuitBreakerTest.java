@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
-import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
 
@@ -30,7 +30,7 @@ public class FutureCircuitBreakerTest {
     @Test
     public void test1() throws Exception {
         CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(), "test invocation",
-                new ExceptionDecision(testException, SetOfThrowables.EMPTY, false),
+                new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed
@@ -87,7 +87,7 @@ public class FutureCircuitBreakerTest {
     @Test
     public void test2() throws Exception {
         CircuitBreaker<Future<String>> cb = new CircuitBreaker<>(invocation(), "test invocation",
-                new ExceptionDecision(testException, SetOfThrowables.EMPTY, false),
+                new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch);
 
         // circuit breaker is closed

@@ -64,6 +64,19 @@ public class StandaloneRetryAsyncTest {
     }
 
     @Test
+    public void asyncRetryWithWhen() {
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+                .withRetry().maxRetries(3).when(e -> e instanceof RuntimeException).done()
+                .withFallback().handler(this::fallback).when(e -> e instanceof TestException).done()
+                .build();
+
+        assertThat(guarded.get())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("fallback");
+        assertThat(counter).hasValue(1); // 1 initial invocation
+    }
+
+    @Test
     public void synchronousFlow() {
         // this is usually a mistake, because it only guards the synchronous execution
         // only testing it here to verify that indeed asynchronous fault tolerance doesn't apply

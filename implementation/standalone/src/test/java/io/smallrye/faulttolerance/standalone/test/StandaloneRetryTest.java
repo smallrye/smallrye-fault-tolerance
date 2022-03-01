@@ -51,6 +51,17 @@ public class StandaloneRetryTest {
         assertThat(counter).isEqualTo(1); // 1 initial invocation
     }
 
+    @Test
+    public void retryWithWhen() throws Exception {
+        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+                .withRetry().maxRetries(3).when(e -> e instanceof RuntimeException).done()
+                .withFallback().when(e -> e instanceof TestException).handler(this::fallback).done()
+                .build();
+
+        assertThat(guarded.call()).isEqualTo("fallback");
+        assertThat(counter).isEqualTo(1); // 1 initial invocation
+    }
+
     public String action() throws TestException {
         counter++;
         throw new TestException();

@@ -20,6 +20,7 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetryTest {
@@ -67,7 +68,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnError",
-                new ExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
+                new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -88,7 +89,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnErrorInCSCreation",
-                new ExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
+                new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -113,7 +114,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnce",
-                new ExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -139,7 +140,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnceOnCsFailure",
-                new ExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -165,7 +166,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
-                new ExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -185,7 +186,7 @@ public class CompletionStageRetryTest {
                 }));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
-                new ExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));

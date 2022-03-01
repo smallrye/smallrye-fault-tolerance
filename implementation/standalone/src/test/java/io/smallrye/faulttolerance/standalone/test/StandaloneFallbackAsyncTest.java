@@ -62,6 +62,18 @@ public class StandaloneFallbackAsyncTest {
     }
 
     @Test
+    public void asyncFallbackWithWhen() {
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+                .withFallback().handler(this::fallback).when(e -> e instanceof RuntimeException).done()
+                .build();
+
+        assertThat(guarded.get())
+                .failsWithin(10, TimeUnit.SECONDS)
+                .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
+                .withCauseExactlyInstanceOf(TestException.class);
+    }
+
+    @Test
     public void synchronousFlow() {
         // doing this is usually a mistake, because it only guards the synchronous execution
         // only testing it here to verify that indeed asynchronous fault tolerance doesn't apply
