@@ -14,6 +14,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
@@ -54,6 +55,8 @@ import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.Initializer;
 import io.smallrye.faulttolerance.core.util.Preconditions;
+import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
+import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
@@ -210,7 +213,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             if (ftEnabled && circuitBreakerBuilder != null) {
                 result = new CircuitBreaker<>(result, description,
-                        createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn),
+                        createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
+                                circuitBreakerBuilder.whenPredicate),
                         circuitBreakerBuilder.delayInMillis,
                         circuitBreakerBuilder.requestVolumeThreshold,
                         circuitBreakerBuilder.failureRatio,
@@ -231,8 +235,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
                 result = new Retry<>(result, description,
-                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn), retryBuilder.maxRetries,
-                        retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
+                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
+                        retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
                         new SystemStopwatch());
             }
 
@@ -240,7 +244,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             if (fallbackBuilder != null) {
                 FallbackFunction<T> fallbackFunction = ctx -> fallbackBuilder.handler.apply(ctx.failure);
                 result = new Fallback<>(result, description, fallbackFunction,
-                        createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn));
+                        createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
+                                fallbackBuilder.whenPredicate));
             }
 
             return result;
@@ -283,7 +288,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             if (ftEnabled && circuitBreakerBuilder != null) {
                 result = new CompletionStageCircuitBreaker<>(result, description,
-                        createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn),
+                        createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
+                                circuitBreakerBuilder.whenPredicate),
                         circuitBreakerBuilder.delayInMillis,
                         circuitBreakerBuilder.requestVolumeThreshold,
                         circuitBreakerBuilder.failureRatio,
@@ -304,8 +310,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
                 result = new CompletionStageRetry<>(result, description,
-                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn), retryBuilder.maxRetries,
-                        retryBuilder.maxDurationInMillis, () -> new TimerDelay(backoff.get(), timer),
+                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
+                        retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new TimerDelay(backoff.get(), timer),
                         new SystemStopwatch());
             }
 
@@ -314,7 +320,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                 FallbackFunction<CompletionStage<T>> fallbackFunction = ctx -> AsyncTypes.toCompletionStageIfRequired(
                         fallbackBuilder.handler.apply(ctx.failure), asyncType);
                 result = new CompletionStageFallback<>(result, description, fallbackFunction,
-                        createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn));
+                        createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
+                                fallbackBuilder.whenPredicate));
             }
 
             // thread offload is always enabled
@@ -330,8 +337,14 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
         }
 
         private static ExceptionDecision createExceptionDecision(Collection<Class<? extends Throwable>> consideredExpected,
-                Collection<Class<? extends Throwable>> consideredFailure) {
-            return new ExceptionDecision(createSetOfThrowables(consideredFailure),
+                Collection<Class<? extends Throwable>> consideredFailure, Predicate<Throwable> whenPredicate) {
+            if (whenPredicate != null) {
+                // the builder API accepts a predicate that returns `true` when an exception is considered failure,
+                // but `PredicateBasedExceptionDecision` accepts a predicate that returns `true` when an exception
+                // is considered success -- hence the negation
+                return new PredicateBasedExceptionDecision(whenPredicate.negate());
+            }
+            return new SetBasedExceptionDecision(createSetOfThrowables(consideredFailure),
                     createSetOfThrowables(consideredExpected), true);
         }
 
@@ -422,6 +435,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             private Collection<Class<? extends Throwable>> failOn = Collections.singleton(Throwable.class);
             private Collection<Class<? extends Throwable>> skipOn = Collections.emptySet();
+            private boolean setBasedExceptionDecisionDefined = false;
+            private Predicate<Throwable> whenPredicate;
             private long delayInMillis = 5000;
             private int requestVolumeThreshold = 20;
             private double failureRatio = 0.5;
@@ -441,12 +456,20 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             @Override
             public CircuitBreakerBuilder<T, R> failOn(Collection<Class<? extends Throwable>> value) {
                 this.failOn = Preconditions.checkNotNull(value, "Exceptions considered failure must be set");
+                this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T, R> skipOn(Collection<Class<? extends Throwable>> value) {
                 this.skipOn = Preconditions.checkNotNull(value, "Exceptions considered success must be set");
+                this.setBasedExceptionDecisionDefined = true;
+                return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder<T, R> when(Predicate<Throwable> value) {
+                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
@@ -509,6 +532,10 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             @Override
             public Builder<T, R> done() {
+                if (whenPredicate != null && setBasedExceptionDecisionDefined) {
+                    throw new IllegalStateException("The when() method may not be combined with failOn() / skipOn()");
+                }
+
                 parent.circuitBreakerBuilder = this;
                 return parent;
             }
@@ -520,6 +547,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             private Function<Throwable, T> handler;
             private Collection<Class<? extends Throwable>> applyOn = Collections.singleton(Throwable.class);
             private Collection<Class<? extends Throwable>> skipOn = Collections.emptySet();
+            private boolean setBasedExceptionDecisionDefined = false;
+            private Predicate<Throwable> whenPredicate;
 
             FallbackBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
@@ -541,18 +570,30 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             @Override
             public FallbackBuilder<T, R> applyOn(Collection<Class<? extends Throwable>> value) {
                 this.applyOn = Preconditions.checkNotNull(value, "Exceptions to apply fallback on must be set");
+                this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
             public FallbackBuilder<T, R> skipOn(Collection<Class<? extends Throwable>> value) {
                 this.skipOn = Preconditions.checkNotNull(value, "Exceptions to skip fallback on must be set");
+                this.setBasedExceptionDecisionDefined = true;
+                return this;
+            }
+
+            @Override
+            public FallbackBuilder<T, R> when(Predicate<Throwable> value) {
+                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
             @Override
             public Builder<T, R> done() {
                 Preconditions.checkNotNull(handler, "Fallback handler must be set");
+
+                if (whenPredicate != null && setBasedExceptionDecisionDefined) {
+                    throw new IllegalStateException("The when() method may not be combined with applyOn() / skipOn()");
+                }
 
                 parent.fallbackBuilder = this;
                 return parent;
@@ -568,6 +609,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             private long jitterInMillis = 200;
             private Collection<Class<? extends Throwable>> retryOn = Collections.singleton(Exception.class);
             private Collection<Class<? extends Throwable>> abortOn = Collections.emptySet();
+            private boolean setBasedExceptionDecisionDefined = false;
+            private Predicate<Throwable> whenPredicate;
 
             private ExponentialBackoffBuilderImpl<T, R> exponentialBackoffBuilder;
             private FibonacciBackoffBuilderImpl<T, R> fibonacciBackoffBuilder;
@@ -617,12 +660,20 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             @Override
             public RetryBuilder<T, R> retryOn(Collection<Class<? extends Throwable>> value) {
                 this.retryOn = Preconditions.checkNotNull(value, "Exceptions to retry on must be set");
+                this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
             public RetryBuilder<T, R> abortOn(Collection<Class<? extends Throwable>> value) {
                 this.abortOn = Preconditions.checkNotNull(value, "Exceptions to abort retrying on must be set");
+                this.setBasedExceptionDecisionDefined = true;
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T, R> when(Predicate<Throwable> value) {
+                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
@@ -661,6 +712,10 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             @Override
             public Builder<T, R> done() {
+                if (whenPredicate != null && setBasedExceptionDecisionDefined) {
+                    throw new IllegalStateException("The when() method may not be combined with retryOn() / abortOn()");
+                }
+
                 int backoffStrategies = 0;
                 if (exponentialBackoffBuilder != null) {
                     backoffStrategies++;

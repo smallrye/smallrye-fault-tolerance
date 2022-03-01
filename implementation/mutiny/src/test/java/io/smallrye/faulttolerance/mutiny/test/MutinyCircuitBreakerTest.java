@@ -80,6 +80,26 @@ public class MutinyCircuitBreakerTest {
                 .withCauseExactlyInstanceOf(TestException.class);
     }
 
+    @Test
+    public void circuitBreakerWithWhen() {
+        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+                .withCircuitBreaker().requestVolumeThreshold(4).when(e -> e instanceof RuntimeException).done()
+                .withFallback().handler(this::fallback).when(e -> e instanceof CircuitBreakerOpenException).done()
+                .build();
+
+        for (int i = 0; i < 4; i++) {
+            assertThat(guarded.get().subscribeAsCompletionStage())
+                    .failsWithin(10, TimeUnit.SECONDS)
+                    .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
+                    .withCauseExactlyInstanceOf(TestException.class);
+        }
+
+        assertThat(guarded.get().subscribeAsCompletionStage())
+                .failsWithin(10, TimeUnit.SECONDS)
+                .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
+                .withCauseExactlyInstanceOf(TestException.class);
+    }
+
     public Uni<String> action() {
         return Uni.createFrom().failure(new TestException());
     }

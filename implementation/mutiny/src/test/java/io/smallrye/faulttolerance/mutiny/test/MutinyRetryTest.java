@@ -60,6 +60,19 @@ public class MutinyRetryTest {
         assertThat(counter).hasValue(1); // 1 initial invocation
     }
 
+    @Test
+    public void retryWithWhen() {
+        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+                .withRetry().maxRetries(3).when(e -> e instanceof RuntimeException).done()
+                .withFallback().handler(this::fallback).when(e -> e instanceof TestException).done()
+                .build();
+
+        assertThat(guarded.get().subscribeAsCompletionStage())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("fallback");
+        assertThat(counter).hasValue(1); // 1 initial invocation
+    }
+
     public Uni<String> action() {
         counter.incrementAndGet();
         return Uni.createFrom().failure(new TestException());

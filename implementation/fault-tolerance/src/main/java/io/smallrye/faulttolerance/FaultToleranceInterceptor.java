@@ -86,6 +86,7 @@ import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
@@ -533,7 +534,7 @@ public class FaultToleranceInterceptor {
 
     private ExceptionDecision createExceptionDecision(Class<? extends Throwable>[] consideredExpected,
             Class<? extends Throwable>[] consideredFailure) {
-        return new ExceptionDecision(createSetOfThrowables(consideredFailure),
+        return new SetBasedExceptionDecision(createSetOfThrowables(consideredFailure),
                 createSetOfThrowables(consideredExpected), specCompatibility.inspectExceptionCauseChain());
     }
 

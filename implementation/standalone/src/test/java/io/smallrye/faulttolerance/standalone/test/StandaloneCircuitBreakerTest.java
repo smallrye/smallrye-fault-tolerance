@@ -60,6 +60,20 @@ public class StandaloneCircuitBreakerTest {
         assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
     }
 
+    @Test
+    public void circuitBreakerWithWhen() {
+        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+                .withCircuitBreaker().requestVolumeThreshold(4).when(e -> e instanceof RuntimeException).done()
+                .withFallback().handler(this::fallback).when(e -> e instanceof CircuitBreakerOpenException).done()
+                .build();
+
+        for (int i = 0; i < 4; i++) {
+            assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
+        }
+
+        assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
+    }
+
     public String action() throws TestException {
         throw new TestException();
     }

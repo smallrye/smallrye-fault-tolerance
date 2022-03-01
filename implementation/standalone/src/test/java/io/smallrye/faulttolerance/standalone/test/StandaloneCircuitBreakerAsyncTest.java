@@ -23,7 +23,7 @@ public class StandaloneCircuitBreakerAsyncTest {
     }
 
     @Test
-    public void asyncCircuitBreaker() throws Exception {
+    public void asyncCircuitBreaker() {
         Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
                 .withCircuitBreaker().requestVolumeThreshold(4).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
@@ -42,7 +42,7 @@ public class StandaloneCircuitBreakerAsyncTest {
     }
 
     @Test
-    public void asyncCircuitBreakerWithSkipOn() throws Exception {
+    public void asyncCircuitBreakerWithSkipOn() {
         Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
                 .withCircuitBreaker().requestVolumeThreshold(4).skipOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
@@ -62,10 +62,30 @@ public class StandaloneCircuitBreakerAsyncTest {
     }
 
     @Test
-    public void asyncCircuitBreakerWithFailOn() throws Exception {
+    public void asyncCircuitBreakerWithFailOn() {
         Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
                 .withCircuitBreaker().requestVolumeThreshold(4).failOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
+                .build();
+
+        for (int i = 0; i < 4; i++) {
+            assertThat(guarded.get())
+                    .failsWithin(10, TimeUnit.SECONDS)
+                    .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
+                    .withCauseExactlyInstanceOf(TestException.class);
+        }
+
+        assertThat(guarded.get())
+                .failsWithin(10, TimeUnit.SECONDS)
+                .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
+                .withCauseExactlyInstanceOf(TestException.class);
+    }
+
+    @Test
+    public void asyncCircuitBreakerWithWhen() {
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+                .withCircuitBreaker().requestVolumeThreshold(4).when(e -> e instanceof RuntimeException).done()
+                .withFallback().handler(this::fallback).when(e -> e instanceof CircuitBreakerOpenException).done()
                 .build();
 
         for (int i = 0; i < 4; i++) {

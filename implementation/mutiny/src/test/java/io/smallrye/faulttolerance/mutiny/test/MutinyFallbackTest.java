@@ -59,6 +59,18 @@ public class MutinyFallbackTest {
                 .withCauseExactlyInstanceOf(TestException.class);
     }
 
+    @Test
+    public void fallbackWithWhen() {
+        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+                .withFallback().handler(this::fallback).when(e -> e instanceof RuntimeException).done()
+                .build();
+
+        assertThat(guarded.get().subscribeAsCompletionStage())
+                .failsWithin(10, TimeUnit.SECONDS)
+                .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
+                .withCauseExactlyInstanceOf(TestException.class);
+    }
+
     public Uni<String> action() {
         return Uni.createFrom().failure(new TestException());
     }

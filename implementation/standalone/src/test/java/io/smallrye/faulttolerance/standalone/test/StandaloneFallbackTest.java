@@ -47,6 +47,15 @@ public class StandaloneFallbackTest {
         assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
     }
 
+    @Test
+    public void fallbackWithWhen() {
+        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+                .withFallback().handler(this::fallback).when(e -> e instanceof RuntimeException).done()
+                .build();
+
+        assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
+    }
+
     public String action() throws TestException {
         throw new TestException();
     }
