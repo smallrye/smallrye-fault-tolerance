@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Contains a sequence of {@link Runnable} actions and makes sure that they are only executed once.
+ * Concurrent threads are guaranteed to not exit {@code runOne()} before initialization has finished.
  */
 public final class Initializer {
     private final Runnable[] actions;
@@ -21,9 +22,15 @@ public final class Initializer {
     }
 
     public void runOnce() {
-        if (ran.compareAndSet(false, true)) {
-            for (Runnable action : actions) {
-                action.run();
+        if (ran.get()) {
+            return;
+        }
+
+        synchronized (this) {
+            if (ran.compareAndSet(false, true)) {
+                for (Runnable action : actions) {
+                    action.run();
+                }
             }
         }
     }

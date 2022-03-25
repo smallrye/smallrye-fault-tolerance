@@ -1,3 +1,0 @@
-io.smallrye.faulttolerance.rxjava3.impl.SingleConverter
-io.smallrye.faulttolerance.rxjava3.impl.MaybeConverter
-io.smallrye.faulttolerance.rxjava3.impl.CompletableConverter

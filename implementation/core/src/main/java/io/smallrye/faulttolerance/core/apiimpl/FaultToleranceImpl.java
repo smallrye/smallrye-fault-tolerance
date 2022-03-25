@@ -17,6 +17,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
+
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
@@ -24,8 +26,6 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
-import io.smallrye.faulttolerance.core.async.types.AsyncTypes;
-import io.smallrye.faulttolerance.core.async.types.AsyncTypesConversion;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
@@ -35,6 +35,10 @@ import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
+import io.smallrye.faulttolerance.core.invocation.Invoker;
+import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.retry.BackOff;
 import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
@@ -59,8 +63,15 @@ import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
-public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
-    private final FaultToleranceStrategy<T> strategy;
+// V = value type, e.g. String
+// S = strategy type, e.g. String or CompletionStage<String>
+// T = result type, e.g. String or CompletionStage<String> or Uni<String>
+//
+// in synchronous scenario, V = S = T
+// in asynchronous scenario, S = CompletionStage<V> and T is an async type that eventually produces V
+public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
+    private final FaultToleranceStrategy<S> strategy;
+    private final AsyncSupport<V, T> asyncSupport;
     private final EventHandlers eventHandlers;
     private final Initializer initializer;
 
@@ -82,8 +93,10 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
     // but that instance is never used. The useful `FaultTolerance` instance is held by the actual bean instance,
     // which is created lazily, on the first method invocation on the client proxy.
 
-    FaultToleranceImpl(FaultToleranceStrategy<T> strategy, EventHandlers eventHandlers, Initializer initializer) {
+    FaultToleranceImpl(FaultToleranceStrategy<S> strategy, AsyncSupport<V, T> asyncSupport, EventHandlers eventHandlers,
+            Initializer initializer) {
         this.strategy = strategy;
+        this.asyncSupport = asyncSupport;
         this.eventHandlers = eventHandlers;
         this.initializer = initializer;
     }
@@ -92,9 +105,18 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
     public T call(Callable<T> action) throws Exception {
         initializer.runOnce();
 
-        InvocationContext<T> ctx = new InvocationContext<>(action);
+        if (asyncSupport == null) {
+            InvocationContext<T> ctx = new InvocationContext<>(action);
+            eventHandlers.register(ctx);
+            return ((FaultToleranceStrategy<T>) strategy).apply(ctx);
+        }
+
+        Invoker<T> invoker = new CallableInvoker<>(action);
+        InvocationContext<CompletionStage<V>> ctx = new InvocationContext<>(() -> asyncSupport.toCompletionStage(invoker));
         eventHandlers.register(ctx);
-        return strategy.apply(ctx);
+        Invoker<CompletionStage<V>> wrapper = new StrategyInvoker<>(null,
+                (FaultToleranceStrategy<CompletionStage<V>>) strategy, ctx);
+        return asyncSupport.fromCompletionStage(wrapper);
     }
 
     public static final class BuilderImpl<T, R> implements Builder<T, R> {
@@ -192,10 +214,23 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
                     timeoutBuilder != null ? timeoutBuilder.onTimeout : null,
                     timeoutBuilder != null ? timeoutBuilder.onFinished : null);
 
-            List<Runnable> initActions = new ArrayList<>();
-            FaultToleranceStrategy<T> strategy = isAsync ? buildAsyncStrategy(initActions) : buildSyncStrategy(initActions);
+            return isAsync ? buildAsync(eventHandlers) : buildSync(eventHandlers);
+        }
 
-            FaultTolerance<T> result = new FaultToleranceImpl<>(strategy, eventHandlers, new Initializer(initActions));
+        private R buildSync(EventHandlers eventHandlers) {
+            List<Runnable> initActions = new ArrayList<>();
+            FaultToleranceStrategy<T> strategy = buildSyncStrategy(initActions);
+            FaultTolerance<T> result = new FaultToleranceImpl<>(strategy, (AsyncSupport<T, T>) null, eventHandlers,
+                    new Initializer(initActions));
+            return finisher.apply(result);
+        }
+
+        private <V> R buildAsync(EventHandlers eventHandlers) {
+            List<Runnable> initActions = new ArrayList<>();
+            FaultToleranceStrategy<CompletionStage<V>> strategy = buildAsyncStrategy(initActions);
+            AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
+            FaultTolerance<T> result = new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers,
+                    new Initializer(initActions));
             return finisher.apply(result);
         }
 
@@ -251,26 +286,8 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
             return result;
         }
 
-        private FaultToleranceStrategy<T> buildAsyncStrategy(List<Runnable> initActions) {
-            // FaultToleranceStrategy expects that the input type and output type are the same, which
-            // isn't true for the conversion strategies used below (even though the entire chain does
-            // retain the type, the conversions are only intermediate)
-            // that's why we use raw types here, to work around this design choice
-
-            FaultToleranceStrategy result = invocation();
-
-            result = new AsyncTypesConversion.ToCompletionStage(result, AsyncTypes.get(asyncType));
-
-            result = buildCompletionStageChain(result, initActions);
-
-            result = new AsyncTypesConversion.FromCompletionStage(result, AsyncTypes.get(asyncType));
-
-            return result;
-        }
-
-        private FaultToleranceStrategy<CompletionStage<T>> buildCompletionStageChain(
-                FaultToleranceStrategy<CompletionStage<T>> invocation, List<Runnable> initActions) {
-            FaultToleranceStrategy<CompletionStage<T>> result = invocation;
+        private <V> FaultToleranceStrategy<CompletionStage<V>> buildAsyncStrategy(List<Runnable> initActions) {
+            FaultToleranceStrategy<CompletionStage<V>> result = invocation();
 
             // thread offload is always enabled
             Executor executor = offloadToAnotherThread ? this.executor : DirectExecutor.INSTANCE;
@@ -317,8 +334,14 @@ public final class FaultToleranceImpl<T> implements FaultTolerance<T> {
 
             // fallback is always enabled
             if (fallbackBuilder != null) {
-                FallbackFunction<CompletionStage<T>> fallbackFunction = ctx -> AsyncTypes.toCompletionStageIfRequired(
-                        fallbackBuilder.handler.apply(ctx.failure), asyncType);
+                AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
+                if (asyncSupport == null) {
+                    throw new FaultToleranceException("Unknown async type: " + asyncType);
+                }
+
+                FallbackFunction<CompletionStage<V>> fallbackFunction = ctx -> asyncSupport.fallbackResultToCompletionStage(
+                        fallbackBuilder.handler.apply(ctx.failure));
+
                 result = new CompletionStageFallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
                                 fallbackBuilder.whenPredicate));

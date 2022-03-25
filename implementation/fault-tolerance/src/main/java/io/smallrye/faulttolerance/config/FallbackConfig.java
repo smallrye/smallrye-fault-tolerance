@@ -64,6 +64,11 @@ public interface FallbackConfig extends Fallback, Config {
                 }
             }
             Type boxedReturnType = FallbackValidation.box(guardedMethod.getGenericReturnType());
+
+            if (KotlinSupport.isSuspendingFunction(guardedMethod)) {
+                boxedReturnType = KotlinSupport.getSuspendingFunctionResultType(guardedMethod);
+            }
+
             if (!boxedReturnType.equals(fallbackType)) {
                 throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
                         + ": fallback handler's type " + fallbackType + " is not the same as method's return type");

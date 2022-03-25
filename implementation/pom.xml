@@ -30,6 +30,8 @@
 
     <modules>
         <module>core</module>
+
+        <module>kotlin</module>
         <module>mutiny</module>
         <module>rxjava3</module>
         <module>vertx</module>

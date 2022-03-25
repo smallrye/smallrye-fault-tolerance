@@ -37,6 +37,8 @@
         <version.javapoet>1.13.0</version.javapoet>
         <version.jboss-logging>3.4.3.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
+        <version.kotlin>1.6.10</version.kotlin>
+        <version.kotlinx-coroutines>1.6.0</version.kotlinx-coroutines>
         <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
         <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
@@ -115,11 +117,6 @@
                 <version>${version.jakarta-interceptors}</version>
             </dependency>
             <dependency>
-                <groupId>com.squareup</groupId>
-                <artifactId>javapoet</artifactId>
-                <version>${version.javapoet}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.eclipse.microprofile.config</groupId>
                 <artifactId>microprofile-config-api</artifactId>
                 <version>${version.microprofile-config-api}</version>
@@ -151,22 +148,11 @@
                 <version>${version.microprofile-fault-tolerance}</version>
                 <scope>test</scope>
             </dependency>
+
             <dependency>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging</artifactId>
-                <version>${version.jboss-logging}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging-annotations</artifactId>
-                <version>${version.jboss-logging-tools}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging-processor</artifactId>
-                <version>${version.jboss-logging-tools}</version>
-                <scope>provided</scope>
+                <groupId>com.squareup</groupId>
+                <artifactId>javapoet</artifactId>
+                <version>${version.javapoet}</version>
             </dependency>
             <dependency>
                 <groupId>io.smallrye.common</groupId>
@@ -209,6 +195,28 @@
                 <artifactId>vertx-core</artifactId>
                 <version>${version.vertx}</version>
             </dependency>
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging</artifactId>
+                <version>${version.jboss-logging}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging-annotations</artifactId>
+                <version>${version.jboss-logging-tools}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging-processor</artifactId>
+                <version>${version.jboss-logging-tools}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>${version.kotlin}</version>
+            </dependency>
 
             <dependency>
                 <groupId>io.smallrye.config</groupId>
@@ -234,6 +242,13 @@
                 <version>${version.smallrye-context-propagation}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-jdk8</artifactId>
+                <version>${version.kotlinx-coroutines}</version>
+                <scope>test</scope>
+            </dependency>
+
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
@@ -322,6 +337,11 @@
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-core</artifactId>
                 <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-kotlin</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

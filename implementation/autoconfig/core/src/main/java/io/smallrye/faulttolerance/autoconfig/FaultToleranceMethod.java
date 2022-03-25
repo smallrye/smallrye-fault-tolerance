@@ -59,6 +59,10 @@ public class FaultToleranceMethod {
     public Set<Class<? extends Annotation>> annotationsPresentDirectly;
 
     public boolean isLegitimate() {
+        if (!KotlinSupport.isLegitimate(method)) {
+            return false;
+        }
+
         // SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff)
         // alone do _not_ trigger the fault tolerance interceptor,
         // only in combination with other fault tolerance annotations
