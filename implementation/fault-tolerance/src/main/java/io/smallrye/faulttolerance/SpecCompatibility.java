@@ -8,7 +8,7 @@ import javax.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
-import io.smallrye.faulttolerance.core.async.types.AsyncTypes;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 
 @Singleton
 public class SpecCompatibility {
@@ -21,13 +21,14 @@ public class SpecCompatibility {
     }
 
     public boolean isOperationTrulyAsynchronous(FaultToleranceOperation operation) {
-        boolean returnTypeMatches = AsyncTypes.isKnown(operation.getReturnType());
+        //boolean supported = AsyncTypes.isKnown(operation.getReturnType());
+        boolean supported = AsyncSupportRegistry.isKnown(operation.getParameterTypes(), operation.getReturnType());
 
         if (compatible) {
             boolean hasAnnotation = operation.hasAsynchronous() || operation.hasBlocking() || operation.hasNonBlocking();
-            return returnTypeMatches && hasAnnotation;
+            return supported && hasAnnotation;
         } else {
-            return returnTypeMatches;
+            return supported;
         }
     }
 

@@ -198,7 +198,7 @@ public class MyService {
 
 <1> Using the `@NonBlocking` annotation described in <<blocking-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
 <2> Returning the `Uni` type from Mutiny.
-    This shows that whatever works for `CompletionStage` also works for the other async types.
+This shows that whatever works for `CompletionStage` also works for the other async types.
 
 The implementation internally converts the async types to a `CompletionStage` and back.
 This means that to be able to use any particular asynchronous type, the corresponding converter must be present.
@@ -311,17 +311,16 @@ Note that the non-compatible mode is available since {smallrye-fault-tolerance} 
 Previous versions are always compatible.
 ****
 
-=== Determining Method Asynchrony from Return Type
+[[method-asynchrony]]
+=== Determining Asynchrony from Method Signature
 
-In addition to the <<blocking-nonblocking>> annotations, in the non-compatible mode, method asynchrony is determined solely from its return type.
+In the non-compatible mode, method asynchrony is determined solely from its signature.
 That is, methods that
 
 * have some fault tolerance annotation (such as `@Retry`),
 * return `CompletionStage` (or some other <<async-types,async type>>),
-* are _not_ annotated `@Blocking`, `@NonBlocking` or `@Asynchronous`
 
-are not offloaded to a thread pool and still have asynchronous fault tolerance applied.
-(In other words, they are treated as if they were annotated `@NonBlocking`.)
+always have asynchronous fault tolerance applied.
 
 For example:
 
@@ -359,7 +358,7 @@ That is, if a method (or class) is annotated `@Asynchronous` or `@Blocking`, exe
 If a method (or class) is annotated `@NonBlocking`, execution will happen on the original thread (even if `@Asynchronous` is present).
 
 Also note that this doesn't affect methods returning `Future`.
-You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool.
+You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool and are guarded properly.
 As mentioned in the <<blocking-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
 
 === Inspecting Exception Cause Chains
@@ -420,3 +419,54 @@ All 3 annotations follow the same principle: exceptions considered success have 
 | `abortOn`
 | `retryOn`
 |===
+
+[[kotlin-suspend-functions]]
+== Kotlin `suspend` Functions
+
+{smallrye-fault-tolerance} includes support for Kotlin suspending functions.
+They are treated as <<async-types>>, even though the internal implementation is more complex than support for Mutiny or RxJava.
+
+For example:
+
+[source,kotlin]
+----
+@ApplicationScoped
+open class MyService {
+    @Retry(maxRetries = 2)
+    @Fallback(fallbackMethod = "helloFallback")
+    open suspend fun hello(): String { // <1>
+        delay(100)
+        throw IllegalArgumentException()
+    }
+
+    private suspend fun helloFallback(): String { // <2>
+        delay(100)
+        return "hello"
+    }
+}
+----
+
+<1> As a suspending function, this method can only be called from another suspending function.
+It will be guarded by the retry and fallback strategies, as defined using the annotations.
+<2> Similarly to fallback methods in Java, fallback methods in Kotlin must have the same signature as the guarded method.
+Since the guarded method is suspending, the fallback method must be suspending.
+
+As mentioned above, suspending functions are treated as async types.
+This means that for asynchronous fault tolerance to work correctly on suspending functions, they must be determined to be asynchronous.
+That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, one of the usual annotations (`@Blocking`, `@NonBlocking`, `@Asynchronous`) must be present.
+It is expected that most users will use the Kotlin support in the non-compatible mode, so the example above does not include any such annotation.
+
+To be able to use this, a support library must be present.
+It is possible that the runtime you use already provides the correct integration.
+Otherwise, add a dependency to your application: `io.smallrye:smallrye-fault-tolerance-kotlin`.
+
+.Quarkus
+****
+In Quarkus, the Kotlin support library is present by default, if you use the Quarkus Kotlin support.
+You can declare fault tolerance annotations on suspending methods out of the box.
+****
+
+=== Programmatic API
+
+Suspending functions are currently only supported in the declarative, annotation-based API, as shown in the example above.
+The xref:usage/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance} does not support suspending functions, but other than that, it can of course be used from Kotlin through its Java interop.

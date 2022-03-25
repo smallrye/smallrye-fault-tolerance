@@ -120,6 +120,10 @@ public class FaultToleranceOperation {
         this.customBackoff = customBackoff;
     }
 
+    public Class<?>[] getParameterTypes() {
+        return methodDescriptor.parameterTypes;
+    }
+
     public Class<?> getReturnType() {
         return methodDescriptor.returnType;
     }

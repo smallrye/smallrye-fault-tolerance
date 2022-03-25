@@ -17,7 +17,6 @@
 package io.smallrye.faulttolerance;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +26,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -51,8 +51,6 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
-import io.smallrye.faulttolerance.core.async.types.AsyncTypes;
-import io.smallrye.faulttolerance.core.async.types.AsyncTypesConversion;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
@@ -64,6 +62,12 @@ import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
+import io.smallrye.faulttolerance.core.invocation.Invoker;
+import io.smallrye.faulttolerance.core.invocation.NormalMethodInvoker;
+import io.smallrye.faulttolerance.core.invocation.SpecialMethodInvoker;
+import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
@@ -88,6 +92,7 @@ import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.internal.InterceptionInvoker;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
@@ -152,7 +157,7 @@ public class FaultToleranceInterceptor {
     }
 
     @AroundInvoke
-    public Object interceptCommand(InvocationContext interceptionContext) throws Exception {
+    public Object intercept(InvocationContext interceptionContext) throws Exception {
         Method method = interceptionContext.getMethod();
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
         InterceptionPoint point = new InterceptionPoint(beanClass, interceptionContext);
@@ -168,16 +173,27 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private Object asyncFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
+    private <V, AT> AT asyncFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
             InterceptionPoint point) {
-        FaultToleranceStrategy<Object> strategy = cache.getStrategy(point, () -> prepareAsyncStrategy(operation, point));
+        AsyncSupport<V, AT> asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
+        if (asyncSupport == null) {
+            throw new FaultToleranceException("Unknown async invocation: " + operation);
+        }
 
-        io.smallrye.faulttolerance.core.InvocationContext<Object> ctx = invocationContext(operation, interceptionContext);
+        FaultToleranceStrategy<CompletionStage<V>> strategy = cache.getStrategy(point,
+                () -> prepareAsyncStrategy(operation, point));
 
+        Invoker<AT> invoker = new InterceptionInvoker<>(interceptionContext);
+
+        io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<V>> ctx = invocationContext(
+                () -> asyncSupport.toCompletionStage(invoker), interceptionContext, operation);
+
+        Invoker<CompletionStage<V>> wrapper = new StrategyInvoker<>(interceptionContext.getParameters(),
+                strategy, ctx);
         try {
-            return strategy.apply(ctx);
+            return asyncSupport.fromCompletionStage(wrapper);
         } catch (Exception e) {
-            return AsyncTypes.get(operation.getReturnType()).fromCompletionStage(() -> failedStage(e));
+            throw sneakyThrow(e);
         }
     }
 
@@ -185,7 +201,8 @@ public class FaultToleranceInterceptor {
             throws Exception {
         FaultToleranceStrategy<T> strategy = cache.getStrategy(point, () -> prepareSyncStrategy(operation, point));
 
-        io.smallrye.faulttolerance.core.InvocationContext<T> ctx = invocationContext(operation, interceptionContext);
+        io.smallrye.faulttolerance.core.InvocationContext<T> ctx = invocationContext(
+                () -> (T) interceptionContext.proceed(), interceptionContext, operation);
 
         return strategy.apply(ctx);
     }
@@ -194,16 +211,17 @@ public class FaultToleranceInterceptor {
             InterceptionPoint point) throws Exception {
         FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point, () -> prepareFutureStrategy(operation, point));
 
-        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(operation, interceptionContext);
+        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(
+                () -> (Future<T>) interceptionContext.proceed(), interceptionContext, operation);
 
         return strategy.apply(ctx);
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> io.smallrye.faulttolerance.core.InvocationContext<T> invocationContext(FaultToleranceOperation operation,
-            InvocationContext interceptionContext) {
+    private <T> io.smallrye.faulttolerance.core.InvocationContext<T> invocationContext(Callable<T> callable,
+            InvocationContext interceptionContext, FaultToleranceOperation operation) {
+
         io.smallrye.faulttolerance.core.InvocationContext<T> result = new io.smallrye.faulttolerance.core.InvocationContext<>(
-                () -> (T) interceptionContext.proceed());
+                callable);
 
         result.set(InvocationContext.class, interceptionContext);
 
@@ -215,27 +233,9 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    private FaultToleranceStrategy<Object> prepareAsyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
-        // FaultToleranceStrategy expects that the input type and output type are the same, which
-        // isn't true for the conversion strategies used below (even though the entire chain does
-        // retain the type, the conversions are only intermediate)
-        // that's why we use raw types here, to work around this design choice
-
-        FaultToleranceStrategy result = invocation();
-
-        result = new AsyncTypesConversion.ToCompletionStage(result, AsyncTypes.get(operation.getReturnType()));
-
-        result = prepareComplectionStageChain((FaultToleranceStrategy<CompletionStage<Object>>) result, operation, point);
-
-        result = new AsyncTypesConversion.FromCompletionStage(result, AsyncTypes.get(operation.getReturnType()));
-
-        return result;
-    }
-
-    private <T> FaultToleranceStrategy<CompletionStage<T>> prepareComplectionStageChain(
-            FaultToleranceStrategy<CompletionStage<T>> invocation, FaultToleranceOperation operation, InterceptionPoint point) {
-
-        FaultToleranceStrategy<CompletionStage<T>> result = invocation;
+    private <T> FaultToleranceStrategy<CompletionStage<T>> prepareAsyncStrategy(FaultToleranceOperation operation,
+            InterceptionPoint point) {
+        FaultToleranceStrategy<CompletionStage<T>> result = invocation();
 
         result = new RequestScopeActivator<>(result, requestContextController);
 
@@ -470,7 +470,7 @@ public class FaultToleranceInterceptor {
             }
         }
 
-        Class<?> returnType = operation.getReturnType();
+        AsyncSupport asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
 
         FallbackFunction<V> fallbackFunction;
 
@@ -479,21 +479,13 @@ public class FaultToleranceInterceptor {
             boolean isDefault = fallbackMethodFinal.isDefault();
             fallbackFunction = ctx -> {
                 InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
-                ExecutionContextWithInvocationContext executionContext = new ExecutionContextWithInvocationContext(
-                        interceptionContext);
                 try {
-                    V result;
-                    if (isDefault) {
-                        // Workaround for default methods (used e.g. in MP Rest Client)
-                        //noinspection unchecked
-                        result = (V) DefaultMethodFallbackProvider.getFallback(fallbackMethodFinal, executionContext);
-                    } else {
-                        //noinspection unchecked
-                        result = (V) fallbackMethodFinal.invoke(interceptionContext.getTarget(),
-                                interceptionContext.getParameters());
-                    }
-                    result = AsyncTypes.toCompletionStageIfRequired(result, returnType);
-                    return result;
+                    Invoker invoker = isDefault
+                            ? new SpecialMethodInvoker(fallbackMethodFinal, interceptionContext.getTarget(),
+                                    interceptionContext.getParameters())
+                            : new NormalMethodInvoker(fallbackMethodFinal, interceptionContext.getTarget(),
+                                    interceptionContext.getParameters());
+                    return asyncSupport == null ? (V) invoker.proceed() : (V) asyncSupport.toCompletionStage(invoker);
                 } catch (Throwable e) {
                     if (e instanceof InvocationTargetException) {
                         e = e.getCause();
@@ -513,7 +505,9 @@ public class FaultToleranceInterceptor {
                             interceptionContext);
                     executionContext.setFailure(ctx.failure);
                     V result = fallbackHandler.handle(executionContext);
-                    result = AsyncTypes.toCompletionStageIfRequired(result, returnType);
+                    if (asyncSupport != null) {
+                        result = (V) asyncSupport.fallbackResultToCompletionStage(result);
+                    }
                     return result;
                 };
             } else {
