@@ -312,8 +312,8 @@ public interface FaultTolerance<T> {
          * Syntactic sugar for calling the builder methods conditionally without breaking the invocation chain.
          * For example:
          *
-         * <pre>
-         * {@code
+         * <!-- @formatter:off -->
+         * <pre>{@code
          * FaultTolerance.create(this::doSomething)
          *     .withFallback() ... .done()
          *     .with(builder -> {
@@ -322,8 +322,8 @@ public interface FaultTolerance<T> {
          *         }
          *     })
          *     .build();
-         * }
-         * </pre>
+         * }</pre>
+         * <!-- @formatter:on -->
          *
          * @param consumer block of code to execute with this builder
          * @return this fault tolerance builder

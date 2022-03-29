@@ -3,17 +3,15 @@ package io.smallrye.faulttolerance.internal;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
-import javax.interceptor.InvocationContext;
-
 public class InterceptionPoint {
     private final String name;
     private final Class<?> beanClass;
     private final Method method;
 
-    public InterceptionPoint(Class<?> beanClass, InvocationContext invocationContext) {
+    public InterceptionPoint(Class<?> beanClass, Method method) {
+        this.name = beanClass.getName() + "#" + method.getName();
         this.beanClass = beanClass;
-        method = invocationContext.getMethod();
-        name = beanClass.getName() + "#" + method.getName();
+        this.method = method;
     }
 
     public Class<?> beanClass() {
@@ -36,8 +34,8 @@ public class InterceptionPoint {
         if (o == null || getClass() != o.getClass())
             return false;
         InterceptionPoint that = (InterceptionPoint) o;
-        return beanClass.equals(that.beanClass) &&
-                method.equals(that.method);
+        return beanClass.equals(that.beanClass)
+                && method.equals(that.method);
     }
 
     @Override

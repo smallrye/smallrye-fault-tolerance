@@ -8,8 +8,13 @@ import io.smallrye.faulttolerance.core.invocation.Invoker;
 
 public class CompletableSupport<T> implements AsyncSupport<T, Completable> {
     @Override
-    public String description() {
+    public String mustDescription() {
         return "return " + Completable.class.getSimpleName();
+    }
+
+    @Override
+    public String doesDescription() {
+        return "returns " + Completable.class.getSimpleName();
     }
 
     @Override

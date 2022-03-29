@@ -8,8 +8,13 @@ import io.smallrye.faulttolerance.core.invocation.Invoker;
 
 public class SingleSupport<T> implements AsyncSupport<T, Single<T>> {
     @Override
-    public String description() {
+    public String mustDescription() {
         return "return " + Single.class.getSimpleName();
+    }
+
+    @Override
+    public String doesDescription() {
+        return "returns " + Single.class.getSimpleName();
     }
 
     @Override

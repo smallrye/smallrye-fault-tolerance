@@ -8,8 +8,13 @@ import io.smallrye.faulttolerance.core.invocation.Invoker;
 
 public class MaybeSupport<T> implements AsyncSupport<T, Maybe<T>> {
     @Override
-    public String description() {
+    public String mustDescription() {
         return "return " + Maybe.class.getSimpleName();
+    }
+
+    @Override
+    public String doesDescription() {
+        return "returns " + Maybe.class.getSimpleName();
     }
 
     @Override

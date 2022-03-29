@@ -6,8 +6,13 @@ import java.util.concurrent.CompletionStage;
 
 public class CompletionStageSupport<T> implements AsyncSupport<T, CompletionStage<T>> {
     @Override
-    public String description() {
+    public String mustDescription() {
         return "return " + CompletionStage.class.getSimpleName();
+    }
+
+    @Override
+    public String doesDescription() {
+        return "returns " + CompletionStage.class.getSimpleName();
     }
 
     @Override

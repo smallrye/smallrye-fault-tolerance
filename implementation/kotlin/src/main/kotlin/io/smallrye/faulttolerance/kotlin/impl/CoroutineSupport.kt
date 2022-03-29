@@ -17,8 +17,12 @@ import kotlin.coroutines.resumeWithException
 // the `Any?` type is used here similarly to Kotlin-transformed `suspend` functions:
 // it stands for a non-denotable union type `T | COROUTINE_SUSPENDED`
 class CoroutineSupport<T> : AsyncSupport<T, Any?> {
-    override fun description(): String {
+    override fun mustDescription(): String {
         return "be a Kotlin suspend function"
+    }
+
+    override fun doesDescription(): String {
+        return "is a Kotlin suspend function"
     }
 
     override fun applies(parameterTypes: Array<Class<*>>, returnType: Class<*>): Boolean {

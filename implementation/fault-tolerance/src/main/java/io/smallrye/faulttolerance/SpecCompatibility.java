@@ -21,7 +21,6 @@ public class SpecCompatibility {
     }
 
     public boolean isOperationTrulyAsynchronous(FaultToleranceOperation operation) {
-        //boolean supported = AsyncTypes.isKnown(operation.getReturnType());
         boolean supported = AsyncSupportRegistry.isKnown(operation.getParameterTypes(), operation.getReturnType());
 
         if (compatible) {
