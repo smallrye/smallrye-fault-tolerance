@@ -10,8 +10,13 @@ import io.smallrye.mutiny.Uni;
 
 public class UniSupport<T> implements AsyncSupport<T, Uni<T>> {
     @Override
-    public String description() {
+    public String mustDescription() {
         return "return " + Uni.class.getSimpleName();
+    }
+
+    @Override
+    public String doesDescription() {
+        return "returns " + Uni.class.getSimpleName();
     }
 
     @Override

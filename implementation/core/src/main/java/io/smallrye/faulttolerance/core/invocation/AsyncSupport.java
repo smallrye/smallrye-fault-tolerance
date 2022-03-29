@@ -5,7 +5,9 @@ import java.util.concurrent.CompletionStage;
 // V = value type, e.g. String
 // AT = async type that eventually produces V, e.g. CompletionStage<String> or Uni<String>
 public interface AsyncSupport<V, AT> {
-    String description();
+    String mustDescription();
+
+    String doesDescription();
 
     boolean applies(Class<?>[] parameterTypes, Class<?> returnType);
 

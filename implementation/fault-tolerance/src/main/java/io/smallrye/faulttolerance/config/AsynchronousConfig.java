@@ -23,7 +23,7 @@ public interface AsynchronousConfig extends Asynchronous, Config {
 
         StringJoiner knownAsync = new StringJoiner(" or ");
         for (AsyncSupport<?, ?> asyncSupport : AsyncSupportRegistry.allKnown()) {
-            knownAsync.add(asyncSupport.description());
+            knownAsync.add(asyncSupport.mustDescription());
         }
         throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method()
                 + ": must return java.util.concurrent.Future or " + knownAsync);

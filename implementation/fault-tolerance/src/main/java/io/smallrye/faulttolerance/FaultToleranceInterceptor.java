@@ -35,6 +35,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Priority;
 import javax.enterprise.context.control.RequestContextController;
+import javax.enterprise.inject.Any;
+import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Intercepted;
 import javax.enterprise.inject.spi.Bean;
 import javax.inject.Inject;
@@ -45,9 +47,12 @@ import javax.interceptor.InvocationContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
+import io.smallrye.common.annotation.Identifier;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
+import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
+import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
@@ -132,6 +137,8 @@ public class FaultToleranceInterceptor {
 
     private final SpecCompatibility specCompatibility;
 
+    private final Instance<FaultTolerance<?>> configuredFaultTolerance;
+
     @Inject
     public FaultToleranceInterceptor(
             @Intercepted Bean<?> interceptedBean,
@@ -142,7 +149,8 @@ public class FaultToleranceInterceptor {
             ExecutorHolder executorHolder,
             RequestContextIntegration requestContextIntegration,
             CircuitBreakerMaintenanceImpl cbMaintenance,
-            SpecCompatibility specCompatibility) {
+            SpecCompatibility specCompatibility,
+            @Any Instance<FaultTolerance<?>> configuredFaultTolerance) {
         this.interceptedBean = interceptedBean;
         this.operationProvider = operationProvider;
         this.cache = cache;
@@ -154,22 +162,60 @@ public class FaultToleranceInterceptor {
         requestContextController = requestContextIntegration.get();
         this.cbMaintenance = cbMaintenance;
         this.specCompatibility = specCompatibility;
+        this.configuredFaultTolerance = configuredFaultTolerance;
     }
 
     @AroundInvoke
     public Object intercept(InvocationContext interceptionContext) throws Exception {
         Method method = interceptionContext.getMethod();
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
-        InterceptionPoint point = new InterceptionPoint(beanClass, interceptionContext);
-
+        InterceptionPoint point = new InterceptionPoint(beanClass, interceptionContext.getMethod());
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
-        if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
+        if (operation.hasApplyFaultTolerance()) {
+            return preconfiguredFlow(operation, interceptionContext);
+        } else if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
             return asyncFlow(operation, interceptionContext, point);
         } else if (specCompatibility.isOperationPseudoAsynchronous(operation)) {
             return futureFlow(operation, interceptionContext, point);
         } else {
             return syncFlow(operation, interceptionContext, point);
+        }
+    }
+
+    private Object preconfiguredFlow(FaultToleranceOperation operation, InvocationContext interceptionContext)
+            throws Exception {
+        String identifier = operation.getApplyFaultTolerance().value();
+        Instance<FaultTolerance<?>> instance = configuredFaultTolerance.select(Identifier.Literal.of(identifier));
+        if (!instance.isResolvable()) {
+            throw new FaultToleranceException("Can't resolve a bean of type " + FaultTolerance.class.getName()
+                    + " with qualifier @" + Identifier.class.getName() + "(\"" + identifier + "\")");
+        }
+        FaultTolerance<Object> faultTolerance = (FaultTolerance<Object>) instance.get();
+        if (!(faultTolerance instanceof FaultToleranceImpl)) {
+            throw new FaultToleranceException("Configured fault tolerance '" + identifier
+                    + "' is not created by the FaultTolerance API, this is not supported");
+        }
+
+        AsyncSupport<?, ?> forOperation = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
+        AsyncSupport<?, ?> fromConfigured = ((FaultToleranceImpl<?, ?, ?>) faultTolerance).internalGetAsyncSupport();
+
+        if (forOperation == null && fromConfigured == null) {
+            return faultTolerance.call(interceptionContext::proceed);
+        } else if (forOperation == null) {
+            throw new FaultToleranceException("Configured fault tolerance '" + identifier
+                    + "' expects the operation to " + fromConfigured.mustDescription()
+                    + ", but the operation is synchronous: " + operation);
+        } else if (fromConfigured == null) {
+            throw new FaultToleranceException("Configured fault tolerance '" + identifier
+                    + "' expects the operation to be synchronous, but it "
+                    + forOperation.doesDescription() + ": " + operation);
+        } else if (!forOperation.getClass().equals(fromConfigured.getClass())) {
+            throw new FaultToleranceException("Configured fault tolerance '" + identifier
+                    + "' expects the operation to " + fromConfigured.mustDescription()
+                    + ", but it " + forOperation.doesDescription() + ": " + operation);
+        } else {
+            return faultTolerance.call(interceptionContext::proceed);
         }
     }
 

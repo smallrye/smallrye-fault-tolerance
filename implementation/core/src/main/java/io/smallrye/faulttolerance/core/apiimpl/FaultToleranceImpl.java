@@ -101,6 +101,10 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         this.initializer = initializer;
     }
 
+    public AsyncSupport<V, T> internalGetAsyncSupport() {
+        return asyncSupport;
+    }
+
     @Override
     public T call(Callable<T> action) throws Exception {
         initializer.runOnce();

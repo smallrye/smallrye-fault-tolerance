@@ -470,3 +470,54 @@ You can declare fault tolerance annotations on suspending methods out of the box
 
 Suspending functions are currently only supported in the declarative, annotation-based API, as shown in the example above.
 The xref:usage/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance} does not support suspending functions, but other than that, it can of course be used from Kotlin through its Java interop.
+
+== Reusable, Preconfigured Fault Tolerance
+
+The declarative, annotation-based API of {microprofile-fault-tolerance} doesn't allow sharing configuration of fault tolerance strategies across multiple classes.
+In a single class, the configuration may be shared across all methods by putting the annotations on the class instead of individual methods, but even then, _stateful_ fault tolerance strategies are not shared.
+Each method has its own bulkhead and/or circuit breaker, which is often not what you want.
+
+The xref:usage/programmatic-api.adoc[programmatic API] of {smallrye-fault-tolerance} allows using a single `FaultTolerance` object to guard multiple disparate actions, which allows reuse and state sharing.
+It is possible to use a programmatically constructed `FaultTolerance` object declaratively, using the `@ApplyFaultTolerance` annotation.
+
+To be able to do that, we need a bean of type `FaultTolerance` with the `@Identifier` qualifier:
+
+[source,java]
+----
+@ApplicationScoped
+public class PreconfiguredFaultTolerance {
+    @Produces
+    @Identifier("my-fault-tolerance")
+    public static final FaultTolerance<String> FT = FaultTolerance.<String>create()
+            .withRetry().maxRetries(2).done()
+            .withFallback().handler(() -> "fallback").done()
+            .build();
+}
+----
+
+See the xref:usage/programmatic-api.adoc[programmatic API] documentation for more information about creating the `FaultTolerance` instance.
+
+It is customary to create the bean by declaring a `static` producer field, just like in the previous example.
+
+Once we have that, we can apply `my-fault-tolerance` to synchronous methods that return `String`:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @ApplyFaultTolerance("my-fault-tolerance")
+    public String doSomething() {
+        ...
+    }
+}
+----
+
+It is also possible to create a bean of type `FaultTolerance<Object>` and apply it to synchronous methods that return many different types.
+Note that this effectively precludes defining a useful fallback, because fallback can only be defined when the value type is known.
+
+It is also possible to define a bean of type `FaultTolerance<CompletionStage<T>>` and apply it to asynchronous methods that return `CompletionStage<T>`.
+Likewise, it is possible to do this for <<async-types>>.
+
+Note that you can't define a synchronous `FaultTolerance<T>` object and apply it to any asynchronous method.
+Similarly, you can't define an asynchronous `FaultTolerance<CompletionStage<T>>` and apply it to a synchronous method or an asynchronous method with different <<async-types,asynchronous type>>.
+This limitation will be lifted in the future.

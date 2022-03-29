@@ -12,6 +12,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -45,6 +46,7 @@ public class FaultToleranceMethod {
     public Timeout timeout;
 
     // SmallRye Fault Tolerance API
+    public ApplyFaultTolerance applyFaultTolerance;
     public CircuitBreakerName circuitBreakerName;
     public CustomBackoff customBackoff;
     public ExponentialBackoff exponentialBackoff;

@@ -28,6 +28,7 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
+import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -45,6 +46,7 @@ public class FaultToleranceOperation {
 
     public static FaultToleranceOperation create(FaultToleranceMethod method) {
         return new FaultToleranceOperation(method.beanClass, method.method,
+                ApplyFaultToleranceConfigImpl.create(method),
                 AsynchronousConfigImpl.create(method),
                 BlockingConfigImpl.create(method),
                 NonBlockingConfigImpl.create(method),
@@ -62,6 +64,8 @@ public class FaultToleranceOperation {
     private final Class<?> beanClass;
 
     private final MethodDescriptor methodDescriptor;
+
+    private final ApplyFaultToleranceConfig applyFaultTolerance;
 
     private final AsynchronousConfig asynchronous;
 
@@ -89,6 +93,7 @@ public class FaultToleranceOperation {
 
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
+            ApplyFaultToleranceConfig applyFaultTolerance,
             AsynchronousConfig asynchronous,
             BlockingConfig blocking,
             NonBlockingConfig nonBlocking,
@@ -103,6 +108,8 @@ public class FaultToleranceOperation {
             CustomBackoffConfig customBackoff) {
         this.beanClass = beanClass;
         this.methodDescriptor = methodDescriptor;
+
+        this.applyFaultTolerance = applyFaultTolerance;
 
         this.asynchronous = asynchronous;
         this.blocking = blocking;
@@ -126,6 +133,14 @@ public class FaultToleranceOperation {
 
     public Class<?> getReturnType() {
         return methodDescriptor.returnType;
+    }
+
+    public boolean hasApplyFaultTolerance() {
+        return applyFaultTolerance != null;
+    }
+
+    public ApplyFaultTolerance getApplyFaultTolerance() {
+        return applyFaultTolerance;
     }
 
     public boolean hasAsynchronous() {
@@ -256,6 +271,10 @@ public class FaultToleranceOperation {
      * Throws {@link FaultToleranceDefinitionException} if validation fails.
      */
     public void validate() {
+        if (applyFaultTolerance != null) {
+            applyFaultTolerance.validate();
+        }
+
         if (asynchronous != null) {
             asynchronous.validate();
         }
