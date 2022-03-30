@@ -12,13 +12,27 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.FaultToleranceSpi;
+import io.smallrye.faulttolerance.core.apiimpl.BasicCircuitBreakerMaintenanceImpl;
+import io.smallrye.faulttolerance.core.apiimpl.BuilderEagerDependencies;
+import io.smallrye.faulttolerance.core.apiimpl.BuilderLazyDependencies;
 import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.timer.Timer;
 
 public class CdiFaultToleranceSpi implements FaultToleranceSpi {
     @Singleton
-    public static class Dependencies {
+    public static class EagerDependencies implements BuilderEagerDependencies {
+        @Inject
+        CircuitBreakerMaintenanceImpl cbMaintenance;
+
+        @Override
+        public BasicCircuitBreakerMaintenanceImpl cbMaintenance() {
+            return cbMaintenance;
+        }
+    }
+
+    @Singleton
+    public static class LazyDependencies implements BuilderLazyDependencies {
         @Inject
         @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true")
         boolean ftEnabled;
@@ -29,29 +43,44 @@ public class CdiFaultToleranceSpi implements FaultToleranceSpi {
         @Inject
         CircuitBreakerMaintenanceImpl cbMaintenance;
 
-        ExecutorService asyncExecutor() {
+        @Override
+        public boolean ftEnabled() {
+            return ftEnabled;
+        }
+
+        @Override
+        public ExecutorService asyncExecutor() {
             return executorHolder.getAsyncExecutor();
         }
 
-        EventLoop eventLoop() {
+        @Override
+        public EventLoop eventLoop() {
             return executorHolder.getEventLoop();
         }
 
-        Timer timer() {
+        @Override
+        public Timer timer() {
             return executorHolder.getTimer();
         }
     }
 
-    private Dependencies getDependencies() {
+    private BuilderEagerDependencies eagerDependencies() {
         // always lookup from current CDI container, because there's no guarantee that `CDI.current()` will always be
         // the same (in certain environments, e.g. in the test suite, CDI containers come and go freely)
-        return CDI.current().select(Dependencies.class).get();
+        return CDI.current().select(EagerDependencies.class).get();
+    }
+
+    private BuilderLazyDependencies lazyDependencies() {
+        // always lookup from current CDI container, because there's no guarantee that `CDI.current()` will always be
+        // the same (in certain environments, e.g. in the test suite, CDI containers come and go freely)
+        return CDI.current().select(LazyDependencies.class).get();
     }
 
     @Override
     public boolean applies() {
         try {
-            return getDependencies() != null;
+            CDI.current();
+            return true;
         } catch (Exception ignored) {
             return false;
         }
@@ -64,20 +93,16 @@ public class CdiFaultToleranceSpi implements FaultToleranceSpi {
 
     @Override
     public <T, R> FaultTolerance.Builder<T, R> newBuilder(Function<FaultTolerance<T>, R> finisher) {
-        Dependencies deps = getDependencies();
-        return new FaultToleranceImpl.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
-                deps.cbMaintenance, false, null, finisher);
+        return new FaultToleranceImpl.BuilderImpl<>(eagerDependencies(), this::lazyDependencies, null, finisher);
     }
 
     @Override
     public <T, R> FaultTolerance.Builder<T, R> newAsyncBuilder(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
-        Dependencies deps = getDependencies();
-        return new FaultToleranceImpl.BuilderImpl<>(deps.ftEnabled, deps.asyncExecutor(), deps.timer(), deps.eventLoop(),
-                deps.cbMaintenance, true, asyncType, finisher);
+        return new FaultToleranceImpl.BuilderImpl<>(eagerDependencies(), this::lazyDependencies, asyncType, finisher);
     }
 
     @Override
     public CircuitBreakerMaintenance circuitBreakerMaintenance() {
-        return getDependencies().cbMaintenance;
+        return eagerDependencies().cbMaintenance();
     }
 }
