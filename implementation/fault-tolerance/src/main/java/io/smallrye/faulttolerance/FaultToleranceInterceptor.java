@@ -52,7 +52,7 @@ import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
+import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
@@ -192,13 +192,15 @@ public class FaultToleranceInterceptor {
                     + " with qualifier @" + Identifier.class.getName() + "(\"" + identifier + "\")");
         }
         FaultTolerance<Object> faultTolerance = (FaultTolerance<Object>) instance.get();
-        if (!(faultTolerance instanceof FaultToleranceImpl)) {
+        if (!(faultTolerance instanceof LazyFaultTolerance)) {
             throw new FaultToleranceException("Configured fault tolerance '" + identifier
                     + "' is not created by the FaultTolerance API, this is not supported");
         }
 
+        Class<?> asyncType = ((LazyFaultTolerance<?>) faultTolerance).internalGetAsyncType();
+
         AsyncSupport<?, ?> forOperation = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
-        AsyncSupport<?, ?> fromConfigured = ((FaultToleranceImpl<?, ?, ?>) faultTolerance).internalGetAsyncSupport();
+        AsyncSupport<?, ?> fromConfigured = asyncType == null ? null : AsyncSupportRegistry.get(new Class[0], asyncType);
 
         if (forOperation == null && fromConfigured == null) {
             return faultTolerance.call(interceptionContext::proceed);

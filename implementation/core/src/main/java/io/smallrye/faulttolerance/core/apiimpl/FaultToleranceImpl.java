@@ -4,10 +4,8 @@ import static io.smallrye.faulttolerance.core.Invocation.invocation;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
@@ -31,7 +29,6 @@ import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
-import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
@@ -54,10 +51,8 @@ import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
-import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
-import io.smallrye.faulttolerance.core.util.Initializer;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
@@ -73,7 +68,6 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     private final FaultToleranceStrategy<S> strategy;
     private final AsyncSupport<V, T> asyncSupport;
     private final EventHandlers eventHandlers;
-    private final Initializer initializer;
 
     // Circuit breakers created using the programmatic API are registered with `CircuitBreakerMaintenance`
     // in two phases:
@@ -93,22 +87,14 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     // but that instance is never used. The useful `FaultTolerance` instance is held by the actual bean instance,
     // which is created lazily, on the first method invocation on the client proxy.
 
-    FaultToleranceImpl(FaultToleranceStrategy<S> strategy, AsyncSupport<V, T> asyncSupport, EventHandlers eventHandlers,
-            Initializer initializer) {
+    FaultToleranceImpl(FaultToleranceStrategy<S> strategy, AsyncSupport<V, T> asyncSupport, EventHandlers eventHandlers) {
         this.strategy = strategy;
         this.asyncSupport = asyncSupport;
         this.eventHandlers = eventHandlers;
-        this.initializer = initializer;
-    }
-
-    public AsyncSupport<V, T> internalGetAsyncSupport() {
-        return asyncSupport;
     }
 
     @Override
     public T call(Callable<T> action) throws Exception {
-        initializer.runOnce();
-
         if (asyncSupport == null) {
             InvocationContext<T> ctx = new InvocationContext<>(action);
             eventHandlers.register(ctx);
@@ -124,13 +110,10 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     }
 
     public static final class BuilderImpl<T, R> implements Builder<T, R> {
-        private final boolean ftEnabled;
-        private final Executor executor;
-        private final Timer timer;
-        private final EventLoop eventLoop;
-        private final BasicCircuitBreakerMaintenanceImpl cbMaintenance;
+        private final BuilderEagerDependencies eagerDependencies;
+        private final Supplier<BuilderLazyDependencies> lazyDependencies;
         private final boolean isAsync;
-        private final Class<?> asyncType; // ignored when isAsync == false
+        private final Class<?> asyncType; // null when isAsync == false
         private final Function<FaultTolerance<T>, R> finisher;
 
         private String description;
@@ -141,15 +124,11 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         private TimeoutBuilderImpl<T, R> timeoutBuilder;
         private boolean offloadToAnotherThread;
 
-        public BuilderImpl(boolean ftEnabled, Executor executor, Timer timer, EventLoop eventLoop,
-                BasicCircuitBreakerMaintenanceImpl cbMaintenance, boolean isAsync, Class<?> asyncType,
-                Function<FaultTolerance<T>, R> finisher) {
-            this.ftEnabled = ftEnabled;
-            this.executor = executor;
-            this.timer = timer;
-            this.eventLoop = eventLoop;
-            this.cbMaintenance = cbMaintenance;
-            this.isAsync = isAsync;
+        public BuilderImpl(BuilderEagerDependencies eagerDependencies, Supplier<BuilderLazyDependencies> lazyDependencies,
+                Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
+            this.eagerDependencies = eagerDependencies;
+            this.lazyDependencies = lazyDependencies;
+            this.isAsync = asyncType != null;
             this.asyncType = asyncType;
             this.finisher = finisher;
 
@@ -199,9 +178,24 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
         @Override
         public R build() {
+            eagerInitialization();
+
+            FaultTolerance<T> faultTolerance = new LazyFaultTolerance<>(() -> build(lazyDependencies.get()), asyncType);
+            return finisher.apply(faultTolerance);
+        }
+
+        // must not access lazyDependencies
+        private void eagerInitialization() {
+            if (circuitBreakerBuilder != null && circuitBreakerBuilder.name != null) {
+                eagerDependencies.cbMaintenance().registerName(circuitBreakerBuilder.name);
+            }
+        }
+
+        private FaultTolerance<T> build(BuilderLazyDependencies lazyDependencies) {
             Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler = null;
             if (circuitBreakerBuilder != null && circuitBreakerBuilder.name != null) {
-                cbMaintenanceEventHandler = cbMaintenance.stateTransitionEventHandler(circuitBreakerBuilder.name);
+                cbMaintenanceEventHandler = eagerDependencies.cbMaintenance()
+                        .stateTransitionEventHandler(circuitBreakerBuilder.name);
             }
             EventHandlers eventHandlers = new EventHandlers(
                     bulkheadBuilder != null ? bulkheadBuilder.onAccepted : null,
@@ -218,39 +212,33 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     timeoutBuilder != null ? timeoutBuilder.onTimeout : null,
                     timeoutBuilder != null ? timeoutBuilder.onFinished : null);
 
-            return isAsync ? buildAsync(eventHandlers) : buildSync(eventHandlers);
+            return isAsync ? buildAsync(lazyDependencies, eventHandlers) : buildSync(lazyDependencies, eventHandlers);
         }
 
-        private R buildSync(EventHandlers eventHandlers) {
-            List<Runnable> initActions = new ArrayList<>();
-            FaultToleranceStrategy<T> strategy = buildSyncStrategy(initActions);
-            FaultTolerance<T> result = new FaultToleranceImpl<>(strategy, (AsyncSupport<T, T>) null, eventHandlers,
-                    new Initializer(initActions));
-            return finisher.apply(result);
+        private FaultTolerance<T> buildSync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
+            FaultToleranceStrategy<T> strategy = buildSyncStrategy(lazyDependencies);
+            return new FaultToleranceImpl<>(strategy, (AsyncSupport<T, T>) null, eventHandlers);
         }
 
-        private <V> R buildAsync(EventHandlers eventHandlers) {
-            List<Runnable> initActions = new ArrayList<>();
-            FaultToleranceStrategy<CompletionStage<V>> strategy = buildAsyncStrategy(initActions);
+        private <V> FaultTolerance<T> buildAsync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
+            FaultToleranceStrategy<CompletionStage<V>> strategy = buildAsyncStrategy(lazyDependencies);
             AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
-            FaultTolerance<T> result = new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers,
-                    new Initializer(initActions));
-            return finisher.apply(result);
+            return new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers);
         }
 
-        private FaultToleranceStrategy<T> buildSyncStrategy(List<Runnable> initActions) {
+        private FaultToleranceStrategy<T> buildSyncStrategy(BuilderLazyDependencies lazyDependencies) {
             FaultToleranceStrategy<T> result = invocation();
 
-            if (ftEnabled && bulkheadBuilder != null) {
+            if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit);
             }
 
-            if (ftEnabled && timeoutBuilder != null) {
+            if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
                 result = new Timeout<>(result, description, timeoutBuilder.durationInMillis,
-                        new TimerTimeoutWatcher(timer));
+                        new TimerTimeoutWatcher(lazyDependencies.timer()));
             }
 
-            if (ftEnabled && circuitBreakerBuilder != null) {
+            if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {
                 result = new CircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
                                 circuitBreakerBuilder.whenPredicate),
@@ -261,16 +249,12 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         new SystemStopwatch());
 
                 if (circuitBreakerBuilder.name != null) {
-                    cbMaintenance.registerName(circuitBreakerBuilder.name);
-
                     CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
-                    initActions.add(() -> {
-                        cbMaintenance.register(circuitBreakerBuilder.name, circuitBreaker);
-                    });
+                    eagerDependencies.cbMaintenance().register(circuitBreakerBuilder.name, circuitBreaker);
                 }
             }
 
-            if (ftEnabled && retryBuilder != null) {
+            if (lazyDependencies.ftEnabled() && retryBuilder != null) {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
                 result = new Retry<>(result, description,
@@ -290,24 +274,24 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             return result;
         }
 
-        private <V> FaultToleranceStrategy<CompletionStage<V>> buildAsyncStrategy(List<Runnable> initActions) {
+        private <V> FaultToleranceStrategy<CompletionStage<V>> buildAsyncStrategy(BuilderLazyDependencies lazyDependencies) {
             FaultToleranceStrategy<CompletionStage<V>> result = invocation();
 
             // thread offload is always enabled
-            Executor executor = offloadToAnotherThread ? this.executor : DirectExecutor.INSTANCE;
+            Executor executor = offloadToAnotherThread ? lazyDependencies.asyncExecutor() : DirectExecutor.INSTANCE;
             result = new CompletionStageExecution<>(result, executor);
 
-            if (ftEnabled && bulkheadBuilder != null) {
+            if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new CompletionStageThreadPoolBulkhead<>(result, description, bulkheadBuilder.limit,
                         bulkheadBuilder.queueSize);
             }
 
-            if (ftEnabled && timeoutBuilder != null) {
+            if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
                 result = new CompletionStageTimeout<>(result, description, timeoutBuilder.durationInMillis,
-                        new TimerTimeoutWatcher(timer));
+                        new TimerTimeoutWatcher(lazyDependencies.timer()));
             }
 
-            if (ftEnabled && circuitBreakerBuilder != null) {
+            if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {
                 result = new CompletionStageCircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
                                 circuitBreakerBuilder.whenPredicate),
@@ -318,21 +302,18 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         new SystemStopwatch());
 
                 if (circuitBreakerBuilder.name != null) {
-                    cbMaintenance.registerName(circuitBreakerBuilder.name);
-
                     CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
-                    initActions.add(() -> {
-                        cbMaintenance.register(circuitBreakerBuilder.name, circuitBreaker);
-                    });
+                    eagerDependencies.cbMaintenance().register(circuitBreakerBuilder.name, circuitBreaker);
                 }
             }
 
-            if (ftEnabled && retryBuilder != null) {
+            if (lazyDependencies.ftEnabled() && retryBuilder != null) {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
                 result = new CompletionStageRetry<>(result, description,
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
-                        retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new TimerDelay(backoff.get(), timer),
+                        retryBuilder.maxRetries, retryBuilder.maxDurationInMillis,
+                        () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
                         new SystemStopwatch());
             }
 
@@ -353,7 +334,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             // thread offload is always enabled
             if (!offloadToAnotherThread) {
-                result = new RememberEventLoop<>(result, eventLoop);
+                result = new RememberEventLoop<>(result, lazyDependencies.eventLoop());
             }
 
             return result;
