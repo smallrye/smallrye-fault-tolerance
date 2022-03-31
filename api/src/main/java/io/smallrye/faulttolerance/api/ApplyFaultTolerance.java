@@ -19,48 +19,17 @@ import io.smallrye.common.annotation.Experimental;
  * must exist. Such bean serves as a preconfigured set of fault tolerance strategies
  * and is used to guard invocations of the annotated business method(s).
  * <p>
- * The {@code @ApplyFaultTolerance} annotation may also be present on a bean class,
- * in which case it applies to all business methods declared by the class. If the
- * annotation is present both on the method and the class declaring the method,
- * the one on the method takes precedence.
- * <p>
- *
  * It is customary to create such bean by declaring a {@code static} producer field.
- * For example:
- *
- * <!-- @formatter:off -->
- * <pre>{@code
- * @ApplicationScoped
- * public class PreconfiguredFaultTolerance {
- *     @Produces
- *     @Identifier("my-fault-tolerance")
- *     public static final FaultTolerance<String> FT = FaultTolerance.<String>create()
- *             .withRetry().maxRetries(2).done()
- *             .withFallback().handler(() -> "fallback").done()
- *             .build();
- * }
- * }</pre>
- * <!-- @formatter:on -->
- *
  * Using a {@code static} producer field like this removes all scoping concerns, because only
  * one instance ever exists. Using a non-static producer field or a producer method means that
  * scoping must be carefully considered, especially if stateful fault tolerance strategies are
  * configured.
  * <p>
- * Example of use:
- *
- * <!-- @formatter:off -->
- * <pre>{@code
- * @ApplicationScoped
- * public class MyService {
- *     @ApplyFaultTolerance("my-fault-tolerance")
- *     public String doSomething() {
- *         ...
- *     }
- * }
- * }</pre>
- * <!-- @formatter:on -->
- *
+ * The {@code @ApplyFaultTolerance} annotation may also be present on a bean class,
+ * in which case it applies to all business methods declared by the class. If the
+ * annotation is present both on the method and the class declaring the method,
+ * the one on the method takes precedence.
+ * <p>
  * When {@code @ApplyFaultTolerance} applies to a business method, all other fault tolerance
  * annotations that would otherwise also apply to that method are ignored.
  * <p>
