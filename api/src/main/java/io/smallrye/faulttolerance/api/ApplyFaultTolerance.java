@@ -20,10 +20,9 @@ import io.smallrye.common.annotation.Experimental;
  * and is used to guard invocations of the annotated business method(s).
  * <p>
  * It is customary to create such bean by declaring a {@code static} producer field.
- * Using a {@code static} producer field like this removes all scoping concerns, because only
- * one instance ever exists. Using a non-static producer field or a producer method means that
- * scoping must be carefully considered, especially if stateful fault tolerance strategies are
- * configured.
+ * That removes all scoping concerns, because only one instance ever exists. Using
+ * a non-static producer field or a producer method means that scoping must be carefully
+ * considered, especially if stateful fault tolerance strategies are configured.
  * <p>
  * The {@code @ApplyFaultTolerance} annotation may also be present on a bean class,
  * in which case it applies to all business methods declared by the class. If the
