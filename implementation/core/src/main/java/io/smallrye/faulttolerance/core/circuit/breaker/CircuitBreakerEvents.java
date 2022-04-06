@@ -1,14 +1,9 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.core.InvocationContextEvent;
 
 public class CircuitBreakerEvents {
-    public enum State {
-        CLOSED,
-        OPEN,
-        HALF_OPEN,
-    }
-
     public enum Result {
         SUCCESS,
         FAILURE,
@@ -16,14 +11,14 @@ public class CircuitBreakerEvents {
     }
 
     public enum StateTransition implements InvocationContextEvent {
-        TO_CLOSED(State.CLOSED),
-        TO_OPEN(State.OPEN),
-        TO_HALF_OPEN(State.HALF_OPEN),
+        TO_CLOSED(CircuitBreakerState.CLOSED),
+        TO_OPEN(CircuitBreakerState.OPEN),
+        TO_HALF_OPEN(CircuitBreakerState.HALF_OPEN),
         ;
 
-        public final State targetState;
+        public final CircuitBreakerState targetState;
 
-        StateTransition(State targetState) {
+        StateTransition(CircuitBreakerState targetState) {
             this.targetState = targetState;
         }
     }

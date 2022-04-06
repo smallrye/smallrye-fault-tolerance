@@ -13,7 +13,7 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     public static final int STATE_CLOSED = 0;
@@ -23,8 +23,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
     final String description;
 
-    final SetOfThrowables failOn;
-    final SetOfThrowables skipOn;
+    private final ExceptionDecision exceptionDecision;
     final long delayInMillis;
     final int rollingWindowSize;
     final int failureThreshold;
@@ -34,13 +33,12 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     final AtomicReference<State> state;
 
     @SuppressWarnings("UnnecessaryThis")
-    public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, SetOfThrowables failOn,
-            SetOfThrowables skipOn, long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
+    public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, ExceptionDecision exceptionDecision,
+            long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
             Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Circuit breaker delegate must be set");
         this.description = checkNotNull(description, "Circuit breaker description must be set");
-        this.failOn = checkNotNull(failOn, "Set of fail-on throwables must be set");
-        this.skipOn = checkNotNull(skipOn, "Set of skip-on throwables must be set");
+        this.exceptionDecision = checkNotNull(exceptionDecision, "Exception decision must be set");
         this.delayInMillis = check(delayInMillis, delayInMillis >= 0, "Circuit breaker delay must be >= 0");
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
@@ -81,7 +79,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     }
 
     boolean isConsideredSuccess(Throwable e) {
-        return skipOn.includes(e.getClass()) || !failOn.includes(e.getClass());
+        return exceptionDecision.isConsideredExpected(e);
     }
 
     private V inClosed(InvocationContext<V> ctx, State state) throws Exception {

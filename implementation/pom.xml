@@ -30,11 +30,17 @@
 
     <modules>
         <module>core</module>
+
+        <module>kotlin</module>
+        <module>mutiny</module>
+        <module>rxjava3</module>
+        <module>vertx</module>
+
         <module>autoconfig</module>
         <module>fault-tolerance</module>
-        <!-- uncomment when SmallRye Context Propagation updates to jakarta.* -->
-<!--        <module>context-propagation</module>-->
-<!--        <module>tracing-propagation</module>-->
-        <module>vertx</module>
+        <module>context-propagation</module>
+        <module>tracing-propagation</module>
+
+        <module>standalone</module>
     </modules>
 </project>

@@ -35,7 +35,7 @@
 
         <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
         <version.jacoco-maven-plugin>0.8.6</version.jacoco-maven-plugin>
-        <version.pitest-maven>1.7.3</version.pitest-maven>
+        <version.pitest-maven>1.7.5</version.pitest-maven>
         <version.pitest-junit5-plugin>0.15</version.pitest-junit5-plugin>
 
         <!--suppress CheckTagEmptyBody -->
@@ -46,6 +46,10 @@
         <dependency>
             <groupId>org.eclipse.microprofile.fault-tolerance</groupId>
             <artifactId>microprofile-fault-tolerance-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye</groupId>
+            <artifactId>smallrye-fault-tolerance-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jboss.logging</groupId>
@@ -70,7 +74,6 @@
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
@@ -90,9 +93,11 @@
                         </goals>
                         <configuration>
                             <includes>
-                                <include>io/smallrye/faulttolerance/core/util/barrier/*</include>
-                                <include>io/smallrye/faulttolerance/core/util/party/*</include>
+                                <include>io/smallrye/faulttolerance/core/util/**</include>
                             </includes>
+                            <excludes>
+                                <exclude>**/*Test.class</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>
@@ -107,9 +112,11 @@
                         </goals>
                         <configuration>
                             <includes>
-                                <include>io/smallrye/faulttolerance/core/util/barrier/*</include>
-                                <include>io/smallrye/faulttolerance/core/util/party/*</include>
+                                <include>io/smallrye/faulttolerance/core/util/**</include>
                             </includes>
+                            <excludes>
+                                <exclude>**/*Test.java</exclude>
+                            </excludes>
                         </configuration>
                     </execution>
                 </executions>

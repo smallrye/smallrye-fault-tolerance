@@ -30,8 +30,8 @@ jobs:
         - 8
         - 11
         - 17
-        # Temurin doesn't have an 18-ea build yet
-        #- 18-ea
+        - 18
+        - 19-ea
         os:
         - ubuntu-latest
         - windows-latest

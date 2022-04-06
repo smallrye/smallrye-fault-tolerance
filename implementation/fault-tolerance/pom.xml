@@ -74,10 +74,6 @@
             <artifactId>microprofile-metrics-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.smallrye.reactive</groupId>
-            <artifactId>smallrye-reactive-converter-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.opentracing</groupId>
             <artifactId>opentracing-api</artifactId>
             <optional>true</optional>

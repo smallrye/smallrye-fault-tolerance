@@ -1,21 +1,32 @@
 package io.smallrye.faulttolerance.core.util;
 
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class SetOfThrowables {
     public static final SetOfThrowables EMPTY = new SetOfThrowables(Collections.emptySet());
     public static final SetOfThrowables ALL = new SetOfThrowables(Collections.singleton(Throwable.class));
 
     /**
-     * @param classes classes to include
-     * @return a set of throwables without any additional constraints.
+     * Creates a set consisting of a single throwable class. The set can later be inspected using {@link #includes(Class)}.
+     *
+     * @param clazz a single throwable class to include in the set
+     * @return a singleton set of throwable classes
      */
-    public static SetOfThrowables create(List<Class<? extends Throwable>> classes) {
-        Set<Class<? extends Throwable>> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
-        set.addAll(classes);
+    public static SetOfThrowables create(Class<? extends Throwable> clazz) {
+        return create(Collections.singletonList(clazz));
+    }
+
+    /**
+     * Creates a set of throwable classes that can later be inspected using {@link #includes(Class)}.
+     *
+     * @param classes throwable classes to include in the set
+     * @return a set of throwable classes
+     */
+    public static SetOfThrowables create(Collection<Class<? extends Throwable>> classes) {
+        Set<Class<? extends Throwable>> set = new HashSet<>(classes);
         return new SetOfThrowables(set);
     }
 

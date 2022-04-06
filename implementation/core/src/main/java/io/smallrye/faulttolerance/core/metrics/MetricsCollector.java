@@ -5,6 +5,7 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsLogger.LOG;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.bulkhead.BulkheadEvents;
@@ -23,7 +24,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
 
     // circuit breaker
 
-    private volatile CircuitBreakerEvents.State state;
+    private volatile CircuitBreakerState state;
     private final AtomicLong previousHalfOpenTime = new AtomicLong();
     private volatile long halfOpenStart;
     private final AtomicLong previousClosedTime = new AtomicLong();
@@ -41,15 +42,15 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         this.metrics = metrics;
         this.isAsync = isAsync;
 
-        this.state = CircuitBreakerEvents.State.CLOSED;
+        this.state = CircuitBreakerState.CLOSED;
         this.closedStart = System.nanoTime();
 
         metrics.registerCircuitBreakerTimeSpentInClosed(
-                () -> getTime(CircuitBreakerEvents.State.CLOSED, closedStart, previousClosedTime));
+                () -> getTime(CircuitBreakerState.CLOSED, closedStart, previousClosedTime));
         metrics.registerCircuitBreakerTimeSpentInOpen(
-                () -> getTime(CircuitBreakerEvents.State.OPEN, openStart, previousOpenTime));
+                () -> getTime(CircuitBreakerState.OPEN, openStart, previousOpenTime));
         metrics.registerCircuitBreakerTimeSpentInHalfOpen(
-                () -> getTime(CircuitBreakerEvents.State.HALF_OPEN, halfOpenStart, previousHalfOpenTime));
+                () -> getTime(CircuitBreakerState.HALF_OPEN, halfOpenStart, previousHalfOpenTime));
 
         metrics.registerBulkheadExecutionsRunning(runningExecutions::get);
         if (isAsync) {
@@ -57,7 +58,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    private Long getTime(CircuitBreakerEvents.State measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
+    private Long getTime(CircuitBreakerState measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
         return state == measuredState
                 ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
                 : prevMeasuredStateTime.get();

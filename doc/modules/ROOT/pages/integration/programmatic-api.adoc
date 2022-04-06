@@ -1,0 +1,23 @@
+= Programmatic API Integration Concerns
+
+This page describes integration concerns of the xref:usage/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance}.
+
+== Standalone Implementation
+
+The standalone implementation provides no integration points.
+It is, as the name suggests, completely standalone.
+
+At the moment, it is not possible to change the thread pool to which actions are offloaded.
+A single cached thread pool, obtained using `Executors.newCachedThreadPool()`, is used for all thread offloads.
+
+Users of the standalone implementation that also use an event loop based library, such as Vert.x, may integrate the event loop support as described in xref:integration/event-loop.adoc[Event Loop].
+
+== CDI implementation
+
+The CDI implementation will use the thread pool an integrator provides (see xref:integration/thread-pool.adoc[Thread Pool]).
+This also extends to the context propagation integration (see xref:integration/context-propagation.adoc[Context Propagation]).
+
+It will also use the event loop support, if integrator provides one (see xref:integration/event-loop.adoc[Event Loop]).
+
+In other words, runtimes that use the CDI implementation don't have to do any extra integration work.
+The existing integration is enough.
