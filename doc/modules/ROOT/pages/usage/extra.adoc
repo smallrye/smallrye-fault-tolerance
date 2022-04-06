@@ -43,12 +43,15 @@ public class Example {
 <1> Obtains current circuit breaker state.
 <2> Resets all circuit breakers to the initial state.
 
-The `CircuitBreakerMaintenance` interface provides 3 methods:
+The `CircuitBreakerMaintenance` interface provides 4 methods:
 
 . `currentState(name)`: returns current state of given circuit breaker.
   The return type `CircuitBreakerState` is an `enum` with 3 values: `CLOSED`, `OPEN`, `HALF_OPEN`.
+- `onStateChange(name, callback)`: registers a callback that will be called when given circuit breaker changes state.
 . `reset(name)`: resets given circuit breaker to the initial state.
 . `resetAll()`: resets all circuit breakers in the application to the initial state.
+
+See the javadoc of those methods for more information.
 
 [[blocking-nonblocking]]
 == @Blocking and @NonBlocking
@@ -175,10 +178,9 @@ We also recommend avoiding `@Asynchronous` methods that return `Future`, because
 
 * Mutiny: `Uni`
 * RxJava: `Single`, `Maybe`, `Completable`
-* Reactor: `Mono`
 
 These types are treated just like `CompletionStage`, so everything that works for `CompletionStage` works for these types as well.
-Stream-like types (`Multi`, `Observable`, `Flowable`, `Flux`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
+Stream-like types (`Multi`, `Observable`, `Flowable`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
 
 For example:
 
@@ -196,22 +198,21 @@ public class MyService {
 
 <1> Using the `@NonBlocking` annotation described in <<blocking-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
 <2> Returning the `Uni` type from Mutiny.
-    This shows that whatever works for `CompletionStage` also works for the other async types.
+This shows that whatever works for `CompletionStage` also works for the other async types.
 
-The implementation is based on the https://github.com/smallrye/smallrye-reactive-utils/tree/main/reactive-converters[SmallRye Reactive Converters] project.
-This means that to be able to use any particular asynchronous type, the corresponding converter library must be present.
+The implementation internally converts the async types to a `CompletionStage` and back.
+This means that to be able to use any particular asynchronous type, the corresponding converter must be present.
+{smallrye-fault-tolerance} provides support libraries for popular asynchronous types, and these support libraries include the corresponding converters.
+
 It is possible that the runtime you use already provides the correct integration.
 Otherwise, add a dependency to your application:
 
-* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye.reactive:smallrye-reactive-converter-mutiny`
-* https://github.com/ReactiveX/RxJava/tree/1.x[RxJava 1]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava1`
-* https://github.com/ReactiveX/RxJava/tree/2.x[RxJava 2]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava2`
-* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye.reactive:smallrye-reactive-converter-rxjava3`
-* https://projectreactor.io/[Reactor]: `io.smallrye.reactive:smallrye-reactive-converter-reactor`
+* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye:smallrye-fault-tolerance-mutiny`
+* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye:smallrye-fault-tolerance-rxjava3`
 
 .Quarkus
 ****
-In Quarkus, the Mutiny converter library is present by default.
+In Quarkus, the Mutiny support library is present by default.
 You can use fault tolerance on methods that return `Uni` out of the box.
 ****
 
@@ -290,8 +291,8 @@ All `@Retry` metrics are still present and reflect the altered behavior.
 
 == Non-compatible Mode
 
-In addition to the <<blocking-nonblocking>> annotations, {smallrye-fault-tolerance} offers a mode where method asynchrony is determined solely from the its return type.
-This mode is *not compatible* with the {microprofile-fault-tolerance} specification (and doesn't pass 2 tests in the TCK).
+{smallrye-fault-tolerance} offers a mode where certain features are improved beyond specification, as described below.
+This mode is *not compatible* with the {microprofile-fault-tolerance} specification (and doesn't necessarily pass the entire TCK).
 
 This mode is disabled by default.
 To enable, set the configuration property `smallrye.faulttolerance.mp-compatibility` to `false`.
@@ -310,14 +311,16 @@ Note that the non-compatible mode is available since {smallrye-fault-tolerance} 
 Previous versions are always compatible.
 ****
 
-In this mode, methods that
+[[method-asynchrony]]
+=== Determining Asynchrony from Method Signature
+
+In the non-compatible mode, method asynchrony is determined solely from its signature.
+That is, methods that
 
 * have some fault tolerance annotation (such as `@Retry`),
 * return `CompletionStage` (or some other <<async-types,async type>>),
-* are _not_ annotated `@Blocking`, `@NonBlocking` or `@Asynchronous`
 
-are not offloaded to a thread pool and still have asynchronous fault tolerance applied.
-(In other words, they are treated as if they were annotated `@NonBlocking`.)
+always have asynchronous fault tolerance applied.
 
 For example:
 
@@ -354,6 +357,167 @@ Note that the existing annotations still work without a change, both in compatib
 That is, if a method (or class) is annotated `@Asynchronous` or `@Blocking`, execution will be offloaded to a thread pool.
 If a method (or class) is annotated `@NonBlocking`, execution will happen on the original thread (even if `@Asynchronous` is present).
 
-Also note that this mode doesn't affect methods returning `Future`.
-You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool.
+Also note that this doesn't affect methods returning `Future`.
+You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool and are guarded properly.
 As mentioned in the <<blocking-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
+
+=== Inspecting Exception Cause Chains
+
+The `@CircuitBreaker`, `@Fallback` and `@Retry` annotations can be used to specify that certain exceptions should be treated as failures and others as successes.
+This is limited to inspecting the actual exception that was thrown.
+However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+
+In the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
+To be specific, in case a `@Fallback` method throws an exception, the decision process is:
+
+1. if the exception is assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown;
+2. otherwise, if the exception is assignable to one of the `applyOn` exceptions, fallback is applied;
+3. otherwise, if the cause chain of the exception contains an exception assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown;
+4. otherwise, if the cause chain of the exception contains an exception assignable to one of the `applyOn` exceptions, fallback is applied;
+5. otherwise, the exception is rethrown.
+
+For example, say we have this method:
+
+[source, java]
+----
+@Fallback(fallbackMethod = "fallback",
+    skipOn = ExpectedOutcomeException.class,
+    applyOn = IOException.class)
+public Result doSomething() {
+    ...
+}
+
+public Result fallback() {
+    ...
+}
+----
+
+If `doSomething` throws an `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
+If `doSomething` throws an `IOException`, fallback is applied.
+If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
+If `doSomething` throws a `WrapperException` whose cause is `IOException`, fallback is applied.
+
+Comparing with the `@Fallback` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
+Note that these steps are executed if and only if the thrown exception matches neither `skipOn` nor `applyOn`.
+If the thrown exception matches either of them, the cause chain is not inspected at all.
+
+Similar behavior applies to `@CircuitBreaker` and `@Retry`.
+All 3 annotations follow the same principle: exceptions considered success have priority over those considered failure.
+
+|===
+| Fault Tolerance annotation | Exception is first tested against | and then against
+
+| `@Fallback`
+| `skipOn`
+| `applyOn`
+
+| `@CircuitBreaker`
+| `skipOn`
+| `failOn`
+
+| `@Retry`
+| `abortOn`
+| `retryOn`
+|===
+
+[[kotlin-suspend-functions]]
+== Kotlin `suspend` Functions
+
+{smallrye-fault-tolerance} includes support for Kotlin suspending functions.
+They are treated as <<async-types>>, even though the internal implementation is more complex than support for Mutiny or RxJava.
+
+For example:
+
+[source,kotlin]
+----
+@ApplicationScoped
+open class MyService {
+    @Retry(maxRetries = 2)
+    @Fallback(fallbackMethod = "helloFallback")
+    open suspend fun hello(): String { // <1>
+        delay(100)
+        throw IllegalArgumentException()
+    }
+
+    private suspend fun helloFallback(): String { // <2>
+        delay(100)
+        return "hello"
+    }
+}
+----
+
+<1> As a suspending function, this method can only be called from another suspending function.
+It will be guarded by the retry and fallback strategies, as defined using the annotations.
+<2> Similarly to fallback methods in Java, fallback methods in Kotlin must have the same signature as the guarded method.
+Since the guarded method is suspending, the fallback method must be suspending.
+
+As mentioned above, suspending functions are treated as async types.
+This means that for asynchronous fault tolerance to work correctly on suspending functions, they must be determined to be asynchronous.
+That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, one of the usual annotations (`@Blocking`, `@NonBlocking`, `@Asynchronous`) must be present.
+It is expected that most users will use the Kotlin support in the non-compatible mode, so the example above does not include any such annotation.
+
+To be able to use this, a support library must be present.
+It is possible that the runtime you use already provides the correct integration.
+Otherwise, add a dependency to your application: `io.smallrye:smallrye-fault-tolerance-kotlin`.
+
+.Quarkus
+****
+In Quarkus, the Kotlin support library is present by default, if you use the Quarkus Kotlin support.
+You can declare fault tolerance annotations on suspending methods out of the box.
+****
+
+=== Programmatic API
+
+Suspending functions are currently only supported in the declarative, annotation-based API, as shown in the example above.
+The xref:usage/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance} does not support suspending functions, but other than that, it can of course be used from Kotlin through its Java interop.
+
+== Reusable, Preconfigured Fault Tolerance
+
+The declarative, annotation-based API of {microprofile-fault-tolerance} doesn't allow sharing configuration of fault tolerance strategies across multiple classes.
+In a single class, the configuration may be shared across all methods by putting the annotations on the class instead of individual methods, but even then, _stateful_ fault tolerance strategies are not shared.
+Each method has its own bulkhead and/or circuit breaker, which is often not what you want.
+
+The xref:usage/programmatic-api.adoc[programmatic API] of {smallrye-fault-tolerance} allows using a single `FaultTolerance` object to guard multiple disparate actions, which allows reuse and state sharing.
+It is possible to use a programmatically constructed `FaultTolerance` object declaratively, using the `@ApplyFaultTolerance` annotation.
+
+To be able to do that, we need a bean of type `FaultTolerance` with the `@Identifier` qualifier:
+
+[source,java]
+----
+@ApplicationScoped
+public class PreconfiguredFaultTolerance {
+    @Produces
+    @Identifier("my-fault-tolerance")
+    public static final FaultTolerance<String> FT = FaultTolerance.<String>create()
+            .withRetry().maxRetries(2).done()
+            .withFallback().handler(() -> "fallback").done()
+            .build();
+}
+----
+
+See the xref:usage/programmatic-api.adoc[programmatic API] documentation for more information about creating the `FaultTolerance` instance.
+
+It is customary to create the bean by declaring a `static` producer field, just like in the previous example.
+
+Once we have that, we can apply `my-fault-tolerance` to synchronous methods that return `String`:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @ApplyFaultTolerance("my-fault-tolerance")
+    public String doSomething() {
+        ...
+    }
+}
+----
+
+It is also possible to create a bean of type `FaultTolerance<Object>` and apply it to synchronous methods that return many different types.
+Note that this effectively precludes defining a useful fallback, because fallback can only be defined when the value type is known.
+
+It is also possible to define a bean of type `FaultTolerance<CompletionStage<T>>` and apply it to asynchronous methods that return `CompletionStage<T>`.
+Likewise, it is possible to do this for <<async-types>>.
+
+Note that you can't define a synchronous `FaultTolerance<T>` object and apply it to any asynchronous method.
+Similarly, you can't define an asynchronous `FaultTolerance<CompletionStage<T>>` and apply it to a synchronous method or an asynchronous method with different <<async-types,asynchronous type>>.
+This limitation will be lifted in the future.

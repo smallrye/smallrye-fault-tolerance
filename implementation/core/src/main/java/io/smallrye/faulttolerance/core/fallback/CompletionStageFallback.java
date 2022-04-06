@@ -9,12 +9,12 @@ import java.util.concurrent.CompletionStage;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
     public CompletionStageFallback(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            FallbackFunction<CompletionStage<V>> fallback, SetOfThrowables applyOn, SetOfThrowables skipOn) {
-        super(delegate, description, fallback, applyOn, skipOn);
+            FallbackFunction<CompletionStage<V>> fallback, ExceptionDecision exceptionDecision) {
+        super(delegate, description, fallback, exceptionDecision);
     }
 
     @Override

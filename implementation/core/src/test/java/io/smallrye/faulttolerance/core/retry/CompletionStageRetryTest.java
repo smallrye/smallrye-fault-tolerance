@@ -4,7 +4,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -20,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 public class CompletionStageRetryTest {
@@ -46,8 +47,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldNotRetryOnSuccess",
-                SetOfThrowables.ALL, SetOfThrowables.EMPTY,
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                ExceptionDecision.ALWAYS_FAILURE, 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldNotRetryOnSuccess");
@@ -68,7 +68,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnError",
-                SetOfThrowables.ALL, SetOfThrowables.create(Collections.singletonList(RuntimeException.class)),
+                new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -89,7 +89,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnErrorInCSCreation",
-                SetOfThrowables.ALL, SetOfThrowables.create(Collections.singletonList(RuntimeException.class)),
+                new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -114,7 +114,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnce",
-                SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -140,7 +140,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnceOnCsFailure",
-                SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -166,7 +166,7 @@ public class CompletionStageRetryTest {
                 });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
-                SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
@@ -186,7 +186,7 @@ public class CompletionStageRetryTest {
                 }));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
-                SetOfThrowables.create(Collections.singletonList(RuntimeException.class)), SetOfThrowables.EMPTY,
+                new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
                 3, 1000L, AsyncDelay.NONE, new TestStopwatch());
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));

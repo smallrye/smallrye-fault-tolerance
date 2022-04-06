@@ -2,9 +2,9 @@
 
 {smallrye-fault-tolerance} comprises the following main artifacts:
 
-* `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance};
+* `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance}, including a programmatic API;
 * `io.smallrye:smallrye-fault-tolerance-core`: core implementations of fault tolerance strategies;
-* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance};
+* `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance} with {smallrye-fault-tolerance} extensions, including a programmatic API;
 * `io.smallrye:smallrye-fault-tolerance-autoconfig-core`: runtime part of the {smallrye-fault-tolerance} configuration system.
 ** (There's also `io.smallrye:smallrye-fault-tolerance-autoconfig-processor`, but that is only used during {smallrye-fault-tolerance} build and isn't required at runtime.)
 
@@ -14,7 +14,6 @@ These artifacts must be always present, together with the following dependencies
 * `org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-api`;
 * `org.eclipse.microprofile.config:microprofile-config-api` and some implementation;
 * `org.eclipse.microprofile.metrics:microprofile-metrics-api` and some implementation (implementation is only required if fault tolerance metrics are enabled);
-* `io.smallrye.reactive:smallrye-reactive-converter-api`;
 * `org.jboss.logging:jboss-logging`.
 
 Some other artifacts are provided to facilitate additional integrations.
@@ -27,4 +26,12 @@ The remaining integration concerns are described in the following sections:
 * xref:integration/thread-pool.adoc[providing a thread pool] for `@Asynchronous` methods and other asynchronous tasks;
 * xref:integration/context-propagation.adoc[enabling Context Propagation] for `@Asynchronous` methods;
 * xref:integration/opentracing.adoc[enabling OpenTracing integration] with Context Propagation;
-* xref:integration/event-loop.adoc[integrating an event loop] for non-blocking method invocations.
+* xref:integration/event-loop.adoc[integrating an event loop] for non-blocking method invocations;
+* xref:integration/async-types.adoc[integrating additional types] for asynchronous invocations;
+* xref:integration/programmatic-api.adoc[integrating the programmatic API] that {smallrye-fault-tolerance} provides.
+
+== Standalone Implementation of the Programmatic API
+
+A completely standalone implementation of the programmatic API exists in the `io.smallrye:smallrye-fault-tolerance-standalone` artifact.
+This is supposed to be used in a non-CDI environment.
+Runtimes that integrate {smallrye-fault-tolerance} typically do so using CDI, and so should ignore this artifact.

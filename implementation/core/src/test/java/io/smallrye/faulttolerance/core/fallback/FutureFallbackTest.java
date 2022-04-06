@@ -10,7 +10,7 @@ import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
@@ -22,7 +22,7 @@ public class FutureFallbackTest {
         TestInvocation<Future<String>> invocation = TestInvocation.of(
                 () -> failedFuture(forcedException));
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
+                this::fallback, ExceptionDecision.ALWAYS_FAILURE));
         Future<String> future = result.await();
         assertThatThrownBy(future::get).hasCause(forcedException);
     }
@@ -34,7 +34,7 @@ public class FutureFallbackTest {
             throw forcedException;
         });
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
+                this::fallback, ExceptionDecision.ALWAYS_FAILURE));
         Future<String> await = result.await();
         assertThat(await.get()).isEqualTo("fallback");
     }
@@ -43,7 +43,7 @@ public class FutureFallbackTest {
     public void shouldSucceed() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation.of(() -> completedFuture("invocation"));
         TestThread<Future<String>> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                this::fallback, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
+                this::fallback, ExceptionDecision.ALWAYS_FAILURE));
         Future<String> future = result.await();
         assertThat(future.get()).isEqualTo("invocation");
     }
@@ -53,11 +53,11 @@ public class FutureFallbackTest {
         TestInvocation<Void> invocation = TestInvocation.of(TestException::doThrow);
         TestThread<Void> result = runOnTestThread(new Fallback<>(invocation, "test invocation", e -> {
             throw new RuntimeException();
-        }, SetOfThrowables.ALL, SetOfThrowables.EMPTY));
+        }, ExceptionDecision.ALWAYS_FAILURE));
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
     }
 
-    private Future<String> fallback(FallbackContext ctx) {
+    private Future<String> fallback(FallbackContext<?> ctx) {
         return completedFuture("fallback");
     }
 }

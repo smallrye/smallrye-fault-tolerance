@@ -2,12 +2,16 @@
 * Usage
 ** xref:usage/basic.adoc[Basic Usage]
 ** xref:usage/extra.adoc[Extra Features]
+** xref:usage/programmatic-api.adoc[Programmatic API]
 * Integration
 ** xref:integration/intro.adoc[Introduction]
 ** xref:integration/thread-pool.adoc[Thread Pool]
 ** xref:integration/context-propagation.adoc[Context Propagation]
 ** xref:integration/opentracing.adoc[OpenTracing]
 ** xref:integration/event-loop.adoc[Event Loop]
+** xref:integration/async-types.adoc[Additional Asynchronous Types Integration Concerns]
+** xref:integration/kotlin.adoc[Kotlin Integration Concerns]
+** xref:integration/programmatic-api.adoc[Programmatic API Integration Concerns]
 * Internals
 ** xref:internals/project-structure.adoc[Project Structure]
 ** xref:internals/instructions.adoc[Instructions]

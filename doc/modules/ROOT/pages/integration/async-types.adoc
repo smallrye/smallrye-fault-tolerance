@@ -1,0 +1,12 @@
+= Additional Asynchronous Types Integration Concerns
+
+This page describes integration concerns for xref:usage/extra.adoc#async-types[Additional Asynchronous Types].
+
+To enable support of additional asynchronous types, it is required that the support library is present.
+That is:
+
+* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye:smallrye-fault-tolerance-mutiny`
+* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye:smallrye-fault-tolerance-rxjava3`
+
+These libraries include some service providers that {smallrye-fault-tolerance} will automatically load and use.
+Therefore, no more integration is necessary.

@@ -20,7 +20,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-build-parent</artifactId>
-        <version>34</version>
+        <version>35</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-parent</artifactId>
@@ -35,8 +35,11 @@
         <version.jakarta-cdi>3.0.0</version.jakarta-cdi>
         <version.jakarta-interceptors>2.0.0</version.jakarta-interceptors>
         <version.javapoet>1.13.0</version.javapoet>
-        <version.jboss-logging>3.4.2.Final</version.jboss-logging>
+        <version.jboss-logging>3.4.3.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
+        <version.kotlin>1.6.10</version.kotlin>
+        <version.kotlin-dokka>1.6.10</version.kotlin-dokka>
+        <version.kotlinx-coroutines>1.6.0</version.kotlinx-coroutines>
         <version.microprofile-fault-tolerance>4.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>3.0.1</version.microprofile-config-api>
         <version.microprofile-metrics-api>4.0</version.microprofile-metrics-api>
@@ -46,20 +49,19 @@
         <!-- smallrye-metrics is purely used for testing -->
         <version.smallrye-metrics>4.0.0-RC1</version.smallrye-metrics>
         <!-- smallrye-context-propagation is purely used for testing -->
-        <version.smallrye-context-propagation>1.2.2</version.smallrye-context-propagation>
+        <version.smallrye-context-propagation>2.0.0-RC1</version.smallrye-context-propagation>
         <version.smallrye-common>2.0.0-RC1</version.smallrye-common>
-        <version.smallrye-reactive-converter>2.6.0</version.smallrye-reactive-converter>
         <version.opentracing>0.33.0</version.opentracing>
-        <version.vertx>4.2.3</version.vertx>
+        <version.vertx>4.2.6</version.vertx>
 
         <version.arquillian>1.7.0.Alpha10</version.arquillian>
         <version.arquillian-weld>3.0.1.Final</version.arquillian-weld>
         <version.assertj>3.22.0</version.assertj>
-        <version.awaitility>4.1.1</version.awaitility>
+        <version.awaitility>4.2.0</version.awaitility>
         <version.junit-jupiter>5.8.2</version.junit-jupiter>
-        <version.junit-pioneer>1.5.0</version.junit-pioneer>
-        <version.mutiny>1.2.0</version.mutiny>
-        <version.rxjava3>3.1.3</version.rxjava3>
+        <version.junit-pioneer>1.6.2</version.junit-pioneer>
+        <version.mutiny>1.4.0</version.mutiny>
+        <version.rxjava3>3.1.4</version.rxjava3>
         <version.testng>6.14.3</version.testng>
         <version.weld-api>4.0.SP1</version.weld-api>
         <version.weld-core>4.0.2.Final</version.weld-core>
@@ -115,11 +117,6 @@
                 <version>${version.jakarta-interceptors}</version>
             </dependency>
             <dependency>
-                <groupId>com.squareup</groupId>
-                <artifactId>javapoet</artifactId>
-                <version>${version.javapoet}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.eclipse.microprofile.config</groupId>
                 <artifactId>microprofile-config-api</artifactId>
                 <version>${version.microprofile-config-api}</version>
@@ -151,22 +148,11 @@
                 <version>${version.microprofile-fault-tolerance}</version>
                 <scope>test</scope>
             </dependency>
+
             <dependency>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging</artifactId>
-                <version>${version.jboss-logging}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging-annotations</artifactId>
-                <version>${version.jboss-logging-tools}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.logging</groupId>
-                <artifactId>jboss-logging-processor</artifactId>
-                <version>${version.jboss-logging-tools}</version>
-                <scope>provided</scope>
+                <groupId>com.squareup</groupId>
+                <artifactId>javapoet</artifactId>
+                <version>${version.javapoet}</version>
             </dependency>
             <dependency>
                 <groupId>io.smallrye.common</groupId>
@@ -175,8 +161,8 @@
             </dependency>
             <dependency>
                 <groupId>io.smallrye.reactive</groupId>
-                <artifactId>smallrye-reactive-converter-api</artifactId>
-                <version>${version.smallrye-reactive-converter}</version>
+                <artifactId>mutiny</artifactId>
+                <version>${version.mutiny}</version>
             </dependency>
             <dependency>
                 <groupId>io.opentracing</groupId>
@@ -200,9 +186,36 @@
                 <type>test-jar</type>
             </dependency>
             <dependency>
+                <groupId>io.reactivex.rxjava3</groupId>
+                <artifactId>rxjava</artifactId>
+                <version>${version.rxjava3}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.vertx</groupId>
                 <artifactId>vertx-core</artifactId>
                 <version>${version.vertx}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging</artifactId>
+                <version>${version.jboss-logging}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging-annotations</artifactId>
+                <version>${version.jboss-logging-tools}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging-processor</artifactId>
+                <version>${version.jboss-logging-tools}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>${version.kotlin}</version>
             </dependency>
 
             <dependency>
@@ -229,6 +242,13 @@
                 <version>${version.smallrye-context-propagation}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-jdk8</artifactId>
+                <version>${version.kotlinx-coroutines}</version>
+                <scope>test</scope>
+            </dependency>
+
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
@@ -321,6 +341,27 @@
             </dependency>
             <dependency>
                 <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-kotlin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-mutiny</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-rxjava3</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-vertx</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-autoconfig-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -344,9 +385,16 @@
                 <artifactId>smallrye-fault-tolerance-tracing-propagation</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>io.smallrye</groupId>
-                <artifactId>smallrye-fault-tolerance-vertx</artifactId>
+                <artifactId>smallrye-fault-tolerance-standalone</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-standalone</artifactId>
+                <type>test-jar</type>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

@@ -15,8 +15,7 @@
 
     <modules>
         <module>basic</module>
-        <!-- uncomment when SmallRye Context Propagation updates to jakarta.* -->
-<!--        <module>integration</module>-->
+        <module>integration</module>
         <module>tck</module>
     </modules>
 
