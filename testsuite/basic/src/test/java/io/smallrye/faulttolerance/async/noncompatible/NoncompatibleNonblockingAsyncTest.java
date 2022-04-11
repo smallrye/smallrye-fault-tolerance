@@ -7,14 +7,14 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
 @FaultToleranceBasicTest
 public class NoncompatibleNonblockingAsyncTest {
     @Test
-    @SetSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
+    @WithSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
     public void noncompatibleMode(NoncompatibleNonblockingHelloService service) throws Exception {
         Thread mainThread = Thread.currentThread();
 
@@ -30,7 +30,7 @@ public class NoncompatibleNonblockingAsyncTest {
     }
 
     @Test
-    @SetSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "true")
+    @WithSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "true")
     public void explicitCompatibleMode(NoncompatibleNonblockingHelloService service) {
         CompletionStage<String> future = service.hello();
         assertThatThrownBy(() -> future.toCompletableFuture().get())

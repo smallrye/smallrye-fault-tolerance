@@ -1,11 +1,10 @@
 package io.smallrye.faulttolerance.async.sizing;
 
-import org.junitpioneer.jupiter.SetSystemProperty;
-
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
-@SetSystemProperty(key = "io.smallrye.faulttolerance.mainThreadPoolSize", value = "10")
-@SetSystemProperty(key = "io.smallrye.faulttolerance.mainThreadPoolQueueSize", value = "0")
+@WithSystemProperty(key = "io.smallrye.faulttolerance.mainThreadPoolSize", value = "10")
+@WithSystemProperty(key = "io.smallrye.faulttolerance.mainThreadPoolQueueSize", value = "0")
 @FaultToleranceBasicTest
 public class AsyncThreadPoolSizingTest extends AbstractAsyncThreadPoolSizingTest {
 }

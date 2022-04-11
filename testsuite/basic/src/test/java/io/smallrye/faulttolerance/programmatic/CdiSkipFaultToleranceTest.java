@@ -6,16 +6,16 @@ import java.util.concurrent.Callable;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
 // we boot a new Weld container for each test, so the config property will be read again
 // this is impossible for the standalone implementation (unless we forked the JVM for each test)
 @FaultToleranceBasicTest
-@SetSystemProperty(key = "MP_Fault_Tolerance_NonFallback_Enabled", value = "false")
+@WithSystemProperty(key = "MP_Fault_Tolerance_NonFallback_Enabled", value = "false")
 public class CdiSkipFaultToleranceTest {
     private int counter;
 
