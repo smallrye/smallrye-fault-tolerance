@@ -8,12 +8,12 @@ import javax.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
 @FaultToleranceBasicTest
-@SetSystemProperty(key = "io.smallrye.faulttolerance.retry.backoff.exponential.config.ConfiguredExponentialBackoffRetryService/hello/ExponentialBackoff/factor", value = "3")
+@WithSystemProperty(key = "io.smallrye.faulttolerance.retry.backoff.exponential.config.ConfiguredExponentialBackoffRetryService/hello/ExponentialBackoff/factor", value = "3")
 @EnabledOnOs(OS.LINUX)
 public class ConfiguredExponentialBackoffRetryTest {
     @Inject

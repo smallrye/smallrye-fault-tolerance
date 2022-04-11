@@ -1,16 +1,16 @@
 package io.smallrye.faulttolerance.kotlin.circuitbreaker
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest
+import io.smallrye.faulttolerance.util.WithSystemProperty
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException
 import org.junit.jupiter.api.Test
-import org.junitpioneer.jupiter.SetSystemProperty
 import java.io.IOException
 
 // so that FT methods don't have to be marked @NonBlocking
-@SetSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
+@WithSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
 @FaultToleranceBasicTest
 class KotlinCircuitBreakerTest {
     @Test

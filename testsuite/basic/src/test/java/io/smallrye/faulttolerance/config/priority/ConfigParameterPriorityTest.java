@@ -24,13 +24,13 @@ import javax.inject.Inject;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.jboss.weld.junit5.auto.AddBeanClasses;
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.FaultToleranceOperations;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
-@SetSystemProperty(key = "Retry/delay", value = "10")
+@WithSystemProperty(key = "Retry/delay", value = "10")
 @FaultToleranceBasicTest
 @AddBeanClasses(FaultyService.class)
 public class ConfigParameterPriorityTest {

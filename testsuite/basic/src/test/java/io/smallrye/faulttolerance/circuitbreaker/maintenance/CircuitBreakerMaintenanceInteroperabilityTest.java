@@ -13,17 +13,17 @@ import javax.inject.Inject;
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
 @FaultToleranceBasicTest
 // Weld SE by default enables relaxed client proxy instantiation, which is different from
 // all other environments and pretty crucial for this test
-@SetSystemProperty(key = "org.jboss.weld.construction.relaxed", value = "false")
+@WithSystemProperty(key = "org.jboss.weld.construction.relaxed", value = "false")
 public class CircuitBreakerMaintenanceInteroperabilityTest {
     @Inject
     private HelloService helloService;
