@@ -67,6 +67,8 @@
         <version.weld-core>3.1.8.Final</version.weld-core>
         <version.weld-junit5>2.0.2.Final</version.weld-junit5>
 
+        <version.maven-enforcer-plugin>3.0.0</version.maven-enforcer-plugin>
+
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
@@ -419,6 +421,41 @@
             <modules>
                 <module>release</module>
             </modules>
+        </profile>
+
+        <profile>
+            <id>enforce-java-version</id>
+            <activation>
+                <property>
+                    <!-- this is only for CI to be able to verify running with Java 8 -->
+                    <name>!allow-java8-build</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>${version.maven-enforcer-plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>enforce-java</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireJavaVersion>
+                                            <version>[9,)</version>
+                                            <message>This project produces a multi-release JAR. Building with JDK 9+ is required.</message>
+                                        </requireJavaVersion>
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
