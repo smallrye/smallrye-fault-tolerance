@@ -41,7 +41,8 @@ public class SemaphoreBulkhead<V> extends BulkheadBase<V> {
                 ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
             }
         } else {
-            LOG.trace("Semaphore not acquired, rejecting task from bulkhead");
+            LOG.debugOrTrace(description + " invocation prevented by bulkhead",
+                    "Semaphore not acquired, rejecting task from bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             throw bulkheadRejected();
         }
