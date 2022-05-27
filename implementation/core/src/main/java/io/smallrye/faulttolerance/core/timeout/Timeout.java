@@ -73,7 +73,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         }
 
         if (execution.hasTimedOut()) {
-            LOG.trace("Invocation timed out");
+            LOG.debug(description + " invocation timed out");
             ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
             throw timeoutException(description);
         }

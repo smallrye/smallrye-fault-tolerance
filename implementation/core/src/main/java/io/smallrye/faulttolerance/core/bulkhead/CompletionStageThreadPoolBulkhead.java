@@ -53,7 +53,8 @@ public class CompletionStageThreadPoolBulkhead<V> extends BulkheadBase<Completio
             runQueuedTask();
             return task.result;
         } else {
-            LOG.trace("Capacity semaphore not acquired, rejecting task from bulkhead");
+            LOG.debugOrTrace(description + " invocation prevented by bulkhead",
+                    "Capacity semaphore not acquired, rejecting task from bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             return failedStage(bulkheadRejected());
         }
