@@ -67,7 +67,7 @@
         <version.weld-core>3.1.8.Final</version.weld-core>
         <version.weld-junit5>2.0.2.Final</version.weld-junit5>
 
-        <version.maven-enforcer-plugin>3.0.0</version.maven-enforcer-plugin>
+        <version.maven-enforcer-plugin>3.1.0</version.maven-enforcer-plugin>
 
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
