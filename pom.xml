@@ -31,7 +31,7 @@
     <url>http://smallrye.io</url>
 
     <properties>
-        <version.jakarta-annotations>1.3.5</version.jakarta-annotations>
+        <version.jakarta-annotations>2.1.1</version.jakarta-annotations>
         <version.jakarta-cdi>2.0.2</version.jakarta-cdi>
         <version.jakarta-interceptors>1.2.5</version.jakarta-interceptors>
         <version.javapoet>1.13.0</version.javapoet>
