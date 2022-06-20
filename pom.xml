@@ -38,7 +38,7 @@
         <version.jboss-logging>3.4.3.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
         <version.kotlin>1.7.0</version.kotlin>
-        <version.kotlin-dokka>1.6.21</version.kotlin-dokka>
+        <version.kotlin-dokka>1.7.0</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.6.2</version.kotlinx-coroutines>
         <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
