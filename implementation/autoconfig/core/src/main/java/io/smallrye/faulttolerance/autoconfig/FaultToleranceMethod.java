@@ -65,14 +65,15 @@ public class FaultToleranceMethod {
             return false;
         }
 
-        // SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff)
-        // alone do _not_ trigger the fault tolerance interceptor,
-        // only in combination with other fault tolerance annotations
+        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff)
+        // do _not_ trigger the fault tolerance interceptor alone, only in combination
+        // with other fault tolerance annotations
         return asynchronous != null
                 || bulkhead != null
                 || circuitBreaker != null
                 || fallback != null
                 || retry != null
-                || timeout != null;
+                || timeout != null
+                || applyFaultTolerance != null;
     }
 }
