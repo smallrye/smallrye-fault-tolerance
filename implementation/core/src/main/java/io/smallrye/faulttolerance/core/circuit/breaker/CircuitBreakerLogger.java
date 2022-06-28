@@ -8,4 +8,12 @@ import org.jboss.logging.annotations.MessageLogger;
 interface CircuitBreakerLogger extends BasicLogger {
     CircuitBreakerLogger LOG = Logger.getMessageLogger(CircuitBreakerLogger.class,
             CircuitBreakerLogger.class.getPackage().getName());
+
+    default void debugOrTrace(String debugMessage, String traceAmendment) {
+        if (isTraceEnabled()) {
+            debug(traceAmendment + ": " + debugMessage);
+        } else {
+            debug(debugMessage);
+        }
+    }
 }

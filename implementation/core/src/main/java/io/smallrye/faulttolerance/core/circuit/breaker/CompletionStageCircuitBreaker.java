@@ -74,7 +74,8 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inOpen(InvocationContext<CompletionStage<V>> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
-            LOG.trace("Circuit breaker open, invocation prevented");
+            LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
+                    "Circuit breaker open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
@@ -87,7 +88,8 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
 
     private CompletionStage<V> inHalfOpen(InvocationContext<CompletionStage<V>> ctx, State state) {
         if (state.probeAttempts.incrementAndGet() > successThreshold) {
-            LOG.trace("Circuit breaker half-open, invocation prevented");
+            LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
+                    "Circuit breaker half-open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is half-open"));
         }

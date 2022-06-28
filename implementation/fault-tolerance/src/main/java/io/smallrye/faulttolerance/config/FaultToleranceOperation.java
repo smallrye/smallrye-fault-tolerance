@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
@@ -28,6 +29,8 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
+import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
@@ -127,6 +130,14 @@ public class FaultToleranceOperation {
         this.customBackoff = customBackoff;
     }
 
+    public Class<?> getBeanClass() {
+        return beanClass;
+    }
+
+    public MethodDescriptor getMethodDescriptor() {
+        return methodDescriptor;
+    }
+
     public Class<?>[] getParameterTypes() {
         return methodDescriptor.parameterTypes;
     }
@@ -147,12 +158,24 @@ public class FaultToleranceOperation {
         return asynchronous != null;
     }
 
+    public Asynchronous getAsynchronous() {
+        return asynchronous;
+    }
+
     public boolean hasBlocking() {
         return blocking != null;
     }
 
+    public Blocking getBlocking() {
+        return blocking;
+    }
+
     public boolean hasNonBlocking() {
         return nonBlocking != null;
+    }
+
+    public NonBlocking getNonBlocking() {
+        return nonBlocking;
     }
 
     // if the guarded method doesn't return CompletionStage, this is meaningless
@@ -342,6 +365,52 @@ public class FaultToleranceOperation {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Ensures all configuration of this fault tolerance operation is loaded. Subsequent method invocations
+     * on this instance are guaranteed to not touch MP Config.
+     */
+    public void materialize() {
+        if (applyFaultTolerance != null) {
+            applyFaultTolerance.materialize();
+        }
+        if (asynchronous != null) {
+            asynchronous.materialize();
+        }
+        if (blocking != null) {
+            blocking.materialize();
+        }
+        if (nonBlocking != null) {
+            nonBlocking.materialize();
+        }
+        if (bulkhead != null) {
+            bulkhead.materialize();
+        }
+        if (circuitBreaker != null) {
+            circuitBreaker.materialize();
+        }
+        if (circuitBreakerName != null) {
+            circuitBreakerName.materialize();
+        }
+        if (fallback != null) {
+            fallback.materialize();
+        }
+        if (retry != null) {
+            retry.materialize();
+        }
+        if (timeout != null) {
+            timeout.materialize();
+        }
+        if (exponentialBackoff != null) {
+            exponentialBackoff.materialize();
+        }
+        if (fibonacciBackoff != null) {
+            fibonacciBackoff.materialize();
+        }
+        if (customBackoff != null) {
+            customBackoff.materialize();
         }
     }
 

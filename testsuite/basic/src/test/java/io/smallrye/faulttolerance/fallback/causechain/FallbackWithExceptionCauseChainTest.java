@@ -5,11 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
+import io.smallrye.faulttolerance.util.WithSystemProperty;
 
-@SetSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
+@WithSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
 @FaultToleranceBasicTest
 public class FallbackWithExceptionCauseChainTest {
     @Test

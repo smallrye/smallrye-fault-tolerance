@@ -107,7 +107,8 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     private V inOpen(InvocationContext<V> ctx, State state) throws Exception {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
-            LOG.trace("Circuit breaker open, invocation prevented");
+            LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
+                    "Circuit breaker open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             throw new CircuitBreakerOpenException(description + " circuit breaker is open");
         } else {
@@ -120,7 +121,8 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     private V inHalfOpen(InvocationContext<V> ctx, State state) throws Exception {
         if (state.probeAttempts.incrementAndGet() > successThreshold) {
-            LOG.trace("Circuit breaker half-open, invocation prevented");
+            LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
+                    "Circuit breaker half-open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             throw new CircuitBreakerOpenException(description + " circuit breaker is half-open");
         }

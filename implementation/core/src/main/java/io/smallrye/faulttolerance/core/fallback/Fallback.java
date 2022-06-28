@@ -51,7 +51,7 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
             throw sneakyThrow(failure);
         }
 
-        LOG.trace("Invocation failed, invoking fallback");
+        LOG.debug(description + " invocation failed, invoking fallback");
         ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
         FallbackContext<V> fallbackContext = new FallbackContext<>(failure, ctx);
         return fallback.call(fallbackContext);

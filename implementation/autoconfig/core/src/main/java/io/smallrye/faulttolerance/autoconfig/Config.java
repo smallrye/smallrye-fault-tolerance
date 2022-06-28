@@ -33,6 +33,12 @@ public interface Config {
      */
     boolean isOnMethod();
 
+    /**
+     * Ensures this configuration is loaded. Subsequent method invocations on this instance
+     * are guaranteed to not touch MP Config.
+     */
+    void materialize();
+
     // ---
 
     static <A extends Annotation> boolean isEnabled(Class<A> annotationType, MethodDescriptor method) {
