@@ -217,6 +217,12 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                         "/", annotationDeclaration.getSimpleName())
                                 .build())
                         : Collections.emptyList())
+                .addMethod(MethodSpec.methodBuilder("materialize")
+                        .addAnnotation(Override.class)
+                        .addModifiers(Modifier.PUBLIC)
+                        .returns(TypeName.VOID)
+                        .addCode(generateMaterializeMethod(annotationDeclaration))
+                        .build())
                 .build())
                 .indent("    ") // 4 spaces
                 .build()
@@ -259,6 +265,14 @@ public class AutoConfigProcessor extends AbstractProcessor {
         return CodeBlock.builder()
                 .addStatement("return instance.$1L()", annotationMember.getSimpleName())
                 .build();
+    }
+
+    private CodeBlock generateMaterializeMethod(TypeElement annotationDeclaration) {
+        CodeBlock.Builder builder = CodeBlock.builder();
+        for (ExecutableElement annotationElement : ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())) {
+            builder.addStatement("$L()", annotationElement.getSimpleName());
+        }
+        return builder.build();
     }
 
     private static TypeName rawType(TypeMirror type) {

@@ -28,6 +28,7 @@ The remaining integration concerns are described in the following sections:
 * xref:integration/opentracing.adoc[enabling OpenTracing integration] with Context Propagation;
 * xref:integration/event-loop.adoc[integrating an event loop] for non-blocking method invocations;
 * xref:integration/async-types.adoc[integrating additional types] for asynchronous invocations;
+* xref:integration/kotlin.adoc[integrating Kotlin support] for `suspend` functions;
 * xref:integration/programmatic-api.adoc[integrating the programmatic API] that {smallrye-fault-tolerance} provides.
 
 == Standalone Implementation of the Programmatic API
