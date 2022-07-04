@@ -13,7 +13,6 @@ These artifacts must be always present, together with the following dependencies
 * Jakarta CDI, Annotations and Interceptors API;
 * `org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-api`;
 * `org.eclipse.microprofile.config:microprofile-config-api` and some implementation;
-* `org.eclipse.microprofile.metrics:microprofile-metrics-api` and some implementation (implementation is only required if fault tolerance metrics are enabled);
 * `org.jboss.logging:jboss-logging`.
 
 Some other artifacts are provided to facilitate additional integrations.
@@ -23,6 +22,7 @@ Most of the integration is performed automatically by the CDI Portable Extension
 Make sure the extension is active.
 The remaining integration concerns are described in the following sections:
 
+* xref:integration/metrics.adoc[emitting metrics] for fault tolerance strategies;
 * xref:integration/thread-pool.adoc[providing a thread pool] for `@Asynchronous` methods and other asynchronous tasks;
 * xref:integration/context-propagation.adoc[enabling Context Propagation] for `@Asynchronous` methods;
 * xref:integration/opentracing.adoc[enabling OpenTracing integration] with Context Propagation;

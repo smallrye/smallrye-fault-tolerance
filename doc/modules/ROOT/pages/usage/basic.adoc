@@ -83,3 +83,85 @@ Again, this is all described in the {microprofile-fault-tolerance-url}#configura
 
 The {microprofile-fault-tolerance} specification describes how implementations should expose metrics over MicroProfile Metrics.
 As usual, this is described in the {microprofile-fault-tolerance-url}#_integration_with_microprofile_metrics[{microprofile-fault-tolerance} specification].
+
+=== Micrometer
+
+In addition to the MicroProfile Metrics support, demanded by the {microprofile-fault-tolerance} specification, {smallrye-fault-tolerance} also provides support for Micrometer.
+The set of metrics emitted to Micrometer is the same as the set of metrics emitted to MicroProfile Metrics, using the same metric names and tags.
+Metric types are mapped as closely as possible:
+
+|===
+| Name | MicroProfile Metrics | Micrometer
+
+| `ft.invocations.total`
+| counter
+| counter
+
+| `ft.retry.calls.total`
+| counter
+| counter
+
+| `ft.retry.retries.total`
+| counter
+| counter
+
+| `ft.timeout.calls.total`
+| counter
+| counter
+
+| `ft.timeout.executionDuration`
+| histogram
+| timer
+
+| `ft.circuitbreaker.calls.total`
+| counter
+| counter
+
+| `ft.circuitbreaker.state.total`
+| gauge
+| time gauge
+
+| `ft.circuitbreaker.opened.total`
+| counter
+| counter
+
+| `ft.bulkhead.calls.total`
+| counter
+| counter
+
+| `ft.bulkhead.executionsRunning`
+| gauge
+| gauge
+
+| `ft.bulkhead.executionsWaiting`
+| gauge
+| gauge
+
+| `ft.bulkhead.runningDuration`
+| histogram
+| timer
+
+| `ft.bulkhead.waitingDuration`
+| histogram
+| timer
+|===
+
+Note that distribution summaries in Micrometer, including timers, do not emit quantile buckets by default.
+Micrometer recommends that libraries should not configure them out of the box, so if you need them, you should use a `MeterFilter`.
+
+The following implementation makes sure Micrometer emits the same quantile buckets as MicroProfile Metrics for all fault tolerance metrics:
+
+```java
+static final MeterFilter ENABLE_HISTOGRAMS = new MeterFilter() {
+    @Override
+    public DistributionStatisticConfig configure(Meter.Id id, DistributionStatisticConfig config) {
+        if (id.getName().startsWith("ft.")) {
+            return DistributionStatisticConfig.builder()
+                    .percentiles(0.5, 0.75, 0.95, 0.98, 0.99, 0.999)
+                    .build()
+                    .merge(config);
+        }
+        return config;
+    }
+};
+```

@@ -338,7 +338,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(operation, point));
+            result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(operation, point),
+                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRetry(), operation.hasTimeout());
         }
 
         if (!operation.isThreadOffloadRequired()) {
@@ -397,7 +398,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false);
+            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false,
+                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRetry(), operation.hasTimeout());
         }
 
         return result;
@@ -458,7 +460,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), true);
+            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), true,
+                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRetry(), operation.hasTimeout());
         }
 
         result = new FutureExecution<>(result, asyncExecutor);

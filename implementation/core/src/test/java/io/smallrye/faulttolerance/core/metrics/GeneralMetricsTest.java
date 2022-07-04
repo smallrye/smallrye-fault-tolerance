@@ -18,7 +18,8 @@ public class GeneralMetricsTest {
     public void successfulInvocation() throws Exception {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
-        MetricsCollector<String> collector = new MetricsCollector<>(invocation(), metrics, false);
+        MetricsCollector<String> collector = new MetricsCollector<>(invocation(), metrics, false,
+                false, false, false, false);
         assertThat(collector.apply(new InvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
 
         assertThat(metrics.valueReturned).isEqualTo(1);
@@ -29,7 +30,8 @@ public class GeneralMetricsTest {
     public void failingInvocation() {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
-        MetricsCollector<Void> collector = new MetricsCollector<>(invocation(), metrics, false);
+        MetricsCollector<Void> collector = new MetricsCollector<>(invocation(), metrics, false,
+                false, false, false, false);
         assertThatThrownBy(() -> collector.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
 

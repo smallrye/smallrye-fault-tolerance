@@ -67,7 +67,7 @@ import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
-import io.smallrye.faulttolerance.metrics.MetricsProvider;
+import io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider;
 
 /**
  * @author Antoine Sabot-Durand
@@ -112,7 +112,8 @@ public class FaultToleranceExtension implements Extension {
                 DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultExistingCircuitBreakerNames.class),
                 DefaultExistingCircuitBreakerNames.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(MetricsProvider.class), MetricsProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(MicroProfileMetricsProvider.class),
+                MicroProfileMetricsProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CircuitBreakerMaintenanceImpl.class),
                 CircuitBreakerMaintenanceImpl.class.getName());
