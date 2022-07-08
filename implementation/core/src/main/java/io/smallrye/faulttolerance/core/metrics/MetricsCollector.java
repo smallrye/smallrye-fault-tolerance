@@ -18,6 +18,10 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
     final MetricsRecorder metrics;
     final boolean isAsync;
+    final boolean hasBulkhead;
+    final boolean hasCircuitBreaker;
+    final boolean hasRetry;
+    final boolean hasTimeout;
 
     // per-invocation metric values are stored in local variables in the `registerMetrics` method
     // shared metric values (for stateful fault tolerance strategies) are stored in fields below
@@ -37,24 +41,33 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     private final AtomicLong runningExecutions = new AtomicLong();
     private final AtomicLong waitingExecutions = new AtomicLong();
 
-    public MetricsCollector(FaultToleranceStrategy<V> delegate, MetricsRecorder metrics, boolean isAsync) {
+    public MetricsCollector(FaultToleranceStrategy<V> delegate, MetricsRecorder metrics, boolean isAsync,
+            boolean hasBulkhead, boolean hasCircuitBreaker, boolean hasRetry, boolean hasTimeout) {
         this.delegate = delegate;
         this.metrics = metrics;
         this.isAsync = isAsync;
+        this.hasBulkhead = hasBulkhead;
+        this.hasCircuitBreaker = hasCircuitBreaker;
+        this.hasRetry = hasRetry;
+        this.hasTimeout = hasTimeout;
 
         this.state = CircuitBreakerState.CLOSED;
         this.closedStart = System.nanoTime();
 
-        metrics.registerCircuitBreakerTimeSpentInClosed(
-                () -> getTime(CircuitBreakerState.CLOSED, closedStart, previousClosedTime));
-        metrics.registerCircuitBreakerTimeSpentInOpen(
-                () -> getTime(CircuitBreakerState.OPEN, openStart, previousOpenTime));
-        metrics.registerCircuitBreakerTimeSpentInHalfOpen(
-                () -> getTime(CircuitBreakerState.HALF_OPEN, halfOpenStart, previousHalfOpenTime));
+        if (hasCircuitBreaker) {
+            metrics.registerCircuitBreakerTimeSpentInClosed(
+                    () -> getTime(CircuitBreakerState.CLOSED, closedStart, previousClosedTime));
+            metrics.registerCircuitBreakerTimeSpentInOpen(
+                    () -> getTime(CircuitBreakerState.OPEN, openStart, previousOpenTime));
+            metrics.registerCircuitBreakerTimeSpentInHalfOpen(
+                    () -> getTime(CircuitBreakerState.HALF_OPEN, halfOpenStart, previousHalfOpenTime));
+        }
 
-        metrics.registerBulkheadExecutionsRunning(runningExecutions::get);
-        if (isAsync) {
-            metrics.registerBulkheadExecutionsWaiting(waitingExecutions::get);
+        if (hasBulkhead) {
+            metrics.registerBulkheadExecutionsRunning(runningExecutions::get);
+            if (isAsync) {
+                metrics.registerBulkheadExecutionsWaiting(waitingExecutions::get);
+            }
         }
     }
 
@@ -100,84 +113,92 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
 
         // retry
 
-        AtomicBoolean retried = new AtomicBoolean(false);
-        ctx.registerEventHandler(RetryEvents.Retried.class, ignored -> {
-            metrics.retryAttempted();
-            retried.set(true);
-        });
-        ctx.registerEventHandler(RetryEvents.Finished.class, event -> {
-            if (RetryEvents.Result.VALUE_RETURNED == event.result) {
-                metrics.retryValueReturned(retried.get());
-            } else if (RetryEvents.Result.EXCEPTION_NOT_RETRYABLE == event.result) {
-                metrics.retryExceptionNotRetryable(retried.get());
-            } else if (RetryEvents.Result.MAX_RETRIES_REACHED == event.result) {
-                metrics.retryMaxRetriesReached(retried.get());
-            } else if (RetryEvents.Result.MAX_DURATION_REACHED == event.result) {
-                metrics.retryMaxDurationReached(retried.get());
-            }
-        });
+        if (hasRetry) {
+            AtomicBoolean retried = new AtomicBoolean(false);
+            ctx.registerEventHandler(RetryEvents.Retried.class, ignored -> {
+                metrics.retryAttempted();
+                retried.set(true);
+            });
+            ctx.registerEventHandler(RetryEvents.Finished.class, event -> {
+                if (RetryEvents.Result.VALUE_RETURNED == event.result) {
+                    metrics.retryValueReturned(retried.get());
+                } else if (RetryEvents.Result.EXCEPTION_NOT_RETRYABLE == event.result) {
+                    metrics.retryExceptionNotRetryable(retried.get());
+                } else if (RetryEvents.Result.MAX_RETRIES_REACHED == event.result) {
+                    metrics.retryMaxRetriesReached(retried.get());
+                } else if (RetryEvents.Result.MAX_DURATION_REACHED == event.result) {
+                    metrics.retryMaxDurationReached(retried.get());
+                }
+            });
+        }
 
         // timeout
 
-        AtomicLong timeoutStart = new AtomicLong();
-        ctx.registerEventHandler(TimeoutEvents.Started.class,
-                ignored -> timeoutStart.set(System.nanoTime()));
-        ctx.registerEventHandler(TimeoutEvents.Finished.class,
-                event -> metrics.timeoutFinished(event.timedOut, System.nanoTime() - timeoutStart.get()));
+        if (hasTimeout) {
+            AtomicLong timeoutStart = new AtomicLong();
+            ctx.registerEventHandler(TimeoutEvents.Started.class,
+                    ignored -> timeoutStart.set(System.nanoTime()));
+            ctx.registerEventHandler(TimeoutEvents.Finished.class,
+                    event -> metrics.timeoutFinished(event.timedOut, System.nanoTime() - timeoutStart.get()));
+        }
 
         // circuit breaker
 
-        ctx.registerEventHandler(CircuitBreakerEvents.Finished.class,
-                event -> metrics.circuitBreakerFinished(event.result));
-        ctx.registerEventHandler(CircuitBreakerEvents.StateTransition.class, event -> {
-            state = event.targetState;
+        if (hasCircuitBreaker) {
+            ctx.registerEventHandler(CircuitBreakerEvents.Finished.class,
+                    event -> metrics.circuitBreakerFinished(event.result));
+            ctx.registerEventHandler(CircuitBreakerEvents.StateTransition.class, event -> {
+                state = event.targetState;
 
-            long now = System.nanoTime();
+                long now = System.nanoTime();
 
-            switch (event.targetState) {
-                case CLOSED:
-                    closedStart = now;
-                    previousHalfOpenTime.addAndGet(now - halfOpenStart);
+                switch (event.targetState) {
+                    case CLOSED:
+                        closedStart = now;
+                        previousHalfOpenTime.addAndGet(now - halfOpenStart);
 
-                    break;
-                case OPEN:
-                    openStart = now;
-                    previousClosedTime.addAndGet(now - closedStart);
+                        break;
+                    case OPEN:
+                        openStart = now;
+                        previousClosedTime.addAndGet(now - closedStart);
 
-                    metrics.circuitBreakerMovedToOpen();
+                        metrics.circuitBreakerMovedToOpen();
 
-                    break;
-                case HALF_OPEN:
-                    halfOpenStart = now;
-                    previousOpenTime.addAndGet(now - openStart);
+                        break;
+                    case HALF_OPEN:
+                        halfOpenStart = now;
+                        previousOpenTime.addAndGet(now - openStart);
 
-                    break;
-            }
-        });
+                        break;
+                }
+            });
+        }
 
         // bulkhead
 
-        AtomicLong runningStart = new AtomicLong();
-        ctx.registerEventHandler(BulkheadEvents.DecisionMade.class, event -> metrics.bulkheadDecisionMade(event.accepted));
-        ctx.registerEventHandler(BulkheadEvents.StartedRunning.class, ignored -> {
-            runningExecutions.incrementAndGet();
-            runningStart.set(System.nanoTime());
-        });
-        ctx.registerEventHandler(BulkheadEvents.FinishedRunning.class, ignored -> {
-            runningExecutions.decrementAndGet();
-            metrics.updateBulkheadRunningDuration(System.nanoTime() - runningStart.get());
-        });
+        if (hasBulkhead) {
+            AtomicLong runningStart = new AtomicLong();
+            ctx.registerEventHandler(BulkheadEvents.DecisionMade.class, event -> metrics.bulkheadDecisionMade(event.accepted));
+            ctx.registerEventHandler(BulkheadEvents.StartedRunning.class, ignored -> {
+                runningExecutions.incrementAndGet();
+                runningStart.set(System.nanoTime());
+            });
+            ctx.registerEventHandler(BulkheadEvents.FinishedRunning.class, ignored -> {
+                runningExecutions.decrementAndGet();
+                metrics.updateBulkheadRunningDuration(System.nanoTime() - runningStart.get());
+            });
 
-        if (isAsync) {
-            AtomicLong waitingStart = new AtomicLong();
-            ctx.registerEventHandler(BulkheadEvents.StartedWaiting.class, ignored -> {
-                waitingExecutions.incrementAndGet();
-                waitingStart.set(System.nanoTime());
-            });
-            ctx.registerEventHandler(BulkheadEvents.FinishedWaiting.class, ignored -> {
-                waitingExecutions.decrementAndGet();
-                metrics.updateBulkheadWaitingDuration(System.nanoTime() - waitingStart.get());
-            });
+            if (isAsync) {
+                AtomicLong waitingStart = new AtomicLong();
+                ctx.registerEventHandler(BulkheadEvents.StartedWaiting.class, ignored -> {
+                    waitingExecutions.incrementAndGet();
+                    waitingStart.set(System.nanoTime());
+                });
+                ctx.registerEventHandler(BulkheadEvents.FinishedWaiting.class, ignored -> {
+                    waitingExecutions.decrementAndGet();
+                    metrics.updateBulkheadWaitingDuration(System.nanoTime() - waitingStart.get());
+                });
+            }
         }
     }
 }

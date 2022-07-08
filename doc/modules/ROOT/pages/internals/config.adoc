@@ -5,7 +5,7 @@ API stability for these interfaces and classes is _not_ guaranteed!
 This documentation is only present to provide implementation insight for people who have to debug issues or want to contribute.
 
 The link:core.adoc[core] fault tolerance strategies are configured simply by constructor parameters.
-This is fine, since the they are an internal implementation detail.
+This is fine, since they are an internal implementation detail.
 However, the constructor parameters correspond closely to the members of {microprofile-fault-tolerance} annotations.
 The idea is that core fault tolerance strategies have no dependency on the {microprofile-fault-tolerance} API, but given a fault tolerance annotation, creating an instance of the corresponding strategy should be straightforward.
 
@@ -14,7 +14,7 @@ This document briefly describes how the configuration system works.
 
 == `FaultToleranceOperation`
 
-The fault tolerance interceptor, which is the main entrypoint, looks up a `FaultToleranceOperation` instance for each class/method combination that it has to process.
+The fault tolerance interceptor, which is the main entrypoint, looks up a `FaultToleranceOperation` instance for each class/method combination it has to process.
 The `FaultToleranceOperation` holds a bean class, a descriptor of the guarded method, and configuration for each fault tolerance strategy applied to the method.
 It also orchestrates configuration validation.
 The interceptor uses a `FaultToleranceOperation` to instantiate all the core fault tolerance strategies for given guarded method.
