@@ -9,4 +9,4 @@ image:https://img.shields.io/maven-central/v/io.smallrye/smallrye-fault-toleranc
 == SmallRye Fault Tolerance
 
 SmallRye Fault Tolerance is an implementation of https://github.com/eclipse/microprofile-fault-tolerance/[Eclipse MicroProfile Fault Tolerance].
-See the https://smallrye.io/docs/smallrye-fault-tolerance/6.0.0-RC3/index.html[documentation].
+See the https://smallrye.io/docs/smallrye-fault-tolerance/6.0.0-RC4/index.html[documentation].
