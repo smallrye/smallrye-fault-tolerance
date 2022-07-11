@@ -24,7 +24,7 @@
     </parent>
 
     <artifactId>smallrye-fault-tolerance-parent</artifactId>
-    <version>6.0.0-SNAPSHOT</version>
+    <version>6.0.0-RC4</version>
     <packaging>pom</packaging>
 
     <name>SmallRye Fault Tolerance: Parent</name>
@@ -82,7 +82,7 @@
         <connection>scm:git:git@github.com:smallrye/smallrye-fault-tolerance.git</connection>
         <developerConnection>scm:git:git@github.com:smallrye/smallrye-fault-tolerance.git</developerConnection>
         <url>https://github.com/smallrye/smallrye-fault-tolerance/</url>
-        <tag>HEAD</tag>
+        <tag>6.0.0-RC4</tag>
     </scm>
 
     <modules>
