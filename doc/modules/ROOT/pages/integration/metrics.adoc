@@ -1,0 +1,43 @@
+= Metrics
+
+{smallrye-fault-tolerance} provides support for MicroProfile Metrics and Micrometer.
+Alternatively, metrics may be completely disabled at the integration level.
+
+As usual, this integration is based on CDI, so an integrator must select one of the following classes and add it to the set of types scanned during CDI bean discovery:
+
+* `io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider`
+* `io.smallrye.faulttolerance.metrics.MicrometerProvider`
+* `io.smallrye.faulttolerance.metrics.NoopProvider`
+
+All these classes implement an internal interface `MetricsProvider`.
+This interface, together with an internal core interface `MetricsRecorder`, is used by the rest of {smallrye-fault-tolerance} to interact with the metrics system.
+
+NOTE: Only the _names_ of the classes listed above are treated as public.
+That is, the classes should be treated as opaque, no guarantees about their internals are made.
+
+The possibility to choose a metrics implementation is currently mainly provided for Quarkus.
+The CDI Portable Extension present in {smallrye-fault-tolerance} always assumes MicroProfile Metrics are required.
+
+Metrics providers have additional requirements, as described below.
+
+== MicroProfile Metrics
+
+If MicroProfile Metrics are used, the integrator must ensure that the following artifacts are present:
+
+* `org.eclipse.microprofile.metrics:microprofile-metrics-api`;
+* some implementation of MicroProfile Metrics.
+
+NOTE: As mentioned above, when an integrator relies on the CDI Portable Extension provided by {smallrye-fault-tolerance}, this is currently the default and only option.
+Therefore, presence of MicroProfile Metrics is mandatory for those integrators.
+
+== Micrometer
+
+If Micrometer is used, the integrator must ensure that the following artifact is present:
+
+* `io.micrometer:micrometer-core`.
+
+== Noop
+
+If the "noop" provider is used, metrics are completely disabled and the `MP_Fault_Tolerance_Metrics_Enabled` configuration property is ignored at runtime.
+
+No metrics API and implementation is required in this case.

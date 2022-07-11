@@ -5,6 +5,7 @@
 ** xref:usage/programmatic-api.adoc[Programmatic API]
 * Integration
 ** xref:integration/intro.adoc[Introduction]
+** xref:integration/metrics.adoc[Metrics]
 ** xref:integration/thread-pool.adoc[Thread Pool]
 ** xref:integration/context-propagation.adoc[Context Propagation]
 ** xref:integration/opentracing.adoc[OpenTracing]
