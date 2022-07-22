@@ -47,7 +47,7 @@ public class RealWorldCompletionStageTimeoutTest {
     private Timer timer;
     private TimerTimeoutWatcher timerWatcher;
 
-    private Stopwatch stopwatch = new SystemStopwatch();
+    private Stopwatch stopwatch = SystemStopwatch.INSTANCE;
 
     @BeforeEach
     public void setUp() {

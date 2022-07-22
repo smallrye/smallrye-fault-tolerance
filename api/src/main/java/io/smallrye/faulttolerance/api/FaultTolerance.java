@@ -22,9 +22,9 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Experimental;
 
 /**
- * Allows guarding an action with various fault tolerance strategies: bulkhead, circuit breaker, fallback, retry, and
- * timeout. Synchronous as well as asynchronous actions may be guarded, asynchronous actions may optionally be
- * offloaded to another thread. The only supported type for asynchronous actions is {@link CompletionStage}.
+ * Allows guarding an action with various fault tolerance strategies: bulkhead, circuit breaker, fallback, rate limit,
+ * retry, and timeout. Synchronous as well as asynchronous actions may be guarded, asynchronous actions may optionally
+ * be offloaded to another thread. The only supported type for asynchronous actions is {@link CompletionStage}.
  * <p>
  * An instance of this interface represents a configured set of fault tolerance strategies. It can be used to
  * guard a {@link #call(Callable) Callable}, {@link #get(Supplier) Supplier} or {@link #run(Runnable) Runnable}
@@ -33,8 +33,8 @@ import io.smallrye.common.annotation.Experimental;
  * <p>
  * The {@code create*} and {@code createAsync*} methods return a builder that allows configuring all fault tolerance
  * strategies. Order of builder method invocations does not matter, the fault tolerance strategies are always applied
- * in a predefined order: fallback &gt; retry &gt; circuit breaker &gt; timeout &gt; bulkhead &gt; thread offload &gt;
- * guarded action.
+ * in a predefined order: fallback &gt; retry &gt; circuit breaker &gt; rate limit &gt; timeout &gt; bulkhead &gt;
+ * thread offload &gt; guarded action.
  * <p>
  * Two styles of usage are possible. The {@link #createCallable(Callable)} and {@link #createAsyncCallable(Callable)}
  * methods return a builder that, at the end, returns a {@code Callable}. This is convenient in case you only want to
@@ -43,10 +43,10 @@ import io.smallrye.common.annotation.Experimental;
  * <p>
  * The {@link #create()} and {@link #createAsync()} methods return a builder that, at the end, returns
  * a {@code FaultTolerance} instance, which is useful when you need to guard multiple actions with the same set
- * of fault tolerance strategies. Note that circuit breakers and bulkheads are stateful, so there's a big difference
- * between guarding multiple actions using the same {@code FaultTolerance} object and using a separate
+ * of fault tolerance strategies. Note that bulkheads, circuit breakers and rate limits are stateful, so there's
+ * a big difference between guarding multiple actions using the same {@code FaultTolerance} object and using a separate
  * {@code FaultTolerance} object for each action. Using a single {@code FaultTolerance} instance to guard multiple
- * actions means that a single circuit breaker and/or bulkhead will be shared among all those actions.
+ * actions means that a single bulkhead, circuit breaker and/or rate limit will be shared among all those actions.
  * <p>
  * This API is essentially a programmatic equivalent to the declarative, annotation-based API of MicroProfile Fault
  * Tolerance and SmallRye Fault Tolerance. It shares the set of fault tolerance strategies, their invocation order
@@ -273,6 +273,14 @@ public interface FaultTolerance<T> {
          * @see Fallback @Fallback
          */
         FallbackBuilder<T, R> withFallback();
+
+        /**
+         * Adds a rate limit strategy.
+         *
+         * @return a builder to configure the rate limit strategy
+         * @see RateLimit @RateLimit
+         */
+        RateLimitBuilder<T, R> withRateLimit();
 
         /**
          * Adds a retry strategy. Retry uses constant backoff between attempts by default,
@@ -652,6 +660,77 @@ public interface FaultTolerance<T> {
             Builder<T, R> done();
 
             default FallbackBuilder<T, R> with(Consumer<FallbackBuilder<T, R>> consumer) {
+                consumer.accept(this);
+                return this;
+            }
+        }
+
+        /**
+         * Configures a rate limit.
+         *
+         * @see RateLimit @RateLimit
+         */
+        interface RateLimitBuilder<T, R> {
+            /**
+             * Sets the maximum number of invocations in a time window. Defaults to 100.
+             *
+             * @param value maximum number of invocations in a time window, must be &gt;= 1
+             * @return this rate limit builder
+             */
+            RateLimitBuilder<T, R> limit(int value);
+
+            /**
+             * Sets the time window length. Defaults to 1 second.
+             *
+             * @param value the time window size, must be &gt;= 1
+             * @return this rate limit builder
+             */
+            RateLimitBuilder<T, R> window(long value, ChronoUnit unit);
+
+            /**
+             * Sets the minimum spacing between invocations. Defaults to 0.
+             *
+             * @param value the minimum spacing, must be &gt;= 0
+             * @return this rate limit builder
+             */
+            RateLimitBuilder<T, R> minSpacing(long value, ChronoUnit unit);
+
+            /**
+             * Sets the type of time windows used for rate limiting. Defaults to {@link RateLimitType#FIXED}.
+             *
+             * @param value the time window type, must not be {@code null}
+             * @return this rate limit builder
+             */
+            RateLimitBuilder<T, R> type(RateLimitType value);
+
+            /**
+             * Sets a callback that will be invoked when this rate limit permits an invocation.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the permitted callback, must not be {@code null}
+             * @return this rate limit builder
+             */
+            RateLimitBuilder<T, R> onPermitted(Runnable callback);
+
+            /**
+             * Sets a callback that will be invoked when this rate limit rejects an invocation.
+             * <p>
+             * The callback must be fast and non-blocking and must not throw an exception.
+             *
+             * @param callback the rejected callback, must not be {@code null}
+             * @return this rate limit builder
+             */
+            RateLimitBuilder<T, R> onRejected(Runnable callback);
+
+            /**
+             * Returns the original fault tolerance builder.
+             *
+             * @return the original fault tolerance builder
+             */
+            Builder<T, R> done();
+
+            default RateLimitBuilder<T, R> with(Consumer<RateLimitBuilder<T, R>> consumer) {
                 consumer.accept(this);
                 return this;
             }

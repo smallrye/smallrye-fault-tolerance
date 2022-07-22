@@ -12,7 +12,7 @@ import org.junit.jupiter.api.condition.OS;
 public class SystemStopwatchTest {
     private static final Percentage tolerance = withPercentage(25);
 
-    private Stopwatch stopwatch = new SystemStopwatch();
+    private Stopwatch stopwatch = SystemStopwatch.INSTANCE;
 
     @Test
     public void immediateMeasurement() {

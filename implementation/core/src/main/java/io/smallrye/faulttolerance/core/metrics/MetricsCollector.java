@@ -11,6 +11,7 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.bulkhead.BulkheadEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.fallback.FallbackEvents;
+import io.smallrye.faulttolerance.core.rate.limit.RateLimitEvents;
 import io.smallrye.faulttolerance.core.retry.RetryEvents;
 import io.smallrye.faulttolerance.core.timeout.TimeoutEvents;
 
@@ -20,6 +21,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     final boolean isAsync;
     final boolean hasBulkhead;
     final boolean hasCircuitBreaker;
+    final boolean hasRateLimit;
     final boolean hasRetry;
     final boolean hasTimeout;
 
@@ -42,12 +44,13 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     private final AtomicLong waitingExecutions = new AtomicLong();
 
     public MetricsCollector(FaultToleranceStrategy<V> delegate, MetricsRecorder metrics, boolean isAsync,
-            boolean hasBulkhead, boolean hasCircuitBreaker, boolean hasRetry, boolean hasTimeout) {
+            boolean hasBulkhead, boolean hasCircuitBreaker, boolean hasRateLimit, boolean hasRetry, boolean hasTimeout) {
         this.delegate = delegate;
         this.metrics = metrics;
         this.isAsync = isAsync;
         this.hasBulkhead = hasBulkhead;
         this.hasCircuitBreaker = hasCircuitBreaker;
+        this.hasRateLimit = hasRateLimit;
         this.hasRetry = hasRetry;
         this.hasTimeout = hasTimeout;
 
@@ -199,6 +202,13 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
                     metrics.updateBulkheadWaitingDuration(System.nanoTime() - waitingStart.get());
                 });
             }
+        }
+
+        // rate limit
+
+        if (hasRateLimit) {
+            ctx.registerEventHandler(RateLimitEvents.DecisionMade.class,
+                    event -> metrics.rateLimitDecisionMade(event.permitted));
         }
     }
 }

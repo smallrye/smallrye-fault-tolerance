@@ -20,6 +20,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceExceptio
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
@@ -29,6 +30,7 @@ import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
+import io.smallrye.faulttolerance.core.clock.SystemClock;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
@@ -36,6 +38,8 @@ import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
+import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
+import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
 import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
@@ -120,6 +124,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         private BulkheadBuilderImpl<T, R> bulkheadBuilder;
         private CircuitBreakerBuilderImpl<T, R> circuitBreakerBuilder;
         private FallbackBuilderImpl<T, R> fallbackBuilder;
+        private RateLimitBuilderImpl<T, R> rateLimitBuilder;
         private RetryBuilderImpl<T, R> retryBuilder;
         private TimeoutBuilderImpl<T, R> timeoutBuilder;
         private boolean offloadToAnotherThread;
@@ -154,6 +159,11 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         @Override
         public FallbackBuilder<T, R> withFallback() {
             return new FallbackBuilderImpl<>(this);
+        }
+
+        @Override
+        public RateLimitBuilder<T, R> withRateLimit() {
+            return new RateLimitBuilderImpl<>(this);
         }
 
         @Override
@@ -206,6 +216,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     circuitBreakerBuilder != null ? circuitBreakerBuilder.onSuccess : null,
                     circuitBreakerBuilder != null ? circuitBreakerBuilder.onFailure : null,
                     circuitBreakerBuilder != null ? circuitBreakerBuilder.onPrevented : null,
+                    rateLimitBuilder != null ? rateLimitBuilder.onPermitted : null,
+                    rateLimitBuilder != null ? rateLimitBuilder.onRejected : null,
                     retryBuilder != null ? retryBuilder.onRetry : null,
                     retryBuilder != null ? retryBuilder.onSuccess : null,
                     retryBuilder != null ? retryBuilder.onFailure : null,
@@ -238,6 +250,15 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         new TimerTimeoutWatcher(lazyDependencies.timer()));
             }
 
+            if (lazyDependencies.ftEnabled() && rateLimitBuilder != null) {
+                result = new RateLimit<>(result, description,
+                        rateLimitBuilder.maxInvocations,
+                        rateLimitBuilder.timeWindowInMillis,
+                        rateLimitBuilder.minSpacingInMillis,
+                        rateLimitBuilder.type,
+                        SystemClock.INSTANCE);
+            }
+
             if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {
                 result = new CircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
@@ -246,7 +267,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.requestVolumeThreshold,
                         circuitBreakerBuilder.failureRatio,
                         circuitBreakerBuilder.successThreshold,
-                        new SystemStopwatch());
+                        SystemStopwatch.INSTANCE);
 
                 if (circuitBreakerBuilder.name != null) {
                     CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
@@ -260,7 +281,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 result = new Retry<>(result, description,
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
-                        new SystemStopwatch());
+                        SystemStopwatch.INSTANCE);
             }
 
             // fallback is always enabled
@@ -291,6 +312,15 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         new TimerTimeoutWatcher(lazyDependencies.timer()));
             }
 
+            if (lazyDependencies.ftEnabled() && rateLimitBuilder != null) {
+                result = new CompletionStageRateLimit<>(result, description,
+                        rateLimitBuilder.maxInvocations,
+                        rateLimitBuilder.timeWindowInMillis,
+                        rateLimitBuilder.minSpacingInMillis,
+                        rateLimitBuilder.type,
+                        SystemClock.INSTANCE);
+            }
+
             if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {
                 result = new CompletionStageCircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
@@ -299,7 +329,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.requestVolumeThreshold,
                         circuitBreakerBuilder.failureRatio,
                         circuitBreakerBuilder.successThreshold,
-                        new SystemStopwatch());
+                        SystemStopwatch.INSTANCE);
 
                 if (circuitBreakerBuilder.name != null) {
                     CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
@@ -314,7 +344,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis,
                         () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
-                        new SystemStopwatch());
+                        SystemStopwatch.INSTANCE);
             }
 
             // fallback is always enabled
@@ -604,6 +634,70 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 }
 
                 parent.fallbackBuilder = this;
+                return parent;
+            }
+        }
+
+        static class RateLimitBuilderImpl<T, R> implements RateLimitBuilder<T, R> {
+            private final BuilderImpl<T, R> parent;
+
+            private int maxInvocations = 100;
+            private long timeWindowInMillis = 1000;
+            private long minSpacingInMillis = 0;
+            private RateLimitType type = RateLimitType.FIXED;
+
+            private Runnable onPermitted;
+            private Runnable onRejected;
+
+            RateLimitBuilderImpl(BuilderImpl<T, R> parent) {
+                this.parent = parent;
+            }
+
+            @Override
+            public RateLimitBuilder<T, R> limit(int value) {
+                this.maxInvocations = Preconditions.check(value, value >= 1, "Rate limit must be >= 1");
+                return this;
+            }
+
+            @Override
+            public RateLimitBuilder<T, R> window(long value, ChronoUnit unit) {
+                Preconditions.check(value, value >= 1, "Time window length must be >= 1");
+                Preconditions.checkNotNull(unit, "Time window length unit must be set");
+
+                this.timeWindowInMillis = getTimeInMs(value, unit);
+                return this;
+            }
+
+            @Override
+            public RateLimitBuilder<T, R> minSpacing(long value, ChronoUnit unit) {
+                Preconditions.check(value, value >= 0, "Min spacing must be >= 0");
+                Preconditions.checkNotNull(unit, "Min spacing unit must be set");
+
+                this.minSpacingInMillis = getTimeInMs(value, unit);
+                return this;
+            }
+
+            @Override
+            public RateLimitBuilder<T, R> type(RateLimitType value) {
+                this.type = Preconditions.checkNotNull(value, "Time window type must be set");
+                return this;
+            }
+
+            @Override
+            public RateLimitBuilder<T, R> onPermitted(Runnable callback) {
+                this.onPermitted = Preconditions.checkNotNull(callback, "Permitted callback must be set");
+                return this;
+            }
+
+            @Override
+            public RateLimitBuilder<T, R> onRejected(Runnable callback) {
+                this.onRejected = Preconditions.checkNotNull(callback, "Rejected callback must be set");
+                return this;
+            }
+
+            @Override
+            public Builder<T, R> done() {
+                parent.rateLimitBuilder = this;
                 return parent;
             }
         }
