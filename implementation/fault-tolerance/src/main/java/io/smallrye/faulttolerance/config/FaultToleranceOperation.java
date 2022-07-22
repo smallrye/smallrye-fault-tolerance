@@ -36,14 +36,13 @@ import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
 /**
  * Fault tolerance operation metadata.
- *
- * @author Martin Kouba
  */
 public class FaultToleranceOperation {
 
@@ -57,6 +56,7 @@ public class FaultToleranceOperation {
                 CircuitBreakerConfigImpl.create(method),
                 CircuitBreakerNameConfigImpl.create(method),
                 FallbackConfigImpl.create(method),
+                RateLimitConfigImpl.create(method),
                 RetryConfigImpl.create(method),
                 TimeoutConfigImpl.create(method),
                 ExponentialBackoffConfigImpl.create(method),
@@ -65,33 +65,24 @@ public class FaultToleranceOperation {
     }
 
     private final Class<?> beanClass;
-
     private final MethodDescriptor methodDescriptor;
 
     private final ApplyFaultToleranceConfig applyFaultTolerance;
 
     private final AsynchronousConfig asynchronous;
-
     private final BlockingConfig blocking;
-
     private final NonBlockingConfig nonBlocking;
 
     private final BulkheadConfig bulkhead;
-
     private final CircuitBreakerConfig circuitBreaker;
-
     private final CircuitBreakerNameConfig circuitBreakerName;
-
     private final FallbackConfig fallback;
-
+    private final RateLimitConfig rateLimit;
     private final RetryConfig retry;
-
     private final TimeoutConfig timeout;
 
     private final ExponentialBackoffConfig exponentialBackoff;
-
     private final FibonacciBackoffConfig fibonacciBackoff;
-
     private final CustomBackoffConfig customBackoff;
 
     private FaultToleranceOperation(Class<?> beanClass,
@@ -104,6 +95,7 @@ public class FaultToleranceOperation {
             CircuitBreakerConfig circuitBreaker,
             CircuitBreakerNameConfig circuitBreakerName,
             FallbackConfig fallback,
+            RateLimitConfig rateLimit,
             RetryConfig retry,
             TimeoutConfig timeout,
             ExponentialBackoffConfig exponentialBackoff,
@@ -122,6 +114,7 @@ public class FaultToleranceOperation {
         this.circuitBreaker = circuitBreaker;
         this.circuitBreakerName = circuitBreakerName;
         this.fallback = fallback;
+        this.rateLimit = rateLimit;
         this.retry = retry;
         this.timeout = timeout;
 
@@ -237,6 +230,14 @@ public class FaultToleranceOperation {
         return fallback;
     }
 
+    public boolean hasRateLimit() {
+        return rateLimit != null;
+    }
+
+    public RateLimit getRateLimit() {
+        return rateLimit;
+    }
+
     public boolean hasRetry() {
         return retry != null;
     }
@@ -317,6 +318,9 @@ public class FaultToleranceOperation {
         if (fallback != null) {
             fallback.validate();
         }
+        if (rateLimit != null) {
+            rateLimit.validate();
+        }
         if (retry != null) {
             retry.validate();
         }
@@ -376,6 +380,7 @@ public class FaultToleranceOperation {
         if (applyFaultTolerance != null) {
             applyFaultTolerance.materialize();
         }
+
         if (asynchronous != null) {
             asynchronous.materialize();
         }
@@ -385,6 +390,7 @@ public class FaultToleranceOperation {
         if (nonBlocking != null) {
             nonBlocking.materialize();
         }
+
         if (bulkhead != null) {
             bulkhead.materialize();
         }
@@ -397,12 +403,16 @@ public class FaultToleranceOperation {
         if (fallback != null) {
             fallback.materialize();
         }
+        if (rateLimit != null) {
+            rateLimit.materialize();
+        }
         if (retry != null) {
             retry.materialize();
         }
         if (timeout != null) {
             timeout.materialize();
         }
+
         if (exponentialBackoff != null) {
             exponentialBackoff.materialize();
         }

@@ -9,6 +9,7 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_STATE_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.INVOCATIONS_TOTAL;
+import static io.smallrye.faulttolerance.metrics.MetricConstants.RATE_LIMIT_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RETRY_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.TIMEOUT_CALLS_TOTAL;
@@ -60,6 +61,9 @@ public class MicrometerProvider implements MetricsProvider {
 
     static final Tag BULKHEAD_RESULT_ACCEPTED = Tag.of("bulkheadResult", "accepted");
     static final Tag BULKHEAD_RESULT_REJECTED = Tag.of("bulkheadResult", "rejected");
+
+    static final Tag RATE_LIMIT_RESULT_PERMITTED = Tag.of("rateLimitResult", "permitted");
+    static final Tag RATE_LIMIT_RESULT_REJECTED = Tag.of("rateLimitResult", "rejected");
 
     @Inject
     MeterRegistry registry;
@@ -150,6 +154,11 @@ public class MicrometerProvider implements MetricsProvider {
                 if (specCompatibility.isOperationTrulyOrPseudoAsynchronous(operation)) {
                     registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton);
                 }
+            }
+
+            if (operation.hasRateLimit()) {
+                registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_ACCEPTED));
+                registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_REJECTED));
             }
         }
 
@@ -273,6 +282,12 @@ public class MicrometerProvider implements MetricsProvider {
         @Override
         public void updateBulkheadWaitingDuration(long time) {
             registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton).record(time, TimeUnit.NANOSECONDS);
+        }
+
+        @Override
+        public void rateLimitDecisionMade(boolean permitted) {
+            Tag rateLimitResultTag = permitted ? RATE_LIMIT_RESULT_PERMITTED : RATE_LIMIT_RESULT_REJECTED;
+            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, rateLimitResultTag)).increment();
         }
     }
 }

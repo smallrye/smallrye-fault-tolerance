@@ -62,6 +62,7 @@ import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
+import io.smallrye.faulttolerance.core.clock.SystemClock;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
@@ -76,6 +77,8 @@ import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
+import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
+import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
 import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
@@ -302,6 +305,15 @@ public class FaultToleranceInterceptor {
                     new TimerTimeoutWatcher(timer));
         }
 
+        if (operation.hasRateLimit()) {
+            result = new CompletionStageRateLimit<>(result, point.toString(),
+                    operation.getRateLimit().value(),
+                    getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
+                    getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
+                    operation.getRateLimit().type(),
+                    SystemClock.INSTANCE);
+        }
+
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CompletionStageCircuitBreaker<>(result, point.toString(),
@@ -310,7 +322,7 @@ public class FaultToleranceInterceptor {
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
-                    new SystemStopwatch());
+                    SystemStopwatch.INSTANCE);
 
             String cbName = operation.hasCircuitBreakerName()
                     ? operation.getCircuitBreakerName().value()
@@ -328,7 +340,7 @@ public class FaultToleranceInterceptor {
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new TimerDelay(backoff.get(), timer),
-                    new SystemStopwatch());
+                    SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasFallback()) {
@@ -339,7 +351,8 @@ public class FaultToleranceInterceptor {
 
         if (metricsProvider.isEnabled()) {
             result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(operation, point),
-                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRetry(), operation.hasTimeout());
+                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRateLimit(),
+                    operation.hasRetry(), operation.hasTimeout());
         }
 
         if (!operation.isThreadOffloadRequired()) {
@@ -362,6 +375,15 @@ public class FaultToleranceInterceptor {
                     new TimerTimeoutWatcher(timer));
         }
 
+        if (operation.hasRateLimit()) {
+            result = new RateLimit<>(result, point.toString(),
+                    operation.getRateLimit().value(),
+                    getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
+                    getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
+                    operation.getRateLimit().type(),
+                    SystemClock.INSTANCE);
+        }
+
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, point.toString(),
@@ -370,7 +392,7 @@ public class FaultToleranceInterceptor {
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
-                    new SystemStopwatch());
+                    SystemStopwatch.INSTANCE);
 
             String cbName = operation.hasCircuitBreakerName()
                     ? operation.getCircuitBreakerName().value()
@@ -388,7 +410,7 @@ public class FaultToleranceInterceptor {
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
-                    new SystemStopwatch());
+                    SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasFallback()) {
@@ -399,7 +421,8 @@ public class FaultToleranceInterceptor {
 
         if (metricsProvider.isEnabled()) {
             result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false,
-                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRetry(), operation.hasTimeout());
+                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRateLimit(),
+                    operation.hasRetry(), operation.hasTimeout());
         }
 
         return result;
@@ -424,6 +447,15 @@ public class FaultToleranceInterceptor {
             result = new AsyncTimeout<>(timeout, asyncExecutor);
         }
 
+        if (operation.hasRateLimit()) {
+            result = new RateLimit<>(result, point.toString(),
+                    operation.getRateLimit().value(),
+                    getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
+                    getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
+                    operation.getRateLimit().type(),
+                    SystemClock.INSTANCE);
+        }
+
         if (operation.hasCircuitBreaker()) {
             long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, point.toString(),
@@ -432,7 +464,7 @@ public class FaultToleranceInterceptor {
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
-                    new SystemStopwatch());
+                    SystemStopwatch.INSTANCE);
 
             String cbName = operation.hasCircuitBreakerName()
                     ? operation.getCircuitBreakerName().value()
@@ -450,7 +482,7 @@ public class FaultToleranceInterceptor {
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
-                    new SystemStopwatch());
+                    SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasFallback()) {
@@ -461,7 +493,8 @@ public class FaultToleranceInterceptor {
 
         if (metricsProvider.isEnabled()) {
             result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), true,
-                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRetry(), operation.hasTimeout());
+                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRateLimit(),
+                    operation.hasRetry(), operation.hasTimeout());
         }
 
         result = new FutureExecution<>(result, asyncExecutor);

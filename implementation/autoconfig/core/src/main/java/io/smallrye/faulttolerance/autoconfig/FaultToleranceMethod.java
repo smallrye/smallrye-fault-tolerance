@@ -17,6 +17,7 @@ import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.api.RateLimit;
 
 /**
  * Created in the CDI extension to capture effective annotations for each
@@ -37,24 +38,23 @@ public class FaultToleranceMethod {
     public Class<?> beanClass;
     public MethodDescriptor method;
 
-    // MicroProfile Fault Tolerance API
+    public ApplyFaultTolerance applyFaultTolerance;
+
     public Asynchronous asynchronous;
+    public Blocking blocking;
+    public NonBlocking nonBlocking;
+
     public Bulkhead bulkhead;
     public CircuitBreaker circuitBreaker;
+    public CircuitBreakerName circuitBreakerName;
     public Fallback fallback;
+    public RateLimit rateLimit;
     public Retry retry;
     public Timeout timeout;
 
-    // SmallRye Fault Tolerance API
-    public ApplyFaultTolerance applyFaultTolerance;
-    public CircuitBreakerName circuitBreakerName;
     public CustomBackoff customBackoff;
     public ExponentialBackoff exponentialBackoff;
     public FibonacciBackoff fibonacciBackoff;
-
-    // SmallRye Common
-    public Blocking blocking;
-    public NonBlocking nonBlocking;
 
     // types of annotations that were declared directly on the method;
     // other annotations, if present, were declared on the type
@@ -68,12 +68,13 @@ public class FaultToleranceMethod {
         // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff)
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
-        return asynchronous != null
+        return applyFaultTolerance != null
+                || asynchronous != null
                 || bulkhead != null
                 || circuitBreaker != null
                 || fallback != null
+                || rateLimit != null
                 || retry != null
-                || timeout != null
-                || applyFaultTolerance != null;
+                || timeout != null;
     }
 }

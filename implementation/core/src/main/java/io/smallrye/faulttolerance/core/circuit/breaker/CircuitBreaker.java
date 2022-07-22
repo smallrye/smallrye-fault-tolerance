@@ -32,7 +32,6 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
     final AtomicReference<State> state;
 
-    @SuppressWarnings("UnnecessaryThis")
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, ExceptionDecision exceptionDecision,
             long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
             Stopwatch stopwatch) {

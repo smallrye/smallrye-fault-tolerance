@@ -1,6 +1,8 @@
 = Extra Features
 
 {smallrye-fault-tolerance} provides several features that are not present in the {microprofile-fault-tolerance} specification.
+Their public API is present in the `io.smallrye:smallrye-fault-tolerance-api` artifact.
+
 Note that these features may have experimental status, marked by the `@Experimental` annotation.
 
 == Circuit Breaker Maintenance
@@ -521,3 +523,152 @@ Likewise, it is possible to do this for <<async-types>>.
 Note that you can't define a synchronous `FaultTolerance<T>` object and apply it to any asynchronous method.
 Similarly, you can't define an asynchronous `FaultTolerance<CompletionStage<T>>` and apply it to a synchronous method or an asynchronous method with different <<async-types,asynchronous type>>.
 This limitation will be lifted in the future.
+
+== Rate Limit
+
+{smallrye-fault-tolerance} includes an additional fault tolerance strategy, not prescribed by the {microprofile-fault-tolerance} specification: _rate limit_.
+
+Rate limit enforces a maximum number of permitted invocations in a time window of some length.
+For example, with a rate limit, one can make sure that a method may only be called 50 times per minute.
+Invocations that would exceed the limit are rejected with an exception of type `RateLimitException`.
+
+Additionally, it is possible to define minimum spacing between invocations.
+For example, with minimum spacing of 1 second, if a second invocation happens 500 millis after the first, it is rejected even if the limit wouldn't be exceeded yet.
+
+Rate limit is superficially similar to a bulkhead (concurrency limit), but is in fact quite different.
+Bulkhead limits the number of executions happening concurrently at any point in time.
+Rate limit limits the number of executions in a time window of some length, without considering concurrency.
+
+=== Rate Limit Usage
+
+A method or a class can be annotated with `@RateLimit`, which means the method or the methods in the class will apply the rate limit strategy.
+
+The following annotation members control the rate limit behavior:
+
+- `value`: the limit of maximum invocations to be permitted in the time window;
+- `window` and `windowUnit`: the length of the time window;
+- `minSpacing` and `minSpacingUnit`: the minimum spacing between two consecutive invocations;
+- `type`: the type of time windows used for rate limiting, described below.
+
+The previous example with 50 maximum invocations per minute and minimum spacing of 1 second would look like this:
+
+[source,java]
+----
+@RateLimit(value = 50,
+        window = 1, windowUnit = ChronoUnit.MINUTES,
+        minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS)
+public void doSomething() {
+    ...
+}
+----
+
+=== Time Window Type
+
+{smallrye-fault-tolerance} supports two types of a time window used for rate limiting: _fixed_ and _rolling_.
+
+Fixed time windows are a result of dividing time into non-overlapping intervals of given length.
+The invocation limit is enforced for each interval independently.
+This means that short bursts of invocations occuring near the time window boundaries may temporarily exceed the configured rate limit.
+
+Rolling time windows enforce the limit continuously, instead of dividing time into independent intervals.
+The invocation limit is enforced for all possible time intervals of given length, regardless of overlap.
+This is more precise, but requires more memory and may be slower.
+
+The type of time window used for rate limiting is configured using the `type` annotation member:
+
+[source,java]
+----
+@RateLimit(value = 50,
+        window = 1, windowUnit = ChronoUnit.MINUTES,
+        minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS,
+        type = RateLimitType.ROLLING)
+public void doSomething() {
+    ...
+}
+----
+
+
+=== Lifecycle
+
+Rate limit needs to maintain some state between invocations, depending on the time window type.
+It may be the number of recent invocations or the time stamp of last invocation.
+This state is a singleton, irrespective of the lifecycle of the bean that uses the `@RateLimit` annotation.
+
+More specifically, the rate limit state is uniquely identified by the combination of the bean class (`java.lang.Class`) and the method object (`java.lang.reflect.Method`) representing the guarded method.
+
+For example, if there’s a guarded method `doWork` on a bean which is `@RequestScoped`, each request will have its own instance of the bean, but all invocations of `doWork` will share the same rate limit state.
+
+=== Interactions with Other Annotations
+
+The `@RateLimit` annotation can be used together with all other fault tolerance annotations.
+If a method would hypothetically declare all fault tolerance annotations, the fault tolerance strategies would be nested like this:
+
+[source]
+----
+Fallback(
+    Retry(
+        CircuitBreaker(
+            RateLimit(
+                Timeout(
+                    Bulkhead(
+                        ... the guarded method ...
+                    )
+                )
+            )
+        )
+    )
+)
+----
+
+If `@Fallback` is used with `@RateLimit`, the fallback method or handler may be invoked if a `RateLimitException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the rate limit as an independent invocation.
+If `RateLimitException` is thrown, the execution may be retried, depending on how retry is configured.
+
+If `@Circuitbreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
+If rate limiting results in `RateLimitException`, this may be counted as a failure, depending on how the circuit breaker is configured.
+
+=== Configuration
+
+The configuration system of {microprofile-fault-tolerance} applies to `@RateLimit` without a change.
+
+For example, assume the following class:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @RateLimit(value = 50,
+            window = 1, windowUnit = ChronoUnit.MINUTES,
+            minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS)
+    public void doSomething() {
+        ...
+    }
+}
+----
+
+The rate limit configured for the `doSomething` method may be reconfigured like this:
+
+[source,properties]
+----
+com.example.MyService/doSomething/RateLimit/value=150
+----
+
+=== Metrics
+
+Rate limit exposes metrics to MicroProfile Metrics, following other {microprofile-fault-tolerance} metrics.
+
+[cols="1,5"]
+|===
+| Name | `ft.ratelimit.calls.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the rate limit logic was run. This will usually be once per method call, but may be zero times if the circuit breaker prevented execution or more than once if the method call is retried.
+| Tags
+a| * `method` - the fully qualified method name
+* `rateLimitResult` = `[permitted\|rejected]` - whether the rate limit permitted the method call
+|===
+
+Micrometer is of course also supported, as described in xref:usage/basic.adoc#metrics[Metrics].

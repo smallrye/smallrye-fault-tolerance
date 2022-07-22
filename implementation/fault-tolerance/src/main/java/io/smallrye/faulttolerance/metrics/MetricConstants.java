@@ -22,4 +22,6 @@ final class MetricConstants {
     static final String BULKHEAD_EXECUTIONS_WAITING = "ft.bulkhead.executionsWaiting";
     static final String BULKHEAD_RUNNING_DURATION = "ft.bulkhead.runningDuration";
     static final String BULKHEAD_WAITING_DURATION = "ft.bulkhead.waitingDuration";
+
+    static final String RATE_LIMIT_CALLS_TOTAL = "ft.ratelimit.calls.total";
 }

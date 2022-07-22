@@ -28,7 +28,7 @@
 
 12000-12999 = smallrye-fault-tolerance-core/event/loop
 
-13000-13999 = smallrye-fault-tolerance-vertx
+13000-13999 = smallrye-fault-tolerance-core/rate/limit
 
 14000-14999 =
 
