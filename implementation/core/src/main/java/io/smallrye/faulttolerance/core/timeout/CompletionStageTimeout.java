@@ -34,7 +34,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         AtomicBoolean completedWithTimeout = new AtomicBoolean(false);
         Runnable onTimeout = () -> {
             if (completedWithTimeout.compareAndSet(false, true)) {
-                LOG.debug(description + " invocation timed out");
+                LOG.debug(description + " invocation timed out (" + timeoutInMillis + "ms)");
                 ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
                 result.completeExceptionally(timeoutException(description));
             }
