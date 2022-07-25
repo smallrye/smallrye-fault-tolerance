@@ -16,16 +16,16 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.clock.TestClock;
+import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 
 public class RateLimitTest {
-    private TestClock clock;
+    private TestStopwatch stopwatch;
 
     @BeforeEach
     public void setUp() {
-        clock = new TestClock();
+        stopwatch = new TestStopwatch();
     }
 
     @Test
@@ -33,7 +33,7 @@ public class RateLimitTest {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
         RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 0,
-                RateLimitType.FIXED, clock);
+                RateLimitType.FIXED, stopwatch);
 
         String result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("1");
@@ -42,12 +42,12 @@ public class RateLimitTest {
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("3");
@@ -62,7 +62,7 @@ public class RateLimitTest {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
         RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 0,
-                RateLimitType.FIXED, clock);
+                RateLimitType.FIXED, stopwatch);
 
         List<TestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -85,12 +85,12 @@ public class RateLimitTest {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
         threads.clear();
         results.clear();
         exceptions.clear();
@@ -116,7 +116,7 @@ public class RateLimitTest {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
         RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 10,
-                RateLimitType.FIXED, clock);
+                RateLimitType.FIXED, stopwatch);
 
         List<TestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -139,12 +139,12 @@ public class RateLimitTest {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
         threads.clear();
         results.clear();
         exceptions.clear();
@@ -173,7 +173,7 @@ public class RateLimitTest {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
         RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 0,
-                RateLimitType.ROLLING, clock);
+                RateLimitType.ROLLING, stopwatch);
 
         String result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("1");
@@ -182,12 +182,12 @@ public class RateLimitTest {
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("3");
@@ -200,7 +200,7 @@ public class RateLimitTest {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
         RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 0,
-                RateLimitType.ROLLING, clock);
+                RateLimitType.ROLLING, stopwatch);
 
         List<TestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -223,12 +223,12 @@ public class RateLimitTest {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
         threads.clear();
         results.clear();
         exceptions.clear();
@@ -257,7 +257,7 @@ public class RateLimitTest {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
         RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 10,
-                RateLimitType.ROLLING, clock);
+                RateLimitType.ROLLING, stopwatch);
 
         List<TestThread<String>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -280,12 +280,12 @@ public class RateLimitTest {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(RateLimitException.class);
 
-        clock.step(100);
+        stopwatch.setCurrentValue(150);
         threads.clear();
         results.clear();
         exceptions.clear();

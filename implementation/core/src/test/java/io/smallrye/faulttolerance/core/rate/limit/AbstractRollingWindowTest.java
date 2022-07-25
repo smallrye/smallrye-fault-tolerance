@@ -5,32 +5,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.core.clock.Clock;
-import io.smallrye.faulttolerance.core.clock.TestClock;
+import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
+import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 
 public abstract class AbstractRollingWindowTest {
-    private TestClock clock;
+    private TestStopwatch stopwatch;
 
     @BeforeEach
     public void setUp() {
-        clock = new TestClock();
+        stopwatch = new TestStopwatch();
     }
 
     @Test
     public void scenario1() {
-        TimeWindow window = createRollingWindow(clock, 2, 100, 0);
+        TimeWindow window = createRollingWindow(stopwatch, 2, 100, 0);
 
         // 0
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         // 50
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         // 100
         assertThat(window.record()).isTrue();
@@ -38,25 +38,25 @@ public abstract class AbstractRollingWindowTest {
 
     @Test
     public void scenario2() {
-        TimeWindow window = createRollingWindow(clock, 2, 100, 0);
+        TimeWindow window = createRollingWindow(stopwatch, 2, 100, 0);
 
         // 0
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         // 50
         assertThat(window.record()).isFalse();
         assertThat(window.record()).isFalse();
 
-        clock.step(70);
+        stopwatch.setCurrentValue(120);
 
         // 120
         assertThat(window.record()).isFalse();
 
-        clock.step(70);
+        stopwatch.setCurrentValue(190);
 
         // 190
         assertThat(window.record()).isTrue();
@@ -65,7 +65,7 @@ public abstract class AbstractRollingWindowTest {
 
     @Test
     public void scenario3() {
-        TimeWindow window = createRollingWindow(clock, 4, 100, 0);
+        TimeWindow window = createRollingWindow(stopwatch, 4, 100, 0);
 
         // 0
         assertThat(window.record()).isTrue();
@@ -74,12 +74,12 @@ public abstract class AbstractRollingWindowTest {
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         // 50
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         // 100
         assertThat(window.record()).isTrue();
@@ -87,7 +87,7 @@ public abstract class AbstractRollingWindowTest {
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(100);
+        stopwatch.setCurrentValue(200);
 
         // 200
         assertThat(window.record()).isTrue();
@@ -99,7 +99,7 @@ public abstract class AbstractRollingWindowTest {
 
     @Test
     public void scenario4() {
-        TimeWindow window = createRollingWindow(clock, 4, 100, 0);
+        TimeWindow window = createRollingWindow(stopwatch, 4, 100, 0);
 
         // 0
         assertThat(window.record()).isTrue();
@@ -108,24 +108,24 @@ public abstract class AbstractRollingWindowTest {
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         // 50
         assertThat(window.record()).isFalse();
 
-        clock.step(25);
+        stopwatch.setCurrentValue(75);
 
         // 75
         assertThat(window.record()).isFalse();
 
-        clock.step(25);
+        stopwatch.setCurrentValue(100);
 
         // 100
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(100);
+        stopwatch.setCurrentValue(200);
 
         // 200
         assertThat(window.record()).isTrue();
@@ -137,39 +137,39 @@ public abstract class AbstractRollingWindowTest {
 
     @Test
     public void scenario5() {
-        TimeWindow window = createRollingWindow(clock, 4, 100, 5);
+        TimeWindow window = createRollingWindow(stopwatch, 4, 100, 5);
 
         // 0
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(10);
+        stopwatch.setCurrentValue(10);
 
         // 10
         assertThat(window.record()).isTrue();
 
-        clock.step(3);
+        stopwatch.setCurrentValue(13);
 
         // 13
         assertThat(window.record()).isFalse();
 
-        clock.step(37);
+        stopwatch.setCurrentValue(50);
 
         // 50
         assertThat(window.record()).isFalse();
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         // 100
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(20);
+        stopwatch.setCurrentValue(120);
 
         // 120
         assertThat(window.record()).isTrue();
 
-        clock.step(10);
+        stopwatch.setCurrentValue(130);
 
         // 130
         assertThat(window.record()).isFalse();
@@ -177,19 +177,19 @@ public abstract class AbstractRollingWindowTest {
 
     @Test
     public void scenario6() {
-        TimeWindow window = createRollingWindow(clock, 2, 100, 0);
+        TimeWindow window = createRollingWindow(stopwatch, 2, 100, 0);
 
         // 0
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
 
-        clock.step(550);
+        stopwatch.setCurrentValue(550);
 
         // 550
         assertThat(window.record()).isTrue();
 
-        clock.step(500);
+        stopwatch.setCurrentValue(1050);
 
         // 1050
         assertThat(window.record()).isTrue();
@@ -197,6 +197,6 @@ public abstract class AbstractRollingWindowTest {
         assertThat(window.record()).isFalse();
     }
 
-    protected abstract TimeWindow createRollingWindow(Clock clock, int maxInvocations, long timeWindowInMillis,
+    protected abstract TimeWindow createRollingWindow(Stopwatch stopwatch, int maxInvocations, long timeWindowInMillis,
             long minSpacingInMillis);
 }

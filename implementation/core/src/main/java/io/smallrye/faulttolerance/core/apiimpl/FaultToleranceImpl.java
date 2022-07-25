@@ -30,7 +30,6 @@ import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
-import io.smallrye.faulttolerance.core.clock.SystemClock;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
@@ -256,7 +255,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         rateLimitBuilder.timeWindowInMillis,
                         rateLimitBuilder.minSpacingInMillis,
                         rateLimitBuilder.type,
-                        SystemClock.INSTANCE);
+                        SystemStopwatch.INSTANCE);
             }
 
             if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {
@@ -318,7 +317,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         rateLimitBuilder.timeWindowInMillis,
                         rateLimitBuilder.minSpacingInMillis,
                         rateLimitBuilder.type,
-                        SystemClock.INSTANCE);
+                        SystemStopwatch.INSTANCE);
             }
 
             if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {

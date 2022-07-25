@@ -62,7 +62,6 @@ import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
-import io.smallrye.faulttolerance.core.clock.SystemClock;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
@@ -311,7 +310,7 @@ public class FaultToleranceInterceptor {
                     getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
                     getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
                     operation.getRateLimit().type(),
-                    SystemClock.INSTANCE);
+                    SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasCircuitBreaker()) {
@@ -381,7 +380,7 @@ public class FaultToleranceInterceptor {
                     getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
                     getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
                     operation.getRateLimit().type(),
-                    SystemClock.INSTANCE);
+                    SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasCircuitBreaker()) {
@@ -453,7 +452,7 @@ public class FaultToleranceInterceptor {
                     getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
                     getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
                     operation.getRateLimit().type(),
-                    SystemClock.INSTANCE);
+                    SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasCircuitBreaker()) {

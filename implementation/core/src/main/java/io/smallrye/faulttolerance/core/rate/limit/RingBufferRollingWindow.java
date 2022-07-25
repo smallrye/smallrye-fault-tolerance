@@ -2,10 +2,11 @@ package io.smallrye.faulttolerance.core.rate.limit;
 
 import java.util.Arrays;
 
-import io.smallrye.faulttolerance.core.clock.Clock;
+import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
+import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 
 final class RingBufferRollingWindow implements TimeWindow {
-    private final Clock clock;
+    private final RunningStopwatch stopwatch;
 
     private final long timeWindowInMillis;
     private final long minSpacingInMillis;
@@ -15,8 +16,8 @@ final class RingBufferRollingWindow implements TimeWindow {
     private int head; // index of newest entry
     private int tail; // index of oldest still valid entry
 
-    RingBufferRollingWindow(Clock clock, int maxInvocations, long timeWindowInMillis, long minSpacingInMillis) {
-        this.clock = clock;
+    RingBufferRollingWindow(Stopwatch stopwatch, int maxInvocations, long timeWindowInMillis, long minSpacingInMillis) {
+        this.stopwatch = stopwatch.start();
         this.timeWindowInMillis = timeWindowInMillis;
         this.minSpacingInMillis = minSpacingInMillis;
         this.timestamps = new long[maxInvocations];
@@ -27,7 +28,7 @@ final class RingBufferRollingWindow implements TimeWindow {
 
     @Override
     public synchronized boolean record() {
-        long now = clock.currentTimeInMillis();
+        long now = stopwatch.elapsedTimeInMillis();
         long validity = now - timeWindowInMillis; // all entries before or at this timestamp have expired
 
         while (timestamps[tail] <= validity && head != tail) {
