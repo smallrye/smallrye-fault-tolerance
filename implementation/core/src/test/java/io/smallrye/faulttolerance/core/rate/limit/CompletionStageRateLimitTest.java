@@ -25,17 +25,17 @@ import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
-import io.smallrye.faulttolerance.core.clock.TestClock;
+import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 
 public class CompletionStageRateLimitTest {
-    private TestClock clock;
+    private TestStopwatch stopwatch;
     private ExecutorService executor;
 
     @BeforeEach
     public void setUp() {
-        clock = new TestClock();
+        stopwatch = new TestStopwatch();
         executor = new ThreadPoolExecutor(4, 4, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     }
 
@@ -52,7 +52,7 @@ public class CompletionStageRateLimitTest {
                 .of(() -> completedStage("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
-                2, 100, 0, RateLimitType.FIXED, clock);
+                2, 100, 0, RateLimitType.FIXED, stopwatch);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("1");
@@ -63,14 +63,14 @@ public class CompletionStageRateLimitTest {
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("3");
@@ -89,7 +89,7 @@ public class CompletionStageRateLimitTest {
                 .of(() -> completedStage("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
-                2, 100, 0, RateLimitType.FIXED, clock);
+                2, 100, 0, RateLimitType.FIXED, stopwatch);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -114,14 +114,14 @@ public class CompletionStageRateLimitTest {
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
         threads.clear();
         results.clear();
         exceptions.clear();
@@ -149,7 +149,7 @@ public class CompletionStageRateLimitTest {
                 .of(() -> completedStage("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
-                2, 100, 10, RateLimitType.FIXED, clock);
+                2, 100, 10, RateLimitType.FIXED, stopwatch);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -174,14 +174,14 @@ public class CompletionStageRateLimitTest {
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
         threads.clear();
         results.clear();
         exceptions.clear();
@@ -214,7 +214,7 @@ public class CompletionStageRateLimitTest {
                 .of(() -> completedStage("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
-                2, 100, 0, RateLimitType.ROLLING, clock);
+                2, 100, 0, RateLimitType.ROLLING, stopwatch);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("1");
@@ -225,14 +225,14 @@ public class CompletionStageRateLimitTest {
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
 
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("3");
@@ -249,7 +249,7 @@ public class CompletionStageRateLimitTest {
                 .of(() -> completedStage("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
-                2, 100, 0, RateLimitType.ROLLING, clock);
+                2, 100, 0, RateLimitType.ROLLING, stopwatch);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -274,14 +274,14 @@ public class CompletionStageRateLimitTest {
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(50);
+        stopwatch.setCurrentValue(100);
         threads.clear();
         results.clear();
         exceptions.clear();
@@ -314,7 +314,7 @@ public class CompletionStageRateLimitTest {
                 .of(() -> completedStage("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
-                2, 100, 10, RateLimitType.ROLLING, clock);
+                2, 100, 10, RateLimitType.ROLLING, stopwatch);
 
         List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -339,14 +339,14 @@ public class CompletionStageRateLimitTest {
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
 
-        clock.step(50);
+        stopwatch.setCurrentValue(50);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(RateLimitException.class);
 
-        clock.step(100);
+        stopwatch.setCurrentValue(150);
         threads.clear();
         results.clear();
         exceptions.clear();

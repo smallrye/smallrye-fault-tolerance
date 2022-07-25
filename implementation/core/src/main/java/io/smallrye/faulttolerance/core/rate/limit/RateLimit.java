@@ -8,7 +8,7 @@ import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.clock.Clock;
+import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 
 public class RateLimit<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
@@ -17,17 +17,17 @@ public class RateLimit<V> implements FaultToleranceStrategy<V> {
     final TimeWindow timeWindow;
 
     public RateLimit(FaultToleranceStrategy<V> delegate, String description, int maxInvocations, long timeWindowInMillis,
-            long minSpacingInMillis, RateLimitType type, Clock clock) {
+            long minSpacingInMillis, RateLimitType type, Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Rate limit delegate must be set");
         this.description = checkNotNull(description, "Rate limit description must be set");
         checkNotNull(type, "Rate limit type must be set");
         check(maxInvocations, maxInvocations > 0, "Max invocations must be > 0");
         check(timeWindowInMillis, timeWindowInMillis > 0, "Time window length must be > 0");
         check(minSpacingInMillis, minSpacingInMillis >= 0, "Min spacing must be >= 0");
-        checkNotNull(clock, "Clock must be set");
+        checkNotNull(stopwatch, "Stopwatch must be set");
         this.timeWindow = type == RateLimitType.FIXED
-                ? TimeWindow.createFixed(clock, maxInvocations, timeWindowInMillis, minSpacingInMillis)
-                : TimeWindow.createRolling(clock, maxInvocations, timeWindowInMillis, minSpacingInMillis);
+                ? TimeWindow.createFixed(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis)
+                : TimeWindow.createRolling(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
     }
 
     @Override

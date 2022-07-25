@@ -1,9 +1,10 @@
 package io.smallrye.faulttolerance.core.rate.limit;
 
-import io.smallrye.faulttolerance.core.clock.Clock;
+import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
+import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 
 final class FixedWindow implements TimeWindow {
-    private final Clock clock;
+    private final RunningStopwatch stopwatch;
 
     private final int maxInvocations;
     private final long timeWindowInMillis;
@@ -14,21 +15,20 @@ final class FixedWindow implements TimeWindow {
 
     private long lastInvocation;
 
-    FixedWindow(Clock clock, int maxInvocations, long timeWindowInMillis, long minSpacingInMillis) {
-        this.clock = clock;
+    FixedWindow(Stopwatch stopwatch, int maxInvocations, long timeWindowInMillis, long minSpacingInMillis) {
+        this.stopwatch = stopwatch.start();
         this.maxInvocations = maxInvocations;
         this.timeWindowInMillis = timeWindowInMillis;
         this.minSpacingInMillis = minSpacingInMillis;
 
-        long now = clock.currentTimeInMillis();
         this.currentPermits = maxInvocations;
-        this.nextRefresh = now + timeWindowInMillis;
-        this.lastInvocation = now - minSpacingInMillis;
+        this.nextRefresh = timeWindowInMillis;
+        this.lastInvocation = -minSpacingInMillis;
     }
 
     @Override
     public synchronized boolean record() {
-        long now = clock.currentTimeInMillis();
+        long now = stopwatch.elapsedTimeInMillis();
         if (now >= nextRefresh) {
             currentPermits = maxInvocations;
             // how many time windows has passed: (now - nextRefresh) / timeWindowInMillis

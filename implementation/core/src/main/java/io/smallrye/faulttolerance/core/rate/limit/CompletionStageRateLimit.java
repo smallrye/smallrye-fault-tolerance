@@ -10,12 +10,12 @@ import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.clock.Clock;
+import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 
 public class CompletionStageRateLimit<V> extends RateLimit<CompletionStage<V>> {
     public CompletionStageRateLimit(FaultToleranceStrategy<CompletionStage<V>> delegate, String description, int maxInvocations,
-            long timeWindowInMillis, long minSpacingInMillis, RateLimitType type, Clock clock) {
-        super(delegate, description, maxInvocations, timeWindowInMillis, minSpacingInMillis, type, clock);
+            long timeWindowInMillis, long minSpacingInMillis, RateLimitType type, Stopwatch stopwatch) {
+        super(delegate, description, maxInvocations, timeWindowInMillis, minSpacingInMillis, type, stopwatch);
     }
 
     @Override
