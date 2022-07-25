@@ -60,8 +60,8 @@ public class FutureThreadPoolBulkhead<V> extends BulkheadBase<Future<V>> {
                 }
 
                 if (LOG.isTraceEnabled()) {
-                    LOG.trace("Cancelling bulkhead task," + (event.interruptible ? "" : " NOT")
-                            + " interrupting executing thread");
+                    LOG.tracef("Cancelling bulkhead task,%s interrupting executing thread",
+                            (event.interruptible ? "" : " NOT"));
                 }
                 cancelled.set(true);
                 if (event.interruptible) {
