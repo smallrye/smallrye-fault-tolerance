@@ -150,7 +150,7 @@ public class FaultToleranceExtension implements Extension {
             if (method.isLegitimate()) {
                 FaultToleranceOperation operation = FaultToleranceOperation.create(method);
                 operation.validate();
-                LOG.debug("Found " + operation);
+                LOG.debugf("Found %s", operation);
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()),
                         operation);
 

@@ -46,7 +46,7 @@ public class RateLimit<V> implements FaultToleranceStrategy<V> {
             ctx.fireEvent(RateLimitEvents.DecisionMade.PERMITTED);
             return delegate.apply(ctx);
         } else {
-            LOG.debug(description + " rate limit exceeded");
+            LOG.debugf("%s rate limit exceeded", description);
             ctx.fireEvent(RateLimitEvents.DecisionMade.REJECTED);
             throw new RateLimitException(description + " rate limit exceeded");
         }

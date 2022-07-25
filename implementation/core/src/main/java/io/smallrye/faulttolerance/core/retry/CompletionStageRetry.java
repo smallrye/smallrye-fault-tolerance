@@ -51,7 +51,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
             // do not sleep
             return afterDelay(ctx, attempt, delay, stopwatch, lastFailure);
         } else if (attempt <= maxRetries) {
-            LOG.debug(description + " invocation failed, retrying (" + attempt + "/" + maxRetries + ")");
+            LOG.debugf("%s invocation failed, retrying (%d/%d)", description, attempt, maxRetries);
             ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
             CompletableFuture<V> result = new CompletableFuture<>();

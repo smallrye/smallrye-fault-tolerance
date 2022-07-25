@@ -40,7 +40,7 @@ public class CompletionStageRateLimit<V> extends RateLimit<CompletionStage<V>> {
                 result.completeExceptionally(e);
             }
         } else {
-            LOG.debug(description + " rate limit exceeded");
+            LOG.debugf("%s rate limit exceeded", description);
             ctx.fireEvent(RateLimitEvents.DecisionMade.REJECTED);
             result.completeExceptionally(new RateLimitException(description + " rate limit exceeded"));
         }
