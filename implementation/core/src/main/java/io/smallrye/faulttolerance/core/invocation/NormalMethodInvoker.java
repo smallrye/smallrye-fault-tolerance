@@ -14,9 +14,7 @@ public class NormalMethodInvoker<V> implements Invoker<V> {
     private final Object[] arguments;
 
     public NormalMethodInvoker(Method method, Object target, Object[] arguments) {
-        if (arguments == null) {
-            arguments = EMPTY_ARRAY;
-        }
+        Preconditions.checkNotNull(arguments, "Arguments array must be set");
         Preconditions.check(arguments.length, arguments.length == method.getParameterCount(),
                 "Argument array length must be " + method.getParameterCount());
         this.method = method;

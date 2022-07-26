@@ -422,6 +422,160 @@ All 3 annotations follow the same principle: exceptions considered success have 
 | `retryOn`
 |===
 
+=== Fallback Method with Exception Parameter
+
+In the non-compatible mode, {smallrye-fault-tolerance} supports access to the causing exception in a `@Fallback` method.
+
+A fallback method, as defind by the {microprofile-fault-tolerance} specification, must have the same parameters as the guarded method.
+{smallrye-fault-tolerance} permits defining one additional parameter, at the end of the parameter list, which must be of an exception type.
+If such parameter is defined, the exception that caused the fallback will be supplied in it.
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) { // <1>
+        ...
+    }
+}
+----
+
+<1> The fallback method matches the guarded method signature, except for one additional parameter at the end.
+
+All rules of {microprofile-fault-tolerance} specification related to looking up fallback methods still apply.
+That is, the return types must match, the parameter types must match (with this one exception), etc.
+
+If the thrown exception is not assignable to the exception parameter type, it is rethrown as if no fallback was declared.
+In the previous example, if `IllegalStateException` was thrown, the fallback method would not be called, as `IllegalStateException` is not a subtype of `IllegalArgumentException`.
+
+If the guarded method has a vararg parameter and you want to declare a fallback method with an exception parameter, simply replace the vararg syntax with an array type:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String... params) {
+        ...
+    }
+
+    public String fallback(String[] params, IllegalArgumentException cause) {
+        ...
+    }
+}
+----
+
+==== Multiple Fallback Methods with Exception Parameter
+
+It is possible to declare multiple overloads of the fallback method, each having different type of the exception parameter:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) {
+        ...
+    }
+
+    public String fallback(String param, RuntimeException cause) {
+        ...
+    }
+}
+----
+
+In that case, which fallback method is called depends on the type of thrown exception.
+The method that declares a most-specific supertype of the actual exception is selected.
+
+In the previous example, if `IllegalArgumentException` was thrown by `doSomething`, the first fallback method would be called.
+If `IllegalStateException` was thrown, the second fallback method would be called.
+
+If the thrown exception is not assignable to the exception parameter type of any fallback method, it is rethrown as if no fallback was declared.
+
+==== Fallback Methods with and without Exception Parameter
+
+It is possible to declare the fallback method with and without an exception parameter at the same time:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) {
+        ...
+    }
+
+    public String fallback(String param, RuntimeException cause) {
+        ...
+    }
+
+    public String fallback(String param) {
+        ...
+    }
+}
+----
+
+The fallback methods with an exception parameter have precedence.
+The fallback method without an exception parameter is only called if the thrown exception is not assignable to any declared exception parameter.
+
+==== Interactions with `applyOn` / `skipOn`
+
+The presence or absence of a fallback method with specific exception parameter may seem related to the usage of `applyOn` / `skipOn` on the `@Fallback` annotation, but in fact, it is not.
+These features are completely independent.
+
+Simply put, the `applyOn` / `skipOn` configuration is always evaluated first.
+A fallback method is only selected and invoked when this configuration indicates that a fallback should apply.
+
+If `@Fallback` is configured to skip `IllegalStateException` and `IllegalStateException` is thrown, no fallback method is invoked.
+That applies even if a fallback method with a matching exception parameter exists.
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback", skipOn = IllegalStateException.class)
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) {
+        ...
+    }
+
+    public String fallback(String param, RuntimeException cause) {
+        ...
+    }
+
+    public String fallback(String param) {
+        ...
+    }
+}
+----
+
+In this case:
+
+- if `doSomething` throws `IllegalArgumentException`, the first fallback method is called;
+- if `doSomething` throws `IllegalStateException`, no fallback method is called, because this exception type is skipped;
+- if `doSomething` throws any other `RuntimeException`, the second fallback method is called;
+- if `doSomething` throws any other exception, the last fallback method is called.
+
 [[kotlin-suspend-functions]]
 == Kotlin `suspend` Functions
 
