@@ -26,6 +26,6 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 @ExpectedDeploymentException(DefinitionException.class)
 public class TypeArgumentMismatchFallbackMethodTest {
     @Test
-    public void testIgnored(TypeArgumentMismatchFallbackMethod ignored) {
+    public void test(TypeArgumentMismatchFallbackMethod ignored) {
     }
 }

@@ -21,7 +21,6 @@ import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.PrivilegedActionException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -99,6 +98,7 @@ import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
 import io.smallrye.faulttolerance.internal.InterceptionInvoker;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
@@ -116,6 +116,8 @@ import io.smallrye.faulttolerance.metrics.MetricsProvider;
 @FaultToleranceBinding
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class FaultToleranceInterceptor {
+
+    private static final Object[] EMPTY_ARRAY = {};
 
     private final Bean<?> interceptedBean;
 
@@ -534,48 +536,43 @@ public class FaultToleranceInterceptor {
     }
 
     private <V> FallbackFunction<V> prepareFallbackFunction(InterceptionPoint point, FaultToleranceOperation operation) {
-        Method fallbackMethod = null;
-
-        Class<? extends FallbackHandler<?>> fallback = operation.getFallback().value();
-        String fallbackMethodName = operation.getFallback().fallbackMethod();
-
-        if (fallback.equals(org.eclipse.microprofile.faulttolerance.Fallback.DEFAULT.class) && !"".equals(fallbackMethodName)) {
-            try {
-                Method method = point.method();
-                fallbackMethod = SecurityActions.getDeclaredMethod(point.beanClass(), method.getDeclaringClass(),
-                        fallbackMethodName, method.getGenericParameterTypes());
-                if (fallbackMethod == null) {
-                    throw new FaultToleranceException("Could not obtain fallback method " + fallbackMethodName);
-                }
-                SecurityActions.setAccessible(fallbackMethod);
-            } catch (PrivilegedActionException e) {
-                throw new FaultToleranceException("Could not obtain fallback method", e);
-            }
-        }
-
         AsyncSupport asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
+
+        String fallbackMethodName = operation.getFallback().fallbackMethod();
+        FallbackMethodCandidates candidates = !"".equals(fallbackMethodName)
+                ? cache.getFallbackMethodCandidates(point, fallbackMethodName)
+                : null;
 
         FallbackFunction<V> fallbackFunction;
 
-        Method fallbackMethodFinal = fallbackMethod;
-        if (fallbackMethod != null) {
-            boolean isDefault = fallbackMethodFinal.isDefault();
+        if (candidates != null) {
             fallbackFunction = ctx -> {
+                Method fallbackMethod = candidates.select(ctx.failure.getClass());
+                if (fallbackMethod == null) {
+                    throw sneakyThrow(ctx.failure);
+                }
+
+                boolean isDefault = fallbackMethod.isDefault();
                 InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
                 try {
+                    Object[] arguments = interceptionContext.getParameters();
+                    if (arguments == null) {
+                        arguments = EMPTY_ARRAY;
+                    }
+                    if (fallbackMethod.getParameterCount() == arguments.length + 1) {
+                        Object[] argumentsWithException = new Object[arguments.length + 1];
+                        System.arraycopy(arguments, 0, argumentsWithException, 0, arguments.length);
+                        argumentsWithException[argumentsWithException.length - 1] = ctx.failure;
+                        arguments = argumentsWithException;
+                    }
+
                     Invoker invoker = isDefault
-                            ? new SpecialMethodInvoker(fallbackMethodFinal, interceptionContext.getTarget(),
-                                    interceptionContext.getParameters())
-                            : new NormalMethodInvoker(fallbackMethodFinal, interceptionContext.getTarget(),
-                                    interceptionContext.getParameters());
+                            ? new SpecialMethodInvoker(fallbackMethod, interceptionContext.getTarget(), arguments)
+                            : new NormalMethodInvoker(fallbackMethod, interceptionContext.getTarget(), arguments);
                     return asyncSupport == null ? (V) invoker.proceed() : (V) asyncSupport.toCompletionStage(invoker);
+                } catch (InvocationTargetException e) {
+                    throw sneakyThrow(e.getCause());
                 } catch (Throwable e) {
-                    if (e instanceof InvocationTargetException) {
-                        e = e.getCause();
-                    }
-                    if (e instanceof Exception) {
-                        throw (Exception) e;
-                    }
                     throw new FaultToleranceException("Error during fallback method invocation", e);
                 }
             };
@@ -583,10 +580,8 @@ public class FaultToleranceInterceptor {
             FallbackHandler<V> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
                 fallbackFunction = ctx -> {
-                    InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
-                    ExecutionContextWithInvocationContext executionContext = new ExecutionContextWithInvocationContext(
-                            interceptionContext);
-                    executionContext.setFailure(ctx.failure);
+                    ExecutionContextImpl executionContext = new ExecutionContextImpl(
+                            ctx.invocationContext.get(InvocationContext.class), ctx.failure);
                     V result = fallbackHandler.handle(executionContext);
                     if (asyncSupport != null) {
                         result = (V) asyncSupport.fallbackResultToCompletionStage(result);

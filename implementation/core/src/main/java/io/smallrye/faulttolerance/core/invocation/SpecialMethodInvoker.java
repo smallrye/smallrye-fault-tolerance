@@ -16,9 +16,7 @@ public class SpecialMethodInvoker<V> implements Invoker<V> {
     private final Object[] arguments;
 
     public SpecialMethodInvoker(Method method, Object target, Object[] arguments) throws ReflectiveOperationException {
-        if (arguments == null) {
-            arguments = NormalMethodInvoker.EMPTY_ARRAY;
-        }
+        Preconditions.checkNotNull(arguments, "Arguments array must be set");
         Preconditions.check(arguments.length, arguments.length == method.getParameterCount(),
                 "Argument array length must be " + method.getParameterCount());
 
