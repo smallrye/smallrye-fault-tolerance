@@ -54,7 +54,7 @@
         <version.smallrye-common>1.13.0</version.smallrye-common>
         <version.smallrye-reactive-utils>2.6.0</version.smallrye-reactive-utils>
         <version.opentracing>0.33.0</version.opentracing>
-        <version.vertx>4.3.2</version.vertx>
+        <version.vertx>4.3.3</version.vertx>
 
         <version.arquillian>1.6.0.Final</version.arquillian>
         <version.arquillian-weld>2.1.0.Final</version.arquillian-weld>
