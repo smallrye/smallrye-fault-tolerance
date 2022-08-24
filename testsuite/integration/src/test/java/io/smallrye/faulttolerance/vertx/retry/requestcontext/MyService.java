@@ -12,7 +12,7 @@ import javax.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 
-import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.core.util.CompletionStages;
 
 @ApplicationScoped
@@ -24,7 +24,7 @@ public class MyService {
     @Inject
     MyRequestScopedService requestScopedService;
 
-    @NonBlocking
+    @AsynchronousNonBlocking
     @Retry(maxRetries = 20, delay = 5, delayUnit = ChronoUnit.MILLIS)
     public CompletionStage<String> hello() {
         requestScopedService.call();

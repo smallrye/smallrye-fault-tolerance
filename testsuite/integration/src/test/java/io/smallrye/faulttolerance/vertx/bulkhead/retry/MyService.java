@@ -10,14 +10,14 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
-import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.vertx.core.Vertx;
 
 @ApplicationScoped
 public class MyService {
     static final Queue<String> invocationThreads = new ConcurrentLinkedQueue<>();
 
-    @NonBlocking
+    @AsynchronousNonBlocking
     @Bulkhead(value = 3, waitingTaskQueue = 3)
     @Retry(maxRetries = 1, delay = 1000, jitter = 0)
     public CompletionStage<String> hello() {

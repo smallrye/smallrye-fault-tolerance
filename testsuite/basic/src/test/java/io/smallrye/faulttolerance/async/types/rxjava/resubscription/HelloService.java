@@ -7,13 +7,13 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import io.reactivex.rxjava3.core.Maybe;
-import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 
 @ApplicationScoped
 public class HelloService {
     static final AtomicInteger COUNTER = new AtomicInteger(0);
 
-    @NonBlocking
+    @AsynchronousNonBlocking
     @Retry
     public Maybe<String> hello() {
         COUNTER.incrementAndGet();

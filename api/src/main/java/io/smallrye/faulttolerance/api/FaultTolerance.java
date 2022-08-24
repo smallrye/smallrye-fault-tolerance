@@ -307,6 +307,7 @@ public interface FaultTolerance<T> {
          * @param value whether the guarded action should be offloaded to another thread
          * @return this fault tolerance builder
          * @see Asynchronous @Asynchronous
+         * @see AsynchronousNonBlocking @AsynchronousNonBlocking
          */
         Builder<T, R> withThreadOffload(boolean value);
 
