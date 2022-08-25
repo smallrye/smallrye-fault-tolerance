@@ -32,6 +32,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -50,6 +51,7 @@ public class FaultToleranceOperation {
         return new FaultToleranceOperation(method.beanClass, method.method,
                 ApplyFaultToleranceConfigImpl.create(method),
                 AsynchronousConfigImpl.create(method),
+                AsynchronousNonBlockingConfigImpl.create(method),
                 BlockingConfigImpl.create(method),
                 NonBlockingConfigImpl.create(method),
                 BulkheadConfigImpl.create(method),
@@ -70,6 +72,7 @@ public class FaultToleranceOperation {
     private final ApplyFaultToleranceConfig applyFaultTolerance;
 
     private final AsynchronousConfig asynchronous;
+    private final AsynchronousNonBlockingConfig asynchronousNonBlocking;
     private final BlockingConfig blocking;
     private final NonBlockingConfig nonBlocking;
 
@@ -89,6 +92,7 @@ public class FaultToleranceOperation {
             MethodDescriptor methodDescriptor,
             ApplyFaultToleranceConfig applyFaultTolerance,
             AsynchronousConfig asynchronous,
+            AsynchronousNonBlockingConfig asynchronousNonBlocking,
             BlockingConfig blocking,
             NonBlockingConfig nonBlocking,
             BulkheadConfig bulkhead,
@@ -107,6 +111,7 @@ public class FaultToleranceOperation {
         this.applyFaultTolerance = applyFaultTolerance;
 
         this.asynchronous = asynchronous;
+        this.asynchronousNonBlocking = asynchronousNonBlocking;
         this.blocking = blocking;
         this.nonBlocking = nonBlocking;
 
@@ -155,6 +160,14 @@ public class FaultToleranceOperation {
         return asynchronous;
     }
 
+    public boolean hasAsynchronousNonBlocking() {
+        return asynchronousNonBlocking != null;
+    }
+
+    public AsynchronousNonBlocking getAsynchronousNonBlocking() {
+        return asynchronousNonBlocking;
+    }
+
     public boolean hasBlocking() {
         return blocking != null;
     }
@@ -173,10 +186,37 @@ public class FaultToleranceOperation {
 
     // if the guarded method doesn't return CompletionStage, this is meaningless
     public boolean isThreadOffloadRequired() {
+        if (blocking == null && nonBlocking == null) {
+            if (asynchronousNonBlocking != null && asynchronousNonBlocking.isOnMethod()) {
+                return false;
+            }
+            if (asynchronous != null && asynchronous.isOnMethod()) {
+                return true;
+            }
+
+            if (asynchronousNonBlocking != null) {
+                return false;
+            }
+            if (asynchronous != null) {
+                return true;
+            }
+
+            // in spec compatible mode, one of the conditions above always holds
+            // in spec non-compatible mode, we can just always return `false`
+            // because `isThreadOffloadRequired` is never called when the return type
+            // isn't `CompletionStage`
+            return false;
+        }
+
+        // the code below is meant to be deleted when support for `@Blocking` and `@NonBlocking` is removed
+
         if (blocking != null && blocking.isOnMethod()) {
             return true;
         }
         if (nonBlocking != null && nonBlocking.isOnMethod()) {
+            return false;
+        }
+        if (asynchronousNonBlocking != null && asynchronousNonBlocking.isOnMethod()) {
             return false;
         }
 
@@ -186,13 +226,16 @@ public class FaultToleranceOperation {
         if (nonBlocking != null) {
             return false;
         }
+        if (asynchronousNonBlocking != null) {
+            return false;
+        }
 
         if (asynchronous != null) {
             return true;
         }
 
-        // in a spec compatible mode, one of the conditions above always holds
-        // in a spec non-compatible mode, we can just always return `false`
+        // in spec compatible mode, one of the conditions above always holds
+        // in spec non-compatible mode, we can just always return `false`
         // because `isThreadOffloadRequired` is never called when the return type
         // isn't `CompletionStage`
         return false;
@@ -302,6 +345,9 @@ public class FaultToleranceOperation {
         if (asynchronous != null) {
             asynchronous.validate();
         }
+        if (asynchronousNonBlocking != null) {
+            asynchronousNonBlocking.validate();
+        }
         if (blocking != null) {
             blocking.validate();
         }
@@ -383,6 +429,9 @@ public class FaultToleranceOperation {
 
         if (asynchronous != null) {
             asynchronous.materialize();
+        }
+        if (asynchronousNonBlocking != null) {
+            asynchronousNonBlocking.materialize();
         }
         if (blocking != null) {
             blocking.materialize();

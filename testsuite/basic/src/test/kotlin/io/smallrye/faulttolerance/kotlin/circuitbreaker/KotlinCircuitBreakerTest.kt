@@ -9,7 +9,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.jupiter.api.Test
 import java.io.IOException
 
-// so that FT methods don't have to be marked @NonBlocking
+// so that FT methods don't have to be marked @AsynchronousNonBlocking
 @WithSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
 @FaultToleranceBasicTest
 class KotlinCircuitBreakerTest {

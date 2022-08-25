@@ -55,86 +55,87 @@ The `CircuitBreakerMaintenance` interface provides 4 methods:
 
 See the javadoc of those methods for more information.
 
-[[blocking-nonblocking]]
-== @Blocking and @NonBlocking
+[[async-nonblocking]]
+== @AsynchronousNonBlocking
 
-In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, which can be placed on methods returning `Future` or `CompletionStage`, {smallrye-fault-tolerance} also supports 2 more annotations for asynchronous processing:
+In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, {smallrye-fault-tolerance} offers an annotation for asynchronous non-blocking processing: `@AsynchronousNonBlocking`.
 
-* `@io.smallrye.common.annotation.Blocking`
-* `@io.smallrye.common.annotation.NonBlocking`
+This annotation may only be placed on methods that return `CompletionStage`, because the `Future` type can't really be used for non-blocking processing.
+It may also be placed on a class, in which case all business methods must return `CompletionStage`.
 
-These annotations are generic and can have multiple meanings, depending on context.
-{smallrye-fault-tolerance} only pays attention to these annotations if:
+As opposed to `@Asynchronous`, the `@AsynchronousNonBlocking` annotation does _not_ offload the method execution to another thread.
+The method is allowed to proceed on the original thread, assuming that it returns quickly and all processing it does is performed in a non-blocking way.
 
-* they are placed on methods that return `CompletionStage` (the `Future` type can't really be used for non-blocking processing);
-* they are placed on methods that apply some fault tolerance strategy (such as `@Fallback`, defined either on a method or a class).
+|===
+|Annotation |Method return type |Execution
 
-Under these circumstances, {smallrye-fault-tolerance} assigns these annotations the following meaning:
+|`@Asynchronous`
+|`Future` or `CompletionStage`
+|offloaded to a thread pool
 
-* `@Blocking` means that execution of the operation will be offloaded to another thread.
-In other words, it is an equivalent of `@Asynchronous`.
-Use this annotation if the method has blocking logic, but you don't want to block the caller thread.
-+
+|`@AsynchronousNonBlocking`
+|`CompletionStage`
+|proceeds on the original thread
+|===
+
+=== When to Use @Asynchronous
+
+Use `@Asynchronous` if the method has blocking logic, but you don’t want to block the caller thread.
 For example:
-+
+
 [source,java]
 ----
 @ApplicationScoped
 public class MyService {
-    @Retry // <1>
-    @Blocking // <2>
+    @Retry
+    @Asynchronous // <1>
     CompletionStage<String> hello() {
         ...
     }
 }
 ----
-+
-<1> A fault tolerance annotation.
-If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@Blocking` annotation.
-<2> Using the `@Blocking` annotation, because the method blocks, and it is necessary to offload its execution to another thread.
-With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
-+
+
+<1> Using the `@Asynchronous` annotation, because the method blocks, and it is necessary to offload its execution to another thread.
+
 The thread pool that is used for offloading method calls is provided by the runtime that integrates {smallrye-fault-tolerance}.
-* `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
-Use this annotation if the method _doesn't_ have blocking logic, and you want the execution to stay on the caller thread.
-+
+
+=== When to Use @AsynchronousNonBlocking
+
+Use `@AsynchronousNonBlocking` if the method _does not_ have blocking logic, and you want the execution to stay on the caller thread.
 For example:
-+
+
 [source,java]
 ----
 @ApplicationScoped
 public class MyService {
-    @Retry // <1>
-    @NonBlocking // <2>
+    @Retry
+    @AsynchronousNonBlocking // <1>
     CompletionStage<String> hello() {
         ...
     }
 }
 ----
-+
-<1> A fault tolerance annotation.
-If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@NonBlocking` annotation.
-<2> Using the `@NonBlocking` annotation, because the method doesn't block and offloading execution to another thread is not necessary.
-With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
-+
+
+<1> Using the `@AsynchronousNonBlocking` annotation, because the method does not block and offloading execution to another thread is not necessary.
+
 If the guarded method uses `@Retry` and some delay between retries is configured, only the initial execution is guaranteed to occur on the original thread.
 Subsequent attempts may be offloaded to an extra thread, so that the original thread is not blocked on the delay.
-+
+
 If the guarded method uses `@Bulkhead`, the execution is _not_ guaranteed to occur on the original thread.
 If the execution has to wait in the bulkhead queue, it may later end up on a different thread.
-+
+
 If the original thread is an event loop thread and event loop integration is enabled, then the event loop is always used to execute the guarded method.
 In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
 
-Additionally, the `@Blocking` and `@NonBlocking` annotations may be placed on a class.
-In that case, they apply to methods satisfying the same criteria: must return `CompletionStage` and must have some fault tolerance strategy (even if that fault tolerance strategy is declared on the class).
-An annotation put on a method has priority over an annotation put on a class.
+=== How to Combine Them
+
+When these annotations are combined, an annotation on a method has priority over an annotation on a class.
 For example:
 
 [source,java]
 ----
 @ApplicationScoped
-@NonBlocking
+@AsynchronousNonBlocking
 public class MyService {
     @Retry
     CompletionStage<String> hello() { // <1>
@@ -142,32 +143,29 @@ public class MyService {
     }
 
     @Retry
-    @Blocking
+    @Asynchronous
     CompletionStage<String> helloBlocking() { // <2>
         ...
     }
 }
 ----
 
-<1> Treated as `@NonBlocking`, based on the class annotation.
-<2> Treated as `@Blocking`, the method annotation has priority over the class annotation.
+<1> Treated as `@AsynchronousNonBlocking`, based on the class annotation.
+<2> Treated as `@Asynchronous`, the method annotation has priority over the class annotation.
 
-It is an error to put both `@Blocking` and `@NonBlocking` on the same program element.
-
-=== Rationale
-
-We believe that the `@Asynchronous` annotation is misnamed, because its meaning is "offload execution to another thread".
-This isn't always appropriate in modern asynchronous programming, where methods are often non-blocking and thread offload is not required.
-We believe that declaring whether the method blocks or not is a better approach.
-
-At the same time, we designed these annotations to be used by a variety of frameworks, so {smallrye-fault-tolerance} can't eagerly intercept all methods using them.
-We also want to stay compatible with the {microprofile-fault-tolerance} specification as much as possible.
-For these reasons, {smallrye-fault-tolerance} only considers these annotations for methods that use some fault tolerance strategy.
+It is an error to put both `@Asynchronous` and `@AsynchronousNonBlocking` on the same program element.
 
 === Recommendation
 
-For methods that use fault tolerance and return `CompletionStage`, we recommend declaring their `@Blocking` or `@NonBlocking` nature.
-In such case, the `@Asynchronous` annotation becomes optional.
+Use the <<method-asynchrony,non-compatible mode>>.
+In this mode, methods returning `CompletionStage` are automatically treated as if they were `@AsynchronousNonBlocking`.
+Use `@Asynchronous` to mark blocking methods for thread offload.
+
+If you can't use the non-compatible mode, use `@AsynchronousNonBlocking` or `@Asynchronous` to mark all asynchronous methods.
+
+IMPORTANT: In previous releases, {smallrye-fault-tolerance} recommended to use the `@Blocking` and `@NonBlocking` annotations.
+Using these annotations *for fault tolerance purposes* is now deprecated.
+They are still supported, but at some point, {smallrye-fault-tolerance} will stop recognizing them.
 
 We also recommend avoiding `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 
@@ -191,14 +189,14 @@ For example:
 @ApplicationScoped
 public class MyService {
     @Retry
-    @NonBlocking // <1>
+    @AsynchronousNonBlocking // <1>
     Uni<String> hello() { // <2>
         ...
     }
 }
 ----
 
-<1> Using the `@NonBlocking` annotation described in <<blocking-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
+<1> Using the `@AsynchronousNonBlocking` annotation described in <<async-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
 <2> Returning the `Uni` type from Mutiny.
 This shows that whatever works for `CompletionStage` also works for the other async types.
 
@@ -291,6 +289,7 @@ com.example.MyService/hello/ExponentialBackoff/factor=3
 These annotations do not have any special metrics.
 All `@Retry` metrics are still present and reflect the altered behavior.
 
+[[noncompatible-mode]]
 == Non-compatible Mode
 
 {smallrye-fault-tolerance} offers a mode where certain features are improved beyond specification, as described below.
@@ -341,7 +340,7 @@ public class MyService {
     }
 
     @Retry
-    @Blocking
+    @Asynchronous
     CompletionStage<String> helloBlocking() { // <3>
         ...
     }
@@ -349,19 +348,19 @@ public class MyService {
 ----
 
 <1> Executed on the original thread, because the method returns `CompletionStage`.
-It is as if the method was annotated `@NonBlocking`.
+It is as if the method was annotated `@AsynchronousNonBlocking`.
 <2> Executed on the original thread, because the method returns an <<async-types,async type>>.
-It is as if the method was annotated `@NonBlocking`.
-<3> The explicit `@Blocking` annotation is honored.
+It is as if the method was annotated `@AsynchronousNonBlocking`.
+<3> The explicit `@Asynchronous` annotation is honored.
 The method is executed on a thread pool.
 
 Note that the existing annotations still work without a change, both in compatible and non-compatible mode.
-That is, if a method (or class) is annotated `@Asynchronous` or `@Blocking`, execution will be offloaded to a thread pool.
-If a method (or class) is annotated `@NonBlocking`, execution will happen on the original thread (even if `@Asynchronous` is present).
+That is, if a method (or class) is annotated `@Asynchronous`, execution will be offloaded to a thread pool.
+If a method (or class) is annotated `@AsynchronousNonBlocking`, execution will happen on the original thread.
 
 Also note that this doesn't affect methods returning `Future`.
 You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool and are guarded properly.
-As mentioned in the <<blocking-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
+As mentioned in the <<async-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
 
 === Inspecting Exception Cause Chains
 
@@ -609,7 +608,7 @@ Since the guarded method is suspending, the fallback method must be suspending.
 
 As mentioned above, suspending functions are treated as async types.
 This means that for asynchronous fault tolerance to work correctly on suspending functions, they must be determined to be asynchronous.
-That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, one of the usual annotations (`@Blocking`, `@NonBlocking`, `@Asynchronous`) must be present.
+That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, the `@Asynchronous` or `@AsynchronousNonBlocking` annotation must be present.
 It is expected that most users will use the Kotlin support in the non-compatible mode, so the example above does not include any such annotation.
 
 To be able to use this, a support library must be present.
@@ -779,7 +778,7 @@ If `@Fallback` is used with `@RateLimit`, the fallback method or handler may be 
 If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the rate limit as an independent invocation.
 If `RateLimitException` is thrown, the execution may be retried, depending on how retry is configured.
 
-If `@Circuitbreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
+If `@CircuitBreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
 If rate limiting results in `RateLimitException`, this may be counted as a failure, depending on how the circuit breaker is configured.
 
 === Configuration

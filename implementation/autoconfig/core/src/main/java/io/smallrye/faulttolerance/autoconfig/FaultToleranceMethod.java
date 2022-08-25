@@ -13,6 +13,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -41,6 +42,7 @@ public class FaultToleranceMethod {
     public ApplyFaultTolerance applyFaultTolerance;
 
     public Asynchronous asynchronous;
+    public AsynchronousNonBlocking asynchronousNonBlocking;
     public Blocking blocking;
     public NonBlocking nonBlocking;
 
@@ -70,6 +72,7 @@ public class FaultToleranceMethod {
         // with other fault tolerance annotations
         return applyFaultTolerance != null
                 || asynchronous != null
+                || asynchronousNonBlocking != null
                 || bulkhead != null
                 || circuitBreaker != null
                 || fallback != null

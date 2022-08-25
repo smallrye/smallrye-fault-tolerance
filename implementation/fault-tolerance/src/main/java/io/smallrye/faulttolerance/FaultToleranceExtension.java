@@ -59,6 +59,7 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
@@ -90,6 +91,8 @@ public class FaultToleranceExtension implements Extension {
         // the fault tolerance interceptor, only in combination with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(
+                bm.createAnnotatedType(AsynchronousNonBlocking.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
@@ -171,6 +174,16 @@ public class FaultToleranceExtension implements Extension {
                         event.addDefinitionError(LOG.backoffAnnotationWithoutRetry(backoffAnnotation.getSimpleName(),
                                 annotatedType.getJavaClass()));
                     }
+                }
+
+                if (annotatedMethod.isAnnotationPresent(Asynchronous.class)
+                        && annotatedMethod.isAnnotationPresent(AsynchronousNonBlocking.class)) {
+                    event.addDefinitionError(LOG.bothAsyncAndAsyncNonBlockingPresent(method.method));
+                }
+
+                if (annotatedType.isAnnotationPresent(Asynchronous.class)
+                        && annotatedType.isAnnotationPresent(AsynchronousNonBlocking.class)) {
+                    event.addDefinitionError(LOG.bothAsyncAndAsyncNonBlockingPresent(annotatedType.getJavaClass()));
                 }
 
                 if (annotatedMethod.isAnnotationPresent(Blocking.class)
