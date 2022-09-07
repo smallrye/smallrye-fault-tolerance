@@ -31,6 +31,9 @@
     <url>http://smallrye.io</url>
 
     <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+
         <version.jakarta-annotations>2.0.0</version.jakarta-annotations>
         <version.jakarta-cdi>3.0.0</version.jakarta-cdi>
         <version.jakarta-interceptors>2.0.0</version.jakarta-interceptors>
@@ -427,41 +430,6 @@
             <modules>
                 <module>release</module>
             </modules>
-        </profile>
-
-        <profile>
-            <id>enforce-java-version</id>
-            <activation>
-                <property>
-                    <!-- this is only for CI to be able to verify running with Java 8 -->
-                    <name>!allow-java8-build</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-enforcer-plugin</artifactId>
-                        <version>${version.maven-enforcer-plugin}</version>
-                        <executions>
-                            <execution>
-                                <id>enforce-java</id>
-                                <goals>
-                                    <goal>enforce</goal>
-                                </goals>
-                                <configuration>
-                                    <rules>
-                                        <requireJavaVersion>
-                                            <version>[9,)</version>
-                                            <message>This project produces a multi-release JAR. Building with JDK 9+ is required.</message>
-                                        </requireJavaVersion>
-                                    </rules>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
     </profiles>
 </project>

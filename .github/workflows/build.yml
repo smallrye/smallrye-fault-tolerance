@@ -27,7 +27,6 @@ jobs:
       matrix:
         java:
         # we want: all LTS versions (that we care about), latest GA, upcoming
-        - 8
         - 11
         - 17
         - 18
@@ -59,12 +58,12 @@ jobs:
     - name: Build with Maven (Linux, Windows)
       if: ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest' }}
       shell: bash
-      run: mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml -Dallow-java8-build
+      run: mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml
 
     - name: Build with Maven (Mac)
       if: ${{ matrix.os == 'macos-latest' }}
       shell: bash
-      run: mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml -Dorg.eclipse.microprofile.fault.tolerance.tck.timeout.multiplier=3.0 -Dallow-java8-build
+      run: mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml -Dorg.eclipse.microprofile.fault.tolerance.tck.timeout.multiplier=3.0
 
     - name: Upload TCK report
       if: ${{ matrix.java == '11' && matrix.os == 'ubuntu-latest' }}
