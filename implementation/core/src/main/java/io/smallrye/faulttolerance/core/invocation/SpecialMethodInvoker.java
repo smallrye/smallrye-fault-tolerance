@@ -4,6 +4,7 @@ import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.function.Function;
@@ -22,12 +23,10 @@ public class SpecialMethodInvoker<V> implements Invoker<V> {
         Preconditions.check(arguments.length, arguments.length == method.getParameterCount(),
                 "Argument array length must be " + method.getParameterCount());
 
-        Class<?> declaringClazz = method.getDeclaringClass();
-        Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class);
-        constructor.setAccessible(true);
-        this.methodHandle = constructor.newInstance(declaringClazz)
-                .in(declaringClazz)
-                .unreflectSpecial(method, declaringClazz);
+        MethodType methodType = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
+        Class<?> declaringClass = method.getDeclaringClass();
+        this.methodHandle = MethodHandles.lookup()
+                .findSpecial(declaringClass, method.getName(), methodType, declaringClass);
         this.target = target;
         this.arguments = arguments;
     }
