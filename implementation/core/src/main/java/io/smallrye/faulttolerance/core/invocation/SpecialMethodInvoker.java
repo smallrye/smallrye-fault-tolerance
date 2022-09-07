@@ -5,7 +5,6 @@ import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.function.Function;
 
