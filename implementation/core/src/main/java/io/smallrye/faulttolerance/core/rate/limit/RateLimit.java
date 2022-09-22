@@ -25,9 +25,16 @@ public class RateLimit<V> implements FaultToleranceStrategy<V> {
         check(timeWindowInMillis, timeWindowInMillis > 0, "Time window length must be > 0");
         check(minSpacingInMillis, minSpacingInMillis >= 0, "Min spacing must be >= 0");
         checkNotNull(stopwatch, "Stopwatch must be set");
-        this.timeWindow = type == RateLimitType.FIXED
-                ? TimeWindow.createFixed(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis)
-                : TimeWindow.createRolling(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
+
+        if (type == RateLimitType.FIXED) {
+            timeWindow = TimeWindow.createFixed(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
+        } else if (type == RateLimitType.ROLLING) {
+            timeWindow = TimeWindow.createRolling(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
+        } else if (type == RateLimitType.SMOOTH) {
+            timeWindow = TimeWindow.createSmooth(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
+        } else {
+            throw new IllegalArgumentException("Unknown rate limit type: " + type);
+        }
     }
 
     @Override

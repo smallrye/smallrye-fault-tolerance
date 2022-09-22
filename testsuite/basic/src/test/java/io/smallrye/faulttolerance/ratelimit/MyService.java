@@ -37,6 +37,18 @@ public class MyService {
         return "hello";
     }
 
+    @RateLimit(value = RATE_LIMIT, window = 1, windowUnit = ChronoUnit.MINUTES, type = RateLimitType.SMOOTH)
+    @Fallback(fallbackMethod = "fallback")
+    public String smoothWindowNoSpacing() {
+        return "hello";
+    }
+
+    @RateLimit(value = RATE_LIMIT, window = 1, windowUnit = ChronoUnit.MINUTES, type = RateLimitType.SMOOTH, minSpacing = 10, minSpacingUnit = ChronoUnit.MILLIS)
+    @Fallback(fallbackMethod = "fallback")
+    public String smoothWindowWithSpacing() {
+        return "hello";
+    }
+
     private String fallback() {
         return "fallback";
     }

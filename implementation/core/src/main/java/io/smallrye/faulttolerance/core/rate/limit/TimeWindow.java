@@ -17,4 +17,8 @@ public interface TimeWindow {
     static TimeWindow createRolling(Stopwatch stopwatch, int maxInvocations, long timeWindowInMillis, long minSpacingInMillis) {
         return new RingBufferRollingWindow(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
     }
+
+    static TimeWindow createSmooth(Stopwatch stopwatch, int maxInvocations, long timeWindowInMillis, long minSpacingInMillis) {
+        return new SmoothWindow(stopwatch, maxInvocations, timeWindowInMillis, minSpacingInMillis);
+    }
 }

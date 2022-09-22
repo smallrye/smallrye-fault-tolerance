@@ -717,15 +717,21 @@ public void doSomething() {
 
 === Time Window Type
 
-{smallrye-fault-tolerance} supports two types of a time window used for rate limiting: _fixed_ and _rolling_.
+{smallrye-fault-tolerance} supports three types of a time window used for rate limiting: _fixed_, _rolling_ and _smooth_.
 
 Fixed time windows are a result of dividing time into non-overlapping intervals of given length.
 The invocation limit is enforced for each interval independently.
 This means that short bursts of invocations occuring near the time window boundaries may temporarily exceed the configured rate limit.
+This kind of rate limiting is also called _fixed window_ rate limiting.
 
 Rolling time windows enforce the limit continuously, instead of dividing time into independent intervals.
 The invocation limit is enforced for all possible time intervals of given length, regardless of overlap.
 This is more precise, but requires more memory and may be slower.
+This kind of rate limiting is also called _sliding log_ rate limiting.
+
+Smooth time windows enforce a uniform distribution of invocations under a rate calculated from given time window length and given limit.
+If recent rate of invocations is under the limit, a subsequent burst of invocations is allowed during a shorter time span, but the calculated rate is never exceeded.
+This kind of rate limiting is also called _token bucket_ or _leaky bucket (as a meter)_ rate limiting, with the additional property that all work units are considered to have the same size.
 
 The type of time window used for rate limiting is configured using the `type` annotation member:
 

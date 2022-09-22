@@ -33,18 +33,22 @@ import io.smallrye.common.annotation.Experimental;
  * when the number of recent invocations is below the configured limit. An invocation that would cause the number
  * of recent invocations to exceed the limit is rejected with {@link RateLimitException}.
  * <p>
- * What "recent" means differs based on the type of the time windows configured. By default, the time windows
- * are {@linkplain RateLimitType#FIXED fixed}, which means that time is divided into a series of consecutive intervals of
- * given length (time windows) and the limit is compared against the number of invocations in the current window.
- * {@linkplain RateLimitType#ROLLING Rolling} time windows may be configured, which means that each invocation has its
- * own time window of given length. This is more precise but requires more memory and may be slower.
+ * What "recent" means differs based on the type of the time windows configured. By default, the time windows are
+ * {@linkplain RateLimitType#FIXED fixed}, which means that time is divided into a series of consecutive intervals
+ * of given length (time windows) and the limit is compared against the number of invocations in the current window.
+ * Two different time windows may be configured. With {@linkplain RateLimitType#ROLLING rolling} time windows,
+ * each invocation has its own time window of given length, overlapping with time windows of previous invocations.
+ * This is more precise but requires more memory and may be slower. Using {@linkplain RateLimitType#SMOOTH smooth}
+ * time windows means that invocations are uniformly distributed over time under a calculated rate.
  * <p>
  * Additionally, a minimum spacing of invocations may be configured. If set, an invocation that happens too
  * quickly after a previous invocation is always rejected with {@link RateLimitException}, even if the limit
  * has not been exceeded yet.
  * <p>
- * A rejected invocation always counts towards the limit, so if a caller continuously invokes the guarded method
- * faster than the configuration allows, all invocations are rejected until the caller slows down.
+ * With fixed and rolling time windows, rejected invocations always count towards the limit, so if a caller
+ * continuously invokes the guarded method faster than the configuration allows, all invocations are rejected
+ * until the caller slows down. With smooth time windows, rejected invocations do not count towards the recent
+ * rate of invocations.
  *
  * @see #value()
  * @see #window()

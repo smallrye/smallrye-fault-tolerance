@@ -45,6 +45,20 @@ public class MyService {
         return completedFuture("hello");
     }
 
+    @Asynchronous
+    @RateLimit(value = RATE_LIMIT, window = 1, windowUnit = ChronoUnit.MINUTES, type = RateLimitType.SMOOTH)
+    @Fallback(fallbackMethod = "fallback")
+    public CompletionStage<String> smoothWindowNoSpacing() {
+        return completedFuture("hello");
+    }
+
+    @Asynchronous
+    @RateLimit(value = RATE_LIMIT, window = 1, windowUnit = ChronoUnit.MINUTES, type = RateLimitType.SMOOTH, minSpacing = 10, minSpacingUnit = ChronoUnit.MILLIS)
+    @Fallback(fallbackMethod = "fallback")
+    public CompletionStage<String> smoothWindowWithSpacing() {
+        return completedFuture("hello");
+    }
+
     private CompletionStage<String> fallback() {
         return completedFuture("fallback");
     }
