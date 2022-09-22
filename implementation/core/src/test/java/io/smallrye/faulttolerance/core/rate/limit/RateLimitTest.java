@@ -308,4 +308,146 @@ public class RateLimitTest {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
     }
+
+    @Test
+    public void smooth_singleThreaded() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
+        RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 0,
+                RateLimitType.SMOOTH, stopwatch);
+
+        String result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
+        assertThat(result).isEqualTo("1");
+        assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
+                .isExactlyInstanceOf(RateLimitException.class);
+
+        stopwatch.setCurrentValue(50);
+
+        result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
+        assertThat(result).isEqualTo("2");
+
+        stopwatch.setCurrentValue(100);
+
+        result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
+        assertThat(result).isEqualTo("3");
+
+        stopwatch.setCurrentValue(150);
+
+        result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
+        assertThat(result).isEqualTo("4");
+        assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
+                .isExactlyInstanceOf(RateLimitException.class);
+    }
+
+    @Test
+    public void smooth_multiThreaded() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
+        RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 2, 100, 0,
+                RateLimitType.SMOOTH, stopwatch);
+
+        List<TestThread<String>> threads = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        Set<String> results = new HashSet<>();
+        Set<Exception> exceptions = new HashSet<>();
+        for (TestThread<String> thread : threads) {
+            try {
+                results.add(thread.await());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("1");
+        assertThat(exceptions).hasSize(3);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+        });
+
+        stopwatch.setCurrentValue(50);
+
+        assertThat(rateLimit.apply(new InvocationContext<>(() -> "ignored"))).isEqualTo("2");
+
+        stopwatch.setCurrentValue(100);
+        threads.clear();
+        results.clear();
+        exceptions.clear();
+
+        for (int i = 0; i < 2; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        for (TestThread<String> thread : threads) {
+            try {
+                results.add(thread.await());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("3");
+        assertThat(exceptions).hasSize(1);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+        });
+    }
+
+    @Test
+    public void smooth_multiThreaded_withMinSpacing() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
+        RateLimit<String> rateLimit = new RateLimit<>(invocation, "test invocation", 1000, 100, 10,
+                RateLimitType.SMOOTH, stopwatch);
+
+        List<TestThread<String>> threads = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        Set<String> results = new HashSet<>();
+        Set<Exception> exceptions = new HashSet<>();
+        for (TestThread<String> thread : threads) {
+            try {
+                results.add(thread.await());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("1");
+        assertThat(exceptions).hasSize(3);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+        });
+
+        stopwatch.setCurrentValue(50);
+
+        assertThat(rateLimit.apply(new InvocationContext<>(() -> "ignored"))).isEqualTo("2");
+
+        stopwatch.setCurrentValue(100);
+        threads.clear();
+        results.clear();
+        exceptions.clear();
+
+        for (int i = 0; i < 2; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        for (TestThread<String> thread : threads) {
+            try {
+                results.add(thread.await());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("3");
+        assertThat(exceptions).hasSize(1);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+        });
+    }
 }

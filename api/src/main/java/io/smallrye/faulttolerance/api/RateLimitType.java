@@ -20,6 +20,7 @@ package io.smallrye.faulttolerance.api;
  *
  * @see #FIXED
  * @see #ROLLING
+ * @see #SMOOTH
  */
 public enum RateLimitType {
     /**
@@ -27,7 +28,9 @@ public enum RateLimitType {
      * limit for each interval independently. This means that short bursts of invocations occuring near
      * the time window boundaries may temporarily exceed the configured rate limit.
      * <p>
-     * This type of time windows requires constant memory and time.
+     * This is also called <em>fixed window</em> rate limiting.
+     * <p>
+     * Requires constant memory and time.
      */
     FIXED,
 
@@ -35,8 +38,23 @@ public enum RateLimitType {
      * Enforces the limit continuously, instead of dividing time into independent windows. The invocation
      * limit is enforced for all possible time intervals of given length, regardless of overlap.
      * <p>
-     * This type of time windows must remember timestamps of recent invocations and so requires
-     * memory and time proportional to the maximum number of invocations in the time window.
+     * This is also called <em>sliding log</em> rate limiting.
+     * <p>
+     * Requires memory and time proportional to the maximum number of invocations in the time window,
+     * due to the need to store and check timestamps of recent invocations.
      */
     ROLLING,
+
+    /**
+     * Calculates the maximum rate of invocations from given time window length and given limit and
+     * enforces a uniform distribution of invocations over time under the calculated rate. If recent
+     * rate of invocations is under the limit, a subsequent burst of invocations is allowed during
+     * a shorter time span, but the calculated rate is never exceeded.
+     * <p>
+     * This is also called <em>token bucket</em> or <em>leaky bucket (as a meter)</em> rate limiting,
+     * with the additional property that all work units are considered to have the same size.
+     * <p>
+     * Requires constant memory and time.
+     */
+    SMOOTH,
 }

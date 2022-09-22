@@ -136,4 +136,54 @@ public class RateLimitTest {
                 .hasSizeLessThanOrEqualTo(MyService.RATE_LIMIT);
         assertThat(results).filteredOn("fallback"::equals).hasSizeGreaterThanOrEqualTo(MyService.RATE_LIMIT);
     }
+
+    @Test
+    public void smoothWindowNoSpacing(MyService service) throws ExecutionException, InterruptedException {
+        List<Callable<String>> tasks = new ArrayList<>(TASKS_COUNT);
+        for (int i = 0; i < TASKS_COUNT; i++) {
+            tasks.add(service::smoothWindowNoSpacing);
+        }
+        List<Future<String>> futures = executorService.invokeAll(tasks);
+
+        List<String> results = new ArrayList<>(TASKS_COUNT);
+        for (Future<String> future : futures) {
+            results.add(future.get());
+        }
+
+        assertThat(results).hasSize(TASKS_COUNT);
+
+        assertThat(results).filteredOn("hello"::equals).hasSize(1);
+        assertThat(results).filteredOn("fallback"::equals).hasSize(TASKS_COUNT - 1);
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    public void smoothWindowWithSpacing(MyService service) throws ExecutionException, InterruptedException {
+        AtomicInteger counter = new AtomicInteger();
+        List<Callable<String>> tasks = new ArrayList<>(TASKS_COUNT);
+        for (int i = 0; i < TASKS_COUNT; i++) {
+            tasks.add(() -> {
+                int id = counter.getAndIncrement();
+                if (id < 10) {
+                    Thread.sleep(id * 100L);
+                } else {
+                    Thread.sleep(2000);
+                }
+                return service.smoothWindowWithSpacing();
+            });
+        }
+        List<Future<String>> futures = executorService.invokeAll(tasks);
+
+        List<String> results = new ArrayList<>(TASKS_COUNT);
+        for (Future<String> future : futures) {
+            results.add(future.get());
+        }
+
+        assertThat(results).hasSize(TASKS_COUNT);
+
+        assertThat(results).filteredOn("hello"::equals)
+                .hasSizeGreaterThanOrEqualTo(1)
+                .hasSizeLessThanOrEqualTo(MyService.RATE_LIMIT);
+        assertThat(results).filteredOn("fallback"::equals).hasSizeGreaterThanOrEqualTo(MyService.RATE_LIMIT);
+    }
 }

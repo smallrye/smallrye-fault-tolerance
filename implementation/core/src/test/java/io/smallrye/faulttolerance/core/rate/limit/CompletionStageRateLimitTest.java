@@ -371,4 +371,166 @@ public class CompletionStageRateLimitTest {
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
     }
+
+    @Test
+    public void smooth_singleThreaded() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation
+                .of(() -> completedStage("" + counter.incrementAndGet()));
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
+                2, 100, 0, RateLimitType.SMOOTH, stopwatch);
+
+        CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
+        assertThat(result.toCompletableFuture().get()).isEqualTo("1");
+        result = rateLimit.apply(new InvocationContext<>(null));
+        assertThatThrownBy(result.toCompletableFuture()::get)
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(RateLimitException.class);
+
+        stopwatch.setCurrentValue(50);
+
+        result = rateLimit.apply(new InvocationContext<>(null));
+        assertThat(result.toCompletableFuture().get()).isEqualTo("2");
+
+        stopwatch.setCurrentValue(100);
+
+        result = rateLimit.apply(new InvocationContext<>(null));
+        assertThat(result.toCompletableFuture().get()).isEqualTo("3");
+
+        stopwatch.setCurrentValue(150);
+
+        result = rateLimit.apply(new InvocationContext<>(null));
+        assertThat(result.toCompletableFuture().get()).isEqualTo("4");
+        result = rateLimit.apply(new InvocationContext<>(null));
+        assertThatThrownBy(result.toCompletableFuture()::get)
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(RateLimitException.class);
+    }
+
+    @Test
+    public void smooth_multiThreaded() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation
+                .of(() -> completedStage("" + counter.incrementAndGet()));
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
+                2, 100, 0, RateLimitType.SMOOTH, stopwatch);
+
+        List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        Set<String> results = new HashSet<>();
+        Set<Exception> exceptions = new HashSet<>();
+        for (TestThread<CompletionStage<String>> thread : threads) {
+            try {
+                results.add(thread.await().toCompletableFuture().get());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("1");
+        assertThat(exceptions).hasSize(3);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e)
+                    .isExactlyInstanceOf(ExecutionException.class)
+                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+        });
+
+        stopwatch.setCurrentValue(50);
+
+        CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
+        assertThat(result.toCompletableFuture().get()).isEqualTo("2");
+
+        stopwatch.setCurrentValue(100);
+        threads.clear();
+        results.clear();
+        exceptions.clear();
+
+        for (int i = 0; i < 2; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        for (TestThread<CompletionStage<String>> thread : threads) {
+            try {
+                results.add(thread.await().toCompletableFuture().get());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("3");
+        assertThat(exceptions).hasSize(1);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e)
+                    .isExactlyInstanceOf(ExecutionException.class)
+                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+        });
+    }
+
+    @Test
+    public void smooth_multiThreaded_withMinSpacing() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation
+                .of(() -> completedStage("" + counter.incrementAndGet()));
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
+        CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
+                1000, 100, 10, RateLimitType.SMOOTH, stopwatch);
+
+        List<TestThread<CompletionStage<String>>> threads = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        Set<String> results = new HashSet<>();
+        Set<Exception> exceptions = new HashSet<>();
+        for (TestThread<CompletionStage<String>> thread : threads) {
+            try {
+                results.add(thread.await().toCompletableFuture().get());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("1");
+        assertThat(exceptions).hasSize(3);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e)
+                    .isExactlyInstanceOf(ExecutionException.class)
+                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+        });
+
+        stopwatch.setCurrentValue(50);
+
+        CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
+        assertThat(result.toCompletableFuture().get()).isEqualTo("2");
+
+        stopwatch.setCurrentValue(100);
+        threads.clear();
+        results.clear();
+        exceptions.clear();
+
+        for (int i = 0; i < 2; i++) {
+            threads.add(runOnTestThread(rateLimit));
+        }
+
+        for (TestThread<CompletionStage<String>> thread : threads) {
+            try {
+                results.add(thread.await().toCompletableFuture().get());
+            } catch (Exception e) {
+                exceptions.add(e);
+            }
+        }
+
+        assertThat(results).containsExactlyInAnyOrder("3");
+        assertThat(exceptions).hasSize(1);
+        assertThat(exceptions).allSatisfy(e -> {
+            assertThat(e)
+                    .isExactlyInstanceOf(ExecutionException.class)
+                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+        });
+    }
 }

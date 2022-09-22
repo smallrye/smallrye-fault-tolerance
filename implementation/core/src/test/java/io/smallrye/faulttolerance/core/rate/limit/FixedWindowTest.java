@@ -187,6 +187,7 @@ public class FixedWindowTest {
 
         // 130
         assertThat(window.record()).isTrue();
+        assertThat(window.record()).isFalse();
     }
 
     @Test
@@ -209,5 +210,43 @@ public class FixedWindowTest {
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isTrue();
         assertThat(window.record()).isFalse();
+    }
+
+    @Test
+    public void scenario7() {
+        TimeWindow window = new FixedWindow(stopwatch, 4, 100, 5);
+
+        // 0
+        assertThat(window.record()).isTrue();
+
+        stopwatch.setCurrentValue(25);
+
+        // 25
+        assertThat(window.record()).isTrue();
+
+        stopwatch.setCurrentValue(28);
+
+        // 28
+        assertThat(window.record()).isFalse();
+
+        stopwatch.setCurrentValue(50);
+
+        // 50
+        assertThat(window.record()).isTrue();
+
+        stopwatch.setCurrentValue(100);
+
+        // 100
+        assertThat(window.record()).isTrue();
+
+        stopwatch.setCurrentValue(123);
+
+        // 123
+        assertThat(window.record()).isTrue();
+
+        stopwatch.setCurrentValue(130);
+
+        // 130
+        assertThat(window.record()).isTrue();
     }
 }
