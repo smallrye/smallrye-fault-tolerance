@@ -41,7 +41,7 @@
         <version.kotlin-dokka>1.7.10</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.6.4</version.kotlinx-coroutines>
         <version.micrometer-core>1.9.4</version.micrometer-core>
-        <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
+        <version.microprofile-fault-tolerance>4.0.1</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
         <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.2</version.microprofile-context-propagation-api>
