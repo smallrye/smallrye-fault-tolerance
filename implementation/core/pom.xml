@@ -35,7 +35,7 @@
 
         <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
         <version.jacoco-maven-plugin>0.8.6</version.jacoco-maven-plugin>
-        <version.pitest-maven>1.9.5</version.pitest-maven>
+        <version.pitest-maven>1.9.6</version.pitest-maven>
         <version.pitest-junit5-plugin>1.1.0</version.pitest-junit5-plugin>
 
         <!--suppress CheckTagEmptyBody -->
