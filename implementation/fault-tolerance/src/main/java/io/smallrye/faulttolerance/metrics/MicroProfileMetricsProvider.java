@@ -19,7 +19,6 @@ import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.metrics.Metadata;
 import org.eclipse.microprofile.metrics.MetricRegistry;
-import org.eclipse.microprofile.metrics.MetricType;
 import org.eclipse.microprofile.metrics.MetricUnits;
 import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
@@ -33,19 +32,16 @@ import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 public class MicroProfileMetricsProvider implements MetricsProvider {
     static final Metadata TIMEOUT_EXECUTION_DURATION_METADATA = Metadata.builder()
             .withName(MetricConstants.TIMEOUT_EXECUTION_DURATION)
-            .withType(MetricType.HISTOGRAM)
             .withUnit(MetricUnits.NANOSECONDS)
             .build();
 
     static final Metadata BULKHEAD_RUNNING_DURATION_METADATA = Metadata.builder()
             .withName(MetricConstants.BULKHEAD_RUNNING_DURATION)
-            .withType(MetricType.HISTOGRAM)
             .withUnit(MetricUnits.NANOSECONDS)
             .build();
 
     static final Metadata BULKHEAD_WAITING_DURATION_METADATA = Metadata.builder()
             .withName(MetricConstants.BULKHEAD_WAITING_DURATION)
-            .withType(MetricType.HISTOGRAM)
             .withUnit(MetricUnits.NANOSECONDS)
             .build();
 
@@ -167,7 +163,6 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
         private void registerGauge(Supplier<Long> supplier, String name, String unit, Tag... tags) {
             Metadata metadata = Metadata.builder()
                     .withName(name)
-                    .withType(MetricType.GAUGE)
                     .withUnit(unit)
                     .build();
             registry.gauge(metadata, supplier, tags);
