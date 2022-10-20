@@ -27,14 +27,11 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 final class SecurityActions {
     private SecurityActions() {
@@ -186,11 +183,16 @@ final class SecurityActions {
     private static Set<Method> getMethodsFromClass(Class<?> guardedMethodDeclaringClass,
             Class<?> classToSearch, String name, Type[] parameterTypes, Type returnType, boolean exceptionParameter,
             TypeMapping actualMapping, TypeMapping expectedMapping) {
-        return Arrays.stream(classToSearch.getDeclaredMethods())
-                .filter(method -> isAccessibleFrom(method, guardedMethodDeclaringClass))
-                .filter(method -> method.getName().equals(name))
-                .filter(signaturesMatch(parameterTypes, returnType, exceptionParameter, actualMapping, expectedMapping))
-                .collect(Collectors.toSet());
+        Set<Method> set = new HashSet<>();
+        for (Method method : classToSearch.getDeclaredMethods()) {
+            if (isAccessibleFrom(method, guardedMethodDeclaringClass)
+                    && method.getName().equals(name)
+                    && signaturesMatch(method, parameterTypes, returnType, exceptionParameter,
+                            actualMapping, expectedMapping)) {
+                set.add(method);
+            }
+        }
+        return set;
     }
 
     private static boolean isAccessibleFrom(Method method, Class<?> guardedMethodDeclaringClass) {
@@ -205,40 +207,38 @@ final class SecurityActions {
         return method.getDeclaringClass().getPackage() == guardedMethodDeclaringClass.getPackage();
     }
 
-    private static Predicate<? super Method> signaturesMatch(Type[] expectedParameterTypes, Type expectedReturnType,
+    private static boolean signaturesMatch(Method method, Type[] expectedParameterTypes, Type expectedReturnType,
             boolean expectedExceptionParameter, TypeMapping actualMapping, TypeMapping expectedMapping) {
-        return method -> {
-            int expectedParameters = expectedParameterTypes.length;
-            if (expectedExceptionParameter) {
-                expectedParameters++;
-            }
+        int expectedParameters = expectedParameterTypes.length;
+        if (expectedExceptionParameter) {
+            expectedParameters++;
+        }
 
-            Type[] methodParams = method.getGenericParameterTypes();
-            if (expectedParameters != methodParams.length) {
+        Type[] methodParams = method.getGenericParameterTypes();
+        if (expectedParameters != methodParams.length) {
+            return false;
+        }
+
+        for (int i = 0; i < expectedParameterTypes.length; i++) {
+            if (!typeMatches(methodParams[i], expectedParameterTypes[i], actualMapping, expectedMapping)) {
                 return false;
             }
+        }
 
-            for (int i = 0; i < expectedParameterTypes.length; i++) {
-                if (!typeMatches(methodParams[i], expectedParameterTypes[i], actualMapping, expectedMapping)) {
-                    return false;
-                }
-            }
-
-            if (expectedExceptionParameter) {
-                Type lastParameter = methodParams[methodParams.length - 1];
-                boolean isThrowable = lastParameter instanceof Class
-                        && Throwable.class.isAssignableFrom((Class<?>) lastParameter);
-                if (!isThrowable) {
-                    return false;
-                }
-            }
-
-            if (!typeMatches(method.getGenericReturnType(), expectedReturnType, actualMapping, expectedMapping)) {
+        if (expectedExceptionParameter) {
+            Type lastParameter = methodParams[methodParams.length - 1];
+            boolean isThrowable = lastParameter instanceof Class
+                    && Throwable.class.isAssignableFrom((Class<?>) lastParameter);
+            if (!isThrowable) {
                 return false;
             }
+        }
 
-            return true;
-        };
+        if (!typeMatches(method.getGenericReturnType(), expectedReturnType, actualMapping, expectedMapping)) {
+            return false;
+        }
+
+        return true;
     }
 
     private static boolean typeMatches(Type actualType, Type expectedType,
