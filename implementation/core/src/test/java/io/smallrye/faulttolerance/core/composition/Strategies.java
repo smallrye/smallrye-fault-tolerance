@@ -6,6 +6,7 @@ import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.retry.Retry;
 import io.smallrye.faulttolerance.core.retry.SyncDelay;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
+import io.smallrye.faulttolerance.core.timer.TestTimer;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 /**
@@ -30,6 +31,6 @@ final class Strategies {
 
     static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate, int delayInMillis) {
         return new CircuitBreaker<>(delegate, "circuit breaker", ExceptionDecision.ALWAYS_FAILURE,
-                delayInMillis, 5, 0.2, 3, new TestStopwatch());
+                delayInMillis, 5, 0.2, 3, new TestStopwatch(), new TestTimer());
     }
 }

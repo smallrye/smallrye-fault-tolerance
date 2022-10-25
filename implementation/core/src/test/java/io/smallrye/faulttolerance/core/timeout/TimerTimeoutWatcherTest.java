@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
+import io.smallrye.faulttolerance.core.timer.ThreadTimer;
 import io.smallrye.faulttolerance.core.timer.Timer;
 
 @EnabledOnOs(OS.LINUX)
@@ -26,7 +27,7 @@ public class TimerTimeoutWatcherTest {
     @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
-        timer = new Timer(executor);
+        timer = new ThreadTimer(executor);
         watcher = new TimerTimeoutWatcher(timer);
     }
 
