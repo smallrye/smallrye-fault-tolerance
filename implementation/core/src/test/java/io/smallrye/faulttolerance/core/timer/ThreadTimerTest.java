@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.core.util;
+package io.smallrye.faulttolerance.core.timer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,17 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import io.smallrye.faulttolerance.core.timer.Timer;
-
 @EnabledOnOs(OS.LINUX)
-public class TimerTest {
+public class ThreadTimerTest {
     private ExecutorService executor;
     private Timer timer;
 
     @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
-        timer = new Timer(executor);
+        timer = new ThreadTimer(executor);
     }
 
     @AfterEach

@@ -323,7 +323,8 @@ public class FaultToleranceInterceptor {
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
-                    SystemStopwatch.INSTANCE);
+                    SystemStopwatch.INSTANCE,
+                    timer);
 
             String cbName = operation.hasCircuitBreakerName()
                     ? operation.getCircuitBreakerName().value()
@@ -393,7 +394,8 @@ public class FaultToleranceInterceptor {
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
-                    SystemStopwatch.INSTANCE);
+                    SystemStopwatch.INSTANCE,
+                    timer);
 
             String cbName = operation.hasCircuitBreakerName()
                     ? operation.getCircuitBreakerName().value()
@@ -465,7 +467,8 @@ public class FaultToleranceInterceptor {
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
-                    SystemStopwatch.INSTANCE);
+                    SystemStopwatch.INSTANCE,
+                    timer);
 
             String cbName = operation.hasCircuitBreakerName()
                     ? operation.getCircuitBreakerName().value()

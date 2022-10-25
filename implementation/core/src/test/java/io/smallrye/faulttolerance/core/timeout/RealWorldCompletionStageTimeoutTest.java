@@ -25,6 +25,7 @@ import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
+import io.smallrye.faulttolerance.core.timer.ThreadTimer;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.TestException;
 
@@ -54,7 +55,7 @@ public class RealWorldCompletionStageTimeoutTest {
         executor = Executors.newSingleThreadExecutor();
 
         timerExecutor = Executors.newSingleThreadExecutor();
-        timer = new Timer(timerExecutor);
+        timer = new ThreadTimer(timerExecutor);
         timerWatcher = new TimerTimeoutWatcher(timer);
     }
 

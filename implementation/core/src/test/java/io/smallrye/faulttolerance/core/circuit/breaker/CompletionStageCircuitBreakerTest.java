@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
+import io.smallrye.faulttolerance.core.timer.TestTimer;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
@@ -49,9 +50,10 @@ public class CompletionStageCircuitBreakerTest {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, new TestTimer());
 
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(returning("foobar1")).toCompletableFuture().get()).isEqualTo("foobar1");
         assertThat(cb.apply(returning("foobar2")).toCompletableFuture().get()).isEqualTo("foobar2");
         assertThatThrownBy(cb.apply(immediatelyFailingWith(new RuntimeException())).toCompletableFuture()::get)
@@ -66,6 +68,7 @@ public class CompletionStageCircuitBreakerTest {
         assertThatThrownBy(cb.apply(immediatelyFailingWith(new TestException())).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(TestException.class);
         // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
         assertThatThrownBy(cb.apply(returning("ignored")).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(CircuitBreakerOpenException.class);
         assertThatThrownBy(cb.apply(returning("ignored")).toCompletableFuture()::get)
@@ -79,9 +82,11 @@ public class CompletionStageCircuitBreakerTest {
         stopwatch.setCurrentValue(1500);
         assertThat(cb.apply(returning("foobar7")).toCompletableFuture().get()).isEqualTo("foobar7");
         // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
         assertThatThrownBy(cb.apply(immediatelyFailingWith(new TestException())).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(TestException.class);
         // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
         stopwatch.setCurrentValue(0);
         assertThatThrownBy(cb.apply(returning("ignored")).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(CircuitBreakerOpenException.class);
@@ -92,8 +97,10 @@ public class CompletionStageCircuitBreakerTest {
         stopwatch.setCurrentValue(1500);
         assertThat(cb.apply(returning("foobar8")).toCompletableFuture().get()).isEqualTo("foobar8");
         // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
         assertThat(cb.apply(returning("foobar9")).toCompletableFuture().get()).isEqualTo("foobar9");
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(returning("foobar10")).toCompletableFuture().get()).isEqualTo("foobar10");
     }
 
@@ -102,9 +109,10 @@ public class CompletionStageCircuitBreakerTest {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, new TestTimer());
 
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(returning("foobar1")).toCompletableFuture().get()).isEqualTo("foobar1");
         assertThatThrownBy(cb.apply(immediatelyFailingWith(new TestException())).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(TestException.class);
@@ -112,6 +120,7 @@ public class CompletionStageCircuitBreakerTest {
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(TestException.class);
         assertThat(cb.apply(returning("foobar2")).toCompletableFuture().get()).isEqualTo("foobar2");
         // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
         assertThatThrownBy(cb.apply(returning("ignored")).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(CircuitBreakerOpenException.class);
         assertThatThrownBy(cb.apply(returning("ignored")).toCompletableFuture()::get)
@@ -125,8 +134,41 @@ public class CompletionStageCircuitBreakerTest {
         stopwatch.setCurrentValue(1500);
         assertThat(cb.apply(returning("foobar3")).toCompletableFuture().get()).isEqualTo("foobar3");
         // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
         assertThat(cb.apply(returning("foobar4")).toCompletableFuture().get()).isEqualTo("foobar4");
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
+        assertThat(cb.apply(returning("foobar5")).toCompletableFuture().get()).isEqualTo("foobar5");
+    }
+
+    @Test
+    public void test3() throws Exception {
+        TestTimer timer = new TestTimer();
+        CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
+        CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
+                new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
+                1000, 4, 0.5, 2, stopwatch, timer);
+
+        assertThat(timer.hasScheduledTasks()).isFalse();
+
+        // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
+        assertThat(cb.apply(returning("foobar1")).toCompletableFuture().get()).isEqualTo("foobar1");
+        assertThatThrownBy(cb.apply(immediatelyFailingWith(new TestException())).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(TestException.class);
+        assertThatThrownBy(cb.apply(immediatelyFailingWith(new TestException())).toCompletableFuture()::get)
+                .isExactlyInstanceOf(ExecutionException.class).hasCauseInstanceOf(TestException.class);
+        assertThat(cb.apply(returning("foobar2")).toCompletableFuture().get()).isEqualTo("foobar2");
+        // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
+        assertThat(timer.hasScheduledTasks()).isTrue();
+        timer.executeSynchronously(timer.nextScheduledTask());
+        // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
+        assertThat(cb.apply(returning("foobar3")).toCompletableFuture().get()).isEqualTo("foobar3");
+        assertThat(cb.apply(returning("foobar4")).toCompletableFuture().get()).isEqualTo("foobar4");
+        // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(returning("foobar5")).toCompletableFuture().get()).isEqualTo("foobar5");
     }
 
@@ -137,7 +179,7 @@ public class CompletionStageCircuitBreakerTest {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation(), executor);
         CompletionStageCircuitBreaker<String> cb = new CompletionStageCircuitBreaker<>(execution, "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, new TestTimer());
 
         assertThatThrownBy(cb.apply(eventuallyFailingWith(exception)).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class).hasCause(exception);

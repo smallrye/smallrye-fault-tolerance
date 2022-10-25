@@ -266,7 +266,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.requestVolumeThreshold,
                         circuitBreakerBuilder.failureRatio,
                         circuitBreakerBuilder.successThreshold,
-                        SystemStopwatch.INSTANCE);
+                        SystemStopwatch.INSTANCE,
+                        lazyDependencies.timer());
 
                 if (circuitBreakerBuilder.name != null) {
                     CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
@@ -328,7 +329,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         circuitBreakerBuilder.requestVolumeThreshold,
                         circuitBreakerBuilder.failureRatio,
                         circuitBreakerBuilder.successThreshold,
-                        SystemStopwatch.INSTANCE);
+                        SystemStopwatch.INSTANCE,
+                        lazyDependencies.timer());
 
                 if (circuitBreakerBuilder.name != null) {
                     CircuitBreaker<?> circuitBreaker = (CircuitBreaker<?>) result;
