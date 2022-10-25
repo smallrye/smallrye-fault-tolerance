@@ -10,7 +10,7 @@ interface BulkheadLogger extends BasicLogger {
 
     default void debugOrTrace(String debugMessage, String traceAmendment) {
         if (isTraceEnabled()) {
-            debug(traceAmendment + ": " + debugMessage);
+            debugf("%s: %s", traceAmendment, debugMessage);
         } else {
             debug(debugMessage);
         }

@@ -1,6 +1,8 @@
 = Extra Features
 
 {smallrye-fault-tolerance} provides several features that are not present in the {microprofile-fault-tolerance} specification.
+Their public API is present in the `io.smallrye:smallrye-fault-tolerance-api` artifact.
+
 Note that these features may have experimental status, marked by the `@Experimental` annotation.
 
 == Circuit Breaker Maintenance
@@ -53,86 +55,87 @@ The `CircuitBreakerMaintenance` interface provides 4 methods:
 
 See the javadoc of those methods for more information.
 
-[[blocking-nonblocking]]
-== @Blocking and @NonBlocking
+[[async-nonblocking]]
+== @AsynchronousNonBlocking
 
-In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, which can be placed on methods returning `Future` or `CompletionStage`, {smallrye-fault-tolerance} also supports 2 more annotations for asynchronous processing:
+In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, {smallrye-fault-tolerance} offers an annotation for asynchronous non-blocking processing: `@AsynchronousNonBlocking`.
 
-* `@io.smallrye.common.annotation.Blocking`
-* `@io.smallrye.common.annotation.NonBlocking`
+This annotation may only be placed on methods that return `CompletionStage`, because the `Future` type can't really be used for non-blocking processing.
+It may also be placed on a class, in which case all business methods must return `CompletionStage`.
 
-These annotations are generic and can have multiple meanings, depending on context.
-{smallrye-fault-tolerance} only pays attention to these annotations if:
+As opposed to `@Asynchronous`, the `@AsynchronousNonBlocking` annotation does _not_ offload the method execution to another thread.
+The method is allowed to proceed on the original thread, assuming that it returns quickly and all processing it does is performed in a non-blocking way.
 
-* they are placed on methods that return `CompletionStage` (the `Future` type can't really be used for non-blocking processing);
-* they are placed on methods that apply some fault tolerance strategy (such as `@Fallback`, defined either on a method or a class).
+|===
+|Annotation |Method return type |Execution
 
-Under these circumstances, {smallrye-fault-tolerance} assigns these annotations the following meaning:
+|`@Asynchronous`
+|`Future` or `CompletionStage`
+|offloaded to a thread pool
 
-* `@Blocking` means that execution of the operation will be offloaded to another thread.
-In other words, it is an equivalent of `@Asynchronous`.
-Use this annotation if the method has blocking logic, but you don't want to block the caller thread.
-+
+|`@AsynchronousNonBlocking`
+|`CompletionStage`
+|proceeds on the original thread
+|===
+
+=== When to Use @Asynchronous
+
+Use `@Asynchronous` if the method has blocking logic, but you don’t want to block the caller thread.
 For example:
-+
+
 [source,java]
 ----
 @ApplicationScoped
 public class MyService {
-    @Retry // <1>
-    @Blocking // <2>
+    @Retry
+    @Asynchronous // <1>
     CompletionStage<String> hello() {
         ...
     }
 }
 ----
-+
-<1> A fault tolerance annotation.
-If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@Blocking` annotation.
-<2> Using the `@Blocking` annotation, because the method blocks, and it is necessary to offload its execution to another thread.
-With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
-+
+
+<1> Using the `@Asynchronous` annotation, because the method blocks, and it is necessary to offload its execution to another thread.
+
 The thread pool that is used for offloading method calls is provided by the runtime that integrates {smallrye-fault-tolerance}.
-* `@NonBlocking` means that the execution of the operation will _not_ be offloaded to another thread (even if the method is annotated `@Asynchronous`).
-Use this annotation if the method _doesn't_ have blocking logic, and you want the execution to stay on the caller thread.
-+
+
+=== When to Use @AsynchronousNonBlocking
+
+Use `@AsynchronousNonBlocking` if the method _does not_ have blocking logic, and you want the execution to stay on the caller thread.
 For example:
-+
+
 [source,java]
 ----
 @ApplicationScoped
 public class MyService {
-    @Retry // <1>
-    @NonBlocking // <2>
+    @Retry
+    @AsynchronousNonBlocking // <1>
     CompletionStage<String> hello() {
         ...
     }
 }
 ----
-+
-<1> A fault tolerance annotation.
-If this wouldn't be present, {smallrye-fault-tolerance} would ignore the `@NonBlocking` annotation.
-<2> Using the `@NonBlocking` annotation, because the method doesn't block and offloading execution to another thread is not necessary.
-With this annotation present, the `@Asynchronous` annotation is not necessary, and so it is omitted here.
-+
+
+<1> Using the `@AsynchronousNonBlocking` annotation, because the method does not block and offloading execution to another thread is not necessary.
+
 If the guarded method uses `@Retry` and some delay between retries is configured, only the initial execution is guaranteed to occur on the original thread.
 Subsequent attempts may be offloaded to an extra thread, so that the original thread is not blocked on the delay.
-+
+
 If the guarded method uses `@Bulkhead`, the execution is _not_ guaranteed to occur on the original thread.
 If the execution has to wait in the bulkhead queue, it may later end up on a different thread.
-+
+
 If the original thread is an event loop thread and event loop integration is enabled, then the event loop is always used to execute the guarded method.
 In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
 
-Additionally, the `@Blocking` and `@NonBlocking` annotations may be placed on a class.
-In that case, they apply to methods satisfying the same criteria: must return `CompletionStage` and must have some fault tolerance strategy (even if that fault tolerance strategy is declared on the class).
-An annotation put on a method has priority over an annotation put on a class.
+=== How to Combine Them
+
+When these annotations are combined, an annotation on a method has priority over an annotation on a class.
 For example:
 
 [source,java]
 ----
 @ApplicationScoped
-@NonBlocking
+@AsynchronousNonBlocking
 public class MyService {
     @Retry
     CompletionStage<String> hello() { // <1>
@@ -140,32 +143,29 @@ public class MyService {
     }
 
     @Retry
-    @Blocking
+    @Asynchronous
     CompletionStage<String> helloBlocking() { // <2>
         ...
     }
 }
 ----
 
-<1> Treated as `@NonBlocking`, based on the class annotation.
-<2> Treated as `@Blocking`, the method annotation has priority over the class annotation.
+<1> Treated as `@AsynchronousNonBlocking`, based on the class annotation.
+<2> Treated as `@Asynchronous`, the method annotation has priority over the class annotation.
 
-It is an error to put both `@Blocking` and `@NonBlocking` on the same program element.
-
-=== Rationale
-
-We believe that the `@Asynchronous` annotation is misnamed, because its meaning is "offload execution to another thread".
-This isn't always appropriate in modern asynchronous programming, where methods are often non-blocking and thread offload is not required.
-We believe that declaring whether the method blocks or not is a better approach.
-
-At the same time, we designed these annotations to be used by a variety of frameworks, so {smallrye-fault-tolerance} can't eagerly intercept all methods using them.
-We also want to stay compatible with the {microprofile-fault-tolerance} specification as much as possible.
-For these reasons, {smallrye-fault-tolerance} only considers these annotations for methods that use some fault tolerance strategy.
+It is an error to put both `@Asynchronous` and `@AsynchronousNonBlocking` on the same program element.
 
 === Recommendation
 
-For methods that use fault tolerance and return `CompletionStage`, we recommend declaring their `@Blocking` or `@NonBlocking` nature.
-In such case, the `@Asynchronous` annotation becomes optional.
+Use the <<method-asynchrony,non-compatible mode>>.
+In this mode, methods returning `CompletionStage` are automatically treated as if they were `@AsynchronousNonBlocking`.
+Use `@Asynchronous` to mark blocking methods for thread offload.
+
+If you can't use the non-compatible mode, use `@AsynchronousNonBlocking` or `@Asynchronous` to mark all asynchronous methods.
+
+IMPORTANT: In previous releases, {smallrye-fault-tolerance} recommended to use the `@Blocking` and `@NonBlocking` annotations.
+Using these annotations *for fault tolerance purposes* is now deprecated.
+They are still supported, but at some point, {smallrye-fault-tolerance} will stop recognizing them.
 
 We also recommend avoiding `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 
@@ -189,14 +189,14 @@ For example:
 @ApplicationScoped
 public class MyService {
     @Retry
-    @NonBlocking // <1>
+    @AsynchronousNonBlocking // <1>
     Uni<String> hello() { // <2>
         ...
     }
 }
 ----
 
-<1> Using the `@NonBlocking` annotation described in <<blocking-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
+<1> Using the `@AsynchronousNonBlocking` annotation described in <<async-nonblocking>>, because the method doesn't block and offloading execution to another thread is not necessary.
 <2> Returning the `Uni` type from Mutiny.
 This shows that whatever works for `CompletionStage` also works for the other async types.
 
@@ -289,6 +289,7 @@ com.example.MyService/hello/ExponentialBackoff/factor=3
 These annotations do not have any special metrics.
 All `@Retry` metrics are still present and reflect the altered behavior.
 
+[[noncompatible-mode]]
 == Non-compatible Mode
 
 {smallrye-fault-tolerance} offers a mode where certain features are improved beyond specification, as described below.
@@ -339,7 +340,7 @@ public class MyService {
     }
 
     @Retry
-    @Blocking
+    @Asynchronous
     CompletionStage<String> helloBlocking() { // <3>
         ...
     }
@@ -347,19 +348,19 @@ public class MyService {
 ----
 
 <1> Executed on the original thread, because the method returns `CompletionStage`.
-It is as if the method was annotated `@NonBlocking`.
+It is as if the method was annotated `@AsynchronousNonBlocking`.
 <2> Executed on the original thread, because the method returns an <<async-types,async type>>.
-It is as if the method was annotated `@NonBlocking`.
-<3> The explicit `@Blocking` annotation is honored.
+It is as if the method was annotated `@AsynchronousNonBlocking`.
+<3> The explicit `@Asynchronous` annotation is honored.
 The method is executed on a thread pool.
 
 Note that the existing annotations still work without a change, both in compatible and non-compatible mode.
-That is, if a method (or class) is annotated `@Asynchronous` or `@Blocking`, execution will be offloaded to a thread pool.
-If a method (or class) is annotated `@NonBlocking`, execution will happen on the original thread (even if `@Asynchronous` is present).
+That is, if a method (or class) is annotated `@Asynchronous`, execution will be offloaded to a thread pool.
+If a method (or class) is annotated `@AsynchronousNonBlocking`, execution will happen on the original thread.
 
 Also note that this doesn't affect methods returning `Future`.
 You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool and are guarded properly.
-As mentioned in the <<blocking-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
+As mentioned in the <<async-nonblocking>> section, we discourage using these methods, because the only way to obtain the future value is blocking.
 
 === Inspecting Exception Cause Chains
 
@@ -420,6 +421,160 @@ All 3 annotations follow the same principle: exceptions considered success have 
 | `retryOn`
 |===
 
+=== Fallback Method with Exception Parameter
+
+In the non-compatible mode, {smallrye-fault-tolerance} supports access to the causing exception in a `@Fallback` method.
+
+A fallback method, as defind by the {microprofile-fault-tolerance} specification, must have the same parameters as the guarded method.
+{smallrye-fault-tolerance} permits defining one additional parameter, at the end of the parameter list, which must be of an exception type.
+If such parameter is defined, the exception that caused the fallback will be supplied in it.
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) { // <1>
+        ...
+    }
+}
+----
+
+<1> The fallback method matches the guarded method signature, except for one additional parameter at the end.
+
+All rules of {microprofile-fault-tolerance} specification related to looking up fallback methods still apply.
+That is, the return types must match, the parameter types must match (with this one exception), etc.
+
+If the thrown exception is not assignable to the exception parameter type, it is rethrown as if no fallback was declared.
+In the previous example, if `IllegalStateException` was thrown, the fallback method would not be called, as `IllegalStateException` is not a subtype of `IllegalArgumentException`.
+
+If the guarded method has a vararg parameter and you want to declare a fallback method with an exception parameter, simply replace the vararg syntax with an array type:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String... params) {
+        ...
+    }
+
+    public String fallback(String[] params, IllegalArgumentException cause) {
+        ...
+    }
+}
+----
+
+==== Multiple Fallback Methods with Exception Parameter
+
+It is possible to declare multiple overloads of the fallback method, each having different type of the exception parameter:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) {
+        ...
+    }
+
+    public String fallback(String param, RuntimeException cause) {
+        ...
+    }
+}
+----
+
+In that case, which fallback method is called depends on the type of thrown exception.
+The method that declares a most-specific supertype of the actual exception is selected.
+
+In the previous example, if `IllegalArgumentException` was thrown by `doSomething`, the first fallback method would be called.
+If `IllegalStateException` was thrown, the second fallback method would be called.
+
+If the thrown exception is not assignable to the exception parameter type of any fallback method, it is rethrown as if no fallback was declared.
+
+==== Fallback Methods with and without Exception Parameter
+
+It is possible to declare the fallback method with and without an exception parameter at the same time:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback")
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) {
+        ...
+    }
+
+    public String fallback(String param, RuntimeException cause) {
+        ...
+    }
+
+    public String fallback(String param) {
+        ...
+    }
+}
+----
+
+The fallback methods with an exception parameter have precedence.
+The fallback method without an exception parameter is only called if the thrown exception is not assignable to any declared exception parameter.
+
+==== Interactions with `applyOn` / `skipOn`
+
+The presence or absence of a fallback method with specific exception parameter may seem related to the usage of `applyOn` / `skipOn` on the `@Fallback` annotation, but in fact, it is not.
+These features are completely independent.
+
+Simply put, the `applyOn` / `skipOn` configuration is always evaluated first.
+A fallback method is only selected and invoked when this configuration indicates that a fallback should apply.
+
+If `@Fallback` is configured to skip `IllegalStateException` and `IllegalStateException` is thrown, no fallback method is invoked.
+That applies even if a fallback method with a matching exception parameter exists.
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback", skipOn = IllegalStateException.class)
+    public String doSomething(String param) {
+        ...
+    }
+
+    public String fallback(String param, IllegalArgumentException cause) {
+        ...
+    }
+
+    public String fallback(String param, RuntimeException cause) {
+        ...
+    }
+
+    public String fallback(String param) {
+        ...
+    }
+}
+----
+
+In this case:
+
+- if `doSomething` throws `IllegalArgumentException`, the first fallback method is called;
+- if `doSomething` throws `IllegalStateException`, no fallback method is called, because this exception type is skipped;
+- if `doSomething` throws any other `RuntimeException`, the second fallback method is called;
+- if `doSomething` throws any other exception, the last fallback method is called.
+
 [[kotlin-suspend-functions]]
 == Kotlin `suspend` Functions
 
@@ -453,7 +608,7 @@ Since the guarded method is suspending, the fallback method must be suspending.
 
 As mentioned above, suspending functions are treated as async types.
 This means that for asynchronous fault tolerance to work correctly on suspending functions, they must be determined to be asynchronous.
-That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, one of the usual annotations (`@Blocking`, `@NonBlocking`, `@Asynchronous`) must be present.
+That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, the `@Asynchronous` or `@AsynchronousNonBlocking` annotation must be present.
 It is expected that most users will use the Kotlin support in the non-compatible mode, so the example above does not include any such annotation.
 
 To be able to use this, a support library must be present.
@@ -521,3 +676,158 @@ Likewise, it is possible to do this for <<async-types>>.
 Note that you can't define a synchronous `FaultTolerance<T>` object and apply it to any asynchronous method.
 Similarly, you can't define an asynchronous `FaultTolerance<CompletionStage<T>>` and apply it to a synchronous method or an asynchronous method with different <<async-types,asynchronous type>>.
 This limitation will be lifted in the future.
+
+== Rate Limit
+
+{smallrye-fault-tolerance} includes an additional fault tolerance strategy, not prescribed by the {microprofile-fault-tolerance} specification: _rate limit_.
+
+Rate limit enforces a maximum number of permitted invocations in a time window of some length.
+For example, with a rate limit, one can make sure that a method may only be called 50 times per minute.
+Invocations that would exceed the limit are rejected with an exception of type `RateLimitException`.
+
+Additionally, it is possible to define minimum spacing between invocations.
+For example, with minimum spacing of 1 second, if a second invocation happens 500 millis after the first, it is rejected even if the limit wouldn't be exceeded yet.
+
+Rate limit is superficially similar to a bulkhead (concurrency limit), but is in fact quite different.
+Bulkhead limits the number of executions happening concurrently at any point in time.
+Rate limit limits the number of executions in a time window of some length, without considering concurrency.
+
+=== Rate Limit Usage
+
+A method or a class can be annotated with `@RateLimit`, which means the method or the methods in the class will apply the rate limit strategy.
+
+The following annotation members control the rate limit behavior:
+
+- `value`: the limit of maximum invocations to be permitted in the time window;
+- `window` and `windowUnit`: the length of the time window;
+- `minSpacing` and `minSpacingUnit`: the minimum spacing between two consecutive invocations;
+- `type`: the type of time windows used for rate limiting, described below.
+
+The previous example with 50 maximum invocations per minute and minimum spacing of 1 second would look like this:
+
+[source,java]
+----
+@RateLimit(value = 50,
+        window = 1, windowUnit = ChronoUnit.MINUTES,
+        minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS)
+public void doSomething() {
+    ...
+}
+----
+
+=== Time Window Type
+
+{smallrye-fault-tolerance} supports three types of a time window used for rate limiting: _fixed_, _rolling_ and _smooth_.
+
+Fixed time windows are a result of dividing time into non-overlapping intervals of given length.
+The invocation limit is enforced for each interval independently.
+This means that short bursts of invocations occuring near the time window boundaries may temporarily exceed the configured rate limit.
+This kind of rate limiting is also called _fixed window_ rate limiting.
+
+Rolling time windows enforce the limit continuously, instead of dividing time into independent intervals.
+The invocation limit is enforced for all possible time intervals of given length, regardless of overlap.
+This is more precise, but requires more memory and may be slower.
+This kind of rate limiting is also called _sliding log_ rate limiting.
+
+Smooth time windows enforce a uniform distribution of invocations under a rate calculated from given time window length and given limit.
+If recent rate of invocations is under the limit, a subsequent burst of invocations is allowed during a shorter time span, but the calculated rate is never exceeded.
+This kind of rate limiting is also called _token bucket_ or _leaky bucket (as a meter)_ rate limiting, with the additional property that all work units are considered to have the same size.
+
+The type of time window used for rate limiting is configured using the `type` annotation member:
+
+[source,java]
+----
+@RateLimit(value = 50,
+        window = 1, windowUnit = ChronoUnit.MINUTES,
+        minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS,
+        type = RateLimitType.ROLLING)
+public void doSomething() {
+    ...
+}
+----
+
+
+=== Lifecycle
+
+Rate limit needs to maintain some state between invocations, depending on the time window type.
+It may be the number of recent invocations or the time stamp of last invocation.
+This state is a singleton, irrespective of the lifecycle of the bean that uses the `@RateLimit` annotation.
+
+More specifically, the rate limit state is uniquely identified by the combination of the bean class (`java.lang.Class`) and the method object (`java.lang.reflect.Method`) representing the guarded method.
+
+For example, if there’s a guarded method `doWork` on a bean which is `@RequestScoped`, each request will have its own instance of the bean, but all invocations of `doWork` will share the same rate limit state.
+
+=== Interactions with Other Annotations
+
+The `@RateLimit` annotation can be used together with all other fault tolerance annotations.
+If a method would hypothetically declare all fault tolerance annotations, the fault tolerance strategies would be nested like this:
+
+[source]
+----
+Fallback(
+    Retry(
+        CircuitBreaker(
+            RateLimit(
+                Timeout(
+                    Bulkhead(
+                        ... the guarded method ...
+                    )
+                )
+            )
+        )
+    )
+)
+----
+
+If `@Fallback` is used with `@RateLimit`, the fallback method or handler may be invoked if a `RateLimitException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the rate limit as an independent invocation.
+If `RateLimitException` is thrown, the execution may be retried, depending on how retry is configured.
+
+If `@CircuitBreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
+If rate limiting results in `RateLimitException`, this may be counted as a failure, depending on how the circuit breaker is configured.
+
+=== Configuration
+
+The configuration system of {microprofile-fault-tolerance} applies to `@RateLimit` without a change.
+
+For example, assume the following class:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @RateLimit(value = 50,
+            window = 1, windowUnit = ChronoUnit.MINUTES,
+            minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS)
+    public void doSomething() {
+        ...
+    }
+}
+----
+
+The rate limit configured for the `doSomething` method may be reconfigured like this:
+
+[source,properties]
+----
+com.example.MyService/doSomething/RateLimit/value=150
+----
+
+=== Metrics
+
+Rate limit exposes metrics to MicroProfile Metrics, following other {microprofile-fault-tolerance} metrics.
+
+[cols="1,5"]
+|===
+| Name | `ft.ratelimit.calls.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the rate limit logic was run. This will usually be once per method call, but may be zero times if the circuit breaker prevented execution or more than once if the method call is retried.
+| Tags
+a| * `method` - the fully qualified method name
+* `rateLimitResult` = `[permitted\|rejected]` - whether the rate limit permitted the method call
+|===
+
+Micrometer is of course also supported, as described in xref:usage/basic.adoc#metrics[Metrics].

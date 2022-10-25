@@ -11,7 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 
-import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.core.util.CompletionStages;
 
 @ApplicationScoped
@@ -20,7 +20,7 @@ public class MyService {
 
     private final AtomicInteger counter = new AtomicInteger(0);
 
-    @NonBlocking
+    @AsynchronousNonBlocking
     @Retry(maxRetries = 20, delay = 5, delayUnit = ChronoUnit.MILLIS)
     public CompletionStage<String> hello() {
         invocationThreads.add(Thread.currentThread().getName());

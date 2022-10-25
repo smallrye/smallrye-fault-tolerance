@@ -52,7 +52,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         Throwable lastFailure = null;
         while (counter <= maxRetries && runningStopwatch.elapsedTimeInMillis() < maxTotalDurationInMillis) {
             if (counter > 0) {
-                LOG.debug(description + " invocation failed, retrying");
+                LOG.debugf("%s invocation failed, retrying (%d/%d)", description, counter, maxRetries);
                 ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
                 try {

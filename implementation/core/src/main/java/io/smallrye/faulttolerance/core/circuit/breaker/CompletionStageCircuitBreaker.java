@@ -11,15 +11,16 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
+import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionStage<V>> {
 
     public CompletionStageCircuitBreaker(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             ExceptionDecision exceptionDecision, long delayInMillis, int requestVolumeThreshold, double failureRatio,
-            int successThreshold, Stopwatch stopwatch) {
+            int successThreshold, Stopwatch stopwatch, Timer timer) {
         super(delegate, description, exceptionDecision, delayInMillis, requestVolumeThreshold, failureRatio, successThreshold,
-                stopwatch);
+                stopwatch, timer);
     }
 
     @Override
@@ -79,7 +80,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
-            LOG.trace("Delay elapsed, circuit breaker moving to half-open");
+            LOG.trace("Delay elapsed synchronously, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
             return doApply(ctx);

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
@@ -22,43 +21,27 @@ import jakarta.interceptor.InvocationContext;
 
 import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 
-/**
- * @author Antoine Sabot-Durand
- */
-class ExecutionContextWithInvocationContext implements ExecutionContext {
+final class ExecutionContextImpl implements ExecutionContext {
+    private final InvocationContext interceptionContext;
+    private final Throwable failure;
 
-    ExecutionContextWithInvocationContext(InvocationContext ic) {
-        this.ic = ic;
+    ExecutionContextImpl(InvocationContext interceptionContext, Throwable failure) {
+        this.interceptionContext = interceptionContext;
+        this.failure = failure;
     }
 
     @Override
     public Method getMethod() {
-        return ic.getMethod();
+        return interceptionContext.getMethod();
     }
 
     @Override
     public Object[] getParameters() {
-        return ic.getParameters();
+        return interceptionContext.getParameters();
     }
 
     @Override
     public Throwable getFailure() {
         return failure;
     }
-
-    void setFailure(Throwable f) {
-        failure = f;
-    }
-
-    public Object getTarget() {
-        return ic.getTarget();
-    }
-
-    public Object proceed() throws Exception {
-        return ic.proceed();
-    }
-
-    private InvocationContext ic;
-
-    private Throwable failure;
 }

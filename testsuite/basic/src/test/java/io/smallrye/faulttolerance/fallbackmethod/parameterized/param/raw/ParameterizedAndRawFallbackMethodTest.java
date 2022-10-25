@@ -26,6 +26,6 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 @ExpectedDeploymentException(DefinitionException.class)
 public class ParameterizedAndRawFallbackMethodTest {
     @Test
-    public void testIgnored(ParameterizedAndRawFallbackMethod ignored) {
+    public void test(ParameterizedAndRawFallbackMethod ignored) {
     }
 }

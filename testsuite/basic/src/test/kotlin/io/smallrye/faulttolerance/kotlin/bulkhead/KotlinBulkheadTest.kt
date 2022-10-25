@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-// so that FT methods don't have to be marked @NonBlocking
+// so that FT methods don't have to be marked @AsynchronousNonBlocking
 @WithSystemProperty(key = "smallrye.faulttolerance.mp-compatibility", value = "false")
 @FaultToleranceBasicTest
 class KotlinBulkheadTest {

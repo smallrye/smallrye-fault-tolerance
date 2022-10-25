@@ -32,4 +32,9 @@ interface CdiLogger extends BasicLogger {
     DefinitionException bothBlockingNonBlockingPresent(MethodDescriptor method);
 
     DefinitionException bothBlockingNonBlockingPresent(Class<?> clazz);
+
+    @Message(id = 5, value = "Both @Asynchronous and @AsynchronousNonBlocking present on '%s'")
+    DefinitionException bothAsyncAndAsyncNonBlockingPresent(MethodDescriptor method);
+
+    DefinitionException bothAsyncAndAsyncNonBlockingPresent(Class<?> clazz);
 }

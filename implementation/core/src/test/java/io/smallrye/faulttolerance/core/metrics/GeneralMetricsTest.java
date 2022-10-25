@@ -19,7 +19,7 @@ public class GeneralMetricsTest {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
         MetricsCollector<String> collector = new MetricsCollector<>(invocation(), metrics, false,
-                false, false, false, false);
+                false, false, false, false, false);
         assertThat(collector.apply(new InvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
 
         assertThat(metrics.valueReturned).isEqualTo(1);
@@ -31,7 +31,7 @@ public class GeneralMetricsTest {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
         MetricsCollector<Void> collector = new MetricsCollector<>(invocation(), metrics, false,
-                false, false, false, false);
+                false, false, false, false, false);
         assertThatThrownBy(() -> collector.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
 
@@ -114,6 +114,10 @@ public class GeneralMetricsTest {
 
         @Override
         public void updateBulkheadWaitingDuration(long time) {
+        }
+
+        @Override
+        public void rateLimitDecisionMade(boolean permitted) {
         }
     }
 }
