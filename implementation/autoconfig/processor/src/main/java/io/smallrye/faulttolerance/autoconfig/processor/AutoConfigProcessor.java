@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.autoconfig.processor;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -200,23 +199,6 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                         : generateNonconfigurableMethod(annotationMember))
                                 .build())
                         .collect(Collectors.toList()))
-                .addMethods(configurable ? Arrays.asList(
-                        MethodSpec.methodBuilder("getConfigKeyForMethod")
-                                .addModifiers(Modifier.PRIVATE)
-                                .returns(TypeNames.STRING)
-                                .addParameter(TypeNames.STRING, "key")
-                                .addStatement(
-                                        "return method.declaringClass.getName() + $1S + method.name + $1S + $2S + $1S + key",
-                                        "/", annotationDeclaration.getSimpleName())
-                                .build(),
-                        MethodSpec.methodBuilder("getConfigKeyForClass")
-                                .addModifiers(Modifier.PRIVATE)
-                                .returns(TypeNames.STRING)
-                                .addParameter(TypeNames.STRING, "key")
-                                .addStatement("return method.declaringClass.getName() + $1S + $2S + $1S + key",
-                                        "/", annotationDeclaration.getSimpleName())
-                                .build())
-                        : Collections.emptyList())
                 .addMethod(MethodSpec.methodBuilder("materialize")
                         .addAnnotation(Override.class)
                         .addModifiers(Modifier.PUBLIC)
@@ -236,20 +218,25 @@ public class AutoConfigProcessor extends AbstractProcessor {
                 .addStatement("$1T config = $2T.getConfig()", TypeNames.MP_CONFIG, TypeNames.MP_CONFIG_PROVIDER)
                 .beginControlFlow("if (onMethod)")
                 .add("// <classname>/<methodname>/<annotation>/<parameter>\n")
+                .addStatement("String key = method.declaringClass.getName() + $1S + method.name + $2S",
+                        "/", "/" + annotationDeclaration.getSimpleName() + "/" + annotationMember.getSimpleName())
                 .addStatement(
-                        "_$1L = config.getOptionalValue(getConfigKeyForMethod($1S), $2T.class).orElse(null)",
+                        "_$1L = config.getOptionalValue(key, $2T.class).orElse(null)",
                         annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
                 .nextControlFlow("else")
                 .add("// <classname>/<annotation>/<parameter>\n")
+                .addStatement("String key = method.declaringClass.getName() + $1S",
+                        "/" + annotationDeclaration.getSimpleName() + "/" + annotationMember.getSimpleName())
                 .addStatement(
-                        "_$1L = config.getOptionalValue(getConfigKeyForClass($1S), $2T.class).orElse(null)",
+                        "_$1L = config.getOptionalValue(key, $2T.class).orElse(null)",
                         annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
                 .endControlFlow()
                 .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
                 .add("// <annotation>/<parameter>\n")
                 .addStatement(
-                        "_$1L = config.getOptionalValue($2S + $3S + $1S, $4T.class).orElse(null)",
-                        annotationMember.getSimpleName(), annotationDeclaration.getSimpleName(), "/",
+                        "_$1L = config.getOptionalValue($2S, $3T.class).orElse(null)",
+                        annotationMember.getSimpleName(),
+                        annotationDeclaration.getSimpleName() + "/" + annotationMember.getSimpleName(),
                         rawType(annotationMember.getReturnType()))
                 .endControlFlow()
                 .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())

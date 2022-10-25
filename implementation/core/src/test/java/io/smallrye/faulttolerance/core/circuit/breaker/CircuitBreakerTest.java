@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
+import io.smallrye.faulttolerance.core.timer.TestTimer;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.core.util.TestException;
@@ -28,9 +29,10 @@ public class CircuitBreakerTest {
     public void test1() throws Exception {
         CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, new TestTimer());
 
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar1"))).isEqualTo("foobar1");
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar2"))).isEqualTo("foobar2");
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> {
@@ -45,6 +47,7 @@ public class CircuitBreakerTest {
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
         // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> "ignored")))
@@ -58,9 +61,11 @@ public class CircuitBreakerTest {
         stopwatch.setCurrentValue(1500);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar7"))).isEqualTo("foobar7");
         // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
         // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
         stopwatch.setCurrentValue(0);
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
@@ -71,8 +76,10 @@ public class CircuitBreakerTest {
         stopwatch.setCurrentValue(1500);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar8"))).isEqualTo("foobar8");
         // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar9"))).isEqualTo("foobar9");
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar10"))).isEqualTo("foobar10");
     }
 
@@ -80,9 +87,10 @@ public class CircuitBreakerTest {
     public void test2() throws Exception {
         CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
-                1000, 4, 0.5, 2, stopwatch);
+                1000, 4, 0.5, 2, stopwatch, new TestTimer());
 
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar1"))).isEqualTo("foobar1");
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
@@ -90,6 +98,7 @@ public class CircuitBreakerTest {
                 .isExactlyInstanceOf(TestException.class);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar2"))).isEqualTo("foobar2");
         // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> "ignored")))
                 .isExactlyInstanceOf(CircuitBreakerOpenException.class);
         assertThatThrownBy(() -> cb.apply(new InvocationContext<>(() -> "ignored")))
@@ -103,8 +112,40 @@ public class CircuitBreakerTest {
         stopwatch.setCurrentValue(1500);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar3"))).isEqualTo("foobar3");
         // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar4"))).isEqualTo("foobar4");
         // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
+        assertThat(cb.apply(new InvocationContext<>(() -> "foobar5"))).isEqualTo("foobar5");
+    }
+
+    @Test
+    public void test3() throws Exception {
+        TestTimer timer = new TestTimer();
+        CircuitBreaker<String> cb = new CircuitBreaker<>(invocation(), "test invocation",
+                new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
+                1000, 4, 0.5, 2, stopwatch, timer);
+
+        assertThat(timer.hasScheduledTasks()).isFalse();
+
+        // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
+        assertThat(cb.apply(new InvocationContext<>(() -> "foobar1"))).isEqualTo("foobar1");
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
+                .isExactlyInstanceOf(TestException.class);
+        assertThatThrownBy(() -> cb.apply(new InvocationContext<>(TestException::doThrow)))
+                .isExactlyInstanceOf(TestException.class);
+        assertThat(cb.apply(new InvocationContext<>(() -> "foobar2"))).isEqualTo("foobar2");
+        // circuit breaker is open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_OPEN);
+        assertThat(timer.hasScheduledTasks()).isTrue();
+        timer.executeSynchronously(timer.nextScheduledTask());
+        // circuit breaker is half-open
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_HALF_OPEN);
+        assertThat(cb.apply(new InvocationContext<>(() -> "foobar3"))).isEqualTo("foobar3");
+        assertThat(cb.apply(new InvocationContext<>(() -> "foobar4"))).isEqualTo("foobar4");
+        // circuit breaker is closed
+        assertThat(cb.currentState()).isEqualTo(CircuitBreaker.STATE_CLOSED);
         assertThat(cb.apply(new InvocationContext<>(() -> "foobar5"))).isEqualTo("foobar5");
     }
 }

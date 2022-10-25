@@ -37,15 +37,22 @@ public class MutinyTest {
     }
 
     @Test
-    public void asynchronousNonblocking(HelloService service) {
-        Uni<String> hello = service.helloAsynchronousNonblocking();
+    public void asynchronousNonBlocking(HelloService service) {
+        Uni<String> hello = service.helloAsynchronousNonBlocking();
         assertThat(hello.await().indefinitely()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }
 
     @Test
-    public void asynchronousBlocking(HelloService service) {
-        Uni<String> hello = service.helloAsynchronousBlocking();
+    public void asynchronousNonblockingCombined(HelloService service) {
+        Uni<String> hello = service.helloAsynchronousNonblockingCombined();
+        assertThat(hello.await().indefinitely()).isEqualTo("hello");
+        assertThat(HelloService.COUNTER).hasValue(4);
+    }
+
+    @Test
+    public void asynchronousBlockingCombined(HelloService service) {
+        Uni<String> hello = service.helloAsynchronousBlockingCombined();
         assertThat(hello.await().indefinitely()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }

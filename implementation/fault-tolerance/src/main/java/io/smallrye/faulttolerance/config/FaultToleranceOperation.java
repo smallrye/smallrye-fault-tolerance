@@ -32,18 +32,18 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
 /**
  * Fault tolerance operation metadata.
- *
- * @author Martin Kouba
  */
 public class FaultToleranceOperation {
 
@@ -51,12 +51,14 @@ public class FaultToleranceOperation {
         return new FaultToleranceOperation(method.beanClass, method.method,
                 ApplyFaultToleranceConfigImpl.create(method),
                 AsynchronousConfigImpl.create(method),
+                AsynchronousNonBlockingConfigImpl.create(method),
                 BlockingConfigImpl.create(method),
                 NonBlockingConfigImpl.create(method),
                 BulkheadConfigImpl.create(method),
                 CircuitBreakerConfigImpl.create(method),
                 CircuitBreakerNameConfigImpl.create(method),
                 FallbackConfigImpl.create(method),
+                RateLimitConfigImpl.create(method),
                 RetryConfigImpl.create(method),
                 TimeoutConfigImpl.create(method),
                 ExponentialBackoffConfigImpl.create(method),
@@ -65,45 +67,39 @@ public class FaultToleranceOperation {
     }
 
     private final Class<?> beanClass;
-
     private final MethodDescriptor methodDescriptor;
 
     private final ApplyFaultToleranceConfig applyFaultTolerance;
 
     private final AsynchronousConfig asynchronous;
-
+    private final AsynchronousNonBlockingConfig asynchronousNonBlocking;
     private final BlockingConfig blocking;
-
     private final NonBlockingConfig nonBlocking;
 
     private final BulkheadConfig bulkhead;
-
     private final CircuitBreakerConfig circuitBreaker;
-
     private final CircuitBreakerNameConfig circuitBreakerName;
-
     private final FallbackConfig fallback;
-
+    private final RateLimitConfig rateLimit;
     private final RetryConfig retry;
-
     private final TimeoutConfig timeout;
 
     private final ExponentialBackoffConfig exponentialBackoff;
-
     private final FibonacciBackoffConfig fibonacciBackoff;
-
     private final CustomBackoffConfig customBackoff;
 
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
             ApplyFaultToleranceConfig applyFaultTolerance,
             AsynchronousConfig asynchronous,
+            AsynchronousNonBlockingConfig asynchronousNonBlocking,
             BlockingConfig blocking,
             NonBlockingConfig nonBlocking,
             BulkheadConfig bulkhead,
             CircuitBreakerConfig circuitBreaker,
             CircuitBreakerNameConfig circuitBreakerName,
             FallbackConfig fallback,
+            RateLimitConfig rateLimit,
             RetryConfig retry,
             TimeoutConfig timeout,
             ExponentialBackoffConfig exponentialBackoff,
@@ -115,6 +111,7 @@ public class FaultToleranceOperation {
         this.applyFaultTolerance = applyFaultTolerance;
 
         this.asynchronous = asynchronous;
+        this.asynchronousNonBlocking = asynchronousNonBlocking;
         this.blocking = blocking;
         this.nonBlocking = nonBlocking;
 
@@ -122,6 +119,7 @@ public class FaultToleranceOperation {
         this.circuitBreaker = circuitBreaker;
         this.circuitBreakerName = circuitBreakerName;
         this.fallback = fallback;
+        this.rateLimit = rateLimit;
         this.retry = retry;
         this.timeout = timeout;
 
@@ -162,6 +160,14 @@ public class FaultToleranceOperation {
         return asynchronous;
     }
 
+    public boolean hasAsynchronousNonBlocking() {
+        return asynchronousNonBlocking != null;
+    }
+
+    public AsynchronousNonBlocking getAsynchronousNonBlocking() {
+        return asynchronousNonBlocking;
+    }
+
     public boolean hasBlocking() {
         return blocking != null;
     }
@@ -180,10 +186,37 @@ public class FaultToleranceOperation {
 
     // if the guarded method doesn't return CompletionStage, this is meaningless
     public boolean isThreadOffloadRequired() {
+        if (blocking == null && nonBlocking == null) {
+            if (asynchronousNonBlocking != null && asynchronousNonBlocking.isOnMethod()) {
+                return false;
+            }
+            if (asynchronous != null && asynchronous.isOnMethod()) {
+                return true;
+            }
+
+            if (asynchronousNonBlocking != null) {
+                return false;
+            }
+            if (asynchronous != null) {
+                return true;
+            }
+
+            // in spec compatible mode, one of the conditions above always holds
+            // in spec non-compatible mode, we can just always return `false`
+            // because `isThreadOffloadRequired` is never called when the return type
+            // isn't `CompletionStage`
+            return false;
+        }
+
+        // the code below is meant to be deleted when support for `@Blocking` and `@NonBlocking` is removed
+
         if (blocking != null && blocking.isOnMethod()) {
             return true;
         }
         if (nonBlocking != null && nonBlocking.isOnMethod()) {
+            return false;
+        }
+        if (asynchronousNonBlocking != null && asynchronousNonBlocking.isOnMethod()) {
             return false;
         }
 
@@ -193,13 +226,16 @@ public class FaultToleranceOperation {
         if (nonBlocking != null) {
             return false;
         }
+        if (asynchronousNonBlocking != null) {
+            return false;
+        }
 
         if (asynchronous != null) {
             return true;
         }
 
-        // in a spec compatible mode, one of the conditions above always holds
-        // in a spec non-compatible mode, we can just always return `false`
+        // in spec compatible mode, one of the conditions above always holds
+        // in spec non-compatible mode, we can just always return `false`
         // because `isThreadOffloadRequired` is never called when the return type
         // isn't `CompletionStage`
         return false;
@@ -235,6 +271,14 @@ public class FaultToleranceOperation {
 
     public Fallback getFallback() {
         return fallback;
+    }
+
+    public boolean hasRateLimit() {
+        return rateLimit != null;
+    }
+
+    public RateLimit getRateLimit() {
+        return rateLimit;
     }
 
     public boolean hasRetry() {
@@ -301,6 +345,9 @@ public class FaultToleranceOperation {
         if (asynchronous != null) {
             asynchronous.validate();
         }
+        if (asynchronousNonBlocking != null) {
+            asynchronousNonBlocking.validate();
+        }
         if (blocking != null) {
             blocking.validate();
         }
@@ -316,6 +363,9 @@ public class FaultToleranceOperation {
         }
         if (fallback != null) {
             fallback.validate();
+        }
+        if (rateLimit != null) {
+            rateLimit.validate();
         }
         if (retry != null) {
             retry.validate();
@@ -376,8 +426,12 @@ public class FaultToleranceOperation {
         if (applyFaultTolerance != null) {
             applyFaultTolerance.materialize();
         }
+
         if (asynchronous != null) {
             asynchronous.materialize();
+        }
+        if (asynchronousNonBlocking != null) {
+            asynchronousNonBlocking.materialize();
         }
         if (blocking != null) {
             blocking.materialize();
@@ -385,6 +439,7 @@ public class FaultToleranceOperation {
         if (nonBlocking != null) {
             nonBlocking.materialize();
         }
+
         if (bulkhead != null) {
             bulkhead.materialize();
         }
@@ -397,12 +452,16 @@ public class FaultToleranceOperation {
         if (fallback != null) {
             fallback.materialize();
         }
+        if (rateLimit != null) {
+            rateLimit.materialize();
+        }
         if (retry != null) {
             retry.materialize();
         }
         if (timeout != null) {
             timeout.materialize();
         }
+
         if (exponentialBackoff != null) {
             exponentialBackoff.materialize();
         }

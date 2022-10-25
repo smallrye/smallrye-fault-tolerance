@@ -7,6 +7,7 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_STATE_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.INVOCATIONS_TOTAL;
+import static io.smallrye.faulttolerance.metrics.MetricConstants.RATE_LIMIT_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RETRY_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.TIMEOUT_CALLS_TOTAL;
@@ -19,7 +20,6 @@ import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.metrics.Metadata;
 import org.eclipse.microprofile.metrics.MetricRegistry;
-import org.eclipse.microprofile.metrics.MetricType;
 import org.eclipse.microprofile.metrics.MetricUnits;
 import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
@@ -33,19 +33,16 @@ import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 public class MicroProfileMetricsProvider implements MetricsProvider {
     static final Metadata TIMEOUT_EXECUTION_DURATION_METADATA = Metadata.builder()
             .withName(MetricConstants.TIMEOUT_EXECUTION_DURATION)
-            .withType(MetricType.HISTOGRAM)
             .withUnit(MetricUnits.NANOSECONDS)
             .build();
 
     static final Metadata BULKHEAD_RUNNING_DURATION_METADATA = Metadata.builder()
             .withName(MetricConstants.BULKHEAD_RUNNING_DURATION)
-            .withType(MetricType.HISTOGRAM)
             .withUnit(MetricUnits.NANOSECONDS)
             .build();
 
     static final Metadata BULKHEAD_WAITING_DURATION_METADATA = Metadata.builder()
             .withName(MetricConstants.BULKHEAD_WAITING_DURATION)
-            .withType(MetricType.HISTOGRAM)
             .withUnit(MetricUnits.NANOSECONDS)
             .build();
 
@@ -76,6 +73,9 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
 
     static final Tag BULKHEAD_RESULT_ACCEPTED = new Tag("bulkheadResult", "accepted");
     static final Tag BULKHEAD_RESULT_REJECTED = new Tag("bulkheadResult", "rejected");
+
+    static final Tag RATE_LIMIT_RESULT_PERMITTED = new Tag("rateLimitResult", "permitted");
+    static final Tag RATE_LIMIT_RESULT_REJECTED = new Tag("rateLimitResult", "rejected");
 
     @Inject
     @RegistryType(type = MetricRegistry.Type.BASE)
@@ -162,12 +162,16 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
                     registry.histogram(BULKHEAD_WAITING_DURATION_METADATA, methodTag).getCount();
                 }
             }
+
+            if (operation.hasRateLimit()) {
+                registry.counter(RATE_LIMIT_CALLS_TOTAL, methodTag, RATE_LIMIT_RESULT_PERMITTED).getCount();
+                registry.counter(RATE_LIMIT_CALLS_TOTAL, methodTag, RATE_LIMIT_RESULT_REJECTED).getCount();
+            }
         }
 
         private void registerGauge(Supplier<Long> supplier, String name, String unit, Tag... tags) {
             Metadata metadata = Metadata.builder()
                     .withName(name)
-                    .withType(MetricType.GAUGE)
                     .withUnit(unit)
                     .build();
             registry.gauge(metadata, supplier, tags);
@@ -283,6 +287,12 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
         @Override
         public void updateBulkheadWaitingDuration(long time) {
             registry.histogram(BULKHEAD_WAITING_DURATION_METADATA, methodTag).update(time);
+        }
+
+        @Override
+        public void rateLimitDecisionMade(boolean permitted) {
+            Tag rateLimitResultTag = permitted ? RATE_LIMIT_RESULT_PERMITTED : RATE_LIMIT_RESULT_REJECTED;
+            registry.counter(RATE_LIMIT_CALLS_TOTAL, methodTag, rateLimitResultTag).inc();
         }
     }
 }

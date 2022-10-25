@@ -13,6 +13,7 @@ import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
+import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
@@ -29,19 +30,20 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     final int failureThreshold;
     final int successThreshold;
     final Stopwatch stopwatch;
+    final Timer timer;
 
     final AtomicReference<State> state;
 
-    @SuppressWarnings("UnnecessaryThis")
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, ExceptionDecision exceptionDecision,
             long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
-            Stopwatch stopwatch) {
+            Stopwatch stopwatch, Timer timer) {
         this.delegate = checkNotNull(delegate, "Circuit breaker delegate must be set");
         this.description = checkNotNull(description, "Circuit breaker description must be set");
         this.exceptionDecision = checkNotNull(exceptionDecision, "Exception decision must be set");
         this.delayInMillis = check(delayInMillis, delayInMillis >= 0, "Circuit breaker delay must be >= 0");
         this.successThreshold = check(successThreshold, successThreshold > 0, "Circuit breaker success threshold must be > 0");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
+        this.timer = checkNotNull(timer, "Timer must be set");
         this.failureThreshold = check((int) Math.ceil(failureRatio * requestVolumeThreshold),
                 failureRatio >= 0.0 && failureRatio <= 1.0,
                 "Circuit breaker rolling window failure ratio must be >= 0 && <= 1");
@@ -112,7 +114,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
             throw new CircuitBreakerOpenException(description + " circuit breaker is open");
         } else {
-            LOG.trace("Delay elapsed, circuit breaker moving to half-open");
+            LOG.trace("Delay elapsed synchronously, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
             return doApply(ctx);
@@ -167,6 +169,25 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
 
         if (moved) {
             ctx.fireEvent(CircuitBreakerEvents.StateTransition.TO_OPEN);
+
+            // this is not necessary for correct functioning of the circuit breaker itself, because
+            // all the necessary state transitions happen synchronously (during invocations)
+            //
+            // that, however, isn't enough for correct functioning of _external observers_ of
+            // the circuit breaker state
+            //
+            // note that:
+            // 1. the timer task created below and the circuit breaker invocations compete on
+            //    changing the state, but that doesn't pose a problem, because it is an atomic CAS
+            // 2. there's some overhead from having both synchronous and asynchronous state changes,
+            //    but it's minuscule (see what `toHalfOpen` does)
+            // 3. this asynchronous state transition fires the event to an _old_ `InvocationContext`,
+            //    so if there's an event handler registered _after_ this circuit breaker invocation,
+            //    it will _not_ be called (I don't think that's a problem, frankly)
+            timer.schedule(delayInMillis, () -> {
+                LOG.trace("Delay elapsed asynchronously, circuit breaker moving to half-open");
+                toHalfOpen(ctx, newState);
+            });
         }
     }
 

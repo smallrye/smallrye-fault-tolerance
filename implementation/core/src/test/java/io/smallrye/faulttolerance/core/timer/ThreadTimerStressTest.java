@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.core.util;
+package io.smallrye.faulttolerance.core.timer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.byLessThan;
@@ -16,11 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
 @EnabledOnOs(OS.LINUX)
-public class TimerStressTest {
+public class ThreadTimerStressTest {
     private static final int ITERATIONS = 100;
     private static final int TASKS_PER_ITERATION = 100;
     private static final long DELAY_INCREMENT = 50;
@@ -34,7 +33,7 @@ public class TimerStressTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
         executor = Executors.newFixedThreadPool(POOL_SIZE);
-        timer = new Timer(executor);
+        timer = new ThreadTimer(executor);
 
         // precreate all threads in the pool
         // if we didn't do this, the first few iterations would be dominated

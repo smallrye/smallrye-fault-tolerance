@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
+import io.smallrye.faulttolerance.core.timer.ThreadTimer;
 import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
@@ -24,7 +25,7 @@ public class ExecutorHolder {
     public ExecutorHolder(AsyncExecutorProvider asyncExecutorProvider) {
         this.asyncExecutor = asyncExecutorProvider.get();
         this.eventLoop = EventLoop.get();
-        this.timer = new Timer(asyncExecutor);
+        this.timer = new ThreadTimer(asyncExecutor);
         this.shouldShutdownAsyncExecutor = asyncExecutorProvider instanceof DefaultAsyncExecutorProvider;
     }
 

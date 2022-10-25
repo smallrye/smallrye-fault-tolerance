@@ -79,6 +79,7 @@ com.example.MyService/hello/Retry/maxRetries=5
 
 Again, this is all described in the {microprofile-fault-tolerance-url}#configuration[{microprofile-fault-tolerance} specification], so we won't go into detail here.
 
+[[metrics]]
 == Metrics
 
 The {microprofile-fault-tolerance} specification describes how implementations should expose metrics over MicroProfile Metrics.
@@ -144,6 +145,10 @@ Metric types are mapped as closely as possible:
 | `ft.bulkhead.waitingDuration`
 | histogram
 | timer
+
+| `ft.ratelimit.calls.total`
+| counter
+| counter
 |===
 
 Note that distribution summaries in Micrometer, including timers, do not emit quantile buckets by default.

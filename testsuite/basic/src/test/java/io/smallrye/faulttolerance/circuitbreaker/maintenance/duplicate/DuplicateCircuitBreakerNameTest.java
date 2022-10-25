@@ -11,6 +11,6 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 @ExpectedDeploymentException(DefinitionException.class)
 public class DuplicateCircuitBreakerNameTest {
     @Test
-    public void ignored(CircuitBreakerService1 ignored1, CircuitBreakerService2 ignored2) {
+    public void test(CircuitBreakerService1 ignored1, CircuitBreakerService2 ignored2) {
     }
 }

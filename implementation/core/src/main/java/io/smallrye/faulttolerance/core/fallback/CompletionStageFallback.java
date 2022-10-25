@@ -51,7 +51,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
             }
 
             try {
-                LOG.debug(description + " invocation failed, invoking fallback");
+                LOG.debugf("%s invocation failed, invoking fallback", description);
                 ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
                 FallbackContext<CompletionStage<V>> fallbackContext = new FallbackContext<>(exception, ctx);
                 propagateCompletion(fallback.call(fallbackContext), result);

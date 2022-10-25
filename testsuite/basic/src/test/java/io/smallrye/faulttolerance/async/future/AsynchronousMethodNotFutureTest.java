@@ -26,6 +26,6 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 @ExpectedDeploymentException(DefinitionException.class)
 public class AsynchronousMethodNotFutureTest {
     @Test
-    public void testIgnored(WrongReturnType ignored) {
+    public void test(WrongReturnType ignored) {
     }
 }

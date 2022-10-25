@@ -17,10 +17,12 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
@@ -33,21 +35,24 @@ public class FaultToleranceMethods {
         result.beanClass = method.getDeclaringType().getJavaClass();
         result.method = createMethodDescriptor(method);
 
+        result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, annotationsPresentDirectly);
+
         result.asynchronous = getAnnotation(Asynchronous.class, method, annotationsPresentDirectly);
+        result.asynchronousNonBlocking = getAnnotation(AsynchronousNonBlocking.class, method, annotationsPresentDirectly);
+        result.blocking = getAnnotation(Blocking.class, method, annotationsPresentDirectly);
+        result.nonBlocking = getAnnotation(NonBlocking.class, method, annotationsPresentDirectly);
+
         result.bulkhead = getAnnotation(Bulkhead.class, method, annotationsPresentDirectly);
         result.circuitBreaker = getAnnotation(CircuitBreaker.class, method, annotationsPresentDirectly);
+        result.circuitBreakerName = getAnnotation(CircuitBreakerName.class, method, annotationsPresentDirectly);
         result.fallback = getAnnotation(Fallback.class, method, annotationsPresentDirectly);
+        result.rateLimit = getAnnotation(RateLimit.class, method, annotationsPresentDirectly);
         result.retry = getAnnotation(Retry.class, method, annotationsPresentDirectly);
         result.timeout = getAnnotation(Timeout.class, method, annotationsPresentDirectly);
 
-        result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, annotationsPresentDirectly);
-        result.circuitBreakerName = getAnnotation(CircuitBreakerName.class, method, annotationsPresentDirectly);
         result.customBackoff = getAnnotation(CustomBackoff.class, method, annotationsPresentDirectly);
         result.exponentialBackoff = getAnnotation(ExponentialBackoff.class, method, annotationsPresentDirectly);
         result.fibonacciBackoff = getAnnotation(FibonacciBackoff.class, method, annotationsPresentDirectly);
-
-        result.blocking = getAnnotation(Blocking.class, method, annotationsPresentDirectly);
-        result.nonBlocking = getAnnotation(NonBlocking.class, method, annotationsPresentDirectly);
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 
@@ -80,21 +85,25 @@ public class FaultToleranceMethods {
         result.beanClass = beanClass;
         result.method = createMethodDescriptor(method);
 
+        result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, beanClass, annotationsPresentDirectly);
+
         result.asynchronous = getAnnotation(Asynchronous.class, method, beanClass, annotationsPresentDirectly);
+        result.asynchronousNonBlocking = getAnnotation(AsynchronousNonBlocking.class, method, beanClass,
+                annotationsPresentDirectly);
+        result.blocking = getAnnotation(Blocking.class, method, beanClass, annotationsPresentDirectly);
+        result.nonBlocking = getAnnotation(NonBlocking.class, method, beanClass, annotationsPresentDirectly);
+
         result.bulkhead = getAnnotation(Bulkhead.class, method, beanClass, annotationsPresentDirectly);
         result.circuitBreaker = getAnnotation(CircuitBreaker.class, method, beanClass, annotationsPresentDirectly);
+        result.circuitBreakerName = getAnnotation(CircuitBreakerName.class, method, beanClass, annotationsPresentDirectly);
         result.fallback = getAnnotation(Fallback.class, method, beanClass, annotationsPresentDirectly);
+        result.rateLimit = getAnnotation(RateLimit.class, method, beanClass, annotationsPresentDirectly);
         result.retry = getAnnotation(Retry.class, method, beanClass, annotationsPresentDirectly);
         result.timeout = getAnnotation(Timeout.class, method, beanClass, annotationsPresentDirectly);
 
-        result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, beanClass, annotationsPresentDirectly);
-        result.circuitBreakerName = getAnnotation(CircuitBreakerName.class, method, beanClass, annotationsPresentDirectly);
         result.customBackoff = getAnnotation(CustomBackoff.class, method, beanClass, annotationsPresentDirectly);
         result.exponentialBackoff = getAnnotation(ExponentialBackoff.class, method, beanClass, annotationsPresentDirectly);
         result.fibonacciBackoff = getAnnotation(FibonacciBackoff.class, method, beanClass, annotationsPresentDirectly);
-
-        result.blocking = getAnnotation(Blocking.class, method, beanClass, annotationsPresentDirectly);
-        result.nonBlocking = getAnnotation(NonBlocking.class, method, beanClass, annotationsPresentDirectly);
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 

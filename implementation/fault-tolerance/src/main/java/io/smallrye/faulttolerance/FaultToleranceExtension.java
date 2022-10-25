@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.smallrye.faulttolerance;
 
 import static io.smallrye.faulttolerance.CdiLogger.LOG;
@@ -60,18 +59,17 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider;
 
-/**
- * @author Antoine Sabot-Durand
- */
 public class FaultToleranceExtension implements Extension {
 
     private static final List<Class<? extends Annotation>> BACKOFF_ANNOTATIONS = Arrays.asList(
@@ -89,16 +87,18 @@ public class FaultToleranceExtension implements Extension {
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOG.activated(getImplementationVersion().orElse("unknown"));
 
-        // @Blocking and @NonBlocking alone do _not_ trigger the fault tolerance interceptor,
-        // only in combination with other fault tolerance annotations
+        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff) alone do _not_ trigger
+        // the fault tolerance interceptor, only in combination with other fault tolerance annotations
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(
+                bm.createAnnotatedType(AsynchronousNonBlocking.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(CircuitBreaker.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(RateLimit.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Retry.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Timeout.class)));
-        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
-        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Fallback.class)));
-        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Bulkhead.class)));
-
-        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
 
         bbd.addAnnotatedType(bm.createAnnotatedType(FaultToleranceInterceptor.class),
                 FaultToleranceInterceptor.class.getName());
@@ -153,7 +153,7 @@ public class FaultToleranceExtension implements Extension {
             if (method.isLegitimate()) {
                 FaultToleranceOperation operation = FaultToleranceOperation.create(method);
                 operation.validate();
-                LOG.debug("Found " + operation);
+                LOG.debugf("Found %s", operation);
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()),
                         operation);
 
@@ -174,6 +174,16 @@ public class FaultToleranceExtension implements Extension {
                         event.addDefinitionError(LOG.backoffAnnotationWithoutRetry(backoffAnnotation.getSimpleName(),
                                 annotatedType.getJavaClass()));
                     }
+                }
+
+                if (annotatedMethod.isAnnotationPresent(Asynchronous.class)
+                        && annotatedMethod.isAnnotationPresent(AsynchronousNonBlocking.class)) {
+                    event.addDefinitionError(LOG.bothAsyncAndAsyncNonBlockingPresent(method.method));
+                }
+
+                if (annotatedType.isAnnotationPresent(Asynchronous.class)
+                        && annotatedType.isAnnotationPresent(AsynchronousNonBlocking.class)) {
+                    event.addDefinitionError(LOG.bothAsyncAndAsyncNonBlockingPresent(annotatedType.getJavaClass()));
                 }
 
                 if (annotatedMethod.isAnnotationPresent(Blocking.class)

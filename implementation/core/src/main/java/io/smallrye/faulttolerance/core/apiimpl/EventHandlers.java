@@ -6,6 +6,7 @@ import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.bulkhead.BulkheadEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
+import io.smallrye.faulttolerance.core.rate.limit.RateLimitEvents;
 import io.smallrye.faulttolerance.core.retry.RetryEvents;
 import io.smallrye.faulttolerance.core.timeout.TimeoutEvents;
 import io.smallrye.faulttolerance.core.util.Callbacks;
@@ -21,6 +22,9 @@ final class EventHandlers {
     private final Runnable circuitBreakerOnFailure;
     private final Runnable circuitBreakerOnPrevented;
 
+    private final Runnable rateLimitOnPermitted;
+    private final Runnable rateLimitOnRejected;
+
     private final Runnable retryOnRetry;
     private final Runnable retryOnSuccess;
     private final Runnable retryOnFailure;
@@ -31,8 +35,9 @@ final class EventHandlers {
     EventHandlers(Runnable bulkheadOnAccepted, Runnable bulkheadOnRejected, Runnable bulkheadOnFinished,
             Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler,
             Consumer<CircuitBreakerState> circuitBreakerOnStateChange, Runnable circuitBreakerOnSuccess,
-            Runnable circuitBreakerOnFailure, Runnable circuitBreakerOnPrevented, Runnable retryOnRetry,
-            Runnable retryOnSuccess, Runnable retryOnFailure, Runnable timeoutOnTimeout, Runnable timeoutOnFinished) {
+            Runnable circuitBreakerOnFailure, Runnable circuitBreakerOnPrevented, Runnable rateLimitOnPermitted,
+            Runnable rateLimitOnRejected, Runnable retryOnRetry, Runnable retryOnSuccess, Runnable retryOnFailure,
+            Runnable timeoutOnTimeout, Runnable timeoutOnFinished) {
         this.bulkheadOnAccepted = Callbacks.wrap(bulkheadOnAccepted);
         this.bulkheadOnRejected = Callbacks.wrap(bulkheadOnRejected);
         this.bulkheadOnFinished = Callbacks.wrap(bulkheadOnFinished);
@@ -41,6 +46,8 @@ final class EventHandlers {
         this.circuitBreakerOnSuccess = Callbacks.wrap(circuitBreakerOnSuccess);
         this.circuitBreakerOnFailure = Callbacks.wrap(circuitBreakerOnFailure);
         this.circuitBreakerOnPrevented = Callbacks.wrap(circuitBreakerOnPrevented);
+        this.rateLimitOnPermitted = Callbacks.wrap(rateLimitOnPermitted);
+        this.rateLimitOnRejected = Callbacks.wrap(rateLimitOnRejected);
         this.retryOnRetry = Callbacks.wrap(retryOnRetry);
         this.retryOnSuccess = Callbacks.wrap(retryOnSuccess);
         this.retryOnFailure = Callbacks.wrap(retryOnFailure);
@@ -95,6 +102,20 @@ final class EventHandlers {
                             circuitBreakerOnPrevented.run();
                         }
                         break;
+                }
+            });
+        }
+
+        if (rateLimitOnPermitted != null || rateLimitOnRejected != null) {
+            ctx.registerEventHandler(RateLimitEvents.DecisionMade.class, event -> {
+                if (event.permitted) {
+                    if (rateLimitOnPermitted != null) {
+                        rateLimitOnPermitted.run();
+                    }
+                } else {
+                    if (rateLimitOnRejected != null) {
+                        rateLimitOnRejected.run();
+                    }
                 }
             });
         }

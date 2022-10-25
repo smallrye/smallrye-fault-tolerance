@@ -13,6 +13,7 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import io.reactivex.rxjava3.core.Single;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 
 @ApplicationScoped
 public class HelloService {
@@ -42,11 +43,19 @@ public class HelloService {
         return Single.error(IllegalArgumentException::new);
     }
 
+    @AsynchronousNonBlocking
+    @Retry(jitter = 0)
+    @Fallback(HelloFallback.class)
+    public Single<String> helloAsynchronousNonBlocking() {
+        COUNTER.incrementAndGet();
+        return Single.error(IllegalArgumentException::new);
+    }
+
     @Asynchronous
     @NonBlocking
     @Retry(jitter = 0)
     @Fallback(HelloFallback.class)
-    public Single<String> helloAsynchronousNonblocking() {
+    public Single<String> helloAsynchronousNonblockingCombined() {
         COUNTER.incrementAndGet();
         return Single.error(IllegalArgumentException::new);
     }
@@ -55,7 +64,7 @@ public class HelloService {
     @Blocking
     @Retry(jitter = 0)
     @Fallback(HelloFallback.class)
-    public Single<String> helloAsynchronousBlocking() {
+    public Single<String> helloAsynchronousBlockingCombined() {
         COUNTER.incrementAndGet();
         return Single.error(IllegalArgumentException::new);
     }

@@ -201,14 +201,14 @@ public class MyService {
 
 === Stateful Fault Tolerance Strategies
 
-The circuit breaker and bulkhead strategies are stateful.
-That is, they hold some state required for their correct functioning, such as the number of current executions for bulkhead, or the rolling window of successes/failures for circuit breaker.
+The bulkhead, circuit breaker and rate limit strategies are stateful.
+That is, they hold some state required for their correct functioning, such as the number of current executions for bulkhead, the rolling window of successes/failures for circuit breaker, or the time window for rate limit.
 If you use these strategies, you have to consider their lifecycle.
 
 The {smallrye-fault-tolerance} programmatic API makes such reasoning pretty straightforward.
 Each `FaultTolerance` object has its own instance of each fault tolerance strategy, including the stateful strategies.
-If you use a single `FaultTolerance` object for guarding multiple different actions, all those actions will be guarded by the same bulkhead and/or circuit breaker.
-If, on the other hand, you use different `FaultTolerance` objects for guarding different actions, each action will be guarded by its own bulkhead and/or circuit breaker.
+If you use a single `FaultTolerance` object for guarding multiple different actions, all those actions will be guarded by the same bulkhead, circuit breaker and/or rate limit.
+If, on the other hand, you use different `FaultTolerance` objects for guarding different actions, each action will be guarded by its own bulkhead, circuit breaker and/or rate limit.
 
 If you use the `adapt*` methods, the resulting `Callable`, `Supplier` or `Runnable` objects will guard the underlying action using the original `FaultTolerance` instance, so stateful strategies will be shared.
 

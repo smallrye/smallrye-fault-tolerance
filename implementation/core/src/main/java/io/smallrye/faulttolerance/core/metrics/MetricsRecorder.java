@@ -49,6 +49,10 @@ public interface MetricsRecorder {
 
     void updateBulkheadWaitingDuration(long time);
 
+    // rate limit
+
+    void rateLimitDecisionMade(boolean permitted);
+
     MetricsRecorder NOOP = new MetricsRecorder() {
         @Override
         public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
@@ -116,6 +120,10 @@ public interface MetricsRecorder {
 
         @Override
         public void updateBulkheadWaitingDuration(long time) {
+        }
+
+        @Override
+        public void rateLimitDecisionMade(boolean permitted) {
         }
     };
 }
