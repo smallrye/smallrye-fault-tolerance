@@ -17,6 +17,11 @@ package io.smallrye.faulttolerance.circuitbreaker.failon.metrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.eclipse.microprofile.metrics.MetricID;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
@@ -28,25 +33,54 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 public class CircuitBreakerFailOnMetricsTest {
     @Test
     public void test(PingService pingService, @RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) {
-        for (int i = 0; i < 10; i++) {
+        try {
+            pingService.ping();
+        } catch (IllegalArgumentException | IllegalStateException expected) {
+        }
+
+        assertThat(getGauge(metrics, "ft.circuitbreaker.state.current", new Tag("state", "closed")))
+                .isEqualTo(1);
+        assertThat(getGauge(metrics, "ft.circuitbreaker.state.current", new Tag("state", "open")))
+                .isEqualTo(0);
+        assertThat(getGauge(metrics, "ft.circuitbreaker.state.current", new Tag("state", "halfOpen")))
+                .isEqualTo(0);
+
+        for (int i = 0; i < 9; i++) {
             try {
                 pingService.ping();
             } catch (IllegalArgumentException | IllegalStateException expected) {
             }
         }
 
-        assertThat(metrics.counter("ft.circuitbreaker.calls.total",
-                new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"),
-                new Tag("circuitBreakerResult", "success"))
-                .getCount()).isEqualTo(5);
-        assertThat(metrics.counter("ft.circuitbreaker.calls.total",
-                new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"),
-                new Tag("circuitBreakerResult", "failure"))
-                .getCount()).isEqualTo(5);
-        assertThat(metrics.counter("ft.invocations.total",
-                new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"),
-                new Tag("result", "exceptionThrown"),
-                new Tag("fallback", "notDefined"))
-                .getCount()).isEqualTo(10);
+        assertThat(getGauge(metrics, "ft.circuitbreaker.state.current", new Tag("state", "closed")))
+                .isEqualTo(0);
+        assertThat(getGauge(metrics, "ft.circuitbreaker.state.current", new Tag("state", "open")))
+                .isEqualTo(1);
+        assertThat(getGauge(metrics, "ft.circuitbreaker.state.current", new Tag("state", "halfOpen")))
+                .isEqualTo(0);
+
+        assertThat(getCounter(metrics, "ft.circuitbreaker.calls.total", new Tag("circuitBreakerResult", "success")))
+                .isEqualTo(5);
+        assertThat(getCounter(metrics, "ft.circuitbreaker.calls.total", new Tag("circuitBreakerResult", "failure")))
+                .isEqualTo(5);
+        assertThat(getCounter(metrics, "ft.invocations.total", new Tag("result", "exceptionThrown"),
+                new Tag("fallback", "notDefined"))).isEqualTo(10);
+    }
+
+    // ---
+
+    private Long getGauge(MetricRegistry registry, String name, Tag... additionalTags) {
+        return (Long) registry.getGauge(getMetricId(name, additionalTags)).getValue();
+    }
+
+    private Long getCounter(MetricRegistry registry, String name, Tag... additionalTags) {
+        return registry.getCounter(getMetricId(name, additionalTags)).getCount();
+    }
+
+    private static MetricID getMetricId(String name, Tag[] additionalTags) {
+        List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag("method", "io.smallrye.faulttolerance.circuitbreaker.failon.metrics.PingService.ping"));
+        tags.addAll(Arrays.asList(additionalTags));
+        return new MetricID(name, tags.toArray(new Tag[0]));
     }
 }

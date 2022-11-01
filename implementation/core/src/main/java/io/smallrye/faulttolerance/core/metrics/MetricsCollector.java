@@ -58,6 +58,10 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         this.closedStart = System.nanoTime();
 
         if (hasCircuitBreaker) {
+            metrics.registerCircuitBreakerIsClosed(() -> CircuitBreakerState.CLOSED == state);
+            metrics.registerCircuitBreakerIsOpen(() -> CircuitBreakerState.OPEN == state);
+            metrics.registerCircuitBreakerIsHalfOpen(() -> CircuitBreakerState.HALF_OPEN == state);
+
             metrics.registerCircuitBreakerTimeSpentInClosed(
                     () -> getTime(CircuitBreakerState.CLOSED, closedStart, previousClosedTime));
             metrics.registerCircuitBreakerTimeSpentInOpen(
@@ -74,7 +78,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    private Long getTime(CircuitBreakerState measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
+    private long getTime(CircuitBreakerState measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
         return state == measuredState
                 ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
                 : prevMeasuredStateTime.get();

@@ -25,7 +25,7 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 public class PingService {
     private AtomicInteger counter = new AtomicInteger(0);
 
-    @CircuitBreaker(failOn = { IllegalArgumentException.class })
+    @CircuitBreaker(failOn = { IllegalArgumentException.class }, requestVolumeThreshold = 10)
     public String ping() {
         int count = counter.incrementAndGet();
 
