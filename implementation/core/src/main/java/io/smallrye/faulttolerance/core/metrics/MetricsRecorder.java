@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.metrics;
 
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 
@@ -31,19 +32,25 @@ public interface MetricsRecorder {
 
     void circuitBreakerMovedToOpen();
 
-    void registerCircuitBreakerTimeSpentInClosed(Supplier<Long> supplier);
+    void registerCircuitBreakerIsClosed(BooleanSupplier supplier);
 
-    void registerCircuitBreakerTimeSpentInOpen(Supplier<Long> supplier);
+    void registerCircuitBreakerIsOpen(BooleanSupplier supplier);
 
-    void registerCircuitBreakerTimeSpentInHalfOpen(Supplier<Long> supplier);
+    void registerCircuitBreakerIsHalfOpen(BooleanSupplier supplier);
+
+    void registerCircuitBreakerTimeSpentInClosed(LongSupplier supplier);
+
+    void registerCircuitBreakerTimeSpentInOpen(LongSupplier supplier);
+
+    void registerCircuitBreakerTimeSpentInHalfOpen(LongSupplier supplier);
 
     // bulkhead
 
     void bulkheadDecisionMade(boolean accepted);
 
-    void registerBulkheadExecutionsRunning(Supplier<Long> supplier);
+    void registerBulkheadExecutionsRunning(LongSupplier supplier);
 
-    void registerBulkheadExecutionsWaiting(Supplier<Long> supplier);
+    void registerBulkheadExecutionsWaiting(LongSupplier supplier);
 
     void updateBulkheadRunningDuration(long time);
 
@@ -91,15 +98,27 @@ public interface MetricsRecorder {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInClosed(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsClosed(BooleanSupplier supplier) {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsOpen(BooleanSupplier supplier) {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInHalfOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsHalfOpen(BooleanSupplier supplier) {
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInClosed(LongSupplier supplier) {
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInOpen(LongSupplier supplier) {
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInHalfOpen(LongSupplier supplier) {
         }
 
         @Override
@@ -107,11 +126,11 @@ public interface MetricsRecorder {
         }
 
         @Override
-        public void registerBulkheadExecutionsRunning(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsRunning(LongSupplier supplier) {
         }
 
         @Override
-        public void registerBulkheadExecutionsWaiting(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsWaiting(LongSupplier supplier) {
         }
 
         @Override

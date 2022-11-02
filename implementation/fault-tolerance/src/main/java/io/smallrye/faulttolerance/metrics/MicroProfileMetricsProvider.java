@@ -5,6 +5,7 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.BULKHEAD_EXECUT
 import static io.smallrye.faulttolerance.metrics.MetricConstants.BULKHEAD_EXECUTIONS_WAITING;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
+import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_STATE_CURRENT;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_STATE_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.INVOCATIONS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RATE_LIMIT_CALLS_TOTAL;
@@ -12,7 +13,8 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.RETRY_CALLS_TOT
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.TIMEOUT_CALLS_TOTAL;
 
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -169,12 +171,16 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
             }
         }
 
-        private void registerGauge(Supplier<Long> supplier, String name, String unit, Tag... tags) {
+        private void registerGauge(BooleanSupplier supplier, String name, String unit, Tag... tags) {
+            registerGauge(() -> supplier.getAsBoolean() ? 1L : 0L, name, unit, tags);
+        }
+
+        private void registerGauge(LongSupplier supplier, String name, String unit, Tag... tags) {
             Metadata metadata = Metadata.builder()
                     .withName(name)
                     .withUnit(unit)
                     .build();
-            registry.gauge(metadata, supplier, tags);
+            registry.gauge(metadata, supplier::getAsLong, tags);
         }
 
         // ---
@@ -246,19 +252,37 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInClosed(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsClosed(BooleanSupplier supplier) {
+            registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, MetricUnits.NONE,
+                    methodTag, CIRCUIT_BREAKER_STATE_CLOSED);
+        }
+
+        @Override
+        public void registerCircuitBreakerIsOpen(BooleanSupplier supplier) {
+            registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, MetricUnits.NONE,
+                    methodTag, CIRCUIT_BREAKER_STATE_OPEN);
+        }
+
+        @Override
+        public void registerCircuitBreakerIsHalfOpen(BooleanSupplier supplier) {
+            registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, MetricUnits.NONE,
+                    methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN);
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInClosed(LongSupplier supplier) {
             registerGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, MetricUnits.NANOSECONDS,
                     methodTag, CIRCUIT_BREAKER_STATE_CLOSED);
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerTimeSpentInOpen(LongSupplier supplier) {
             registerGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, MetricUnits.NANOSECONDS,
                     methodTag, CIRCUIT_BREAKER_STATE_OPEN);
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInHalfOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerTimeSpentInHalfOpen(LongSupplier supplier) {
             registerGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, MetricUnits.NANOSECONDS,
                     methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN);
         }
@@ -270,12 +294,12 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
         }
 
         @Override
-        public void registerBulkheadExecutionsRunning(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsRunning(LongSupplier supplier) {
             registerGauge(supplier, BULKHEAD_EXECUTIONS_RUNNING, MetricUnits.NONE, methodTag);
         }
 
         @Override
-        public void registerBulkheadExecutionsWaiting(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsWaiting(LongSupplier supplier) {
             registerGauge(supplier, BULKHEAD_EXECUTIONS_WAITING, MetricUnits.NONE, methodTag);
         }
 

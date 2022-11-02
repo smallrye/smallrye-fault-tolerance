@@ -7,6 +7,7 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.BULKHEAD_RUNNIN
 import static io.smallrye.faulttolerance.metrics.MetricConstants.BULKHEAD_WAITING_DURATION;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
+import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_STATE_CURRENT;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.CIRCUIT_BREAKER_STATE_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.INVOCATIONS_TOTAL;
 import static io.smallrye.faulttolerance.metrics.MetricConstants.RATE_LIMIT_CALLS_TOTAL;
@@ -18,7 +19,8 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.TIMEOUT_EXECUTI
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -162,13 +164,17 @@ public class MicrometerProvider implements MetricsProvider {
             }
         }
 
-        private void registerGauge(Supplier<Long> supplier, String name, Tag... tags) {
-            registry.gauge(name, Arrays.asList(tags), supplier, it -> it.get().doubleValue());
+        private void registerGauge(LongSupplier supplier, String name, Tag... tags) {
+            registry.gauge(name, Arrays.asList(tags), supplier, it -> (double) it.getAsLong());
         }
 
-        private void registerTimeGauge(Supplier<Long> supplier, String name, Tag... tags) {
+        private void registerGauge(BooleanSupplier supplier, String name, Tag... tags) {
+            registry.gauge(name, Arrays.asList(tags), supplier, it -> it.getAsBoolean() ? 1.0 : 0.0);
+        }
+
+        private void registerTimeGauge(LongSupplier supplier, String name, Tag... tags) {
             registry.more().timeGauge(name, Arrays.asList(tags), supplier, TimeUnit.NANOSECONDS,
-                    it -> it.get().doubleValue());
+                    it -> (double) it.getAsLong());
         }
 
         // ---
@@ -241,19 +247,34 @@ public class MicrometerProvider implements MetricsProvider {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInClosed(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsClosed(BooleanSupplier supplier) {
+            registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, methodTag, CIRCUIT_BREAKER_STATE_CLOSED);
+        }
+
+        @Override
+        public void registerCircuitBreakerIsOpen(BooleanSupplier supplier) {
+            registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, methodTag, CIRCUIT_BREAKER_STATE_OPEN);
+        }
+
+        @Override
+        public void registerCircuitBreakerIsHalfOpen(BooleanSupplier supplier) {
+            registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN);
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInClosed(LongSupplier supplier) {
             registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL,
                     methodTag, CIRCUIT_BREAKER_STATE_CLOSED);
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerTimeSpentInOpen(LongSupplier supplier) {
             registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL,
                     methodTag, CIRCUIT_BREAKER_STATE_OPEN);
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInHalfOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerTimeSpentInHalfOpen(LongSupplier supplier) {
             registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL,
                     methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN);
         }
@@ -265,12 +286,12 @@ public class MicrometerProvider implements MetricsProvider {
         }
 
         @Override
-        public void registerBulkheadExecutionsRunning(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsRunning(LongSupplier supplier) {
             registerGauge(supplier, BULKHEAD_EXECUTIONS_RUNNING, methodTag);
         }
 
         @Override
-        public void registerBulkheadExecutionsWaiting(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsWaiting(LongSupplier supplier) {
             registerGauge(supplier, BULKHEAD_EXECUTIONS_WAITING, methodTag);
         }
 

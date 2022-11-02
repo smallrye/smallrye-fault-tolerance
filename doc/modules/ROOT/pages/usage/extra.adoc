@@ -5,6 +5,23 @@ Their public API is present in the `io.smallrye:smallrye-fault-tolerance-api` ar
 
 Note that these features may have experimental status, marked by the `@Experimental` annotation.
 
+== Additional Metrics
+
+In addition to the metrics defined by the {microprofile-fault-tolerance} specification, {smallrye-fault-tolerance} exposes some additional metrics.
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.state.current`
+| Type | `Gauge<Long>` (`0` or `1`)
+| Unit | None
+| Description | Whether the circuit breaker is currently in given state (`1`) or not (`0`)
+| Tags
+a| * `method` - the fully qualified method name
+* `state` = `[open\|closed\|halfOpen]` - the circuit breaker state
+|===
+
+Micrometer is of course also supported, as described in xref:usage/basic.adoc#metrics[Metrics].
+
 == Circuit Breaker Maintenance
 
 It is sometimes useful to see the circuit breaker status from within the application, or reset it to the initial state.

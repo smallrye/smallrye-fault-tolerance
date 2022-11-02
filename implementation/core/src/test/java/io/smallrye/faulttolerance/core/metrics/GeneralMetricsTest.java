@@ -4,7 +4,8 @@ import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -85,15 +86,27 @@ public class GeneralMetricsTest {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInClosed(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsClosed(BooleanSupplier supplier) {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsOpen(BooleanSupplier supplier) {
         }
 
         @Override
-        public void registerCircuitBreakerTimeSpentInHalfOpen(Supplier<Long> supplier) {
+        public void registerCircuitBreakerIsHalfOpen(BooleanSupplier supplier) {
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInClosed(LongSupplier supplier) {
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInOpen(LongSupplier supplier) {
+        }
+
+        @Override
+        public void registerCircuitBreakerTimeSpentInHalfOpen(LongSupplier supplier) {
         }
 
         @Override
@@ -101,11 +114,11 @@ public class GeneralMetricsTest {
         }
 
         @Override
-        public void registerBulkheadExecutionsRunning(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsRunning(LongSupplier supplier) {
         }
 
         @Override
-        public void registerBulkheadExecutionsWaiting(Supplier<Long> supplier) {
+        public void registerBulkheadExecutionsWaiting(LongSupplier supplier) {
         }
 
         @Override

@@ -14,6 +14,7 @@ final class MetricConstants {
     static final String TIMEOUT_EXECUTION_DURATION = "ft.timeout.executionDuration";
 
     static final String CIRCUIT_BREAKER_CALLS_TOTAL = "ft.circuitbreaker.calls.total";
+    static final String CIRCUIT_BREAKER_STATE_CURRENT = "ft.circuitbreaker.state.current";
     static final String CIRCUIT_BREAKER_STATE_TOTAL = "ft.circuitbreaker.state.total";
     static final String CIRCUIT_BREAKER_OPENED_TOTAL = "ft.circuitbreaker.opened.total";
 
