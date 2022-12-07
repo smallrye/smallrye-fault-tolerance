@@ -1,0 +1,67 @@
+= Timeout
+
+For introduction, see xref:howto/timeout.adoc[How to Watch for Timeouts].
+
+== Description
+
+If a guarded method takes too long, the caller will get a `TimeoutException`.
+
+If the gaurded method is not `@Asynchronous` or `@AsynchronousNonBlocking`, the thread executing the method is interrupted.
+Note that interruption requires cooperation from the executing code.
+In other words, it is not guaranteed that interrupting the method will actually make it stop.
+
+[[configuration]]
+== Configuration
+
+There are 2 configuration options, corresponding to the 2 members of the `@Timeout` annotation.
+
+=== `value` + `unit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `1000 millis`, or 1 second
+
+The timeout to enforce.
+
+[[metrics]]
+== Metrics
+
+Timeout exposes the following metrics:
+
+[cols="1,5"]
+|===
+| Name | `ft.timeout.calls.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the timeout logic was run. This is usually once per method call, but may be zero times if the circuit breaker or rate limit prevents execution or more than once if the method is retried.
+| Tags
+a| * `method` - the fully qualified method name
+* `timedOut` = `[true\|false]` - whether the method call timed out
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.timeout.executionDuration`
+| Type | `Histogram`
+| Unit | Nanoseconds
+| Description | Histogram of execution times for the method
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
+
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@Timeout`, the fallback method or handler may be invoked if a `TimeoutException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@Timeout`, each retry attempt is processed by the timeout as an independent invocation.
+If `TimeoutException` is thrown, the execution may be retried, depending on how retry is configured.
+
+If `@CircuitBreaker` is used with `@Timeout`, the circuit breaker is checked before enforcing the timeout.
+If enforcing the timeout results in `TimeoutException`, this may be counted as a failure, depending on how the circuit breaker is configured.
+
+If `@RateLimit` is used with `@Timeout`, the rate limit is enforced before enforcing the timeout.

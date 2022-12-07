@@ -1,0 +1,1 @@
+IMPORTANT: This feature only works in the xref:reference/non-compat.adoc[non-compatible mode].

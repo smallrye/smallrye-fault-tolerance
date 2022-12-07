@@ -1,6 +1,6 @@
 = Programmatic API Integration Concerns
 
-This page describes integration concerns of the xref:usage/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance}.
+This page describes integration concerns of the xref:reference/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance}.
 
 == Standalone Implementation
 

@@ -1,0 +1,3 @@
+WARNING: Note that everything explained here is an implementation detail.
+API stability for these interfaces and classes is _not_ guaranteed!
+This documentation is only present to provide implementation insight for people who have to debug issues or want to contribute.

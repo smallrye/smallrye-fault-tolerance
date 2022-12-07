@@ -1,8 +1,6 @@
 = Fault Tolerance Core
 
-WARNING: Please note that everything explained here is an implementation detail.
-API stability for these interfaces and classes is _not_ guaranteed!
-This documentation is only present to provide implementation insight for people who have to debug issues or want to contribute.
+include::partial$internals.adoc[]
 
 The core idea in {smallrye-fault-tolerance} is a `FaultToleranceStrategy`.
 It is an interface that looks like this:

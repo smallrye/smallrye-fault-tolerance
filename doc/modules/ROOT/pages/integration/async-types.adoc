@@ -1,6 +1,6 @@
 = Additional Asynchronous Types Integration Concerns
 
-This page describes integration concerns for xref:usage/extra.adoc#async-types[Additional Asynchronous Types].
+This page describes integration concerns for xref:reference/asynchronous.adoc#async-types[Additional Asynchronous Types].
 
 To enable support of additional asynchronous types, it is required that the support library is present.
 That is:

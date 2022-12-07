@@ -1,0 +1,124 @@
+= How to Begin
+
+== Installation
+
+As an application developer, you don't have to "install" {smallrye-fault-tolerance} in any way.
+Your chosen runtime, such as Quarkus or WildFly, already integrates {smallrye-fault-tolerance} to provide {microprofile-fault-tolerance}.
+Please refer to the documentation of your selected runtime to understand how to enable MicroProfile Fault Tolerance.
+
+.Quarkus
+****
+In case of Quarkus, it is enough to add a dependency on `io.quarkus:quarkus-smallrye-fault-tolerance`.
+
+See the https://quarkus.io/guides/smallrye-fault-tolerance[{smallrye-fault-tolerance} guide] in Quarkus documentation for more.
+****
+
+.WildFly
+****
+In case of WildFly, the {microprofile-fault-tolerance} subsystem must be enabled.
+It is not included in the default `standalone` or `standalone-full` profiles, but it is included in the `standalone-microprofile` profile.
+It is easiest to just start WildFly in this profile.
+
+See the https://docs.wildfly.org/27/Admin_Guide.html#MicroProfile-Fault-Tolerance-SmallRye[{microprofile-fault-tolerance} chapter] in WildFly Admin Guide for more.
+****
+
+If you are a framework developer, interested in integrating {smallrye-fault-tolerance} in your framework or runtime, please refer to the xref:integration/intro.adoc[Integration] section.
+
+== Usage
+
+{microprofile-fault-tolerance} is built on top of CDI and interceptors.
+This lets you guard method calls with selected fault tolerance strategies simply by annotating a CDI bean class or method with one of the fault tolerance annotations.
+For example:
+
+[source,java]
+----
+@ApplicationScoped // <1>
+public class MyService {
+    @Retry // <2>
+    public String hello() {
+        ...
+    }
+}
+----
+
+<1> `@ApplicationScoped` is a bean defining annotation.
+It makes the `MyService` class a CDI bean.
+<2> `@Retry` is a fault tolerance annotation.
+
+Here, if the `hello` method throws an exception, the invocation will be retried several times, until the method returns a value.
+
+The annotation may also be present on a class, in which case it applies to all business method in the class:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+@Retry // <1>
+public class MyService {
+    public String hello() { // <2>
+        ...
+    }
+}
+----
+<1> `@Retry` is a fault tolerance annotation.
+<2> The `hello()` method will use the retry strategy, because it is defined on the class.
+
+A class-level annotation may be overridden by explicitly annotating a method.
+
+TIP: CDI beginners often expect that this will work if you create an instance manually: `new MyService()`.
+That is not the case.
+You have to let the CDI container construct an instance for you and inject it: `@Inject MyService service`.
+What you get injected is actually a proxy that implements the additional behaviors.
+
+The fault tolerance strategies present in {microprofile-fault-tolerance}, together with the corresponding annotations, are:
+
+* `@Asynchronous`: offload method execution to another thread
+* `@Bulkhead`: limit concurrent invocations
+* `@CircuitBreaker`: prevent invocations if previous invocations failed too often
+* `@Fallback`: provide alternative result in case of a failure
+* `@Retry`: retry several times in case of a failure
+* `@Timeout`: fail if the invocation takes too long
+
+{smallrye-fault-tolerance} adds some more fault tolerance strategies and annotations:
+
+* `@ApplyFaultTolerance`: apply a programmatically-defined guard
+* `@AsynchronousNonBlocking`: apply asynchronous fault tolerance without offloading method execution to another thread
+* `@RateLimit`: limit rate of method invocations
+
+These are all described in the corresponding how-to and reference guides.
+The {microprofile-fault-tolerance} features are also described in the {microprofile-fault-tolerance-url}[specification].
+
+== Configuration
+
+The fault tolerance strategies can be configured using annotations, such as:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry(maxRetries = 10, retryOn = IOException.class) // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+
+<1> Retries will only be attempted if the thrown exception was `IOException`.
+Other exceptions will be rethrown directly.
+Also, the maximum number of retry attempts is changed to 10 (the default is 3).
+
+This is convenient, but changing such configuration requires recompilation.
+For that reason, configuration using MicroProfile Config is also possible.
+For example:
+
+[source,properties]
+----
+com.example.MyService/hello/Retry/maxRetries=5 <1>
+----
+<1> Even though the `@Retry` annotation says that `maxRetries` should be 10, this configuration takes precedence.
+The maximum number of retries will be 5.
+
+Since this example configuration does not modify the `retryOn` setting, the configuration provided in the annotation still applies.
+
+For more information about configuration, see xref:reference/config.adoc[the Configuration reference guide].

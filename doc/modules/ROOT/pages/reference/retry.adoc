@@ -1,0 +1,225 @@
+= Retry
+
+For introduction, see xref:howto/retry.adoc[How to Retry on Failures].
+
+== Description
+
+If a guarded method throws an exception, retry will swallow that exception and call the method again.
+
+More specifically:
+
+. If the guarded method returns normally, its return value is returned.
+. Otherwise, if the guarded method throws an exception whose type is assignable to any of the `abortOn` types (see <<abort-on,abortOn>>), retrying is aborted and the exception is rethrown.
+. Otherwise, if the guarded method throws an exception whose type is assignable to any of the `retryOn` types (see <<retry-on,retryOn>>), the method call is retried.
+. Otherwise, the exception is rethrown.
+
+[[configuration]]
+== Configuration
+
+There are 9 configuration options, corresponding to the 9 members of the `@Retry` annotation.
+
+=== `maxRetries`
+
+Type: `int`
+
+Default: `3`
+
+The maximum number of retries.
+`-1` means the maximum number of retries is unlimited.
+
+=== `delay` + `delayUnit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `0 millis`
+
+The delay between retry attempts.
+
+=== `maxDuration` + `durationUnit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `180_000 millis`, or 3 minutes
+
+The maximum duration for which retries will be attempted.
+
+:time-value-name: maxDuration
+:time-unit-bad-name: durationUnit
+:time-unit-good-name: maxDurationUnit
+include::partial$time-unit-inconsistency.adoc[]
+
+=== `jitter` + `jitterDelayUnit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `200 millis`
+
+The maximum jitter to adjust the delay between retries.
+If set, the delay before each retry attempt will be computed as follows:
+
+. Generate random number from the closed interval `[-jitter, jitter]`.
+. Add the generated random number to the configured `delay`.
+. If the result is by any chance negative, use `0`.
+
+:time-value-name: jitter
+:time-unit-bad-name: jitterDelayUnit
+:time-unit-good-name: jitterUnit
+include::partial$time-unit-inconsistency.adoc[]
+
+[[retry-on]]
+=== `retryOn`
+
+Type: `Class<? extends Throwable>[]`
+
+Default: `{Exception.class}`
+
+Set of exception types that trigger a retry.
+
+[[abort-on]]
+=== `abortOn`
+
+Type: `Class<? extends Throwable>[]`
+
+Default: `{}`
+
+Set of exception types that abort retrying.
+This configuration takes precedence over `retryOn`.
+
+[[metrics]]
+== Metrics
+
+Rate limit exposes the following metrics:
+
+[cols="1,5"]
+|===
+| Name | `ft.retry.calls.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the retry logic was run. This will always be once per method call.
+| Tags
+a| * `method` - the fully qualified method name
+* `retried` = `[true\|false]` - whether any retries occurred
+* `retryResult` = `[valueReturned\|exceptionNotRetryable\|maxRetriesReached\|maxDurationReached]` - the reason that last attempt to call the method was not retried
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.retry.retries.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the method was retried
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
+
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@Retry`, the fallback method or handler may be invoked if all retry attempts failed, depending on the fallback configuration.
+
+== Extra Features
+
+=== Backoff Strategies for `@Retry`
+
+include::partial$srye-feature.adoc[]
+
+When retrying failed operations, it is often useful to make a delay between retry attempts.
+This delay is also called "backoff".
+The `@Retry` annotation in {microprofile-fault-tolerance} supports a single backoff strategy: constant.
+That is, the delay between all retry attempts is identical (except for a random jitter).
+
+{smallrye-fault-tolerance} offers 3 annotations to specify a different backoff strategy:
+
+* `@ExponentialBackoff`
+* `@FibonacciBackoff`
+* `@CustomBackoff`
+
+One of these annotations may be present on any program element (method or class) that also has the `@Retry` annotation.
+For example:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @ExponentialBackoff
+    public void hello() {
+        ...
+    }
+}
+----
+
+It is an error to add a backoff annotation to a program element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@ExponentialBackoff` on a method).
+It is also an error to add more than one of these annotations to the same program element.
+
+When any one of these annotations is present, it modifies the behavior specified by the `@Retry` annotation.
+The new behavior is as follows:
+
+For `@ExponentialBackoff`, the delays between retry attempts grow exponentially, using a defined `factor`.
+By default, the `factor` is 2, so each delay is 2 * the previous delay.
+For example, if the initial delay (specified by `@Retry`) is 1 second, then the second delay is 2 seconds, third delay is 4 seconds, fourth delay is 8 seconds etc.
+It is possible to define a `maxDelay`, so that this growth has a limit.
+
+For `@FibonacciBackoff`, the delays between retry attempts grow per the Fibonacci sequence.
+For example, if the initial delay (specified by `@Retry`) is 1 second, then the second delay is 2 seconds, third delay is 3 seconds, fourth delay is 5 seconds etc.
+It is possible to define a `maxDelay`, so that this growth has a limit.
+
+Both `@ExponentialBackoff` and `@FibonacciBackoff` also apply jitter, exactly like plain `@Retry`.
+
+Also, since `@Retry` has a default `maxDuration` of 3 minutes and default `maxRetries` of 3, both `@ExponentialBackoff` and `@FibonacciBackoff` define a `maxDelay` of 1 minute.
+If we redefine `maxRetries` to a much higher value, and the guarded method keeps failing, the delay would eventually become higher than 1 minute.
+In that case, it will be limited to 1 minute.
+Of course, `maxDelay` can be configured.
+If set to `0`, there's no limit, and the delays will grow without bounds.
+
+For `@CustomBackoff`, computing the delays between retry attempts is delegated to a specified implementation of `CustomBackoffStrategy`.
+This is an advanced option.
+
+For more information about these backoff strategies, see the javadoc of the annotations.
+
+[[inspecting-exception-cause-chains]]
+=== Inspecting Exception Cause Chains
+
+include::partial$srye-feature.adoc[]
+
+include::partial$non-compat.adoc[]
+
+The `@Retry` annotation can specify that certain exceptions should be treated as failures (`retryOn`) and others as successes (`abortOn`).
+The specification limits this to inspecting the actual exception that was thrown.
+However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+
+For that reason, in the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
+To be specific, in case a `@Retry` method throws an exception, the decision process is:
+
+1. If the exception is assignable to one of the `abortOn` exceptions, retry is aborted and the exception is rethrown.
+2. Otherwise, if the exception is assignable to one of the `retryOn` exceptions, retry is attempted.
+3. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `abortOn` exceptions, retry is aborted and the exception is rethrown.
+4. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `retryOn` exceptions, retry is attempted.
+5. Otherwise, the exception is rethrown.
+
+For example, say we have this method:
+
+[source,java]
+----
+@Retry(maxRetries = 5,
+    abortOn = ExpectedOutcomeException.class,
+    retryOn = IOException.class)
+public Result doSomething() {
+    ...
+}
+----
+
+If `doSomething` throws an `ExpectedOutcomeException`, retry is aborted and the exception is thrown.
+If `doSomething` throws an `IOException`, retry is attempted.
+If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, retry is aborted and the exception is thrown.
+If `doSomething` throws a `WrapperException` whose cause is `IOException`, retry is attempted.
+
+Comparing with the `@Retry` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
+Note that these steps are executed if and only if the thrown exception matches neither `abortOn` nor `retryOn`.
+If the thrown exception matches either of them, the cause chain is not inspected at all.

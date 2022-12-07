@@ -1,0 +1,31 @@
+= How to Retry on Failures
+
+If an operation fails, it is possible to _retry_ the operation in case the failure was just a temporary glitch.
+
+CAUTION: In case an operation fails due to the target system being overloaded, retrying will likely make the overload situation even worse.
+Use sparingly, preferably with a xref:howto/bulkhead.adoc[concurrency limit] or a xref:howto/circuit-breaker.adoc[circuit breaker].
+
+== `@Retry`
+
+The `@Retry` annotation specifies that a method should be called again in case a previous execution thrown an exception.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> Declares that if `hello()` throws an exception, the exception is swallowed and `hello()` is called again.
+Since there is no configuration, at most 3 retry attempts will be done before rethrowing the exception.
+
+It is possible to specify the maximum number of retry attempts, as well as the maximum duration for which retries should be attempted.
+Further, it is possible to specify some delay between retry attempts, together with random jitter.
+Finally, it is possible to specify that calls should be retried only for certain exception types or that retrying should be aborted for certain exception types.
+
+== Links
+
+For more information, see xref:reference/retry.adoc[the Retry reference guide].

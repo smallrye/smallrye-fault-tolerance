@@ -1,0 +1,157 @@
+= Configuration
+
+The fault tolerance strategies are primarily configured using annotations.
+This is convenient, but changing such configuration requires recompilation.
+For that reason, configuration using MicroProfile Config is also possible.
+
+NOTE: The configuration system of {microprofile-fault-tolerance}, as described in this guide, also applies to annotations defined by {smallrye-fault-tolerance}.
+
+== Annotation on Method
+
+The annotation may be present on a method:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry(maxRetries = 10, retryOn = IOException.class) // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+
+<1> Retries will only be attempted if the thrown exception was `IOException`.
+Other exceptions will be rethrown directly.
+Also, the maximum number of retry attempts is changed to 10 (the default is 3).
+
+To change the `maxRetries` property using MicroProfile Config, set:
+
+[source,properties]
+----
+com.example.MyService/hello/Retry/maxRetries=5
+----
+
+== Annotation on Class
+
+The annotation may be present on a class, in which case it applies to all business method in the class:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+@Retry(maxRetries = 10, retryOn = IOException.class) // <1>
+public class MyService {
+    public String hello() {
+        ...
+    }
+}
+----
+<1> The `hello()` method will use the `@Retry` strategy, as configured in this annotation.
+
+A class-level annotation may be overridden by explicitly annotating a method.
+
+The MicroProfile Config configuration property doesn't include the method name in this case:
+
+[source,properties]
+----
+com.example.MyService/Retry/maxRetries=5
+----
+
+[IMPORTANT]
+====
+Attempting to configure some property for a method or a class which does not have the annotation has no effect.
+
+* If the annotation is present on a method, the configuration property must target the method.
+* If the annotation is present on a class, the configuration property must target the class.
+====
+
+== Global Configuration
+
+It is also possible to reconfigure some property for all annotations in the application.
+For example:
+
+[source,properties]
+----
+Retry/maxRetries=5
+----
+
+All `@Retry` annotations in the application will be considered to have `maxRetries` set to `5`.
+
+== Configuration Priority
+
+The most specific configuration has priority over more general configuration.
+
+For example:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+@Retry(maxRetries = 5)
+public class MyService {
+    public String simpleHello() {
+        ...
+    }
+
+    @Retry(maxRetries = 10)
+    public String complexHello() {
+        ...
+    }
+}
+----
+
+The following configuration:
+
+[source,properties]
+----
+Retry/maxRetries=30
+com.example.MyService/Retry/maxRetries=15
+com.example.MyService/complexHello/Retry/maxRetries=20
+----
+
+Has the following effects:
+
+* `MyService.complexHello()` has `maxRetries` set to `20`.
+* `MyService.simpleHello()` has `maxRetries` set to `15`.
+* Other `@Retry` methods in the application have `maxRetries` set to `30`.
+
+== Disabling Fault Tolerance
+
+It is possible to disable certain fault tolerance annotation on some method, if the annotation is present on the method:
+
+[source,properties]
+----
+com.example.MyService/hello/Retry/enabled=false
+----
+
+Or on some class, if the annotation is present on the class:
+
+[source,properties]
+----
+com.example.MyService/Retry/enabled=false
+----
+
+Or globally:
+
+[source,properties]
+----
+Retry/enabled=false
+----
+
+It is also possible to disable all fault tolerance completely:
+
+[source,properties]
+----
+MP_Fault_Tolerance_NonFallback_Enabled=false
+----
+
+This will leave only fallbacks enabled, all other annotations will be disabled.
+
+== Links
+
+This is described in detail in the {microprofile-fault-tolerance-url}#configuration[{microprofile-fault-tolerance} specification].

@@ -1,6 +1,6 @@
 = Kotlin Integration Concerns
 
-This page describes integration concerns for xref:usage/extra.adoc#kotlin-suspend-functions[Kotlin `suspend` functions].
+This page describes integration concerns for xref:reference/asynchronous.adoc#kotlin-suspend-functions[Kotlin `suspend` functions].
 
 To enable support of Kotlin suspending functions, it is required that the support library is present.
 Its coordinates are: `io.smallrye:smallrye-fault-tolerance-kotlin`.

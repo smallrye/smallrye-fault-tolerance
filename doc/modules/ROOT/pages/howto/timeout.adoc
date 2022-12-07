@@ -1,0 +1,26 @@
+= How to Watch for Timeouts
+
+It is possible to prevent an operation from taking too long using a _timeout_.
+
+== `@Timeout`
+
+The `@Timeout` annotation specifies that all calls of the method should fail if they take too long.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Timeout // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> Declares that `hello()` must not take too long.
+Since there is no configuration, the default is at most 1 second.
+
+If the method call takes too long, the caller will get a `TimeoutException` instead.
+
+== Links
+
+For more information, see xref:reference/timeout.adoc[the Timeout reference guide].

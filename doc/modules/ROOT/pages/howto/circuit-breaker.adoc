@@ -1,0 +1,31 @@
+= How to Fail Fast on Recurring Failures
+
+If an operation fails too often, it is possible to prevent executing that operation and fail fast using a _circuit breaker_.
+
+The circuit breaker starts _closed_, in which state it allows all invocations to proceed.
+If too many invocations fail, the circuit breaker moves to _open_, in which state it prevents all invocations and fails fast.
+After some time in _open_, the circuit breaker moves to _half-open_, in which state it determines whether it should continue failing fast (and move back to _open_) or allow invocations again (and move to _closed_).
+
+== `@CircuitBreaker`
+
+The `@CircuitBreaker` annotation specifies that method invocations should be prevented if the method failed too often recently.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @CircuitBreaker // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> Declares that `hello()` must be guarded with a circuit breaker.
+
+If some callers attempt to invoke the method when the circuit breaker is _open_, they will fail with `CircuitBreakerOpenException`.
+
+It is possible to configure the number of recent invocations the circuit breaker should track, the failure rate, and so on.
+
+== Links
+
+For more information, see xref:reference/circuit-breaker.adoc[the Circuit Breaker reference guide].

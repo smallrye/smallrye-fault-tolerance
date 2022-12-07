@@ -1,5 +1,7 @@
 = Programmatic API
 
+include::partial$srye-feature.adoc[]
+
 In addition to the declarative, annotation-based API of {microprofile-fault-tolerance}, {smallrye-fault-tolerance} also offers a programmatic API for advanced scenarios.
 This API is present in the `io.smallrye:smallrye-fault-tolerance-api` artifact, just like all other additional APIs {smallrye-fault-tolerance} provides.
 
@@ -179,7 +181,7 @@ public class MyService {
 This style of usage still creates a `FaultTolerance` instance first.
 If that is not necessary, you can create a `Callable`, `Supplier` or `Runnable` directly:
 
-[source, java]
+[source,java]
 ----
 public class MyService {
     private static final Callable<String> guard = FaultTolerance.createCallable(() -> externalService.hello()) // <1>
@@ -293,7 +295,7 @@ Which one do you want to call depends on the type used to represent the action.
 == Mutiny Support
 
 In addition to the `FaultTolerance` interface, which provides support for guarding synchronous actions and asynchronous actions using `CompletionStage`, there's a special programmatic API entrypoint for asynchronous actions using the Mutiny library.
-It is enough to include the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny`, as described in xref:usage/extra.adoc#async-types[Additional Asynchronous Types].
+It is enough to include the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny`, as described in xref:reference/asynchronous.adoc#async-types[Additional Asynchronous Types].
 
 This entrypoint is called `MutinyFaultTolerance` and it includes static factory methods for creating a `Callable<Uni<T>>`, `Supplier<Uni<T>` and `FaultTolerance<Uni<T>>`.
 Guarding a `Multi` is not supported.
@@ -301,7 +303,7 @@ Guarding a `Multi` is not supported.
 These factory methods return the common fault tolerance builder, which is supposed to be used just like the builder used when guarding an async action of type `CompletionStage<T>`.
 For example:
 
-[source, java]
+[source,java]
 ----
 public class MyService {
     private final Supplier<Uni<String>> guard = MutinyFaultTolerance.createSupplier(() -> externalService.hello()) // <1>
@@ -325,10 +327,12 @@ In Quarkus, the Mutiny support library is present by default.
 You can use `MutinyFaultTolerance` out of the box.
 ****
 
-== Configuration and Metrics
+== Configuration
 
 As mentioned above, with the single exception of `MP_Fault_Tolerance_NonFallback_Enabled`, there is no external configuration support.
 This may change in the future, though possibly only in the CDI implementation.
+
+== Metrics
 
 At the moment, the programmatic API of {smallrye-fault-tolerance} is not integrated with metrics.
 This will change in the future, though possibly only in the CDI implementation.
