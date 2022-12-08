@@ -43,7 +43,7 @@
         <version.micrometer-core>1.10.2</version.micrometer-core>
         <version.microprofile-fault-tolerance>3.0</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>2.0</version.microprofile-config-api>
-        <version.microprofile-metrics-api>3.0</version.microprofile-metrics-api>
+        <version.microprofile-metrics-api>5.0.0</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.2</version.microprofile-context-propagation-api>
         <!-- smallrye-config is purely used for testing -->
         <version.smallrye-config>2.12.0</version.smallrye-config>
