@@ -1,0 +1,60 @@
+= How to Supply Fallback Values
+
+If an operation fails, it is often possible to replace the failure with an alternative result: a _fallback_.
+
+== `@Fallback`
+
+=== Using a Fallback Method
+
+The `@Fallback` annotation allows specifying a method that should be called in case an exception is thrown.
+The fallback method must have the same parameter types as the guarded method, and must return a type that is assignable to the guarded method's return type.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(fallbackMethod = "fallback") // <1>
+    public String hello() {
+        ...
+    }
+
+    private String fallback() {
+        return "fallback";
+    }
+}
+----
+<1> Declares that if `hello()` throws an exception, the `fallback()` method is called and its result is returned instead.
+
+In this particular case, if `hello()` throws an exception, that exception is swallowed and the string `"fallback"` is returned.
+It is possible to specify that fallback should only apply to certain exception types or that it should be skipped for certain exception types.
+
+=== Using a Fallback Handler
+
+Alternatively, the `@Fallback` annotation allows specifying a fallback handler that should be called.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Fallback(MyFallback.class) // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> Declares that if `hello()` throws an exception, the `MyFallback` handler is used to obtain a fallback value.
+
+[source,java]
+----
+public class MyFallback implements FallbackHandler<String> { // <1>
+    String handle(ExecutionContext context) { // <2>
+        return "fallback";
+    }
+}
+----
+<1> A fallback handler must implement the `FallbackHandler` interface.
+<2> The `ExecutionContext` provides access to the guarded method, its parameter values, and the thrown exception.
+
+== Links
+
+For more information, see xref:reference/fallback.adoc[the Fallback reference guide].

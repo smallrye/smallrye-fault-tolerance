@@ -1,0 +1,275 @@
+= Circuit Breaker
+
+For introduction, see xref:howto/circuit-breaker.adoc[How to Fail Fast on Recurring Failures].
+
+== Description
+
+The circuit breaker is a simple state machine:
+
+[mermaid,circuit-breaker,svg]
+----
+stateDiagram-v2
+    CLOSED: [CLOSED] Allow invocations and track the number of successes and failures
+    OPEN: [OPEN] Fail fast, prevent all invocations
+    HALF_OPEN: [HALF-OPEN] Allow some probe invocations to proceed
+
+    [*] --> CLOSED
+    CLOSED --> OPEN: Recent invocations failed too often
+    OPEN --> HALF_OPEN: After some time, determine if \n failing fast is still appropriate
+    HALF_OPEN --> CLOSED: All probe invocations succeeded
+    HALF_OPEN --> OPEN: Some probe invocations failed
+----
+
+The circuit breaker starts _closed_.
+In this state, the circuit breaker maintains a rolling window of recent invocations.
+For each invocation, the rolling window tracks whether it finished successfully or failed.
+
+The rolling window must be full to take any state transition decision.
+For example, if the rolling window has size 10, a closed circuit breaker always allows at least 10 invocations.
+
+If the rolling window contains a number of failures higher than the configured ratio, a closed circuit breaker moves to _open_.
+When the circuit breaker is open, invocations are not allowed to proceed.
+Instead, the circuit breaker fails fast and throws `CircuitBreakerOpenException`.
+
+For example, if the rolling window has size 10 and the failure rate is 0.5, it means that 5 invocations out of the most recent 10 invocations must fail for the circuit breaker to move to _open_.
+
+After some time, an open circuit breaker moves to _half-open_ to determine whether failing fast is still appropriate.
+A half-open circuit breaker allows some configured number of probe attempts to proceed.
+If all of them succeed, the circuit breaker moves to _closed_ and invocations are allowed again.
+If some probe invocations fail, the circuit breaker moves back to _open_ and invocations are prevented.
+
+Successes and failures are determined from the method result.
+More specifically:
+
+. If the guarded method returns normally, it is treated as success.
+. Otherwise, if the guarded method throws an exception whose type is assignable to any of the `skipOn` types (see <<skip-on,skipOn>>), it is treated as success.
+. Otherwise, if the guarded method throws an exception whose type is assignable to any of the `failOn` types (see <<fail-on,failOn>>), it is treated as failure.
+. Otherwise, it is treated as success.
+
+=== Lifecycle
+
+Circuit breaker needs to maintain some state between invocations: the number of recent successful invocations, the number of recent failed invocations, and so on.
+This state is a singleton, irrespective of the lifecycle of the bean that uses the `@CircuitBreaker` annotation.
+
+More specifically, the circuit breaker state is uniquely identified by the combination of the bean class (`java.lang.Class`) and the method object (`java.lang.reflect.Method`) representing the guarded method.
+
+For example, if there’s a guarded method `doWork` on a bean which is `@RequestScoped`, each request will have its own instance of the bean, but all invocations of `doWork` will share the same circuit breaker state.
+
+[[configuration]]
+== Configuration
+
+There are 7 configuration options, corresponding to the 7 members of the `@CircuitBreaker` annotation.
+
+=== `requestVolumeThreshold`
+
+Type: `int`
+
+Default: `20`
+
+The size of the rolling window.
+That is, the number of recent consecutive invocations tracked by a _closed_ circuit breaker.
+
+=== `failureRatio`
+
+Type: `double`
+
+Default: `0.5`
+
+The ratio of failures in the rolling window that causes a _closed_ circuit breaker to move to _open_.
+
+=== `delay` + `delayUnit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `5000 millis`, or 5 seconds
+
+The delay after which an _open_ circuit breaker moves to _half-open_.
+
+=== `successThreshold`
+
+Type: `int`
+
+Default: `1`
+
+The number of probe invocations allowed when the circuit breaker is _half-open_.
+If they all succeed, the circuit breaker moves to _closed_, otherwise it moves back to _open_.
+
+[[fail-on]]
+=== `failOn`
+
+Type: `Class<? extends Throwable>[]`
+
+Default: `{Throwable.class}`
+
+Set of exception types that the circuit breaker considers failures.
+
+[[skip-on]]
+=== `skipOn`
+
+Type: `Class<? extends Throwable>[]`
+
+Default: `{}`
+
+Set of exception types that the circuit breaker considers success.
+This configuration takes precedence over `failOn`.
+
+[[metrics]]
+== Metrics
+
+Circuit breaker exposes the following metrics:
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.calls.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the circuit breaker logic was run. This is usually once per method call, but may be more than once if the method call is retried.
+| Tags
+a| * `method` - the fully qualified method name
+* `circuitBreakerResult` = `[success\|failure\|circuitBreakerOpen]` - the result of the method call, as considered by the circuit breaker
+** `success` - the method ran and was successful
+** `failure` - the method ran and failed
+** `circuitBreakerOpen` - the method did not run because the circuit breaker was in open or half-open state
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.state.total`
+| Type | `Gauge<Long>`
+| Unit | Nanoseconds
+| Description | Amount of time the circuit breaker has spent in each state
+| Tags
+a| * `method` - the fully qualified method name
+* `state` = `[open\|closed\|halfOpen]` - the circuit breaker state
+| Notes | Although this metric is a `Gauge`, its value increases monotonically.
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.opened.total`
+| Type | `Counter`
+| Unit | None
+| Description | Number of times the circuit breaker has moved from closed state to open state
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.state.current`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type | `Gauge<Long>` (`0` or `1`)
+| Unit | None
+| Description | Whether the circuit breaker is currently in given state (`1`) or not (`0`)
+| Tags
+a| * `method` - the fully qualified method name
+* `state` = `[open\|closed\|halfOpen]` - the circuit breaker state
+|===
+
+See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
+
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@CircuitBreaker`, the fallback method or handler may be invoked if a `CircuitBreakerOpenException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the circuit breaker as an independent invocation.
+If `CircuitBreakerOpenException` is thrown, the execution may be retried, depending on how retry is configured.
+
+== Extra Features
+
+=== Circuit Breaker Maintenance
+
+include::partial$srye-feature.adoc[]
+
+It is sometimes useful to see the circuit breaker status from within the application, or reset it to the initial state.
+This is possible in two steps:
+
+. Give the circuit breaker a name by annotating the guarded method with `@CircuitBreakerName`:
++
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @CircuitBreaker
+    @CircuitBreakerName("hello-cb") // <1>
+    public String hello() {
+        ...
+    }
+}
+----
++
+<1> The circuit breaker guarding the `MyService.hello` method is given a name `hello-cb`.
+. Inject `CircuitBreakerMaintenance` and call its methods:
++
+[source,java]
+----
+@ApplicationScoped
+public class Example {
+    @Inject
+    CircuitBreakerMaintenance maintenance;
+
+    public void test() {
+        System.out.println("Circuit breaker state: "
+            + maintenance.currentState("hello-cb")); // <1>
+        maintenance.resetAll(); // <2>
+    }
+}
+----
++
+<1> Obtains current circuit breaker state.
+<2> Resets all circuit breakers to the initial state.
+
+The `CircuitBreakerMaintenance` interface provides 4 methods:
+
+. `currentState(name)`: returns current state of given circuit breaker.
+The return type `CircuitBreakerState` is an `enum` with 3 values: `CLOSED`, `OPEN`, `HALF_OPEN`.
+. `onStateChange(name, callback)`: registers a callback that will be called when given circuit breaker changes state.
+. `reset(name)`: resets given circuit breaker to the initial state.
+. `resetAll()`: resets all circuit breakers in the application to the initial state.
+
+See the javadoc of those methods for more information.
+
+[[inspecting-exception-cause-chains]]
+=== Inspecting Exception Cause Chains
+
+include::partial$srye-feature.adoc[]
+
+include::partial$non-compat.adoc[]
+
+The `@CircuitBreaker` annotation can specify that certain exceptions should be treated as failures (`failOn`) and others as successes (`skipOn`).
+The specification limits this to inspecting the actual exception that was thrown.
+However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+
+For that reason, in the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
+To be specific, in case a `@CircuitBreaker` method throws an exception, the decision process is:
+
+1. If the exception is assignable to one of the `skipOn` exceptions, the circuit breaker treats it as a success.
+2. Otherwise, if the exception is assignable to one of the `failOn` exceptions, the circuit breaker treats it as a failure.
+3. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `skipOn` exceptions, the circuit breaker treats it as a success.
+4. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `failOn` exceptions, the circuit breaker treats it as a failure.
+5. Otherwise, the exception is treated as a success.
+
+For example, say we have this method:
+
+[source,java]
+----
+@CircuitBreaker(requestVolumeThreshold = 10,
+    skipOn = ExpectedOutcomeException.class,
+    failOn = IOException.class)
+public Result doSomething() {
+    ...
+}
+----
+
+If `doSomething` throws an `ExpectedOutcomeException`, the circuit breaker treats it as a success.
+If `doSomething` throws an `IOException`, the circuit breaker treats it as a failure.
+If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, the circuit breaker treats it as a success.
+If `doSomething` throws a `WrapperException` whose cause is `IOException`, the circuit breaker treats it as a failure.
+
+Comparing with the `@CircuitBreaker` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
+Note that these steps are executed if and only if the thrown exception matches neither `failOn` nor `skipOn`.
+If the thrown exception matches either of them, the cause chain is not inspected at all.

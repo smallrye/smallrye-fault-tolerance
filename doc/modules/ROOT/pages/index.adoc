@@ -1,12 +1,77 @@
 [[index]]
 = {smallrye-fault-tolerance} Documentation
 
-{smallrye-fault-tolerance} {smallrye-fault-tolerance-version} is an implementation of https://github.com/eclipse/microprofile-fault-tolerance/[Eclipse {microprofile-fault-tolerance}] {microprofile-fault-tolerance-version}.
+{smallrye-fault-tolerance} {smallrye-fault-tolerance-version} is an implementation of https://github.com/eclipse/microprofile-fault-tolerance/[Eclipse {microprofile-fault-tolerance}] {microprofile-fault-tolerance-version} with additional features not defined by the specification.
 
-include::../nav.adoc[]
+It provides a declarative, annotation-based API for guarding method calls:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> If `hello()` throws an exception, the invocation will be retried several times, until the method returns a value.
+
+It also provides a programmatic API to build reusable guards:
+
+[source,java]
+----
+public class MyService {
+    private static final FaultTolerance<String> guard = FaultTolerance.<String>create()
+        .withFallback().handler(() -> "fallback").done() // <1>
+        .build();
+
+    public String hello() throws Exception {
+        return guard.call(() -> externalService.hello()); // <2>
+    }
+}
+----
+<1> If the guarded call throws an exception, the fallback value will be returned instead.
+<2> The guarded call simply invokes some external service.
+
+CAUTION: The fault tolerance strategies provided by {smallrye-fault-tolerance} are best suited for guarding network interactions.
+To handle ordinary exceptions, it is typically best to use the plain old `try` / `catch` / `finally` blocks.
+Using {smallrye-fault-tolerance} as a replacement of exception handling is often a bad idea.
+
+NOTE: Some additional features may have experimental status, marked by the `@Experimental` annotation.
+The programmatic API to build reusable guards, as mentioned above, is one example, but there are more.
+
+== Runtimes
 
 Runtimes that currently use {smallrye-fault-tolerance} include:
 
 * https://quarkus.io/[Quarkus]
 * https://wildfly.org/[WildFly]
-* https://thorntail.io/[Thorntail]
+
+== Navigation
+
+This documentation site has several sections, as you can see in the menu.
+
+=== How-to Guides
+
+How-tos are task-oriented guides that let you quickly start using some feature.
+They provide a short overview, but not many details.
+
+TIP: If you're just starting with {smallrye-fault-tolerance}, start with the how-tos.
+
+=== References
+
+References are detailed guides that let you understand some feature in depth.
+They also provide information about more advanced options or features.
+
+TIP: If the how-to guide doesn't answer a question you have, the reference guide should.
+
+=== Integration
+
+The articles here address concerns that runtimes integrating {smallrye-fault-tolerance} might have.
+Useful for people who maintain {smallrye-fault-tolerance} integration into some bigger framework or platform, but not required for application developers.
+
+=== Internals
+
+A few random articles that describe some parts of the {smallrye-fault-tolerance} code base.
+Useful for prospective contributors or generally curious users, but not required for application developers.

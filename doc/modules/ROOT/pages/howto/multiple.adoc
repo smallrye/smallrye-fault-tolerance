@@ -1,0 +1,56 @@
+= How to Use Multiple Strategies
+
+It is possible to use multiple fault tolerance strategies to guard a single method.
+For example, it is possible to use fallback together with retry and timeout:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry(maxRetries = 5)
+    @Fallback(fallbackMethod = "fallback")
+    @Timeout
+    public String hello() {
+        ...
+    }
+
+    public String fallback() {
+        return "fallback";
+    }
+}
+----
+
+In such case, the fault tolerance strategies are nested in a pre-defined order:
+
+[source]
+----
+Fallback(
+    Retry(
+        CircuitBreaker(
+            RateLimit(
+                Timeout(
+                    Bulkhead(
+                        ... the guarded method ...
+                    )
+                )
+            )
+        )
+    )
+)
+----
+
+In the previous example, this means that timeout is nested inside retry, which in turn is nested inside fallback.
+If the method times out (the default timeout is 1 second), it is retried (up to 5 times).
+If no attempt succeeds, fallback is used.
+
+== Links
+
+Reference guides for all fault tolerance strategies explain in detail how they interact with one another:
+
+* xref:reference/asynchronous.adoc#interactions[@Asynchronous and @AsynchronousNonBlocking]
+* xref:reference/bulkhead.adoc#interactions[@Bulkhead]
+* xref:reference/circuit-breaker.adoc#interactions[@CircuitBreaker]
+* xref:reference/fallback.adoc#interactions[@Fallback]
+* xref:reference/rate-limit.adoc#interactions[@RateLimit]
+* xref:reference/retry.adoc#interactions[@Retry]
+* xref:reference/timeout.adoc#interactions[@Timeout]

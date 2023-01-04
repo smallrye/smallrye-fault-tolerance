@@ -1,0 +1,273 @@
+= Asynchronous Execution
+
+For introduction, see xref:howto/asynchronous.adoc[How to Guard Asynchronous Methods].
+The how-to guide also explains what _asynchronous fault tolerance_ is and when does it apply.
+
+== Description
+
+=== `@Asynchronous`
+
+This annotation may only be placed on methods that return `Future` or `CompletionStage`.
+It may also be placed on a class, in which case all business methods must return `Future` or `CompletionStage`.
+
+The method call is offloaded to another thread.
+The thread pool that is used for offloading method calls is provided by the runtime that integrates {smallrye-fault-tolerance}.
+
+=== `@AsynchronousNonBlocking`
+
+include::partial$srye-feature.adoc[]
+
+In addition to the {microprofile-fault-tolerance} `@Asynchronous` annotation, {smallrye-fault-tolerance} offers an annotation for asynchronous non-blocking processing: `@AsynchronousNonBlocking`.
+
+This annotation may only be placed on methods that return `CompletionStage`, because the `Future` type cannot really be used for non-blocking processing.
+It may also be placed on a class, in which case all business methods must return `CompletionStage`.
+
+As opposed to `@Asynchronous`, the `@AsynchronousNonBlocking` annotation does _not_ offload the method execution to another thread.
+The method is allowed to proceed on the original thread, assuming that it returns quickly and all processing it does is performed in a non-blocking way.
+
+=== `@Asynchronous` and `@AsynchronousNonBlocking` Compared
+
+|===
+|Annotation |Method return type |Execution
+
+|`@Asynchronous`
+|`Future` or `CompletionStage`
+|offloaded to a thread pool
+
+|`@AsynchronousNonBlocking`
+|`CompletionStage`
+|proceeds on the original thread
+|===
+
+=== `@Asynchronous` and `@AsynchronousNonBlocking` Combined
+
+When these annotations are combined, an annotation on a method has priority over an annotation on a class.
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+@Asynchronous
+public class MyService {
+    @Retry
+    CompletionStage<String> hello() { // <1>
+        ...
+    }
+
+    @Retry
+    @AsynchronousNonBlocking
+    CompletionStage<String> helloBlocking() { // <2>
+        ...
+    }
+}
+----
+
+<1> Treated as `@Asynchronous`, based on the class annotation.
+<2> Treated as `@AsynchronousNonBlocking`, the method annotation has priority over the class annotation.
+
+It is an error to put both `@Asynchronous` and `@AsynchronousNonBlocking` on the same program element.
+
+[[recommendation]]
+=== Recommendation
+
+Use the <<method-asynchrony,non-compatible mode>>.
+In this mode, methods returning `CompletionStage` are automatically treated as if they were `@AsynchronousNonBlocking`.
+Use `@Asynchronous` to mark blocking methods for thread offload.
+
+If you can't use the non-compatible mode, use `@AsynchronousNonBlocking` or `@Asynchronous` to mark all asynchronous methods.
+
+IMPORTANT: In previous releases, {smallrye-fault-tolerance} recommended to use the `@Blocking` and `@NonBlocking` annotations.
+Using these annotations *for fault tolerance purposes* is now deprecated.
+They are still supported, but at some point, {smallrye-fault-tolerance} will stop recognizing them.
+
+We also recommend avoiding `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
+
+[[configuration]]
+== Configuration
+
+There is no configuration for `@Asynchronous` or `@AsynchronousNonBlocking`.
+
+[[metrics]]
+== Metrics
+
+Asynchronous execution does not emit any metrics.
+
+See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
+
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+=== `@Asynchronous`
+
+`@Asynchronous` does not interact with other fault tolerance strategies, with the obvious exception that it moves execution to another thread.
+
+=== `@AsynchronousNonBlocking`
+
+If the guarded method uses `@Retry` and some delay between retries is configured, only the initial execution is guaranteed to occur on the original thread.
+Subsequent attempts may be offloaded to an extra thread, so that the original thread is not blocked on the delay.
+
+If the guarded method uses `@Bulkhead`, the execution is _not_ guaranteed to occur on the original thread.
+If the execution has to wait in the bulkhead queue, it may later end up on a different thread.
+
+If the original thread is an event loop thread and event loop integration is enabled, then the event loop is always used to execute the guarded method.
+In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
+
+== Extra Features
+
+[[async-types]]
+=== Additional Asynchronous Types
+
+include::partial$srye-feature.adoc[]
+
+{microprofile-fault-tolerance} supports asynchronous fault tolerance for methods that return `CompletionStage`.
+(The `Future` type is not truly asynchronous, so we won't take it into account here.)
+{smallrye-fault-tolerance} adds support for additional asynchronous types:
+
+* Mutiny: `Uni`
+* RxJava 3: `Single`, `Maybe`, `Completable`
+
+These types are treated just like `CompletionStage`, so everything that works for `CompletionStage` works for these types as well.
+Stream-like types (`Multi`, `Observable`, `Flowable`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @AsynchronousNonBlocking // <1>
+    Uni<String> hello() { // <2>
+        ...
+    }
+}
+----
+
+<1> Using the `@AsynchronousNonBlocking` annotation, because the method doesn't block and offloading execution to another thread is not necessary.
+<2> Returning the `Uni` type from Mutiny.
+This shows that whatever works for `CompletionStage` also works for the other async types.
+
+The implementation internally converts the async types to a `CompletionStage` and back.
+This means that to be able to use any particular asynchronous type, the corresponding converter must be present.
+{smallrye-fault-tolerance} provides support libraries for popular asynchronous types, and these support libraries include the corresponding converters.
+
+It is possible that the runtime you use already provides the correct integration.
+Otherwise, add a dependency to your application:
+
+* https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye:smallrye-fault-tolerance-mutiny`
+* https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye:smallrye-fault-tolerance-rxjava3`
+
+.Quarkus
+****
+In Quarkus, the Mutiny support library is present by default.
+You can use fault tolerance on methods that return `Uni` out of the box.
+****
+
+[[kotlin-suspend-functions]]
+=== Kotlin `suspend` Functions
+
+include::partial$srye-feature.adoc[]
+
+{smallrye-fault-tolerance} includes support for Kotlin suspending functions.
+They are treated as <<async-types>>, even though the internal implementation is more complex than support for Mutiny or RxJava 3.
+
+For example:
+
+[source,kotlin]
+----
+@ApplicationScoped
+open class MyService {
+    @Retry(maxRetries = 2)
+    @Fallback(fallbackMethod = "helloFallback")
+    open suspend fun hello(): String { // <1>
+        delay(100)
+        throw IllegalArgumentException()
+    }
+
+    private suspend fun helloFallback(): String { // <2>
+        delay(100)
+        return "hello"
+    }
+}
+----
+
+<1> As a suspending function, this method can only be called from another suspending function.
+It will be guarded by the retry and fallback strategies, as defined using the annotations.
+<2> Similarly to fallback methods in Java, fallback methods in Kotlin must have the same signature as the guarded method.
+Since the guarded method is suspending, the fallback method must be suspending.
+
+As mentioned above, suspending functions are treated as async types.
+This means that for asynchronous fault tolerance to work correctly on suspending functions, they must be determined to be asynchronous.
+That happens automatically in the <<method-asynchrony,non-compatible mode>>, based on the method signature, but if you use strictly compatible mode, the `@Asynchronous` or `@AsynchronousNonBlocking` annotation must be present.
+It is expected that most users will use the Kotlin support in the non-compatible mode, so the example above does not include any such annotation.
+
+To be able to use this, a support library must be present.
+It is possible that the runtime you use already provides the correct integration.
+Otherwise, add a dependency to your application: `io.smallrye:smallrye-fault-tolerance-kotlin`.
+
+.Quarkus
+****
+In Quarkus, the Kotlin support library is present by default, if you use the Quarkus Kotlin support.
+You can declare fault tolerance annotations on suspending methods out of the box.
+****
+
+==== Programmatic API
+
+Suspending functions are currently only supported in the declarative, annotation-based API, as shown in the example above.
+The xref:reference/programmatic-api.adoc[Programmatic API] of {smallrye-fault-tolerance} does not support suspending functions, but other than that, it can of course be used from Kotlin through its Java interop.
+
+[[method-asynchrony]]
+=== Determining Asynchrony from Method Signature
+
+include::partial$srye-feature.adoc[]
+
+include::partial$non-compat.adoc[]
+
+In the non-compatible mode, method asynchrony is determined solely from its signature.
+That is, methods that
+
+* have some fault tolerance annotation (such as `@Retry`),
+* return `CompletionStage` (or some other <<async-types,async type>>),
+
+always have asynchronous fault tolerance applied.
+
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry
+    CompletionStage<String> hello() { // <1>
+        ...
+    }
+
+    @Retry
+    Uni<String> helloMutiny() { // <2>
+        ...
+    }
+
+    @Retry
+    @Asynchronous
+    CompletionStage<String> helloBlocking() { // <3>
+        ...
+    }
+}
+----
+
+<1> Executed on the original thread, because the method returns `CompletionStage`.
+It is as if the method was annotated `@AsynchronousNonBlocking`.
+<2> Executed on the original thread, because the method returns an <<async-types,async type>>.
+It is as if the method was annotated `@AsynchronousNonBlocking`.
+<3> The explicit `@Asynchronous` annotation is honored.
+The method is executed on a thread pool.
+
+Note that the existing annotations still work without a change, both in compatible and non-compatible mode.
+That is, if a method (or class) is annotated `@Asynchronous`, execution will be offloaded to a thread pool.
+If a method (or class) is annotated `@AsynchronousNonBlocking`, execution will happen on the original thread.
+
+Also note that this doesn't affect methods returning `Future`.
+You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool and are guarded properly.
+As mentioned in the <<recommendation>>, we discourage using these methods, because the only way to obtain the future value is blocking.

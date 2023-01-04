@@ -1,0 +1,31 @@
+= How to Limit Concurrency
+
+It is possible to prevent an operation from having too many concurrent executions using a _bulkhead_.
+
+NOTE: In general, the term _bulkhead_ refers to system compartmentalization, or the practice of preventing failures in one part of the system from spreading to other parts of the system.
+In {microprofile-fault-tolerance}, the term refers to one specific instance of the general idea: a _concurrency limiter_.
+
+== `@Bulkhead`
+
+The `@Bulkhead` annotation specifies that a concurrency limit should be enforced for all calls of the method.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Bulkhead // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> Declares that `hello()` must not have too many concurrent executions.
+Since there is no configuration, the default is at most 10 concurrent calls.
+
+If some callers attempt to invoke the method when the concurrency limit has already been reached, they will fail with `BulkheadException`.
+
+It is possible to specify the maximum allowed concurrency, as well as define a queue for excess invocations in case of xref:howto/asynchronous.adoc[asynchronous methods].
+
+== Links
+
+For more information, see xref:reference/bulkhead.adoc[the Bulkhead reference guide].

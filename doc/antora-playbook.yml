@@ -13,5 +13,8 @@ ui:
     url: https://github.com/smallrye/smallrye-antora-ui/blob/main/build/ui-bundle.zip?raw=true
     snapshot: true
 asciidoc:
+  extensions:
+  - asciidoctor-kroki
   attributes:
     page-pagination: ''
+    kroki-fetch-diagram: true

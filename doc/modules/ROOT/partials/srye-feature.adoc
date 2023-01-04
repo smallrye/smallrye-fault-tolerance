@@ -1,0 +1,1 @@
+IMPORTANT: This is an additional feature of {smallrye-fault-tolerance} and is not specified by {microprofile-fault-tolerance}.

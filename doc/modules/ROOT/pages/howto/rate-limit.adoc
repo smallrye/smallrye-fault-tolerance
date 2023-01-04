@@ -1,0 +1,31 @@
+= How to Limit Execution Rate
+
+include::partial$srye-feature.adoc[]
+
+It is possible to prevent an operation from being executed too often using a _rate limit_.
+
+== `@RateLimit`
+
+The `@RateLimit` annotation specifies that a rate limit should be enforced for all method calls.
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @RateLimit // <1>
+    public String hello() {
+        ...
+    }
+}
+----
+<1> Declares that `hello()` must not be called too often.
+Since there is no configuration, the default is at most 100 calls per 1 minute.
+
+If the method is called too often, excess attempts will fail with `RateLimitException`.
+
+It is possible to specify the maximum allowed rate of execution (the rate limit), together with minimum spacing between invocations.
+There are also several types of rate limiting to choose from.
+
+== Links
+
+For more information, see xref:reference/rate-limit.adoc[the Rate Limit reference guide].

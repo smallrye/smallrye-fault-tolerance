@@ -1,8 +1,6 @@
 = Configuration System
 
-WARNING: Please note that everything explained here is an implementation detail.
-API stability for these interfaces and classes is _not_ guaranteed!
-This documentation is only present to provide implementation insight for people who have to debug issues or want to contribute.
+include::partial$internals.adoc[]
 
 The xref:internals/core.adoc[core] fault tolerance strategies are configured simply by constructor parameters.
 This is fine, since they are an internal implementation detail.

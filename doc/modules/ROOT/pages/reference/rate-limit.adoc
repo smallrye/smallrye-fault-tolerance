@@ -1,0 +1,136 @@
+= Rate Limit
+
+For introduction, see xref:howto/rate-limit.adoc[How to Limit Execution Rate].
+
+include::partial$srye-feature.adoc[]
+
+== Description
+
+Rate limit enforces a maximum number of permitted invocations in a time window of some length.
+For example, with a rate limit, one can make sure that a method may only be called 50 times per minute.
+Invocations that would exceed the limit are rejected with an exception of type `RateLimitException`.
+
+Additionally, it is possible to define minimum spacing between invocations.
+For example, with minimum spacing of 1 second, if a second invocation happens 500 millis after the first, it is rejected even if the limit would not be exceeded yet.
+
+Rate limit is superficially similar to a bulkhead (concurrency limit), but is in fact quite different.
+Bulkhead limits the number of executions happening concurrently at any point in time.
+Rate limit limits the number of executions in a time window of some length, without considering concurrency.
+
+A method or a class can be annotated with `@RateLimit`, which means the method or the methods in the class will apply the rate limit strategy.
+The previous example with 50 maximum invocations per minute and minimum spacing of 1 second would look like this:
+
+[source,java]
+----
+@RateLimit(value = 50,
+        window = 1, windowUnit = ChronoUnit.MINUTES,
+        minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS)
+public void doSomething() {
+    ...
+}
+----
+
+=== Lifecycle
+
+Rate limit needs to maintain some state between invocations: the number of recent invocations, the time stamp of last invocation, and so on.
+This state is a singleton, irrespective of the lifecycle of the bean that uses the `@RateLimit` annotation.
+
+More specifically, the rate limit state is uniquely identified by the combination of the bean class (`java.lang.Class`) and the method object (`java.lang.reflect.Method`) representing the guarded method.
+
+For example, if there’s a guarded method `doWork` on a bean which is `@RequestScoped`, each request will have its own instance of the bean, but all invocations of `doWork` will share the same rate limit state.
+
+[[configuration]]
+== Configuration
+
+There are 6 configuration options, corresponding to the 6 members of the `@RateLimit` annotation.
+
+=== `value`
+
+Type: `int`
+
+Default: `100`
+
+The limit of maximum invocations to be permitted in the time window.
+
+=== `window` + `windowUnit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `1 second`
+
+The length of the time window.
+
+=== `minSpacing` + `minSpacingUnit`
+
+Type: `long` + `ChronoUnit`
+
+Default: `0 seconds`
+
+The minimum spacing between two consecutive invocations.
+
+=== `type`
+
+Type: `RateLimitType`
+
+Default: `RateLimitType.FIXED`
+
+The type of time window used for rate limiting.
+There are 3 types of time windows used for rate limiting: _fixed_, _rolling_ and _smooth_.
+
+Fixed time windows are a result of dividing time into non-overlapping intervals of given length.
+The invocation limit is enforced for each interval independently.
+This means that short bursts of invocations occuring near the time window boundaries may temporarily exceed the configured rate limit.
+This kind of rate limiting is also called _fixed window_ rate limiting.
+
+Rolling time windows enforce the limit continuously, instead of dividing time into independent intervals.
+The invocation limit is enforced for all possible time intervals of given length, regardless of overlap.
+This is more precise, but requires more memory and may be slower.
+This kind of rate limiting is also called _sliding log_ rate limiting.
+
+Smooth time windows enforce a uniform distribution of invocations under a rate calculated from given time window length and given limit.
+If recent rate of invocations is under the limit, a subsequent burst of invocations is allowed during a shorter time span, but the calculated rate is never exceeded.
+This kind of rate limiting is also called _token bucket_ or _leaky bucket (as a meter)_ rate limiting, with the additional property that all work units are considered to have the same size.
+
+Example usage:
+
+[source,java]
+----
+@RateLimit(value = 50,
+        window = 1, windowUnit = ChronoUnit.MINUTES,
+        minSpacing = 1, minSpacingUnit = ChronoUnit.SECONDS,
+        type = RateLimitType.ROLLING)
+public void doSomething() {
+    ...
+}
+----
+
+[[metrics]]
+== Metrics
+
+Rate limit exposes the following metrics:
+
+[cols="1,5"]
+|===
+| Name | `ft.ratelimit.calls.total`
+| Type | `Counter`
+| Unit | None
+| Description | The number of times the rate limit logic was run. This is usually once per method call, but may be zero times if the circuit breaker prevented execution or more than once if the method call was retried.
+| Tags
+a| * `method` - the fully qualified method name
+* `rateLimitResult` = `[permitted\|rejected]` - whether the rate limit permitted the method call
+|===
+
+See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
+
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@RateLimit`, the fallback method or handler may be invoked if a `RateLimitException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the rate limit as an independent invocation.
+If `RateLimitException` is thrown, the execution may be retried, depending on how retry is configured.
+
+If `@CircuitBreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
+If rate limiting results in `RateLimitException`, this may be counted as a failure, depending on how the circuit breaker is configured.

@@ -1,0 +1,100 @@
+= How to Guard Asynchronous Methods
+
+{smallrye-fault-tolerance} allows offloading method calls to another thread, as well as applying asynchronous fault tolerance.
+
+Asynchronous fault tolerance means guarding not just the synchronous method execution, but the entire asynchronous operation started by the method call, until the result is delivered.
+For example:
+
+[source,java]
+----
+CompletionStage<String> doSomething() {
+    return CompletableFuture.supplyAsync(() -> {
+        if (someCondition) {
+            return someValue;
+        } else {
+            throw someException;
+        }
+    });
+}
+----
+
+This method always returns a `CompletionStage` and it never throws an exception.
+However, if `someCondition` does not hold, the `CompletionStage` returned from the method will complete exceptionally.
+
+Ordinary (non-asynchronous) fault tolerance:
+
+* never considers this operation failing, because the method returns a value and does not throw an exception;
+* considers this operation finished when the method returns.
+
+Asynchronous fault tolerance, on the other hand:
+
+* defers its decision process to the moment when the returned `CompletionStage` completes,
+* and considers this operation running until that happens.
+
+As a special case, if an asynchronous method in fact does throw an exception (it typically shouldn't), it is treated as if it returned a `CompletionStage` that is already completed exceptionally with the thrown exception.
+
+== `@Asynchronous`
+
+A method that returns `Future` or `CompletionStage` may be annotated `@Asynchronous`.
+Such method is executed on another thread.
+Additionally, if the return type is `CompletionStage`, asynchronous fault tolerance applies.
+
+[NOTE]
+====
+Note that if an `@Asynchronous` method returns a `Future`, asynchronous fault tolerance does _not_ apply.
+Only the synchronous method execution is guarded.
+
+Asynchronous fault tolerance only applies if the `@Asynchronous` method returns `CompletionStage`.
+====
+
+Use `@Asynchronous` if the method has blocking logic, but you don’t want to block the caller thread.
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @Asynchronous // <1>
+    CompletionStage<String> hello() {
+        ... blocking IO here ...
+    }
+}
+----
+
+<1> Using the `@Asynchronous` annotation, because the method blocks, and it is necessary to offload its execution to another thread.
+
+== `@AsynchronousNonBlocking`
+
+include::partial$srye-feature.adoc[]
+
+A method that returns `CompletionStage` may be annotated `@AsynchronousNonBlocking`.
+In such case, the method is executed on the original thread, but asynchronous fault tolerance still applies.
+
+Use `@AsynchronousNonBlocking` if the method _does not_ have blocking logic, and you want the execution to stay on the caller thread.
+For example:
+
+[source,java]
+----
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @AsynchronousNonBlocking // <1>
+    CompletionStage<String> hello() {
+        ... non-blocking IO here ...
+    }
+}
+----
+
+<1> Using the `@AsynchronousNonBlocking` annotation, because the method does not block and offloading execution to another thread is not necessary.
+
+=== Non-compatible mode
+
+include::partial$non-compat.adoc[]
+
+In the non-compatible mode, the `@AsynchronousNonBlocking` annotation is not necessary.
+A method that returns `CompletionStage` and is not annotated `@Asynchronous` is automatically treated as `@AsynchronousNonBlocking`.
+
+== Links
+
+For more information, see xref:reference/asynchronous.adoc[the Asynchronous Execution reference guide].

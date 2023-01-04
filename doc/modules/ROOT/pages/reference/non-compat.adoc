@@ -1,0 +1,34 @@
+= Non-compatible Mode
+
+include::partial$srye-feature.adoc[]
+
+{smallrye-fault-tolerance} offers a mode where certain features are improved beyond specification, as described below.
+This mode is *not compatible* with the {microprofile-fault-tolerance} specification (and doesn't necessarily pass the entire TCK).
+
+This mode is disabled by default.
+To enable, set the configuration property `smallrye.faulttolerance.mp-compatibility` to `false`.
+
+.Quarkus
+****
+In Quarkus, the non-compatible mode is enabled by default.
+To restore compatibility, add the following to your `application.properties`:
+
+[source,properties]
+----
+smallrye.faulttolerance.mp-compatibility=true
+----
+
+Note that the non-compatible mode is available since {smallrye-fault-tolerance} 5.2.0 and Quarkus 2.1.0.Final.
+Previous versions are always compatible.
+****
+
+== Improvements
+
+The improvements enabled in the non-compatible mode are:
+
+* xref:reference/asynchronous.adoc#method-asynchrony[Determining asynchrony from method signatures]
+* Inspecting exception cause chains
+** in xref:reference/fallback.adoc#inspecting-exception-cause-chains[fallback]
+** in xref:reference/circuit-breaker.adoc#inspecting-exception-cause-chains[circuit breaker]
+** in xref:reference/retry.adoc#inspecting-exception-cause-chains[retry]
+* xref:reference/fallback.adoc#fallback-methods-with-exception-parameter[Fallback methods with exception parameter]
