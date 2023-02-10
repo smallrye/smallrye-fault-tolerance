@@ -4,7 +4,7 @@ import kotlinx.coroutines.delay
 import org.eclipse.microprofile.faulttolerance.Bulkhead
 import org.eclipse.microprofile.faulttolerance.Fallback
 import java.util.concurrent.atomic.AtomicInteger
-import javax.enterprise.context.ApplicationScoped
+import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
 open class MyService {

@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.circuitbreaker.timer.halfopen;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 

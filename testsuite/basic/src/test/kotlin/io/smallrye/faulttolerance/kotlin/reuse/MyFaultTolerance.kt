@@ -3,8 +3,8 @@ package io.smallrye.faulttolerance.kotlin.reuse
 import io.smallrye.common.annotation.Identifier
 import io.smallrye.faulttolerance.api.FaultTolerance
 import java.util.function.Supplier
-import javax.enterprise.context.ApplicationScoped
-import javax.enterprise.inject.Produces
+import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.inject.Produces
 
 @ApplicationScoped
 object MyFaultTolerance {

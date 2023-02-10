@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.metrics;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;

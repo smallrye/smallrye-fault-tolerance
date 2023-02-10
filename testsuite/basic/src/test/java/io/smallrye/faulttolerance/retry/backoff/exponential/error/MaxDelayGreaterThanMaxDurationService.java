@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.retry.backoff.exponential.error;
 
 import java.time.temporal.ChronoUnit;
 
-import javax.enterprise.context.Dependent;
+import jakarta.enterprise.context.Dependent;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 

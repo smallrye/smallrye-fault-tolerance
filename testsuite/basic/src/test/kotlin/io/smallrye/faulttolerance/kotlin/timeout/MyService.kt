@@ -5,7 +5,7 @@ import org.eclipse.microprofile.faulttolerance.ExecutionContext
 import org.eclipse.microprofile.faulttolerance.Fallback
 import org.eclipse.microprofile.faulttolerance.FallbackHandler
 import org.eclipse.microprofile.faulttolerance.Timeout
-import javax.enterprise.context.ApplicationScoped
+import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
 open class MyService {

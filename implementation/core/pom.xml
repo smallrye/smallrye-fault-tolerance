@@ -20,7 +20,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
-        <version>5.6.1-SNAPSHOT</version>
+        <version>6.1.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-core</artifactId>
@@ -28,16 +28,6 @@
     <name>SmallRye Fault Tolerance: Core</name>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <version.java>1.8</version.java>
-
-        <version.org.apache.maven.plugins.maven-surefire-plugin>2.22.1</version.org.apache.maven.plugins.maven-surefire-plugin>
-        <version.jacoco-maven-plugin>0.8.6</version.jacoco-maven-plugin>
-        <version.pitest-maven>1.11.0</version.pitest-maven>
-        <version.pitest-junit5-plugin>1.1.2</version.pitest-junit5-plugin>
-
         <!--suppress CheckTagEmptyBody -->
         <jacoco.argLine /> <!-- will be set by the JaCoCo Maven plugin when active -->
     </properties>
@@ -140,6 +130,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${version.jacoco-maven-plugin}</version>
                         <executions>
                             <execution>
                                 <id>default-prepare-agent</id>

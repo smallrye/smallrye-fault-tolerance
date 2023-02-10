@@ -3,9 +3,9 @@ package io.smallrye.faulttolerance;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
-import javax.enterprise.inject.spi.CDI;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.enterprise.inject.spi.CDI;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 

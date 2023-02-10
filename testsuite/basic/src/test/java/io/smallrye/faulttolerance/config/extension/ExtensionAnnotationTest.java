@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.temporal.ChronoUnit;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.jboss.weld.junit5.auto.AddExtensions;

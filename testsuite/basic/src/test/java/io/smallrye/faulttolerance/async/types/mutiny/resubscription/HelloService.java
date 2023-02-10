@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.async.types.mutiny.resubscription;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 

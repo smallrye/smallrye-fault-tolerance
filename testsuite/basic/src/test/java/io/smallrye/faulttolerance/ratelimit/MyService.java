@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.ratelimit;
 
 import java.time.temporal.ChronoUnit;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Fallback;
 

@@ -17,7 +17,7 @@ package io.smallrye.faulttolerance.timeout;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Timeout;
 

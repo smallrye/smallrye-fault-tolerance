@@ -17,11 +17,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.enterprise.context.spi.CreationalContext;
-import javax.enterprise.inject.spi.BeanManager;
-import javax.enterprise.inject.spi.InterceptionType;
-import javax.enterprise.inject.spi.Interceptor;
-import javax.interceptor.InvocationContext;
+import jakarta.enterprise.context.spi.CreationalContext;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.inject.spi.InterceptionType;
+import jakarta.enterprise.inject.spi.Interceptor;
+import jakarta.interceptor.InvocationContext;
 
 // adapted from https://github.com/resteasy/resteasy-microprofile/tree/main/rest-client-base/src/main/java/org/jboss/resteasy/microprofile/client
 // which is Apache 2.0 licensed

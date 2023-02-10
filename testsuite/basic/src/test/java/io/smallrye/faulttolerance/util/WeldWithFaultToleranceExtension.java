@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.util;
 
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 
 import java.lang.reflect.Method;
@@ -38,7 +39,7 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
     }
 
     @Override
-    public void beforeAll(ExtensionContext extensionContext) throws Exception {
+    public void beforeAll(ExtensionContext extensionContext) {
         try {
             super.beforeAll(extensionContext);
         } catch (Exception e) {
@@ -47,7 +48,7 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
     }
 
     @Override
-    public void beforeEach(ExtensionContext extensionContext) throws Exception {
+    public void beforeEach(ExtensionContext extensionContext) {
         try {
             super.beforeEach(extensionContext);
         } catch (Exception e) {
@@ -56,7 +57,7 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
     }
 
     @Override
-    public void afterAll(ExtensionContext extensionContext) throws Exception {
+    public void afterAll(ExtensionContext extensionContext) {
         super.afterAll(extensionContext);
 
         Optional<ExpectedDeploymentException> expectedException = findAnnotation(extensionContext.getRequiredTestClass(),
@@ -66,7 +67,7 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
         }
     }
 
-    private void handle(Exception exception, ExtensionContext extensionContext) throws Exception {
+    private void handle(Exception exception, ExtensionContext extensionContext) {
         Optional<ExpectedDeploymentException> expectedException = findAnnotation(extensionContext.getRequiredTestClass(),
                 ExpectedDeploymentException.class);
         if (expectedException.isPresent()) {
@@ -82,7 +83,7 @@ public class WeldWithFaultToleranceExtension extends WeldJunit5AutoExtension imp
             }
         }
 
-        throw exception;
+        throw sneakyThrow(exception);
     }
 
     @Override

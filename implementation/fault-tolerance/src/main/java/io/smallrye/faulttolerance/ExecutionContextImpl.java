@@ -17,7 +17,7 @@ package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
 
-import javax.interceptor.InvocationContext;
+import jakarta.interceptor.InvocationContext;
 
 import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 

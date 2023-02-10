@@ -18,9 +18,9 @@ package io.smallrye.faulttolerance;
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 
-import javax.enterprise.inject.spi.BeanManager;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;

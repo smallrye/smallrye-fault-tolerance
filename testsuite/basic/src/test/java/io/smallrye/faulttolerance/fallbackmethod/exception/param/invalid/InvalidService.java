@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.fallbackmethod.exception.param.invalid;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Fallback;
 

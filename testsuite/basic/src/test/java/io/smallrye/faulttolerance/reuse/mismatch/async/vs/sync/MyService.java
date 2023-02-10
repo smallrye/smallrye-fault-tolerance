@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.reuse.mismatch.async.vs.sync;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 

@@ -4,7 +4,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletionStage;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 

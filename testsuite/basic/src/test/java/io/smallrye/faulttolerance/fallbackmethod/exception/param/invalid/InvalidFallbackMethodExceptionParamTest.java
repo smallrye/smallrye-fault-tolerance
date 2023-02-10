@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.fallbackmethod.exception.param.invalid;
 
-import javax.enterprise.inject.spi.DefinitionException;
+import jakarta.enterprise.inject.spi.DefinitionException;
 
 import org.junit.jupiter.api.Test;
 
