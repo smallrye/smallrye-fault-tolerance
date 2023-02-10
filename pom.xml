@@ -70,6 +70,9 @@
 
         <version.maven-enforcer-plugin>3.1.0</version.maven-enforcer-plugin>
 
+        <!-- 1.8.0 is the first version to support Maven 3.9+, and SmallRye Parent doesn't have it yet -->
+        <version.impsort.plugin>1.8.0</version.impsort.plugin>
+
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
