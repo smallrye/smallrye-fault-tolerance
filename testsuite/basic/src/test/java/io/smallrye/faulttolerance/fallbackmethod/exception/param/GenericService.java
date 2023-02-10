@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.fallbackmethod.exception.param;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class GenericService extends GenericSuperclass<String> {

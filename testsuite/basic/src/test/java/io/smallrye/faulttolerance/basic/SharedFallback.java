@@ -16,7 +16,7 @@
 
 package io.smallrye.faulttolerance.basic;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * @author Martin Kouba

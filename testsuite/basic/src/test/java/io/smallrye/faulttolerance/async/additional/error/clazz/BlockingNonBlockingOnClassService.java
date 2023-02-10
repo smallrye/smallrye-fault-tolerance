@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.async.additional.error.clazz;
 
 import java.util.concurrent.CompletionStage;
 
-import javax.enterprise.context.Dependent;
+import jakarta.enterprise.context.Dependent;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 

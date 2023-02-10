@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.internal;
 
 import java.util.function.Function;
 
-import javax.interceptor.InvocationContext;
+import jakarta.interceptor.InvocationContext;
 
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 

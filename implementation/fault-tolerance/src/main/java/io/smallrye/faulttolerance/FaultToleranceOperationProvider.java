@@ -17,7 +17,7 @@ package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 

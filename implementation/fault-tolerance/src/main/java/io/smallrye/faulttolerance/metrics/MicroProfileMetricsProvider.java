@@ -16,8 +16,8 @@ import static io.smallrye.faulttolerance.metrics.MetricConstants.TIMEOUT_CALLS_T
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.metrics.Metadata;

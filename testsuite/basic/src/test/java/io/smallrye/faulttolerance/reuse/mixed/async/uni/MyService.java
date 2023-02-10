@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.reuse.mixed.async.uni;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.mutiny.Uni;

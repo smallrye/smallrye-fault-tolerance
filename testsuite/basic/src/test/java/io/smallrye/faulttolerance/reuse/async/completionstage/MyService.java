@@ -5,7 +5,7 @@ import static io.smallrye.faulttolerance.core.util.CompletionStages.failedFuture
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 

@@ -3,7 +3,7 @@ package io.smallrye.faulttolerance.retryonerror;
 import java.io.IOError;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 

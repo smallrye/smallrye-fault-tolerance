@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance;
 
 import java.util.Set;
 
-import javax.enterprise.inject.spi.DefinitionException;
+import jakarta.enterprise.inject.spi.DefinitionException;
 
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;

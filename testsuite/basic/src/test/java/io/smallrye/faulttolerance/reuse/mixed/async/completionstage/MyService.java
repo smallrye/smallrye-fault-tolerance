@@ -6,7 +6,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 
