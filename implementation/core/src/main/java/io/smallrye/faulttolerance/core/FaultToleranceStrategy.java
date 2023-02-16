@@ -15,7 +15,7 @@ import java.util.concurrent.Callable;
  * <p>
  * The strategies must be thread-safe, as they are expected to be used simultaneously from multiple threads.
  * This is important in case of strategies that maintain some state over time (such as circuit breaker).
- * 
+ *
  * @param <V> the result type of method {@code apply}; also the result type of the guarded {@code Callable}
  */
 @FunctionalInterface

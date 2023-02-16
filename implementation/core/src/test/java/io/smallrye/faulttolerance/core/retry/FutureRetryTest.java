@@ -47,9 +47,9 @@ public class FutureRetryTest {
     @Test
     public void immediatelyReturning_value() throws Exception {
         TestInvocation<Future<String>> invocation = TestInvocation.immediatelyReturning(() -> completedFuture("foobar"));
-        Future<String> result = runOnTestThread(
-                new Retry<>(invocation, "test invocation", ExceptionDecision.ALWAYS_EXPECTED, 3, 1000,
-                        SyncDelay.NONE, stopwatch)).await();
+        Retry<Future<String>> futureRetry = new Retry<>(invocation, "test invocation",
+                ExceptionDecision.ALWAYS_EXPECTED, 3, 1000, SyncDelay.NONE, stopwatch);
+        Future<String> result = runOnTestThread(futureRetry).await();
         assertThat(result.get()).isEqualTo("foobar");
         assertThat(invocation.numberOfInvocations()).isEqualTo(1);
     }

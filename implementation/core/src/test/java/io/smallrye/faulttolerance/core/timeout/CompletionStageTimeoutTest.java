@@ -50,18 +50,16 @@ public class CompletionStageTimeoutTest {
     public void negativeTimeout() {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation",
-                -1, timeoutWatcher))
-                        .isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", -1, timeoutWatcher))
+                .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     public void zeroTimeout() {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation",
-                0, timeoutWatcher))
-                        .isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", 0, timeoutWatcher))
+                .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
