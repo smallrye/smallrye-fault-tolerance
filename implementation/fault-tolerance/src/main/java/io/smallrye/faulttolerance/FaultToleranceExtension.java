@@ -68,7 +68,10 @@ import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
+import io.smallrye.faulttolerance.metrics.MetricsIntegration;
 import io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider;
+import io.smallrye.faulttolerance.metrics.MicrometerProvider;
+import io.smallrye.faulttolerance.metrics.NoopProvider;
 
 public class FaultToleranceExtension implements Extension {
 
@@ -83,6 +86,15 @@ public class FaultToleranceExtension implements Extension {
     private final ConcurrentMap<String, FaultToleranceOperation> faultToleranceOperations = new ConcurrentHashMap<>();
 
     private final ConcurrentMap<String, Set<String>> existingCircuitBreakerNames = new ConcurrentHashMap<>();
+    private final MetricsIntegration metricsIntegration;
+
+    public FaultToleranceExtension() {
+        this(MetricsIntegration.MICROPROFILE_METRICS);
+    }
+
+    public FaultToleranceExtension(MetricsIntegration metricsIntegration) {
+        this.metricsIntegration = metricsIntegration;
+    }
 
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOG.activated(getImplementationVersion().orElse("unknown"));
@@ -112,8 +124,18 @@ public class FaultToleranceExtension implements Extension {
                 DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultExistingCircuitBreakerNames.class),
                 DefaultExistingCircuitBreakerNames.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(MicroProfileMetricsProvider.class),
-                MicroProfileMetricsProvider.class.getName());
+        switch (metricsIntegration) {
+            case MICROPROFILE_METRICS:
+                bbd.addAnnotatedType(bm.createAnnotatedType(MicroProfileMetricsProvider.class),
+                        MicroProfileMetricsProvider.class.getName());
+                break;
+            case MICROMETER:
+                bbd.addAnnotatedType(bm.createAnnotatedType(MicrometerProvider.class), MicrometerProvider.class.getName());
+                break;
+            case NOOP:
+                bbd.addAnnotatedType(bm.createAnnotatedType(NoopProvider.class), NoopProvider.class.getName());
+                break;
+        }
         bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CircuitBreakerMaintenanceImpl.class),
                 CircuitBreakerMaintenanceImpl.class.getName());
