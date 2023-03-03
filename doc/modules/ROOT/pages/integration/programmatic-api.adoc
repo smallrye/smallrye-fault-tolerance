@@ -12,7 +12,7 @@ A single cached thread pool, obtained using `Executors.newCachedThreadPool()`, i
 
 Users of the standalone implementation that also use an event loop based library, such as Vert.x, may integrate the event loop support as described in xref:integration/event-loop.adoc[Event Loop].
 
-== CDI implementation
+== CDI Implementation
 
 The CDI implementation will use the thread pool an integrator provides (see xref:integration/thread-pool.adoc[Thread Pool]).
 This also extends to the context propagation integration (see xref:integration/context-propagation.adoc[Context Propagation]).
