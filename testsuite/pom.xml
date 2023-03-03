@@ -5,7 +5,7 @@
     <parent>
         <artifactId>smallrye-fault-tolerance-parent</artifactId>
         <groupId>io.smallrye</groupId>
-        <version>6.2.1</version>
+        <version>6.2.2-SNAPSHOT</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
