@@ -44,7 +44,7 @@
         <version.jboss-logging>3.5.0.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
         <version.kotlin>1.8.10</version.kotlin>
-        <version.kotlin-dokka>1.7.20</version.kotlin-dokka>
+        <version.kotlin-dokka>1.8.10</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.6.4</version.kotlinx-coroutines>
         <version.micrometer-core>1.10.4</version.micrometer-core>
         <version.microprofile-fault-tolerance>4.0.2</version.microprofile-fault-tolerance>
