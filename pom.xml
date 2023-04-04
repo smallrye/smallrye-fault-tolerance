@@ -73,7 +73,7 @@
         <version.weld-core>5.1.0.Final</version.weld-core>
         <version.weld-junit5>4.0.0.Final</version.weld-junit5>
 
-        <version.jacoco-maven-plugin>0.8.8</version.jacoco-maven-plugin>
+        <version.jacoco-maven-plugin>0.8.9</version.jacoco-maven-plugin>
         <version.pitest-maven>1.11.7</version.pitest-maven>
         <version.pitest-junit5-plugin>1.1.2</version.pitest-junit5-plugin>
 
