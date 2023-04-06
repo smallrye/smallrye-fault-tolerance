@@ -27,6 +27,7 @@ public final class FaultToleranceSpiAccess {
             }
             if (candidate.priority() > bestCandidatePriority) {
                 bestCandidate = candidate;
+                bestCandidatePriority = candidate.priority();
             }
         }
 
