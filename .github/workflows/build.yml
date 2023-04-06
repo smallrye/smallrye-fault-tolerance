@@ -29,8 +29,8 @@ jobs:
         # we want: all LTS versions (that we care about), latest GA, upcoming
         - 11
         - 17
-        - 19
-        - 20-ea
+        - 20
+        #- 21-ea
         os:
         - ubuntu-latest
         - windows-latest
