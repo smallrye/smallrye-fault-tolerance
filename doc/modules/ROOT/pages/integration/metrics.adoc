@@ -62,6 +62,9 @@ If Micrometer is used, the integrator must ensure that the following artifact is
 
 * `io.micrometer:micrometer-core`.
 
+Further, a bean of type `io.micrometer.core.instrument.MeterRegistry` must exist.
+This bean is used to emit the actual metrics.
+
 === Noop
 
 If the "noop" provider is used, metrics are completely disabled and the `MP_Fault_Tolerance_Metrics_Enabled` configuration property is ignored at runtime.
