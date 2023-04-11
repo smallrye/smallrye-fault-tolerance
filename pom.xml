@@ -46,7 +46,7 @@
         <version.kotlin>1.8.20</version.kotlin>
         <version.kotlin-dokka>1.8.10</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.6.4</version.kotlinx-coroutines>
-        <version.micrometer-core>1.10.5</version.micrometer-core>
+        <version.micrometer-core>1.10.6</version.micrometer-core>
         <version.microprofile-fault-tolerance>4.0.2</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>3.0.2</version.microprofile-config-api>
         <version.microprofile-metrics-api>4.0.1</version.microprofile-metrics-api>
