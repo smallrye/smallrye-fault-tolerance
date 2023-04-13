@@ -48,7 +48,7 @@
         <version.kotlinx-coroutines>1.6.4</version.kotlinx-coroutines>
         <version.micrometer-core>1.10.6</version.micrometer-core>
         <version.microprofile-fault-tolerance>4.0.2</version.microprofile-fault-tolerance>
-        <version.microprofile-config-api>3.0.2</version.microprofile-config-api>
+        <version.microprofile-config-api>3.0.3</version.microprofile-config-api>
         <version.microprofile-metrics-api>4.0.1</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.3</version.microprofile-context-propagation-api>
         <!-- smallrye-config is purely used for testing -->
