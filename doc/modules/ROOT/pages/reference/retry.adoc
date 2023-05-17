@@ -13,6 +13,13 @@ More specifically:
 . Otherwise, if the guarded method throws an exception whose type is assignable to any of the `retryOn` types (see <<retry-on,retryOn>>), the method call is retried.
 . Otherwise, the exception is rethrown.
 
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@Retry`, the fallback method or handler may be invoked if all retry attempts failed, depending on the fallback configuration.
+
 [[configuration]]
 == Configuration
 
@@ -113,13 +120,6 @@ a| * `method` - the fully qualified method name
 |===
 
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
-
-[[interactions]]
-== Interactions with Other Strategies
-
-See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
-
-If `@Fallback` is used with `@Retry`, the fallback method or handler may be invoked if all retry attempts failed, depending on the fallback configuration.
 
 == Extra Features
 

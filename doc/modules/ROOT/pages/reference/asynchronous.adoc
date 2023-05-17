@@ -82,18 +82,6 @@ They are still supported, but at some point, {smallrye-fault-tolerance} will sto
 
 We also recommend avoiding `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 
-[[configuration]]
-== Configuration
-
-There is no configuration for `@Asynchronous` or `@AsynchronousNonBlocking`.
-
-[[metrics]]
-== Metrics
-
-Asynchronous execution does not emit any metrics.
-
-See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
-
 [[interactions]]
 == Interactions with Other Strategies
 
@@ -113,6 +101,18 @@ If the execution has to wait in the bulkhead queue, it may later end up on a dif
 
 If the original thread is an event loop thread and event loop integration is enabled, then the event loop is always used to execute the guarded method.
 In such case, all retry attempts and queued bulkhead executions are guaranteed to happen on the original thread.
+
+[[configuration]]
+== Configuration
+
+There is no configuration for `@Asynchronous` or `@AsynchronousNonBlocking`.
+
+[[metrics]]
+== Metrics
+
+Asynchronous execution does not emit any metrics.
+
+See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
 
 == Extra Features
 

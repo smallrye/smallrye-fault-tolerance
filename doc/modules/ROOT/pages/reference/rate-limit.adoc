@@ -39,6 +39,19 @@ More specifically, the rate limit state is uniquely identified by the combinatio
 
 For example, if there’s a guarded method `doWork` on a bean which is `@RequestScoped`, each request will have its own instance of the bean, but all invocations of `doWork` will share the same rate limit state.
 
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@RateLimit`, the fallback method or handler may be invoked if a `RateLimitException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the rate limit as an independent invocation.
+If `RateLimitException` is thrown, the execution may be retried, depending on how retry is configured.
+
+If `@CircuitBreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
+If rate limiting results in `RateLimitException`, this may be counted as a failure, depending on how the circuit breaker is configured.
+
 [[configuration]]
 == Configuration
 
@@ -121,16 +134,3 @@ a| * `method` - the fully qualified method name
 |===
 
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
-
-[[interactions]]
-== Interactions with Other Strategies
-
-See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
-
-If `@Fallback` is used with `@RateLimit`, the fallback method or handler may be invoked if a `RateLimitException` is thrown, depending on the fallback configuration.
-
-If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the rate limit as an independent invocation.
-If `RateLimitException` is thrown, the execution may be retried, depending on how retry is configured.
-
-If `@CircuitBreaker` is used with `@RateLimit`, the circuit breaker is checked before enforcing the rate limit.
-If rate limiting results in `RateLimitException`, this may be counted as a failure, depending on how the circuit breaker is configured.
