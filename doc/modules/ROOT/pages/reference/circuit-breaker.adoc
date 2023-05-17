@@ -55,6 +55,16 @@ More specifically, the circuit breaker state is uniquely identified by the combi
 
 For example, if there’s a guarded method `doWork` on a bean which is `@RequestScoped`, each request will have its own instance of the bean, but all invocations of `doWork` will share the same circuit breaker state.
 
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used with `@CircuitBreaker`, the fallback method or handler may be invoked if a `CircuitBreakerOpenException` is thrown, depending on the fallback configuration.
+
+If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the circuit breaker as an independent invocation.
+If `CircuitBreakerOpenException` is thrown, the execution may be retried, depending on how retry is configured.
+
 [[configuration]]
 == Configuration
 
@@ -168,16 +178,6 @@ a| * `method` - the fully qualified method name
 |===
 
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
-
-[[interactions]]
-== Interactions with Other Strategies
-
-See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
-
-If `@Fallback` is used with `@CircuitBreaker`, the fallback method or handler may be invoked if a `CircuitBreakerOpenException` is thrown, depending on the fallback configuration.
-
-If `@Retry` is used with `@RateLimit`, each retry attempt is processed by the circuit breaker as an independent invocation.
-If `CircuitBreakerOpenException` is thrown, the execution may be retried, depending on how retry is configured.
 
 == Extra Features
 

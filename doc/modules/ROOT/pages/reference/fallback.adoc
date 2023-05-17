@@ -14,6 +14,13 @@ More specifically:
 . Otherwise, if the guarded method throws an exception whose type is assignable to any of the `applyOn` types (see <<apply-on,applyOn>>), the fallback value is obtained and returned.
 . Otherwise, the exception is rethrown.
 
+[[interactions]]
+== Interactions with Other Strategies
+
+See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
+
+If `@Fallback` is used, the fallback method or handler may be invoked if other fault tolerance strategies throw an exception, depending on the fallback configuration.
+
 [[configuration]]
 == Configuration
 
@@ -74,13 +81,6 @@ Fallback does not emit any metrics on its own.
 
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
 Fallback is included in the overall method invocation metric described there.
-
-[[interactions]]
-== Interactions with Other Strategies
-
-See xref:howto/multiple.adoc[How to Use Multiple Strategies] for an overview of how fault tolerance strategies are nested.
-
-If `@Fallback` is used, the fallback method or handler may be invoked if other fault tolerance strategies throw an exception, depending on the fallback configuration.
 
 == Extra Features
 
