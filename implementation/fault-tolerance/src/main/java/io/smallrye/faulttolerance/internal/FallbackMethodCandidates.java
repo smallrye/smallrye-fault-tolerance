@@ -10,15 +10,21 @@ import java.util.Set;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 public final class FallbackMethodCandidates {
-    private final Method withoutExceptionParam;
-    private final Map<Class<?>, Method> withExceptionParam;
+    private final FallbackMethod withoutExceptionParam;
+    private final Map<Class<?>, FallbackMethod> withExceptionParam;
 
     private FallbackMethodCandidates(Method withoutExceptionParam, Set<Method> withExceptionParam) {
-        this.withoutExceptionParam = withoutExceptionParam;
+        this.withoutExceptionParam = FallbackMethod.withoutExceptionParameter(withoutExceptionParam);
 
-        Map<Class<?>, Method> map = new HashMap<>();
+        Map<Class<?>, FallbackMethod> map = new HashMap<>();
         for (Method method : withExceptionParam) {
-            map.put(method.getParameterTypes()[method.getParameterCount() - 1], method);
+            int exceptionParameterPosition = method.getParameterCount() - 1;
+            if (KotlinSupport.isSuspendingFunction(method)) {
+                exceptionParameterPosition--;
+            }
+
+            map.put(method.getParameterTypes()[exceptionParameterPosition],
+                    FallbackMethod.withExceptionParameter(method, exceptionParameterPosition));
         }
         this.withExceptionParam = map;
     }
@@ -27,11 +33,11 @@ public final class FallbackMethodCandidates {
         return withoutExceptionParam == null && withExceptionParam.isEmpty();
     }
 
-    public Method select(Class<? extends Throwable> exceptionType) {
+    public FallbackMethod select(Class<? extends Throwable> exceptionType) {
         if (!withExceptionParam.isEmpty()) {
             Class<?> type = exceptionType;
             while (type != null) {
-                Method candidate = withExceptionParam.get(type);
+                FallbackMethod candidate = withExceptionParam.get(type);
                 if (candidate != null) {
                     return candidate;
                 }

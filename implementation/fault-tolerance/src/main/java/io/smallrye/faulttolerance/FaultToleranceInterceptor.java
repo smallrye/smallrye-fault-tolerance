@@ -69,8 +69,6 @@ import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
-import io.smallrye.faulttolerance.core.invocation.NormalMethodInvoker;
-import io.smallrye.faulttolerance.core.invocation.SpecialMethodInvoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
@@ -98,6 +96,7 @@ import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.internal.FallbackMethod;
 import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
 import io.smallrye.faulttolerance.internal.InterceptionInvoker;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
@@ -116,9 +115,6 @@ import io.smallrye.faulttolerance.metrics.MetricsProvider;
 @FaultToleranceBinding
 @Priority(Interceptor.Priority.PLATFORM_AFTER + 10)
 public class FaultToleranceInterceptor {
-
-    private static final Object[] EMPTY_ARRAY = {};
-
     private final Bean<?> interceptedBean;
 
     private final FaultToleranceOperationProvider operationProvider;
@@ -550,28 +546,13 @@ public class FaultToleranceInterceptor {
 
         if (candidates != null) {
             fallbackFunction = ctx -> {
-                Method fallbackMethod = candidates.select(ctx.failure.getClass());
+                FallbackMethod fallbackMethod = candidates.select(ctx.failure.getClass());
                 if (fallbackMethod == null) {
                     throw sneakyThrow(ctx.failure);
                 }
 
-                boolean isDefault = fallbackMethod.isDefault();
-                InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
                 try {
-                    Object[] arguments = interceptionContext.getParameters();
-                    if (arguments == null) {
-                        arguments = EMPTY_ARRAY;
-                    }
-                    if (fallbackMethod.getParameterCount() == arguments.length + 1) {
-                        Object[] argumentsWithException = new Object[arguments.length + 1];
-                        System.arraycopy(arguments, 0, argumentsWithException, 0, arguments.length);
-                        argumentsWithException[argumentsWithException.length - 1] = ctx.failure;
-                        arguments = argumentsWithException;
-                    }
-
-                    Invoker invoker = isDefault
-                            ? new SpecialMethodInvoker(fallbackMethod, interceptionContext.getTarget(), arguments)
-                            : new NormalMethodInvoker(fallbackMethod, interceptionContext.getTarget(), arguments);
+                    Invoker<?> invoker = fallbackMethod.createInvoker(ctx);
                     return asyncSupport == null ? (V) invoker.proceed() : (V) asyncSupport.toCompletionStage(invoker);
                 } catch (InvocationTargetException e) {
                     throw sneakyThrow(e.getCause());
