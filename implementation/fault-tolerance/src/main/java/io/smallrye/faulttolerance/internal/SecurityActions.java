@@ -27,6 +27,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -125,8 +126,8 @@ final class SecurityActions {
 
         Class<?> clazz = beanClass;
         while (true) {
-            Set<Method> methods = getMethodsFromClass(declaringClass, clazz, name, expectedParameterTypes,
-                    expectedReturnType, expectedExceptionParameter, actualMapping, expectedMapping);
+            Set<Method> methods = getMethodsFromClass(clazz, name, expectedParameterTypes, expectedReturnType,
+                    expectedExceptionParameter, declaringClass, actualMapping, expectedMapping);
             for (Method method : methods) {
                 if (possibleFallbackMethodNames.contains(method.getName())) {
                     result.add(method);
@@ -145,8 +146,8 @@ final class SecurityActions {
         }
 
         for (Class<?> iface : beanClass.getInterfaces()) {
-            Set<Method> methods = getMethodsFromClass(declaringClass, iface, name, expectedParameterTypes,
-                    expectedReturnType, expectedExceptionParameter, actualMapping, expectedMapping);
+            Set<Method> methods = getMethodsFromClass(iface, name, expectedParameterTypes, expectedReturnType,
+                    expectedExceptionParameter, declaringClass, actualMapping, expectedMapping);
             for (Method method : methods) {
                 if (possibleFallbackMethodNames.contains(method.getName())) {
                     result.add(method);
@@ -180,13 +181,24 @@ final class SecurityActions {
         return result;
     }
 
-    private static Set<Method> getMethodsFromClass(Class<?> guardedMethodDeclaringClass,
-            Class<?> classToSearch, String name, Type[] parameterTypes, Type returnType, boolean exceptionParameter,
+    /**
+     * Returns all methods that:
+     * <ul>
+     * <li>are declared directly on given {@code classToSearch},</li>
+     * <li>have given {@code name},</li>
+     * <li>have matching {@code parameterTypes},</li>
+     * <li>have matching {@code returnType},</li>
+     * <li>have an additional {@code exceptionParameter} if required,</li>
+     * <li>are accessible from given {@code guardedMethodDeclaringClass}.</li>
+     * </ul>
+     */
+    private static Set<Method> getMethodsFromClass(Class<?> classToSearch, String name, Type[] parameterTypes,
+            Type returnType, boolean exceptionParameter, Class<?> guardedMethodDeclaringClass,
             TypeMapping actualMapping, TypeMapping expectedMapping) {
         Set<Method> set = new HashSet<>();
         for (Method method : classToSearch.getDeclaredMethods()) {
-            if (isAccessibleFrom(method, guardedMethodDeclaringClass)
-                    && method.getName().equals(name)
+            if (method.getName().equals(name)
+                    && isAccessibleFrom(method, guardedMethodDeclaringClass)
                     && signaturesMatch(method, parameterTypes, returnType, exceptionParameter,
                             actualMapping, expectedMapping)) {
                 set.add(method);
@@ -211,6 +223,15 @@ final class SecurityActions {
             boolean expectedExceptionParameter, TypeMapping actualMapping, TypeMapping expectedMapping) {
         int expectedParameters = expectedParameterTypes.length;
         if (expectedExceptionParameter) {
+            // need to figure this out _before_ expanding the `expectedParameterTypes` array
+            boolean kotlinSuspendingFunction = KotlinSupport.isSuspendingFunction(expectedParameterTypes);
+            // adjust `expectedParameterTypes` so that there's one more element on the position
+            // where the exception parameter should be, and the value on that position is `null`
+            expectedParameterTypes = Arrays.copyOfRange(expectedParameterTypes, 0, expectedParameters + 1);
+            if (kotlinSuspendingFunction) {
+                expectedParameterTypes[expectedParameters] = expectedParameterTypes[expectedParameters - 1];
+                expectedParameterTypes[expectedParameters - 1] = null;
+            }
             expectedParameters++;
         }
 
@@ -219,18 +240,19 @@ final class SecurityActions {
             return false;
         }
 
-        for (int i = 0; i < expectedParameterTypes.length; i++) {
-            if (!typeMatches(methodParams[i], expectedParameterTypes[i], actualMapping, expectedMapping)) {
-                return false;
-            }
-        }
-
-        if (expectedExceptionParameter) {
-            Type lastParameter = methodParams[methodParams.length - 1];
-            boolean isThrowable = lastParameter instanceof Class
-                    && Throwable.class.isAssignableFrom((Class<?>) lastParameter);
-            if (!isThrowable) {
-                return false;
+        for (int i = 0; i < expectedParameters; i++) {
+            Type methodParam = methodParams[i];
+            Type expectedParamType = expectedParameterTypes[i];
+            if (expectedParamType != null) {
+                if (!typeMatches(methodParam, expectedParamType, actualMapping, expectedMapping)) {
+                    return false;
+                }
+            } else { // exception parameter
+                boolean isThrowable = methodParam instanceof Class
+                        && Throwable.class.isAssignableFrom((Class<?>) methodParam);
+                if (!isThrowable) {
+                    return false;
+                }
             }
         }
 
@@ -273,8 +295,11 @@ final class SecurityActions {
 
     private static boolean parameterizedTypeMatches(ParameterizedType actualType, ParameterizedType expectedType,
             TypeMapping actualMapping, TypeMapping expectedMapping) {
-        return typeArrayMatches(actualType.getActualTypeArguments(), expectedType.getActualTypeArguments(),
+        boolean genericClassMatch = typeMatches(actualType.getRawType(), expectedType.getRawType(),
                 actualMapping, expectedMapping);
+        boolean typeArgumentsMatch = typeArrayMatches(actualType.getActualTypeArguments(),
+                expectedType.getActualTypeArguments(), actualMapping, expectedMapping);
+        return genericClassMatch && typeArgumentsMatch;
     }
 
     private static boolean typeArrayMatches(Type[] actualTypes, Type[] expectedTypes,

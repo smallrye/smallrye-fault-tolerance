@@ -7,9 +7,11 @@ import java.lang.reflect.WildcardType;
 
 // TODO this would ideally live in the `kotlin` module
 final class KotlinSupport {
+    private static final String KOTLIN_CONTINUATION = "kotlin.coroutines.Continuation";
+
     static boolean isSuspendingFunction(Method method) {
         int params = method.getParameterCount();
-        return params > 0 && method.getParameterTypes()[params - 1].getName().equals("kotlin.coroutines.Continuation");
+        return params > 0 && method.getParameterTypes()[params - 1].getName().equals(KOTLIN_CONTINUATION);
     }
 
     static Type getSuspendingFunctionResultType(Method method) {
