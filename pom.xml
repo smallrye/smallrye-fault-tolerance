@@ -75,7 +75,7 @@
 
         <version.jacoco-maven-plugin>0.8.10</version.jacoco-maven-plugin>
         <version.pitest-maven>1.14.0</version.pitest-maven>
-        <version.pitest-junit5-plugin>1.1.2</version.pitest-junit5-plugin>
+        <version.pitest-junit5-plugin>1.2.0</version.pitest-junit5-plugin>
 
         <!-- 1.8.0 is the first version to support Maven 3.9+, and SmallRye Parent doesn't have it yet -->
         <version.impsort.plugin>1.8.0</version.impsort.plugin>
