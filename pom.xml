@@ -41,7 +41,7 @@
         <version.jakarta-cdi>4.0.1</version.jakarta-cdi>
         <version.jakarta-interceptors>2.1.0</version.jakarta-interceptors>
         <version.javapoet>1.13.0</version.javapoet>
-        <version.jboss-logging>3.5.0.Final</version.jboss-logging>
+        <version.jboss-logging>3.5.1.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
         <version.kotlin>1.8.21</version.kotlin>
         <version.kotlin-dokka>1.8.20</version.kotlin-dokka>
