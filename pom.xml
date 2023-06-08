@@ -43,7 +43,7 @@
         <version.javapoet>1.13.0</version.javapoet>
         <version.jboss-logging>3.5.1.Final</version.jboss-logging>
         <version.jboss-logging-tools>2.2.1.Final</version.jboss-logging-tools>
-        <version.kotlin>1.8.21</version.kotlin>
+        <version.kotlin>1.8.22</version.kotlin>
         <version.kotlin-dokka>1.8.20</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.7.1</version.kotlinx-coroutines>
         <version.micrometer-core>1.11.0</version.micrometer-core>
