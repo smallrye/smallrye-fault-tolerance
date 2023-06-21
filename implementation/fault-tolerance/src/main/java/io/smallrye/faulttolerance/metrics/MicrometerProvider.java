@@ -164,17 +164,26 @@ public class MicrometerProvider implements MetricsProvider {
             }
         }
 
+        // Micrometer only refers to the state object (our supplier) behind the gauge weakly,
+        // so we refer to it strongly from the value extraction function
+        //
+        // this means that the state object never becomes unreachable, which in turn means
+        // that the gauge always has a value
+        //
+        // Micrometer has an API to make sure the state object is held strongy, but that
+        // has more overhead (and the API that needs to be used is uglier)
+
         private void registerGauge(LongSupplier supplier, String name, Tag... tags) {
-            registry.gauge(name, Arrays.asList(tags), supplier, it -> (double) it.getAsLong());
+            registry.gauge(name, Arrays.asList(tags), supplier, ignored -> (double) supplier.getAsLong());
         }
 
         private void registerGauge(BooleanSupplier supplier, String name, Tag... tags) {
-            registry.gauge(name, Arrays.asList(tags), supplier, it -> it.getAsBoolean() ? 1.0 : 0.0);
+            registry.gauge(name, Arrays.asList(tags), supplier, ignored -> supplier.getAsBoolean() ? 1.0 : 0.0);
         }
 
         private void registerTimeGauge(LongSupplier supplier, String name, Tag... tags) {
             registry.more().timeGauge(name, Arrays.asList(tags), supplier, TimeUnit.NANOSECONDS,
-                    it -> (double) it.getAsLong());
+                    ignored -> (double) supplier.getAsLong());
         }
 
         // ---
