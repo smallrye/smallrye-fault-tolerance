@@ -37,18 +37,19 @@ public class InterfaceBasedExtension implements Extension {
         }
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     public void registerBeans(@Observes AfterBeanDiscovery abd, BeanManager beanManager) {
-        for (Class<?> iface : interfaces) {
+        for (Class iface : interfaces) {
             abd.addBean()
                     .beanClass(iface)
                     .types(iface)
                     .scope(Dependent.class)
                     .qualifiers(Default.Literal.INSTANCE, Any.Literal.INSTANCE, InterfaceBased.Literal.INSTANCE)
                     .createWith(ctx -> {
-                        Object target = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
+                        Object instance = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
                                 new Class[] { iface }, InterfaceBasedExtension::invoke);
-                        return Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
-                                new Class[] { iface }, new InterceptingInvocationHandler(iface, target, beanManager));
+                        return beanManager.createInterceptionFactory(ctx, iface)
+                                .createInterceptedInstance(instance);
                     });
             LOG.info("Registered bean for " + iface);
         }
