@@ -77,9 +77,6 @@
         <version.pitest-maven>1.14.2</version.pitest-maven>
         <version.pitest-junit5-plugin>1.2.0</version.pitest-junit5-plugin>
 
-        <!-- 1.8.0 is the first version to support Maven 3.9+, and SmallRye Parent doesn't have it yet -->
-        <version.impsort.plugin>1.8.0</version.impsort.plugin>
-
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
@@ -116,11 +113,6 @@
                     <exclusion>
                         <groupId>jakarta.el</groupId>
                         <artifactId>jakarta.el-api</artifactId>
-                    </exclusion>
-                    <!-- https://github.com/eclipse-ee4j/interceptor-api/issues/31 -->
-                    <exclusion>
-                        <groupId>jakarta.ejb</groupId>
-                        <artifactId>jakarta.ejb-api</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -280,19 +272,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>org.jboss.arquillian</groupId>
-                <artifactId>arquillian-bom</artifactId>
-                <version>${version.arquillian}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.arquillian.container</groupId>
-                <artifactId>arquillian-weld-embedded</artifactId>
-                <version>${version.arquillian-weld}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
                 <groupId>org.jboss.weld</groupId>
                 <artifactId>weld-api</artifactId>
                 <version>${version.weld-api}</version>
@@ -411,20 +390,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <!-- Fixes maven build warnings by making maven-resources-plugin version explicit,
-                  since it is not managed by smallrye parent pom -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.3.1</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
 
     <profiles>
         <profile>
