@@ -15,7 +15,7 @@ stateDiagram-v2
 
     [*] --> CLOSED
     CLOSED --> OPEN: Recent invocations failed too often
-    OPEN --> HALF_OPEN: After some time, determine if \n failing fast is still appropriate
+    OPEN --> HALF_OPEN: Configured time elapsed
     HALF_OPEN --> CLOSED: All probe invocations succeeded
     HALF_OPEN --> OPEN: Some probe invocations failed
 ----
