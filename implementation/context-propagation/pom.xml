@@ -20,7 +20,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
-        <version>6.2.5-SNAPSHOT</version>
+        <version>6.2.6</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-context-propagation</artifactId>
