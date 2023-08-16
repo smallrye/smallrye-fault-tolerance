@@ -61,7 +61,7 @@
         <version.opentracing>0.33.0</version.opentracing>
         <version.vertx>4.4.4</version.vertx>
 
-        <version.arquillian>1.7.0.Final</version.arquillian>
+        <version.arquillian>1.7.1.Final</version.arquillian>
         <version.arquillian-weld>3.0.2.Final</version.arquillian-weld>
         <version.assertj>3.24.2</version.assertj>
         <version.awaitility>4.2.0</version.awaitility>
