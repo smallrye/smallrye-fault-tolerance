@@ -7,8 +7,11 @@ For introduction, see xref:howto/timeout.adoc[How to Watch for Timeouts].
 If a guarded method takes too long, the caller will get a `TimeoutException`.
 
 If the gaurded method is not `@Asynchronous` or `@AsynchronousNonBlocking`, the thread executing the method is interrupted.
-Note that interruption requires cooperation from the executing code.
+Note that interruption requires cooperation from the executing code (for example, it must not swallow `InterruptedException`).
 In other words, it is not guaranteed that interrupting the method will actually make it stop.
+
+If the gaurded method is `@Asynchronous` or `@AsynchronousNonBlocking`, timeout is always signalled correctly, but there is no cancellation.
+Even after timeout, the asynchronous action will keep running; its eventual result is just ignored.
 
 [[interactions]]
 == Interactions with Other Strategies
