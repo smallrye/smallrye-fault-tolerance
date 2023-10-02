@@ -14,7 +14,7 @@ import io.smallrye.common.annotation.Experimental;
 /**
  * Alternative to MicroProfile Fault Tolerance's {@link org.eclipse.microprofile.faulttolerance.Asynchronous @Asynchronous}
  * for guarding non-blocking asynchronous methods (executed on the original thread). It may only be present on methods
- * that declare return type of {@link java.util.concurrent.CompletionStage CompletionStage}. Otherwise, it has the same
+ * that declare return type of {@link java.util.concurrent.CompletionStage CompletionStage}. Other than that, it has the same
  * meaning as MicroProfile Fault Tolerance's {@link org.eclipse.microprofile.faulttolerance.Asynchronous @Asynchronous}.
  * More specifically:
  * <p>
