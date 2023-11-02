@@ -6,6 +6,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
@@ -66,5 +67,28 @@ public class ThreadTimerTest {
         // 600 ms since start
 
         assertThat(queue).containsExactly("bar", "quux", "foo");
+    }
+
+    @Test void simple() throws InterruptedException{
+        var tt = new ThreadTimer(Runnable::run);
+        var q = new LinkedBlockingQueue<Integer>();
+        {
+            TimerTask task1 = tt.schedule(50, ()->q.add(1));
+            assertThat(task1.isDone()).isFalse();
+            assertThat(task1.cancel()).isTrue();
+            assertThat(task1.cancel()).isFalse();// already canceled
+            assertThat(task1.isDone()).isTrue();
+            assertThat(q).hasSize(0);
+            Thread.sleep(60);
+            assertThat(q).hasSize(0);
+        }
+        {
+            TimerTask task2 = tt.schedule(0, ()->q.add(2));
+            Thread.sleep(20);
+            assertThat(task2.isDone()).isTrue();
+            assertThat(task2.cancel()).isFalse();// already done
+            assertThat(task2.isDone()).isTrue();
+            assertThat(q).hasSize(1).containsExactly(2);
+        }
     }
 }

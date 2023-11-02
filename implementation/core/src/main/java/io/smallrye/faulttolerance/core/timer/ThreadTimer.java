@@ -3,6 +3,8 @@ package io.smallrye.faulttolerance.core.timer;
 import static io.smallrye.faulttolerance.core.timer.TimerLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
@@ -78,7 +80,7 @@ public final class ThreadTimer implements Timer {
                         //  and yet `taskStartTime` is _before_ `currentTime`
                         if (taskStartTime - currentTime <= 0) {
                             tasks.remove(task);
-                            if (task.state.compareAndSet(Task.STATE_NEW, Task.STATE_RUNNING)) {
+                            if (STATE.compareAndSet(task, Task.STATE_NEW, Task.STATE_RUNNING)) {
                                 Executor executorForTask = task.executorOverride;
                                 if (executorForTask == null) {
                                     executorForTask = defaultExecutor;
@@ -89,7 +91,7 @@ public final class ThreadTimer implements Timer {
                                     try {
                                         task.runnable.run();
                                     } finally {
-                                        task.state.set(Task.STATE_FINISHED);
+                                        STATE.setRelease(task, Task.STATE_FINISHED);
                                     }
                                 });
                             }
@@ -133,15 +135,15 @@ public final class ThreadTimer implements Timer {
     }
 
     private static final class Task implements TimerTask {
-        static final int STATE_NEW = 0; // was scheduled, but isn't running yet
-        static final int STATE_RUNNING = 1; // running on the executor
-        static final int STATE_FINISHED = 2; // finished running
-        static final int STATE_CANCELLED = 3; // cancelled before it could be executed
+        static final byte STATE_NEW = 0; // was scheduled, but isn't running yet
+        static final byte STATE_RUNNING = 1; // running on the executor
+        static final byte STATE_FINISHED = 2; // finished running
+        static final byte STATE_CANCELLED = 3; // cancelled before it could be executed
 
         final long startTime; // in nanos, to be compared with System.nanoTime()
         final Runnable runnable;
         final Executor executorOverride; // may be null, which means that the timer's executor shall be used
-        final AtomicInteger state = new AtomicInteger(STATE_NEW);
+        volatile byte state = STATE_NEW;
 
         private final Consumer<TimerTask> onCancel;
 
@@ -154,19 +156,30 @@ public final class ThreadTimer implements Timer {
 
         @Override
         public boolean isDone() {
-            int state = this.state.get();
-            return state == STATE_FINISHED || state == STATE_CANCELLED;
+            byte s = this.state;
+            return s == STATE_FINISHED || s == STATE_CANCELLED;
         }
 
         @Override
         public boolean cancel() {
             // can't cancel if it's already running
-            if (state.compareAndSet(STATE_NEW, STATE_CANCELLED)) {
+            if (STATE.compareAndSet(this, STATE_NEW, STATE_CANCELLED)) {
                 LOG.cancelledTimerTask(this);
                 onCancel.accept(this);
                 return true;
             }
             return false;
+        }
+    }
+
+    // VarHandle mechanics
+    private static final VarHandle STATE;
+    static {
+        try {
+            MethodHandles.Lookup l = MethodHandles.lookup();
+            STATE = l.findVarHandle(Task.class, "state", byte.class);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
         }
     }
 }
