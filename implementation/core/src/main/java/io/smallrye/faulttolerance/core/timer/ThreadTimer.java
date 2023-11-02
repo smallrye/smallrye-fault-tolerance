@@ -37,7 +37,9 @@ public final class ThreadTimer implements Timer {
 
         // must _not_ return 0 if start times are equal, because that isn't consistent
         // with `equals` (see also above)
-        return o1.startTime <= o2.startTime ? -1 : 1;
+        return o1.startTime < o2.startTime ? -1
+            : o1.startTime > o2.startTime ? 1
+            : Integer.compare(o1.hashCode(), o2.hashCode());
     };
 
     private final String name;
@@ -48,12 +50,15 @@ public final class ThreadTimer implements Timer {
 
     private final AtomicBoolean running = new AtomicBoolean(true);
 
+    public final Executor defaultExecutor;
+
     /**
      * @param defaultExecutor default {@link Executor} used for running scheduled tasks, unless an executor
      *        is provided when {@linkplain #schedule(long, Runnable, Executor) scheduling} a task
      */
     public ThreadTimer(Executor defaultExecutor) {
         checkNotNull(defaultExecutor, "Executor must be set");
+        this.defaultExecutor = defaultExecutor;
 
         this.name = "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet();
         LOG.createdTimer(name);
@@ -114,7 +119,7 @@ public final class ThreadTimer implements Timer {
     @Override
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        Task timerTask = executor == null
+        Task timerTask = executor == null || executor == defaultExecutor
             ? new Task(startTime, RunnableWrapper.INSTANCE.wrap(task))
             : new Task(startTime, RunnableWrapper.INSTANCE.wrap(task)){
                 @Override Executor executorOverride (){
@@ -188,6 +193,10 @@ public final class ThreadTimer implements Timer {
         @Override public String toString() {
             return "TTask:"+state+':'+runnable+'@'+startTime;
         }
+    }
+
+    public int size() {
+        return tasks.size();
     }
 
     /** For metrics and standalone-shutdown */
