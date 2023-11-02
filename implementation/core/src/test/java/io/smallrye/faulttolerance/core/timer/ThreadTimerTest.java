@@ -69,11 +69,14 @@ public class ThreadTimerTest {
         assertThat(queue).containsExactly("bar", "quux", "foo");
     }
 
-    @Test void simple() throws InterruptedException{
+    @Test
+    void simple() throws InterruptedException {
         var tt = new ThreadTimer(Runnable::run);
+        assertThat(ThreadTimer.getThreadTimerRegistry()).contains(tt);
         var q = new LinkedBlockingQueue<Integer>();
         {
             TimerTask task1 = tt.schedule(50, ()->q.add(1));
+            assertThat(tt.size()).isEqualTo(1);
             assertThat(task1.isDone()).isFalse();
             assertThat(task1.cancel()).isTrue();
             assertThat(task1.cancel()).isFalse();// already canceled
@@ -81,6 +84,7 @@ public class ThreadTimerTest {
             assertThat(q).hasSize(0);
             Thread.sleep(60);
             assertThat(q).hasSize(0);
+            assertThat(tt.size()).isEqualTo(0);
         }
         {
             TimerTask task2 = tt.schedule(0, ()->q.add(2));
@@ -89,6 +93,29 @@ public class ThreadTimerTest {
             assertThat(task2.cancel()).isFalse();// already done
             assertThat(task2.isDone()).isTrue();
             assertThat(q).hasSize(1).containsExactly(2);
+            assertThat(tt.size()).isEqualTo(0);
         }
+        tt.shutdown();
+        assertThat(ThreadTimer.getThreadTimerRegistry()).doesNotContain(tt);
+    }
+
+    @Test
+    void big() throws InterruptedException{
+        var tt = new ThreadTimer(Runnable::run);
+
+        var rt = Runtime.getRuntime();
+        long mem0 = rt.totalMemory() - rt.freeMemory();
+        System.out.println("Initial memory: "+mem0);
+        long t = System.nanoTime();
+        for (int i=0; i<10_000_000; i++){
+            tt.schedule(999_000, ()->{});
+        }
+        t = System.nanoTime() - t;
+        assertThat(tt.size()).isEqualTo(10_000_000);
+        long mem = rt.totalMemory() - rt.freeMemory();
+        System.out.println("Used memory: "+(mem-mem0));
+        System.out.println("Time: "+(t/1000/1000.0));
+
+        tt.shutdown();
     }
 }
