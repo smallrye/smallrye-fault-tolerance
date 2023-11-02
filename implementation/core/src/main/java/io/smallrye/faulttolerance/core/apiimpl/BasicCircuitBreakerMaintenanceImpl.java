@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.core.apiimpl;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -16,7 +15,7 @@ import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.util.Callbacks;
 
 public class BasicCircuitBreakerMaintenanceImpl implements CircuitBreakerMaintenance {
-    private final Set<String> knownNames = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<String> knownNames = ConcurrentHashMap.newKeySet();
     private final ConcurrentMap<String, CircuitBreaker<?>> registry = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Collection<Consumer<CircuitBreakerState>>> stateChangeCallbacks = new ConcurrentHashMap<>();
 

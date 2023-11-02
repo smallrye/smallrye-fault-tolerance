@@ -2,7 +2,6 @@ package io.smallrye.faulttolerance.async.compstage.bulkhead.timeout.fallback;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -35,7 +34,7 @@ public class AsyncCompletionStageThreadPoolBulkheadTimeoutFallbackTest {
     private static void test(int parallelRequests, Map<String, Integer> expectedResponses, Invocation invocation)
             throws InterruptedException {
 
-        Set<String> violations = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        Set<String> violations = ConcurrentHashMap.newKeySet();
         Queue<String> seenResponses = new ConcurrentLinkedQueue<>();
 
         ExecutorService executor = Executors.newFixedThreadPool(parallelRequests);
