@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Consumer;
 
 import io.smallrye.faulttolerance.core.util.RunnableWrapper;
 
@@ -86,14 +85,7 @@ public final class ThreadTimer implements Timer {
                                     executorForTask = defaultExecutor;
                                 }
 
-                                executorForTask.execute(() -> {
-                                    LOG.runningTimerTask(task);
-                                    try {
-                                        task.runnable.run();
-                                    } finally {
-                                        STATE.setRelease(task, Task.STATE_FINISHED);
-                                    }
-                                });
+                                executorForTask.execute(task);
                             }
                         } else {
                             // this is OK even if another timer is scheduled during the sleep (even if that timer should
@@ -140,7 +132,7 @@ public final class ThreadTimer implements Timer {
         }
     }
 
-    private static class Task implements TimerTask {
+    private static class Task implements TimerTask, Runnable {
         static final byte STATE_NEW = 0; // was scheduled, but isn't running yet
         static final byte STATE_RUNNING = 1; // running on the executor
         static final byte STATE_FINISHED = 2; // finished running
@@ -149,7 +141,6 @@ public final class ThreadTimer implements Timer {
         final long startTime; // in nanos, to be compared with System.nanoTime()
         final Runnable runnable;
         volatile byte state = STATE_NEW;
-
         private final SortedSet<Task> tasks;
 
         Task(long startTime, Runnable runnable, SortedSet<Task> tasks) {
@@ -177,6 +168,20 @@ public final class ThreadTimer implements Timer {
                 return true;
             }
             return false;
+        }
+
+        @Override
+        public void run (){
+            LOG.runningTimerTask(this);
+            try {
+                runnable.run();
+            } finally {
+                STATE.setRelease(this, Task.STATE_FINISHED);
+            }
+        }
+
+        @Override public String toString (){
+            return "TTask:"+state+':'+runnable+'@'+startTime;
         }
     }
 
