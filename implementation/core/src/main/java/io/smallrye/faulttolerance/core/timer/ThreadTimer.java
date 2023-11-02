@@ -119,8 +119,8 @@ public final class ThreadTimer implements Timer {
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
         Task timerTask = executor == null
-            ? new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove)
-            : new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove){
+            ? new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks)
+            : new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks){
                 @Override Executor executorOverride (){
                     return executor;
                 }
@@ -150,12 +150,12 @@ public final class ThreadTimer implements Timer {
         final Runnable runnable;
         volatile byte state = STATE_NEW;
 
-        private final Consumer<TimerTask> onCancel;
+        private final SortedSet<Task> tasks;
 
-        Task(long startTime, Runnable runnable, Consumer<TimerTask> onCancel) {
+        Task(long startTime, Runnable runnable, SortedSet<Task> tasks) {
             this.startTime = startTime;
             this.runnable = checkNotNull(runnable, "Runnable task must be set");
-            this.onCancel = checkNotNull(onCancel, "Cancellation callback must be set");
+            this.tasks = checkNotNull(tasks, "Tasks-set must be set");
         }
 
         Executor executorOverride() {
@@ -173,7 +173,7 @@ public final class ThreadTimer implements Timer {
             // can't cancel if it's already running
             if (STATE.compareAndSet(this, STATE_NEW, STATE_CANCELLED)) {
                 LOG.cancelledTimerTask(this);
-                onCancel.accept(this);
+                tasks.remove(this);
                 return true;
             }
             return false;
