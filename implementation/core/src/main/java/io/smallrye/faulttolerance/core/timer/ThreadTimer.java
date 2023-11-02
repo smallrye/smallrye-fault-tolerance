@@ -81,7 +81,7 @@ public final class ThreadTimer implements Timer {
                         if (taskStartTime - currentTime <= 0) {
                             tasks.remove(task);
                             if (STATE.compareAndSet(task, Task.STATE_NEW, Task.STATE_RUNNING)) {
-                                Executor executorForTask = task.executorOverride;
+                                Executor executorForTask = task.executorOverride();
                                 if (executorForTask == null) {
                                     executorForTask = defaultExecutor;
                                 }
@@ -118,7 +118,13 @@ public final class ThreadTimer implements Timer {
     @Override
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        Task timerTask = new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove, executor);
+        Task timerTask = executor == null
+            ? new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove)
+            : new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove){
+                @Override Executor executorOverride (){
+                    return executor;
+                }
+            };
         tasks.add(timerTask);
         LockSupport.unpark(thread);
         LOG.scheduledTimerTask(timerTask, delayInMillis);
@@ -134,7 +140,7 @@ public final class ThreadTimer implements Timer {
         }
     }
 
-    private static final class Task implements TimerTask {
+    private static class Task implements TimerTask {
         static final byte STATE_NEW = 0; // was scheduled, but isn't running yet
         static final byte STATE_RUNNING = 1; // running on the executor
         static final byte STATE_FINISHED = 2; // finished running
@@ -142,16 +148,18 @@ public final class ThreadTimer implements Timer {
 
         final long startTime; // in nanos, to be compared with System.nanoTime()
         final Runnable runnable;
-        final Executor executorOverride; // may be null, which means that the timer's executor shall be used
         volatile byte state = STATE_NEW;
 
         private final Consumer<TimerTask> onCancel;
 
-        Task(long startTime, Runnable runnable, Consumer<TimerTask> onCancel, Executor executorOverride) {
+        Task(long startTime, Runnable runnable, Consumer<TimerTask> onCancel) {
             this.startTime = startTime;
             this.runnable = checkNotNull(runnable, "Runnable task must be set");
             this.onCancel = checkNotNull(onCancel, "Cancellation callback must be set");
-            this.executorOverride = executorOverride;
+        }
+
+        Executor executorOverride() {
+            return null; // may be null, which means that the timer's executor shall be used
         }
 
         @Override
