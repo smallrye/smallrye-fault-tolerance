@@ -39,12 +39,12 @@ public final class ThreadTimer implements Timer {
         // with `equals` (see also above)
         return o1.startTime < o2.startTime ? -1
             : o1.startTime > o2.startTime ? 1
-            : Integer.compare(o1.hashCode(), o2.hashCode());
+            : o1.hashCode() <= o2.hashCode() ? -1 : 1;
     };
 
     private final String name;
 
-    final SortedSet<Task> tasks;
+    final SortedSet<Task> tasks = new ConcurrentSkipListSet<>(TASK_COMPARATOR);
 
     private final Thread thread;
 
@@ -57,13 +57,11 @@ public final class ThreadTimer implements Timer {
      *        is provided when {@linkplain #schedule(long, Runnable, Executor) scheduling} a task
      */
     public ThreadTimer(Executor defaultExecutor) {
-        checkNotNull(defaultExecutor, "Executor must be set");
-        this.defaultExecutor = defaultExecutor;
+        this.defaultExecutor = checkNotNull(defaultExecutor, "Executor must be set");
 
         this.name = "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet();
         LOG.createdTimer(name);
 
-        this.tasks = new ConcurrentSkipListSet<>(TASK_COMPARATOR);
         this.thread = new Thread(() -> {
             while (running.get()) {
                 try {
