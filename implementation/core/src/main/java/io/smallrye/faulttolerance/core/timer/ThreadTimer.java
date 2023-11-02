@@ -7,7 +7,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Comparator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +27,7 @@ import io.smallrye.faulttolerance.core.util.RunnableWrapper;
 // TODO implement a hashed wheel?
 public final class ThreadTimer implements Timer {
     private static final AtomicInteger COUNTER = new AtomicInteger(0);
+    private static final Set<ThreadTimer> TIMERS = ConcurrentHashMap.newKeySet();
 
     private static final Comparator<Task> TASK_COMPARATOR = (o1, o2) -> {
         if (o1 == o2) {
@@ -39,7 +42,7 @@ public final class ThreadTimer implements Timer {
 
     private final String name;
 
-    private final SortedSet<Task> tasks;
+    final SortedSet<Task> tasks;
 
     private final Thread thread;
 
@@ -100,6 +103,7 @@ public final class ThreadTimer implements Timer {
             }
         }, name);
         thread.start();
+        TIMERS.add(this);
     }
 
     @Override
@@ -111,8 +115,8 @@ public final class ThreadTimer implements Timer {
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
         Task timerTask = executor == null
-            ? new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks)
-            : new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks){
+            ? new Task(startTime, RunnableWrapper.INSTANCE.wrap(task))
+            : new Task(startTime, RunnableWrapper.INSTANCE.wrap(task)){
                 @Override Executor executorOverride (){
                     return executor;
                 }
@@ -130,6 +134,7 @@ public final class ThreadTimer implements Timer {
             thread.interrupt();
             thread.join();
         }
+        TIMERS.remove(this);
     }
 
     private static class Task implements TimerTask, Runnable {
@@ -141,12 +146,10 @@ public final class ThreadTimer implements Timer {
         final long startTime; // in nanos, to be compared with System.nanoTime()
         final Runnable runnable;
         volatile byte state = STATE_NEW;
-        private final SortedSet<Task> tasks;
 
-        Task(long startTime, Runnable runnable, SortedSet<Task> tasks) {
+        Task(long startTime, Runnable runnable) {
             this.startTime = startTime;
             this.runnable = checkNotNull(runnable, "Runnable task must be set");
-            this.tasks = checkNotNull(tasks, "Tasks-set must be set");
         }
 
         Executor executorOverride() {
@@ -164,14 +167,16 @@ public final class ThreadTimer implements Timer {
             // can't cancel if it's already running
             if (STATE.compareAndSet(this, STATE_NEW, STATE_CANCELLED)) {
                 LOG.cancelledTimerTask(this);
-                tasks.remove(this);
+                for (ThreadTimer next : TIMERS){
+                    next.tasks.remove(this);
+                }
                 return true;
             }
             return false;
         }
 
         @Override
-        public void run (){
+        public void run() {
             LOG.runningTimerTask(this);
             try {
                 runnable.run();
@@ -180,9 +185,14 @@ public final class ThreadTimer implements Timer {
             }
         }
 
-        @Override public String toString (){
+        @Override public String toString() {
             return "TTask:"+state+':'+runnable+'@'+startTime;
         }
+    }
+
+    /** For metrics and standalone-shutdown */
+    public static Set<ThreadTimer> getThreadTimerRegistry() {
+        return TIMERS;
     }
 
     // VarHandle mechanics
