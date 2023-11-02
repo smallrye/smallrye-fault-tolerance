@@ -36,5 +36,5 @@ interface TimerLogger extends BasicLogger {
 
     @Message(id = 11000, value = "Unexpected exception in timer loop, ignoring")
     @LogMessage(level = Logger.Level.WARN)
-    void unexpectedExceptionInTimerLoop(@Cause Exception e);
+    void unexpectedExceptionInTimerLoop(@Cause Throwable e);
 }

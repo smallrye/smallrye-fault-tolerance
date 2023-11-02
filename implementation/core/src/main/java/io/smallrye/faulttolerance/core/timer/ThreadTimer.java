@@ -101,7 +101,7 @@ public final class ThreadTimer implements Timer {
                             LockSupport.parkNanos(taskStartTime - currentTime);
                         }
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     // can happen e.g. when the executor is shut down sooner than the timer
                     LOG.unexpectedExceptionInTimerLoop(e);
                 }
