@@ -124,6 +124,11 @@ public final class ThreadTimer implements Timer {
     }
 
     @Override
+    public int countScheduledTasks() {
+        return tasks.size();
+    }
+
+    @Override
     public void shutdown() throws InterruptedException {
         if (running.compareAndSet(true, false)) {
             LOG.shutdownTimer(name);

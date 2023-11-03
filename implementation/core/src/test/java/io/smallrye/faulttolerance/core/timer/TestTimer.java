@@ -36,6 +36,11 @@ public class TestTimer implements Timer {
     }
 
     @Override
+    public int countScheduledTasks() {
+        return tasks.size();
+    }
+
+    @Override
     public void shutdown() throws InterruptedException {
     }
 

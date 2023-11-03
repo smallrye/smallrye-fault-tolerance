@@ -49,7 +49,7 @@ If you don't set a configuration property, it will default to the same value the
 There's one exception to the "no external configuration" rule.
 
 The CDI implementation looks for the well-known `MP_Fault_Tolerance_NonFallback_Enabled` configuration property in MicroProfile Config.
-The standalone implementation looks for a system property with the same name.
+The standalone implementation looks for a system property with the same name, or obtains the value from custom configuration (as xref:integration/programmatic-api.adoc[described] in the integration section).
 
 If such property exists and is set to `false`, only the fallback and thread offload fault tolerance strategies will be applied.
 Everything else will be ignored.
@@ -329,7 +329,7 @@ You can use `MutinyFaultTolerance` out of the box.
 
 == Configuration
 
-As mentioned above, with the single exception of `MP_Fault_Tolerance_NonFallback_Enabled`, there is no external configuration support.
+As mentioned above, with the single exception of `MP_Fault_Tolerance_NonFallback_Enabled`, there is no support for external configuration of fault tolerance strategies.
 This may change in the future, though possibly only in the CDI implementation.
 
 == Metrics
