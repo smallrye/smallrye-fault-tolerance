@@ -90,6 +90,7 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
     @Inject
     SpecCompatibility specCompatibility;
 
+    @Override
     public MetricsRecorder create(FaultToleranceOperation operation) {
         if (metricsEnabled) {
             return new MetricsRecorderImpl(registry, specCompatibility, operation);
@@ -98,6 +99,7 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
         }
     }
 
+    @Override
     public boolean isEnabled() {
         return metricsEnabled;
     }
