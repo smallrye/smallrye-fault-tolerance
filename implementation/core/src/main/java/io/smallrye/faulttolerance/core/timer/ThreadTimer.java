@@ -12,6 +12,7 @@ import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -167,6 +168,14 @@ public final class ThreadTimer implements Timer {
 
         @Override
         public boolean cancel() {
+            if (runnable instanceof Future){ // wrapped FutureTask
+                try {
+                    ((Future<?>) runnable).cancel(false);
+                } catch (Throwable ignore){
+                    // best effort; don't break our mechanics
+                }
+            }
+
             // can't cancel if it's already running
             if (STATE.compareAndSet(this, STATE_NEW, STATE_CANCELLED)) {
                 LOG.cancelledTimerTask(this);
@@ -188,7 +197,8 @@ public final class ThreadTimer implements Timer {
             }
         }
 
-        @Override public String toString() {
+        @Override
+        public String toString() {
             return "TTask:"+state+':'+runnable+'@'+startTime;
         }
     }
