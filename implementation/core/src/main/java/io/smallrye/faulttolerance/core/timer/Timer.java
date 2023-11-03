@@ -24,6 +24,14 @@ public interface Timer {
     TimerTask schedule(long delayInMillis, Runnable task, Executor executor);
 
     /**
+     * Returns the number of tasks that are currently scheduled for execution by the timer.
+     * Finished tasks and tasks that are already running are not included.
+     *
+     * @return the number of currently scheduled tasks
+     */
+    int countScheduledTasks();
+
+    /**
      * Shuts down this timer. Returns after all internal resources of this timer are shut down.
      */
     void shutdown() throws InterruptedException;
