@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.timeout;
 
 import static io.smallrye.faulttolerance.core.timeout.TimeoutLogger.LOG;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -47,7 +47,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         try {
             originalResult = delegate.apply(ctx);
         } catch (Exception e) {
-            originalResult = failedStage(e);
+            originalResult = failedFuture(e);
         }
 
         originalResult.whenComplete((value, exception) -> {

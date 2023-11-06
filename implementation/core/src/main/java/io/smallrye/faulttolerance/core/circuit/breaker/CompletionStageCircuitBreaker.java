@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
 import static io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerLogger.LOG;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -69,7 +69,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             return result;
         } catch (Throwable e) {
             inClosedHandleResult(isConsideredSuccess(e), ctx, state);
-            return failedStage(e);
+            return failedFuture(e);
         }
     }
 
@@ -78,7 +78,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
                     "Circuit breaker open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
-            return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is open"));
+            return failedFuture(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
             LOG.trace("Delay elapsed synchronously, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
@@ -92,7 +92,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
                     "Circuit breaker half-open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
-            return failedStage(new CircuitBreakerOpenException(description + " circuit breaker is half-open"));
+            return failedFuture(new CircuitBreakerOpenException(description + " circuit breaker is half-open"));
         }
 
         try {
@@ -113,7 +113,7 @@ public class CompletionStageCircuitBreaker<V> extends CircuitBreaker<CompletionS
             return result;
         } catch (Throwable e) {
             inHalfOpenHandleResult(isConsideredSuccess(e), ctx, state);
-            return failedStage(e);
+            return failedFuture(e);
         }
     }
 }

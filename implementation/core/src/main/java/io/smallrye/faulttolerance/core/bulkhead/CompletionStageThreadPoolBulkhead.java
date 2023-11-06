@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
 import static io.smallrye.faulttolerance.core.bulkhead.BulkheadLogger.LOG;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
@@ -56,7 +56,7 @@ public class CompletionStageThreadPoolBulkhead<V> extends BulkheadBase<Completio
             LOG.debugOrTrace(description + " invocation prevented by bulkhead",
                     "Capacity semaphore not acquired, rejecting task from bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
-            return failedStage(bulkheadRejected());
+            return failedFuture(bulkheadRejected());
         }
     }
 

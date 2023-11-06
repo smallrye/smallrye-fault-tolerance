@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.rate.limit;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
 import static io.smallrye.faulttolerance.core.util.TestThread.runOnTestThread;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -49,7 +49,7 @@ public class CompletionStageRateLimitTest {
     public void fixed_singleThreaded() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.FIXED, stopwatch);
@@ -86,7 +86,7 @@ public class CompletionStageRateLimitTest {
     public void fixed_multiThreaded() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.FIXED, stopwatch);
@@ -146,7 +146,7 @@ public class CompletionStageRateLimitTest {
     public void fixed_multiThreaded_withMinSpacing() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 10, RateLimitType.FIXED, stopwatch);
@@ -211,7 +211,7 @@ public class CompletionStageRateLimitTest {
     public void rolling_singleThreaded() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.ROLLING, stopwatch);
@@ -246,7 +246,7 @@ public class CompletionStageRateLimitTest {
     public void rolling_multiThreaded() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.ROLLING, stopwatch);
@@ -311,7 +311,7 @@ public class CompletionStageRateLimitTest {
     public void rolling_multiThreaded_withMinSpacing() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 10, RateLimitType.ROLLING, stopwatch);
@@ -376,7 +376,7 @@ public class CompletionStageRateLimitTest {
     public void smooth_singleThreaded() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.SMOOTH, stopwatch);
@@ -412,7 +412,7 @@ public class CompletionStageRateLimitTest {
     public void smooth_multiThreaded() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.SMOOTH, stopwatch);
@@ -475,7 +475,7 @@ public class CompletionStageRateLimitTest {
     public void smooth_multiThreaded_withMinSpacing() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<CompletionStage<String>> invocation = TestInvocation
-                .of(() -> completedStage("" + counter.incrementAndGet()));
+                .of(() -> completedFuture("" + counter.incrementAndGet()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRateLimit<String> rateLimit = new CompletionStageRateLimit<>(execution, "test invocation",
                 1000, 100, 10, RateLimitType.SMOOTH, stopwatch);

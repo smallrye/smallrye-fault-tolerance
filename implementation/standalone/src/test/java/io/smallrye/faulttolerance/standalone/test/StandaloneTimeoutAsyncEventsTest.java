@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.standalone.test;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.temporal.ChronoUnit;
@@ -51,10 +51,10 @@ public class StandaloneTimeoutAsyncEventsTest {
         if (shouldSleep) {
             Thread.sleep(10_000);
         }
-        return completedStage("value");
+        return completedFuture("value");
     }
 
     public CompletionStage<String> fallback() {
-        return completedStage("fallback");
+        return completedFuture("fallback");
     }
 }

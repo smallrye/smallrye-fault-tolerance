@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.standalone.test;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
@@ -129,11 +129,11 @@ public class StandalonePassthroughAsyncTest {
     }
 
     private CompletionStage<String> completeSuccessfully() {
-        return completedStage("value");
+        return completedFuture("value");
     }
 
     private CompletionStage<String> completeExceptionally() {
-        return failedStage(new TestException());
+        return failedFuture(new TestException());
     }
 
     private CompletionStage<String> throwException() throws TestException {

@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.vertx.retry;
 
+import static java.util.concurrent.CompletableFuture.failedFuture;
+
 import java.time.temporal.ChronoUnit;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -12,7 +14,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
-import io.smallrye.faulttolerance.core.util.CompletionStages;
 
 @ApplicationScoped
 public class MyService {
@@ -29,6 +30,6 @@ public class MyService {
         if (current > 10) {
             return CompletableFuture.completedFuture("Hello!");
         }
-        return CompletionStages.failedStage(new Exception());
+        return failedFuture(new Exception());
     }
 }

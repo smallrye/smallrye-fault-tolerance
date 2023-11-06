@@ -1,6 +1,5 @@
 package io.smallrye.faulttolerance.standalone.test;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,6 +62,6 @@ public class StandaloneRateLimitAsyncTest {
     }
 
     public CompletionStage<String> fallback() {
-        return completedStage("fallback");
+        return completedFuture("fallback");
     }
 }

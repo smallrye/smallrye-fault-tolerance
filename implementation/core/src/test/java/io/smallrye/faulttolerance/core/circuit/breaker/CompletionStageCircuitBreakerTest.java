@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -195,7 +195,7 @@ public class CompletionStageCircuitBreakerTest {
     }
 
     private static InvocationContext<CompletionStage<String>> returning(String value) {
-        return new InvocationContext<>(() -> completedStage(value));
+        return new InvocationContext<>(() -> completedFuture(value));
     }
 
     private static <V> InvocationContext<CompletionStage<V>> immediatelyFailingWith(Exception exception) {
@@ -205,6 +205,6 @@ public class CompletionStageCircuitBreakerTest {
     }
 
     private static <V> InvocationContext<CompletionStage<V>> eventuallyFailingWith(Exception exception) {
-        return new InvocationContext<>(() -> failedStage(exception));
+        return new InvocationContext<>(() -> failedFuture(exception));
     }
 }

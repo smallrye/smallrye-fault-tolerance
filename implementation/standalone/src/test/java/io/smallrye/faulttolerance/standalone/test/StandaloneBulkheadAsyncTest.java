@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.standalone.test;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletionStage;
@@ -26,13 +26,13 @@ public class StandaloneBulkheadAsyncTest {
         for (int i = 0; i < 10; i++) {
             guarded.call(() -> {
                 party.participant().attend();
-                return completedStage("ignored");
+                return completedFuture("ignored");
             });
         }
 
         party.organizer().waitForAll();
 
-        assertThat(guarded.call(() -> completedStage("value")))
+        assertThat(guarded.call(() -> completedFuture("value")))
                 .succeedsWithin(10, TimeUnit.SECONDS)
                 .isEqualTo("fallback");
 
@@ -40,6 +40,6 @@ public class StandaloneBulkheadAsyncTest {
     }
 
     public CompletionStage<String> fallback() {
-        return completedStage("fallback");
+        return completedFuture("fallback");
     }
 }

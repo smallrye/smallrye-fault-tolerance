@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.standalone.test;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletionStage;
@@ -29,7 +29,7 @@ public class StandaloneFallbackAsyncTest {
     @Test
     public void asyncFallbackWithFunction() {
         Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
-                .withFallback().handler(e -> completedStage(e.getClass().getSimpleName())).done()
+                .withFallback().handler(e -> completedFuture(e.getClass().getSimpleName())).done()
                 .build();
 
         assertThat(guarded.get())
@@ -88,10 +88,10 @@ public class StandaloneFallbackAsyncTest {
     }
 
     public CompletionStage<String> action() {
-        return failedStage(new TestException());
+        return failedFuture(new TestException());
     }
 
     public CompletionStage<String> fallback() {
-        return completedStage("fallback");
+        return completedFuture("fallback");
     }
 }

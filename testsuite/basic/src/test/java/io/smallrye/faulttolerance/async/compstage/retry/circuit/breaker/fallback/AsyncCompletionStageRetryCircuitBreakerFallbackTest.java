@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -63,7 +62,7 @@ public class AsyncCompletionStageRetryCircuitBreakerFallbackTest {
 
     private static void test(int parallelRequests, Map<String, Range> expectedResponses, Invocation invocation)
             throws InterruptedException {
-        Set<String> violations = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        Set<String> violations = ConcurrentHashMap.newKeySet();
         Queue<String> seenResponses = new ConcurrentLinkedQueue<>();
 
         ExecutorService executor = Executors.newFixedThreadPool(parallelRequests);
