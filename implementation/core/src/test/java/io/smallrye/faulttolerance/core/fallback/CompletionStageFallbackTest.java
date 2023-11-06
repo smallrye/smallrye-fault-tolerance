@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.fallback;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,10 +28,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void allExceptionsSupported_valueThenValue() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> completedStage("fallback"),
+                "test invocation", ctx -> completedFuture("fallback"),
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
@@ -39,7 +39,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void allExceptionsSupported_valueThenDirectException() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
                 "test invocation", ctx -> TestException.doThrow(),
@@ -50,10 +50,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void allExceptionsSupported_valueThenCompletionStageException() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> failedStage(new TestException()),
+                "test invocation", ctx -> failedFuture(new TestException()),
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
@@ -64,7 +64,7 @@ public class CompletionStageFallbackTest {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(TestException::doThrow);
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> completedStage("fallback"),
+                "test invocation", ctx -> completedFuture("fallback"),
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("fallback");
@@ -72,10 +72,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void allExceptionsSupported_completionStageExceptionThenValue() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> completedStage("fallback"),
+                "test invocation", ctx -> completedFuture("fallback"),
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("fallback");
@@ -100,7 +100,7 @@ public class CompletionStageFallbackTest {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(TestException::doThrow);
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<Void> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> failedStage(new RuntimeException()),
+                "test invocation", ctx -> failedFuture(new RuntimeException()),
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<Void> result = fallback.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
@@ -110,7 +110,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void allExceptionsSupported_completionStageExceptionThenDirectException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<Void> fallback = new CompletionStageFallback<>(execution,
                 "test invocation", ctx -> {
@@ -124,10 +124,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void allExceptionsSupported_completionStageExceptionThenCompletionStageException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<Void> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> failedStage(new RuntimeException()),
+                "test invocation", ctx -> failedFuture(new RuntimeException()),
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<Void> result = fallback.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
@@ -137,10 +137,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void noExceptionSupported_valueThenValue() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> completedStage("fallback"),
+                "test invocation", ctx -> completedFuture("fallback"),
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
@@ -148,7 +148,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void noExceptionSupported_valueThenDirectException() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
                 "test invocation", ctx -> TestException.doThrow(),
@@ -159,10 +159,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void noExceptionSupported_valueThenCompletionStageException() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> failedStage(new TestException()),
+                "test invocation", ctx -> failedFuture(new TestException()),
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
@@ -173,7 +173,7 @@ public class CompletionStageFallbackTest {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(TestException::doThrow);
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> completedStage("fallback"),
+                "test invocation", ctx -> completedFuture("fallback"),
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
@@ -183,10 +183,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void noExceptionSupported_completionStageExceptionThenValue() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> completedStage("fallback"),
+                "test invocation", ctx -> completedFuture("fallback"),
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
@@ -213,7 +213,7 @@ public class CompletionStageFallbackTest {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(TestException::doThrow);
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<Void> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> failedStage(new RuntimeException()),
+                "test invocation", ctx -> failedFuture(new RuntimeException()),
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<Void> result = fallback.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
@@ -223,7 +223,7 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void noExceptionSupported_completionStageExceptionThenDirectException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<Void> fallback = new CompletionStageFallback<>(execution,
                 "test invocation", ctx -> {
@@ -237,10 +237,10 @@ public class CompletionStageFallbackTest {
 
     @Test
     public void noExceptionSupported_completionStageExceptionThenCompletionStageException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<Void> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> failedStage(new RuntimeException()),
+                "test invocation", ctx -> failedFuture(new RuntimeException()),
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<Void> result = fallback.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)

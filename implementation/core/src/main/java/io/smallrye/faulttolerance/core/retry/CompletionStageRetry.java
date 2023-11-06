@@ -1,9 +1,9 @@
 package io.smallrye.faulttolerance.core.retry;
 
 import static io.smallrye.faulttolerance.core.retry.RetryLogger.LOG;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -64,9 +64,9 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
         } else {
             ctx.fireEvent(RetryEvents.Finished.MAX_RETRIES_REACHED);
             if (lastFailure != null) {
-                return failedStage(lastFailure);
+                return failedFuture(lastFailure);
             } else {
-                return failedStage(new FaultToleranceException(description + " reached max retries"));
+                return failedFuture(new FaultToleranceException(description + " reached max retries"));
             }
         }
     }
@@ -76,9 +76,9 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
         if (stopwatch.elapsedTimeInMillis() > maxTotalDurationInMillis) {
             ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
             if (lastFailure != null) {
-                return failedStage(lastFailure);
+                return failedFuture(lastFailure);
             } else {
-                return failedStage(new FaultToleranceException(description + " reached max retry duration"));
+                return failedFuture(new FaultToleranceException(description + " reached max retry duration"));
             }
         }
 
@@ -103,7 +103,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
         } catch (Throwable e) {
             if (shouldAbortRetrying(e)) {
                 ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
-                return failedStage(e);
+                return failedFuture(e);
             } else {
                 return doRetry(ctx, attempt + 1, delay, stopwatch, e);
             }

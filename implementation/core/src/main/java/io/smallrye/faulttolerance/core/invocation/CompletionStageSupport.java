@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.core.invocation;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletionStage;
 
@@ -30,7 +30,7 @@ public class CompletionStageSupport<T> implements AsyncSupport<T, CompletionStag
         try {
             return invoker.proceed();
         } catch (Exception e) {
-            return failedStage(e);
+            return failedFuture(e);
         }
     }
 

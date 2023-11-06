@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.async.compstage.circuit.breaker.timer.halfopen;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletionStage;
 
@@ -22,9 +22,9 @@ public class AsyncHelloService {
     @CircuitBreakerName("hello")
     public CompletionStage<String> hello(boolean fail) {
         if (fail) {
-            return failedStage(new IllegalArgumentException());
+            return failedFuture(new IllegalArgumentException());
         }
 
-        return completedStage("Hello, world!");
+        return completedFuture("Hello, world!");
     }
 }

@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.timeout;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.data.Percentage.withPercentage;
@@ -79,7 +79,7 @@ public class RealWorldCompletionStageTimeoutTest {
 
         assertThat(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
-            return completedStage("foobar");
+            return completedFuture("foobar");
         })).toCompletableFuture().get()).isEqualTo("foobar");
         assertThat(runningStopwatch.elapsedTimeInMillis()).isCloseTo(SLEEP_TIME, tolerance);
     }
@@ -111,7 +111,7 @@ public class RealWorldCompletionStageTimeoutTest {
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(SLEEP_TIME);
-            return failedStage(new TestException());
+            return failedFuture(new TestException());
         })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
@@ -128,7 +128,7 @@ public class RealWorldCompletionStageTimeoutTest {
 
         assertThatThrownBy(timeout.apply(new InvocationContext<>(() -> {
             Thread.sleep(TIMEOUT);
-            return completedStage("foobar");
+            return completedFuture("foobar");
         })).toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);

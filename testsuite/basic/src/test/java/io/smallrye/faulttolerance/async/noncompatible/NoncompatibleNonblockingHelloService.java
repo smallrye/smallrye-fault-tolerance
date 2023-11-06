@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.async.noncompatible;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletionStage;
 

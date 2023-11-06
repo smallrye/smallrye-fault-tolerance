@@ -1,8 +1,10 @@
 package io.smallrye.faulttolerance.vertx.retry.fallback;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
+
 import java.time.temporal.ChronoUnit;
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -12,7 +14,6 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import io.smallrye.common.annotation.NonBlocking;
-import io.smallrye.faulttolerance.core.util.CompletionStages;
 
 @ApplicationScoped
 public class MyService {
@@ -23,11 +24,11 @@ public class MyService {
     @Fallback(fallbackMethod = "fallback")
     public CompletionStage<String> hello() {
         invocationThreads.add(Thread.currentThread().getName());
-        return CompletionStages.failedStage(new Exception());
+        return failedFuture(new Exception());
     }
 
     public CompletionStage<String> fallback() {
         invocationThreads.add(Thread.currentThread().getName());
-        return CompletableFuture.completedFuture("Hello fallback!");
+        return completedFuture("Hello fallback!");
     }
 }

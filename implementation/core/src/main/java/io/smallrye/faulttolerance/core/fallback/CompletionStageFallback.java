@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.fallback;
 
 import static io.smallrye.faulttolerance.core.fallback.FallbackLogger.LOG;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
 import static io.smallrye.faulttolerance.core.util.CompletionStages.propagateCompletion;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -36,7 +36,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
         try {
             originalResult = delegate.apply(ctx);
         } catch (Exception e) {
-            originalResult = failedStage(e);
+            originalResult = failedFuture(e);
         }
 
         originalResult.whenComplete((value, exception) -> {

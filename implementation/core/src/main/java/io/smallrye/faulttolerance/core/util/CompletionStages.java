@@ -8,18 +8,6 @@ import java.util.concurrent.CompletionStage;
  * Utility methods for {@link CompletionStage} and {@link CompletableFuture}.
  */
 public class CompletionStages {
-    public static <T> CompletionStage<T> completedStage(T value) {
-        return CompletableFuture.completedStage(value);
-    }
-
-    public static <T> CompletionStage<T> failedStage(Throwable exception) {
-        return CompletableFuture.failedStage(exception);
-    }
-
-    public static <T> CompletableFuture<T> failedFuture(Throwable exception) {
-        return CompletableFuture.failedFuture(exception);
-    }
-
     public static <T> void propagateCompletion(CompletionStage<T> from, CompletableFuture<T> to) {
         from.whenComplete((value, exception) -> {
             if (exception == null) {

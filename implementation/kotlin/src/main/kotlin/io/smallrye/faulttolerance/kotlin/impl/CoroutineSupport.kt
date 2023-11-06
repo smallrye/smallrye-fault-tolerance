@@ -2,10 +2,10 @@ package io.smallrye.faulttolerance.kotlin.impl
 
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport
 import io.smallrye.faulttolerance.core.invocation.Invoker
-import io.smallrye.faulttolerance.core.util.CompletionStages.failedFuture
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
+import java.util.concurrent.CompletableFuture.failedFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ExecutionException
 import kotlin.coroutines.Continuation

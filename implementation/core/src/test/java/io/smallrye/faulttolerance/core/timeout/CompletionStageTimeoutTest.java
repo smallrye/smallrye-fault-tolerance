@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.timeout;
 
-import static io.smallrye.faulttolerance.core.util.CompletionStages.completedStage;
-import static io.smallrye.faulttolerance.core.util.CompletionStages.failedStage;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -48,7 +48,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void negativeTimeout() {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", -1, timeoutWatcher))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
@@ -56,7 +56,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void zeroTimeout() {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", 0, timeoutWatcher))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
@@ -64,7 +64,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void immediatelyReturning_value() throws Exception {
-        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedStage("foobar"));
+        TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -88,7 +88,7 @@ public class CompletionStageTimeoutTest {
 
     @Test
     public void immediatelyReturning_completionStageException() {
-        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedStage(new TestException()));
+        TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
                 "test invocation", 1000, timeoutWatcher);
@@ -105,7 +105,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
             delayBarrier.await();
-            return completedStage("foobar");
+            return completedFuture("foobar");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
@@ -122,7 +122,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
             delayBarrier.await();
-            return completedStage("foobar");
+            return completedFuture("foobar");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
@@ -143,7 +143,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
             delayBarrier.await();
-            return completedStage("foobar");
+            return completedFuture("foobar");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
@@ -165,7 +165,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> {
             party.participant().attend();
-            return completedStage("foobar");
+            return completedFuture("foobar");
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
@@ -185,7 +185,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
             delayBarrier.await();
-            return failedStage(new TestException());
+            return failedFuture(new TestException());
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
@@ -204,7 +204,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
             delayBarrier.await();
-            return failedStage(new TestException());
+            return failedFuture(new TestException());
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
@@ -225,7 +225,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
             delayBarrier.await();
-            return failedStage(new TestException());
+            return failedFuture(new TestException());
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
@@ -247,7 +247,7 @@ public class CompletionStageTimeoutTest {
 
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> {
             party.participant().attend();
-            return failedStage(new TestException());
+            return failedFuture(new TestException());
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
