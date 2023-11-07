@@ -14,13 +14,13 @@ import org.jboss.logging.annotations.Transform;
 interface TimerLogger extends BasicLogger {
     TimerLogger LOG = Logger.getMessageLogger(TimerLogger.class, TimerLogger.class.getPackage().getName());
 
-    @Message(id = NONE, value = "Timer %s created")
+    @Message(id = NONE, value = "Timer created")
     @LogMessage(level = Logger.Level.TRACE)
-    void createdTimer(String name);
+    void createdTimer();
 
-    @Message(id = NONE, value = "Timer %s shut down")
+    @Message(id = NONE, value = "Timer shut down")
     @LogMessage(level = Logger.Level.TRACE)
-    void shutdownTimer(String name);
+    void shutdownTimer();
 
     @Message(id = NONE, value = "Scheduled timer task %s to run in %s millis")
     @LogMessage(level = Logger.Level.TRACE)
@@ -36,5 +36,5 @@ interface TimerLogger extends BasicLogger {
 
     @Message(id = 11000, value = "Unexpected exception in timer loop, ignoring")
     @LogMessage(level = Logger.Level.WARN)
-    void unexpectedExceptionInTimerLoop(@Cause Exception e);
+    void unexpectedExceptionInTimerLoop(@Cause Throwable e);
 }

@@ -27,7 +27,7 @@ public class TimerTimeoutWatcherTest {
     @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
-        timer = new ThreadTimer(executor);
+        timer = ThreadTimer.create(executor);
         watcher = new TimerTimeoutWatcher(timer);
     }
 

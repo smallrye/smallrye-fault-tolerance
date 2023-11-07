@@ -55,7 +55,7 @@ public class RealWorldCompletionStageTimeoutTest {
         executor = Executors.newSingleThreadExecutor();
 
         timerExecutor = Executors.newSingleThreadExecutor();
-        timer = new ThreadTimer(timerExecutor);
+        timer = ThreadTimer.create(timerExecutor);
         timerWatcher = new TimerTimeoutWatcher(timer);
     }
 
