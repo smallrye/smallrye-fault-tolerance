@@ -1,13 +1,23 @@
 package io.smallrye.faulttolerance.core.timeout;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 
 final class TimeoutExecution {
     private static final int STATE_RUNNING = 0;
     private static final int STATE_FINISHED = 1;
     private static final int STATE_TIMED_OUT = 2;
 
-    private final AtomicInteger state;
+    private static final VarHandle STATE;
+    static {
+        try {
+            STATE = MethodHandles.lookup().findVarHandle(TimeoutExecution.class, "state", int.class);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
+    private volatile int state;
 
     // can be null, if no thread shall be interrupted upon timeout
     private final Thread executingThread;
@@ -21,7 +31,7 @@ final class TimeoutExecution {
     }
 
     TimeoutExecution(Thread executingThread, long timeoutInMillis, Runnable timeoutAction) {
-        this.state = new AtomicInteger(STATE_RUNNING);
+        this.state = STATE_RUNNING;
         this.executingThread = executingThread;
         this.timeoutInMillis = timeoutInMillis;
         this.timeoutAction = timeoutAction;
@@ -32,25 +42,25 @@ final class TimeoutExecution {
     }
 
     boolean isRunning() {
-        return state.get() == STATE_RUNNING;
+        return state == STATE_RUNNING;
     }
 
     boolean hasFinished() {
-        return state.get() == STATE_FINISHED;
+        return state == STATE_FINISHED;
     }
 
     boolean hasTimedOut() {
-        return state.get() == STATE_TIMED_OUT;
+        return state == STATE_TIMED_OUT;
     }
 
     void finish(Runnable ifFinished) {
-        if (state.compareAndSet(STATE_RUNNING, STATE_FINISHED)) {
+        if (STATE.compareAndSet(this, STATE_RUNNING, STATE_FINISHED)) {
             ifFinished.run();
         }
     }
 
     void timeoutAndInterrupt() {
-        if (state.compareAndSet(STATE_RUNNING, STATE_TIMED_OUT)) {
+        if (STATE.compareAndSet(this, STATE_RUNNING, STATE_TIMED_OUT)) {
             if (executingThread != null) {
                 executingThread.interrupt();
             }

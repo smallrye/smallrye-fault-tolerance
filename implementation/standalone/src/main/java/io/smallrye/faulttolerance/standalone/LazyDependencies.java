@@ -17,7 +17,7 @@ final class LazyDependencies implements BuilderLazyDependencies {
         this.enabled = config.enabled();
         this.executor = config.executor();
         this.eventLoop = EventLoop.get();
-        this.timer = new ThreadTimer(executor);
+        this.timer = ThreadTimer.create(executor);
     }
 
     @Override

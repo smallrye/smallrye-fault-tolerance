@@ -10,9 +10,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Consumer;
 
 import io.smallrye.faulttolerance.core.util.RunnableWrapper;
 
@@ -20,41 +18,58 @@ import io.smallrye.faulttolerance.core.util.RunnableWrapper;
  * Starts one thread that processes submitted tasks in a loop and when it's time for a task to run,
  * it gets submitted to the executor. The default executor is provided by a caller, so the caller
  * must shut down this timer <em>before</em> shutting down the executor.
+ * <p>
+ * At most one timer may exist.
  */
-// TODO implement a hashed wheel?
 public final class ThreadTimer implements Timer {
-    private static final AtomicInteger COUNTER = new AtomicInteger(0);
-
     private static final Comparator<Task> TASK_COMPARATOR = (o1, o2) -> {
+        // two different instances are never equal
         if (o1 == o2) {
-            // two different instances are never equal
             return 0;
         }
 
-        // must _not_ return 0 if start times are equal, because that isn't consistent
-        // with `equals` (see also above)
-        return o1.startTime <= o2.startTime ? -1 : 1;
+        // must _not_ return 0 if start times are equal, because that isn't consistent with `equals` (see also above)
+        // must _not_ compare `startTime` using `<` because of how `System.nanoTime()` works (see also below)
+        long delta = o1.startTime - o2.startTime;
+        if (delta < 0) {
+            return -1;
+        } else if (delta > 0) {
+            return 1;
+        }
+
+        return System.identityHashCode(o1) < System.identityHashCode(o2) ? -1 : 1;
     };
 
-    private final String name;
+    private static volatile ThreadTimer INSTANCE;
 
-    private final SortedSet<Task> tasks;
+    private final SortedSet<Task> tasks = new ConcurrentSkipListSet<>(TASK_COMPARATOR);
+
+    private final Executor defaultExecutor;
 
     private final Thread thread;
 
     private final AtomicBoolean running = new AtomicBoolean(true);
 
     /**
+     * Creates a timer with given {@code defaultExecutor}, unless a timer already exists,
+     * in which case an exception is thrown.
+     *
      * @param defaultExecutor default {@link Executor} used for running scheduled tasks, unless an executor
      *        is provided when {@linkplain #schedule(long, Runnable, Executor) scheduling} a task
      */
-    public ThreadTimer(Executor defaultExecutor) {
-        checkNotNull(defaultExecutor, "Executor must be set");
+    public static synchronized ThreadTimer create(Executor defaultExecutor) {
+        ThreadTimer instance = INSTANCE;
+        if (instance == null) {
+            instance = new ThreadTimer(defaultExecutor);
+            INSTANCE = instance;
+            return instance;
+        }
+        throw new IllegalStateException("Timer already exists");
+    }
 
-        this.name = "SmallRye Fault Tolerance Timer " + COUNTER.incrementAndGet();
-        LOG.createdTimer(name);
+    private ThreadTimer(Executor defaultExecutor) {
+        this.defaultExecutor = checkNotNull(defaultExecutor, "Executor must be set");
 
-        this.tasks = new ConcurrentSkipListSet<>(TASK_COMPARATOR);
         this.thread = new Thread(() -> {
             while (running.get()) {
                 try {
@@ -77,35 +92,30 @@ public final class ThreadTimer implements Timer {
                         // in such case, `taskStartTime` can be positive, `currentTime` can be negative,
                         //  and yet `taskStartTime` is _before_ `currentTime`
                         if (taskStartTime - currentTime <= 0) {
-                            tasks.remove(task);
-                            if (task.state.compareAndSet(Task.STATE_NEW, Task.STATE_RUNNING)) {
-                                Executor executorForTask = task.executorOverride;
+                            boolean removed = tasks.remove(task);
+                            if (removed) {
+                                Executor executorForTask = task.executor();
                                 if (executorForTask == null) {
                                     executorForTask = defaultExecutor;
                                 }
 
-                                executorForTask.execute(() -> {
-                                    LOG.runningTimerTask(task);
-                                    try {
-                                        task.runnable.run();
-                                    } finally {
-                                        task.state.set(Task.STATE_FINISHED);
-                                    }
-                                });
+                                executorForTask.execute(task);
                             }
                         } else {
                             // this is OK even if another timer is scheduled during the sleep (even if that timer should
-                            // fire sooner than `taskStartTime`), because `schedule` always calls` LockSupport.unpark`
+                            // fire sooner than `taskStartTime`), because `schedule` always calls `LockSupport.unpark`
                             LockSupport.parkNanos(taskStartTime - currentTime);
                         }
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     // can happen e.g. when the executor is shut down sooner than the timer
                     LOG.unexpectedExceptionInTimerLoop(e);
                 }
             }
-        }, name);
+        }, "SmallRye Fault Tolerance Timer");
         thread.start();
+
+        LOG.createdTimer();
     }
 
     @Override
@@ -116,7 +126,10 @@ public final class ThreadTimer implements Timer {
     @Override
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
-        Task timerTask = new Task(startTime, RunnableWrapper.INSTANCE.wrap(task), tasks::remove, executor);
+        task = RunnableWrapper.INSTANCE.wrap(task);
+        Task timerTask = executor == null || executor == defaultExecutor
+                ? new Task(startTime, task)
+                : new TaskWithExecutor(startTime, task, executor);
         tasks.add(timerTask);
         LockSupport.unpark(thread);
         LOG.scheduledTimerTask(timerTask, delayInMillis);
@@ -131,47 +144,84 @@ public final class ThreadTimer implements Timer {
     @Override
     public void shutdown() throws InterruptedException {
         if (running.compareAndSet(true, false)) {
-            LOG.shutdownTimer(name);
-            thread.interrupt();
-            thread.join();
+            try {
+                LOG.shutdownTimer();
+                thread.interrupt();
+                thread.join();
+            } finally {
+                INSTANCE = null;
+            }
         }
     }
 
-    private static final class Task implements TimerTask {
-        static final int STATE_NEW = 0; // was scheduled, but isn't running yet
-        static final int STATE_RUNNING = 1; // running on the executor
-        static final int STATE_FINISHED = 2; // finished running
-        static final int STATE_CANCELLED = 3; // cancelled before it could be executed
+    private static class Task implements TimerTask, Runnable {
+        // scheduled: present in the `tasks` queue
+        // running: not present in the `tasks` queue && `runnable != null`
+        // finished or cancelled: not present in the `tasks` queue && `runnable == null`
 
         final long startTime; // in nanos, to be compared with System.nanoTime()
-        final Runnable runnable;
-        final Executor executorOverride; // may be null, which means that the timer's executor shall be used
-        final AtomicInteger state = new AtomicInteger(STATE_NEW);
+        volatile Runnable runnable;
 
-        private final Consumer<TimerTask> onCancel;
-
-        Task(long startTime, Runnable runnable, Consumer<TimerTask> onCancel, Executor executorOverride) {
+        Task(long startTime, Runnable runnable) {
             this.startTime = startTime;
             this.runnable = checkNotNull(runnable, "Runnable task must be set");
-            this.onCancel = checkNotNull(onCancel, "Cancellation callback must be set");
-            this.executorOverride = executorOverride;
         }
 
         @Override
         public boolean isDone() {
-            int state = this.state.get();
-            return state == STATE_FINISHED || state == STATE_CANCELLED;
+            ThreadTimer timer = INSTANCE;
+            if (timer != null) {
+                boolean queued = timer.tasks.contains(this);
+                if (queued) {
+                    return false;
+                } else {
+                    return runnable == null;
+                }
+            }
+            return true; // ?
         }
 
         @Override
         public boolean cancel() {
-            // can't cancel if it's already running
-            if (state.compareAndSet(STATE_NEW, STATE_CANCELLED)) {
-                LOG.cancelledTimerTask(this);
-                onCancel.accept(this);
-                return true;
+            ThreadTimer timer = INSTANCE;
+            if (timer != null) {
+                // can't cancel if it's already running
+                boolean removed = timer.tasks.remove(this);
+                if (removed) {
+                    runnable = null;
+                    LOG.cancelledTimerTask(this);
+                    return true;
+                }
             }
             return false;
+        }
+
+        public Executor executor() {
+            return null; // default executor of the timer should be used
+        }
+
+        @Override
+        public void run() {
+            LOG.runningTimerTask(this);
+            try {
+                runnable.run();
+            } finally {
+                runnable = null;
+            }
+        }
+    }
+
+    private static final class TaskWithExecutor extends Task {
+        private final Executor executor;
+
+        TaskWithExecutor(long startTime, Runnable runnable, Executor executor) {
+            super(startTime, runnable);
+            this.executor = checkNotNull(executor, "Executor must be set");
+        }
+
+        @Override
+        public Executor executor() {
+            return executor;
         }
     }
 }

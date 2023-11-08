@@ -3,6 +3,8 @@ package io.smallrye.faulttolerance.core.timer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.byLessThan;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -33,7 +35,7 @@ public class ThreadTimerStressTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
         executor = Executors.newFixedThreadPool(POOL_SIZE);
-        timer = new ThreadTimer(executor);
+        timer = ThreadTimer.create(executor);
 
         // precreate all threads in the pool
         // if we didn't do this, the first few iterations would be dominated
@@ -63,6 +65,8 @@ public class ThreadTimerStressTest {
         // this test assumes that ConcurrentHashMap scales better than the Timer
         ConcurrentMap<String, Long> deltas = new ConcurrentHashMap<>();
 
+        List<TimerTask> tasksToCancel = new ArrayList<>();
+
         long delay = 0;
         for (int i = 0; i < ITERATIONS; i++) {
             delay += DELAY_INCREMENT;
@@ -71,17 +75,24 @@ public class ThreadTimerStressTest {
                 String taskId = i + "_" + j;
 
                 long desiredTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delay);
-                timer.schedule(delay, () -> {
+                TimerTask task = timer.schedule(delay, () -> {
                     long now = System.nanoTime();
                     long delta = TimeUnit.NANOSECONDS.toMillis(now - desiredTime);
                     deltas.put(taskId, delta);
                 });
+                if (j == TASKS_PER_ITERATION / 2) {
+                    tasksToCancel.add(task); // one task to cancel in each iteration
+                }
             }
+        }
+
+        for (TimerTask task : tasksToCancel) {
+            task.cancel();
         }
 
         Thread.sleep(delay + DELAY_INCREMENT);
 
-        assertThat(deltas).hasSize(ITERATIONS * TASKS_PER_ITERATION);
+        assertThat(deltas).hasSizeBetween(ITERATIONS * (TASKS_PER_ITERATION - 1), ITERATIONS * TASKS_PER_ITERATION);
 
         for (Map.Entry<String, Long> entry : deltas.entrySet()) {
             String id = entry.getKey();

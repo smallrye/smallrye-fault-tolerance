@@ -22,7 +22,7 @@ public class ThreadTimerTest {
     @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
-        timer = new ThreadTimer(executor);
+        timer = ThreadTimer.create(executor);
     }
 
     @AfterEach
@@ -36,35 +36,56 @@ public class ThreadTimerTest {
     public void basicUsage() throws InterruptedException {
         Queue<String> queue = new ConcurrentLinkedQueue<>();
 
-        timer.schedule(500, () -> {
+        TimerTask fooTask = timer.schedule(600, () -> {
             queue.add("foo");
         });
 
-        timer.schedule(100, () -> {
+        TimerTask barTask = timer.schedule(100, () -> {
             queue.add("bar");
+        });
+
+        TimerTask bazTask = timer.schedule(400, () -> {
+            queue.add("baz");
         });
 
         // 0 ms since start
 
         assertThat(queue).isEmpty();
+        assertThat(fooTask.isDone()).isFalse();
+        assertThat(barTask.isDone()).isFalse();
+        assertThat(bazTask.isDone()).isFalse();
 
         Thread.sleep(200);
         // 200 ms since start
 
         assertThat(queue).containsExactly("bar");
+        assertThat(fooTask.isDone()).isFalse();
+        assertThat(barTask.isDone()).isTrue();
+        assertThat(bazTask.isDone()).isFalse();
 
-        timer.schedule(100, () -> {
+        TimerTask quuxTask = timer.schedule(100, () -> {
             queue.add("quux");
         });
+
+        boolean cancelled = bazTask.cancel();
+        assertThat(cancelled).isTrue();
+        assertThat(bazTask.isDone()).isTrue();
 
         Thread.sleep(200);
         // 400 ms since start
 
         assertThat(queue).containsExactly("bar", "quux");
+        assertThat(fooTask.isDone()).isFalse();
+        assertThat(barTask.isDone()).isTrue();
+        assertThat(quuxTask.isDone()).isTrue();
 
-        Thread.sleep(200);
-        // 600 ms since start
+        Thread.sleep(300);
+        // 700 ms since start
 
         assertThat(queue).containsExactly("bar", "quux", "foo");
+
+        assertThat(fooTask.isDone()).isTrue();
+        assertThat(barTask.isDone()).isTrue();
+        assertThat(quuxTask.isDone()).isTrue();
     }
 }
