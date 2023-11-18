@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.core;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -22,7 +21,7 @@ public final class InvocationContext<V> implements Callable<V> {
 
     // arbitrary contextual data
 
-    private final ConcurrentMap<Class<?>, Object> data = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Class<?>, Object> data = new ConcurrentHashMap<>(4);
 
     public <T> void set(Class<T> clazz, T object) {
         data.put(clazz, object);
@@ -50,10 +49,13 @@ public final class InvocationContext<V> implements Callable<V> {
     }
 
     public <E extends InvocationContextEvent> void fireEvent(E event) {
-        eventHandlers.getOrDefault(event.getClass(), Collections.emptySet()).forEach(c -> {
-            @SuppressWarnings("unchecked")
-            Consumer<E> consumer = (Consumer<E>) c;
-            consumer.accept(event);
-        });
+        Collection<Consumer<? extends InvocationContextEvent>> handlers = eventHandlers.get(event.getClass());
+        if (handlers != null) {
+            for (Consumer<? extends InvocationContextEvent> handler : handlers) {
+                @SuppressWarnings("unchecked")
+                Consumer<E> consumer = (Consumer<E>) handler;
+                consumer.accept(event);
+            }
+        }
     }
 }
