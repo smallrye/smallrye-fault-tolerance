@@ -45,7 +45,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
                 notification.accept(timeoutException(description));
             }
         });
-        TimeoutWatch watch = watcher.schedule(execution);
+        var watch = watcher.schedule(execution);
         ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
         V result = null;

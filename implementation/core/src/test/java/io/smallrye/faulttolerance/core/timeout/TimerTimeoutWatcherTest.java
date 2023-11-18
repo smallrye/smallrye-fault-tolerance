@@ -44,10 +44,10 @@ public class TimerTimeoutWatcherTest {
 
         Thread thread = run(wasInterrupted);
         TimeoutExecution execution = new TimeoutExecution(thread, 100L);
-        TimeoutWatch watch = watcher.schedule(execution);
+        var watch = watcher.schedule(execution);
 
         assertThat(execution.isRunning()).isTrue();
-        assertThat(watch.isRunning()).isTrue();
+        assertThat(watch.isDone()).isFalse();// isRunning isTrue
 
         thread.join();
         assertThat(wasInterrupted).isTrue();
@@ -59,7 +59,7 @@ public class TimerTimeoutWatcherTest {
         await("watch not running")
                 .atMost(Duration.ofMillis(100))
                 .pollInterval(Duration.ofMillis(50))
-                .until(() -> !watch.isRunning());
+                .until(watch::isDone);// !watch.isRunning()
     }
 
     @Test
@@ -68,10 +68,10 @@ public class TimerTimeoutWatcherTest {
 
         Thread thread = run(wasInterrupted);
         TimeoutExecution execution = new TimeoutExecution(thread, 300L);
-        TimeoutWatch watch = watcher.schedule(execution);
+        var watch = watcher.schedule(execution);
 
         assertThat(execution.isRunning()).isTrue();
-        assertThat(watch.isRunning()).isTrue();
+        assertThat(watch.isDone()).isFalse();
 
         thread.join();
         execution.finish(watch::cancel); // execution.finish() needs to be called explicitly
@@ -83,7 +83,7 @@ public class TimerTimeoutWatcherTest {
         await("watch not running")
                 .atMost(Duration.ofMillis(100))
                 .pollInterval(Duration.ofMillis(50))
-                .until(() -> !watch.isRunning());
+                .until(watch::isDone);
     }
 
     private Thread run(AtomicBoolean interruptionFlag) {

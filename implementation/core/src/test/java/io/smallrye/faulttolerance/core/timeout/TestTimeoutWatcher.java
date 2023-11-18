@@ -2,6 +2,7 @@ package io.smallrye.faulttolerance.core.timeout;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.smallrye.faulttolerance.core.timer.TimerTask;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 
 /**
@@ -27,7 +28,7 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
     }
 
     @Override
-    public TimeoutWatch schedule(TimeoutExecution execution) {
+    public TimerTask schedule(TimeoutExecution execution) {
         if (alreadyUsed.compareAndSet(false, true)) {
             executingThread = new Thread(() -> {
                 try {
@@ -40,16 +41,16 @@ public final class TestTimeoutWatcher implements TimeoutWatcher {
                 }
             }, "TestTimeoutWatcher thread");
             executingThread.start();
-            return new TimeoutWatch() {
-                @Override
-                public boolean isRunning() {
-                    return executingThread.isAlive();
+            return new TimerTask() {
+                @Override public boolean isDone (){
+                    return !executingThread.isAlive();
                 }
 
                 @Override
-                public void cancel() {
+                public boolean cancel() {
                     timeoutWatchCancelled.set(true);
                     executingThread.interrupt();
+                    return true;
                 }
             };
         } else {

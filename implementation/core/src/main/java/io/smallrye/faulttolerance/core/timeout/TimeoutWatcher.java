@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import io.smallrye.faulttolerance.core.timer.TimerTask;
+
 public interface TimeoutWatcher {
-    TimeoutWatch schedule(TimeoutExecution execution);
+    TimerTask schedule(TimeoutExecution execution);
 }

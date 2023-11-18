@@ -11,18 +11,7 @@ public class TimerTimeoutWatcher implements TimeoutWatcher {
     }
 
     @Override
-    public TimeoutWatch schedule(TimeoutExecution execution) {
-        TimerTask task = timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
-        return new TimeoutWatch() {
-            @Override
-            public boolean isRunning() {
-                return !task.isDone();
-            }
-
-            @Override
-            public void cancel() {
-                task.cancel();
-            }
-        };
+    public TimerTask schedule(TimeoutExecution execution) {
+        return timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
     }
 }

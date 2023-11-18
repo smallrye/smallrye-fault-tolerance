@@ -41,7 +41,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
         };
 
         TimeoutExecution timeoutExecution = new TimeoutExecution(null, timeoutInMillis, onTimeout);
-        TimeoutWatch watch = watcher.schedule(timeoutExecution);
+        var watch = watcher.schedule(timeoutExecution);
 
         CompletionStage<V> originalResult;
         try {
