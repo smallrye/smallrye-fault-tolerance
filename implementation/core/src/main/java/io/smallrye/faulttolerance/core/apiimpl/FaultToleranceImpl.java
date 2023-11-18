@@ -177,7 +177,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
         @Override
         public Builder<T, R> withThreadOffload(boolean value) {
-            if (!isAsync) {
+            if (!isAsync && value) {
                 throw new IllegalStateException("Thread offload may only be set for asynchronous invocations");
             }
 
