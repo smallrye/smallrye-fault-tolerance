@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.smallrye.faulttolerance.core.timer.ThreadTimer;
+import io.smallrye.faulttolerance.core.timer.Timer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,13 +20,15 @@ import org.junit.jupiter.api.condition.OS;
 
 @EnabledOnOs(OS.LINUX)
 public class ScheduledExecutorTimeoutWatcherTest {
-    private ScheduledExecutorService executor;
-    private ScheduledExecutorTimeoutWatcher watcher;
+    private ExecutorService executor;
+    private Timer timer;
+    private TimerTimeoutWatcher watcher;
 
     @BeforeEach
     public void setUp() {
-        executor = Executors.newSingleThreadScheduledExecutor();
-        watcher = new ScheduledExecutorTimeoutWatcher(executor);
+        executor = Executors.newSingleThreadExecutor();
+        timer = ThreadTimer.create(executor);
+        watcher = new TimerTimeoutWatcher(timer);
     }
 
     @AfterEach
