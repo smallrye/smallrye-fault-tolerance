@@ -14,9 +14,13 @@ public final class InvocationContext<V> implements Callable<V> {
         this.delegate = delegate;
     }
 
-    @Override
+    @Override @SuppressWarnings("unchecked")
     public V call() throws Exception {
-        return delegate.call();
+        if (delegate instanceof FaultToleranceStrategy){ // API to access InvocationContext from Callable (store data in session context)
+            return ( (FaultToleranceStrategy<V>) delegate ).apply(this);
+        } else {
+            return delegate.call();
+        }
     }
 
     // arbitrary contextual data
