@@ -53,7 +53,6 @@ import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
-import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.Preconditions;
@@ -246,7 +245,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
                 result = new Timeout<>(result, description, timeoutBuilder.durationInMillis,
-                        new TimerTimeoutWatcher(lazyDependencies.timer()));
+                        lazyDependencies.timer());
             }
 
             if (lazyDependencies.ftEnabled() && rateLimitBuilder != null) {
@@ -309,7 +308,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
                 result = new CompletionStageTimeout<>(result, description, timeoutBuilder.durationInMillis,
-                        new TimerTimeoutWatcher(lazyDependencies.timer()));
+                        lazyDependencies.timer());
             }
 
             if (lazyDependencies.ftEnabled() && rateLimitBuilder != null) {

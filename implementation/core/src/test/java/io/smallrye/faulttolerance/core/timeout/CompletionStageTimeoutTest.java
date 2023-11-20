@@ -23,19 +23,19 @@ import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class CompletionStageTimeoutTest {
-    private Barrier watcherTimeoutElapsedBarrier;
-    private Barrier watcherExecutionInterruptedBarrier;
+    private Barrier timerElapsedBarrier;
+    private Barrier timerTaskFinishedBarrier;
 
-    private TestTimeoutWatcher timeoutWatcher;
+    private TestTimer timer;
 
     private TestExecutor executor;
 
     @BeforeEach
     public void setUp() {
-        watcherTimeoutElapsedBarrier = Barrier.interruptible();
-        watcherExecutionInterruptedBarrier = Barrier.interruptible();
+        timerElapsedBarrier = Barrier.interruptible();
+        timerTaskFinishedBarrier = Barrier.interruptible();
 
-        timeoutWatcher = new TestTimeoutWatcher(watcherTimeoutElapsedBarrier, watcherExecutionInterruptedBarrier);
+        timer = new TestTimer(timerElapsedBarrier, timerTaskFinishedBarrier);
 
         executor = new TestExecutor();
     }
@@ -43,14 +43,14 @@ public class CompletionStageTimeoutTest {
     @AfterEach
     public void tearDown() throws InterruptedException {
         executor.shutdown();
-        timeoutWatcher.shutdown();
+        timer.shutdown();
     }
 
     @Test
     public void negativeTimeout() {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", -1, timeoutWatcher))
+        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", -1, timer))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 
@@ -58,7 +58,7 @@ public class CompletionStageTimeoutTest {
     public void zeroTimeout() {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
-        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", 0, timeoutWatcher))
+        assertThatThrownBy(() -> new CompletionStageTimeout<>(execution, "test invocation", 0, timer))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 
@@ -67,10 +67,10 @@ public class CompletionStageTimeoutTest {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -78,12 +78,12 @@ public class CompletionStageTimeoutTest {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(TestException::doThrow);
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -91,12 +91,12 @@ public class CompletionStageTimeoutTest {
         TestInvocation<CompletionStage<Void>> invocation = TestInvocation.of(() -> failedFuture(new TestException()));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -109,11 +109,11 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
         delayBarrier.open();
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -126,15 +126,15 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
-        watcherTimeoutElapsedBarrier.open();
-        watcherExecutionInterruptedBarrier.await();
+        timerElapsedBarrier.open();
+        timerTaskFinishedBarrier.await();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class)
                 .hasMessageContaining("test invocation timed out");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
+        assertThat(timer.timerTaskCancelled()).isFalse();
     }
 
     @Test
@@ -147,16 +147,16 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
-        watcherTimeoutElapsedBarrier.open();
-        watcherExecutionInterruptedBarrier.await();
+        timerElapsedBarrier.open();
+        timerTaskFinishedBarrier.await();
         delayBarrier.open();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class)
                 .hasMessageContaining("test invocation timed out");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
+        assertThat(timer.timerTaskCancelled()).isFalse();
     }
 
     @Test
@@ -169,14 +169,14 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<String> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<String> result = timeout.apply(new InvocationContext<>(null));
         party.organizer().waitForAll();
         executor.interruptExecutingThread();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(InterruptedException.class);
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -189,13 +189,13 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
         delayBarrier.open();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -208,15 +208,15 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
-        watcherTimeoutElapsedBarrier.open();
-        watcherExecutionInterruptedBarrier.await();
+        timerElapsedBarrier.open();
+        timerTaskFinishedBarrier.await();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class)
                 .hasMessageContaining("test invocation timed out");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
+        assertThat(timer.timerTaskCancelled()).isFalse();
     }
 
     @Test
@@ -229,16 +229,16 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
-        watcherTimeoutElapsedBarrier.open();
-        watcherExecutionInterruptedBarrier.await();
+        timerElapsedBarrier.open();
+        timerTaskFinishedBarrier.await();
         delayBarrier.open();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class)
                 .hasMessageContaining("test invocation timed out");
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isFalse();
+        assertThat(timer.timerTaskCancelled()).isFalse();
     }
 
     @Test
@@ -251,14 +251,14 @@ public class CompletionStageTimeoutTest {
         });
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
         party.organizer().waitForAll();
         executor.interruptExecutingThread();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(InterruptedException.class);
-        assertThat(timeoutWatcher.timeoutWatchWasCancelled()).isTrue();
+        assertThat(timer.timerTaskCancelled()).isTrue();
     }
 
     @Test
@@ -276,10 +276,10 @@ public class CompletionStageTimeoutTest {
                 }));
         CompletionStageExecution<Void> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageTimeout<Void> timeout = new CompletionStageTimeout<>(execution,
-                "test invocation", 1000, timeoutWatcher);
+                "test invocation", 1000, timer);
         CompletionStage<Void> result = timeout.apply(new InvocationContext<>(null));
-        watcherTimeoutElapsedBarrier.open();
-        watcherExecutionInterruptedBarrier.await();
+        timerElapsedBarrier.open();
+        timerTaskFinishedBarrier.await();
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(TimeoutException.class);
