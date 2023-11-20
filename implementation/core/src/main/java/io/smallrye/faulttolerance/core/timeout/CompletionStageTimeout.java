@@ -9,11 +9,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.timer.Timer;
+import io.smallrye.faulttolerance.core.timer.TimerTask;
 
 public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
     public CompletionStageTimeout(FaultToleranceStrategy<CompletionStage<V>> delegate, String description, long timeoutInMillis,
-            TimeoutWatcher watcher) {
-        super(delegate, description, timeoutInMillis, watcher);
+            Timer timer) {
+        super(delegate, description, timeoutInMillis, timer);
     }
 
     @Override
@@ -40,8 +42,8 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
             }
         };
 
-        TimeoutExecution timeoutExecution = new TimeoutExecution(null, timeoutInMillis, onTimeout);
-        TimeoutWatch watch = watcher.schedule(timeoutExecution);
+        TimeoutExecution execution = new TimeoutExecution(null, timeoutInMillis, onTimeout);
+        TimerTask task = timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
 
         CompletionStage<V> originalResult;
         try {
@@ -55,9 +57,9 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
             //
             // this comes first, so that when the future is completed, the timeout watcher is already cancelled
             // (this isn't exactly needed, but makes tests easier to write)
-            timeoutExecution.finish(watch::cancel);
+            execution.finish(task::cancel);
 
-            if (timeoutExecution.hasTimedOut()) {
+            if (execution.hasTimedOut()) {
                 onTimeout.run();
             } else if (exception != null) {
                 ctx.fireEvent(TimeoutEvents.Finished.NORMALLY);

@@ -90,7 +90,6 @@ import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
 import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
-import io.smallrye.faulttolerance.core.timeout.TimerTimeoutWatcher;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
@@ -298,8 +297,7 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new CompletionStageTimeout<>(result, point.toString(), timeoutMs,
-                    new TimerTimeoutWatcher(timer));
+            result = new CompletionStageTimeout<>(result, point.toString(), timeoutMs, timer);
         }
 
         if (operation.hasRateLimit()) {
@@ -369,8 +367,7 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new Timeout<>(result, point.toString(), timeoutMs,
-                    new TimerTimeoutWatcher(timer));
+            result = new Timeout<>(result, point.toString(), timeoutMs, timer);
         }
 
         if (operation.hasRateLimit()) {
@@ -441,8 +438,7 @@ public class FaultToleranceInterceptor {
 
         if (operation.hasTimeout()) {
             long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
-            Timeout<Future<T>> timeout = new Timeout<>(result, point.toString(), timeoutMs,
-                    new TimerTimeoutWatcher(timer));
+            Timeout<Future<T>> timeout = new Timeout<>(result, point.toString(), timeoutMs, timer);
             result = new AsyncTimeout<>(timeout, asyncExecutor);
         }
 

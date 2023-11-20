@@ -8,19 +8,21 @@ import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.timer.Timer;
+import io.smallrye.faulttolerance.core.timer.TimerTask;
 
 public class Timeout<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
     final String description;
 
     final long timeoutInMillis;
-    final TimeoutWatcher watcher;
+    final Timer timer;
 
-    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis, TimeoutWatcher watcher) {
+    public Timeout(FaultToleranceStrategy<V> delegate, String description, long timeoutInMillis, Timer timer) {
         this.delegate = checkNotNull(delegate, "Timeout delegate must be set");
         this.description = checkNotNull(description, "Timeout description must be set");
         this.timeoutInMillis = check(timeoutInMillis, timeoutInMillis > 0, "Timeout must be > 0");
-        this.watcher = checkNotNull(watcher, "Timeout watcher must be set");
+        this.timer = checkNotNull(timer, "Timer must be set");
     }
 
     @Override
@@ -45,7 +47,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
                 notification.accept(timeoutException(description));
             }
         });
-        TimeoutWatch watch = watcher.schedule(execution);
+        TimerTask task = timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
         ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
         V result = null;
@@ -59,7 +61,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
             exception = e;
         } finally {
             // if the execution already timed out, this will be a noop
-            execution.finish(watch::cancel);
+            execution.finish(task::cancel);
         }
 
         if (Thread.interrupted()) {
