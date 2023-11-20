@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.apiimpl;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
+import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
 
-import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
@@ -370,10 +370,6 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             return result;
         }
 
-        private static long getTimeInMs(long time, ChronoUnit unit) {
-            return Duration.of(time, unit).toMillis();
-        }
-
         private static ExceptionDecision createExceptionDecision(Collection<Class<? extends Throwable>> consideredExpected,
                 Collection<Class<? extends Throwable>> consideredFailure, Predicate<Throwable> whenPredicate) {
             if (whenPredicate != null) {
@@ -516,7 +512,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 0, "Delay must be >= 0");
                 Preconditions.checkNotNull(unit, "Delay unit must be set");
 
-                this.delayInMillis = getTimeInMs(value, unit);
+                this.delayInMillis = timeInMillis(value, unit);
                 return this;
             }
 
@@ -664,7 +660,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 1, "Time window length must be >= 1");
                 Preconditions.checkNotNull(unit, "Time window length unit must be set");
 
-                this.timeWindowInMillis = getTimeInMs(value, unit);
+                this.timeWindowInMillis = timeInMillis(value, unit);
                 return this;
             }
 
@@ -673,7 +669,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 0, "Min spacing must be >= 0");
                 Preconditions.checkNotNull(unit, "Min spacing unit must be set");
 
-                this.minSpacingInMillis = getTimeInMs(value, unit);
+                this.minSpacingInMillis = timeInMillis(value, unit);
                 return this;
             }
 
@@ -737,7 +733,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 0, "Delay must be >= 0");
                 Preconditions.checkNotNull(unit, "Delay unit must be set");
 
-                this.delayInMillis = getTimeInMs(value, unit);
+                this.delayInMillis = timeInMillis(value, unit);
                 return this;
             }
 
@@ -746,7 +742,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 0, "Max duration must be >= 0");
                 Preconditions.checkNotNull(unit, "Max duration unit must be set");
 
-                this.maxDurationInMillis = getTimeInMs(value, unit);
+                this.maxDurationInMillis = timeInMillis(value, unit);
                 return this;
             }
 
@@ -755,7 +751,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 0, "Jitter must be >= 0");
                 Preconditions.checkNotNull(unit, "Jitter unit must be set");
 
-                this.jitterInMillis = getTimeInMs(value, unit);
+                this.jitterInMillis = timeInMillis(value, unit);
                 return this;
             }
 
@@ -857,7 +853,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     Preconditions.check(value, value >= 0, "Max delay must be >= 0");
                     Preconditions.checkNotNull(unit, "Max delay unit must be set");
 
-                    this.maxDelayInMillis = getTimeInMs(value, unit);
+                    this.maxDelayInMillis = timeInMillis(value, unit);
                     return this;
                 }
 
@@ -882,7 +878,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     Preconditions.check(value, value >= 0, "Max delay must be >= 0");
                     Preconditions.checkNotNull(unit, "Max delay unit must be set");
 
-                    this.maxDelayInMillis = getTimeInMs(value, unit);
+                    this.maxDelayInMillis = timeInMillis(value, unit);
                     return this;
                 }
 
@@ -935,7 +931,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Preconditions.check(value, value >= 0, "Timeout duration must be >= 0");
                 Preconditions.checkNotNull(unit, "Timeout duration unit must be set");
 
-                this.durationInMillis = getTimeInMs(value, unit);
+                this.durationInMillis = timeInMillis(value, unit);
                 return this;
             }
 

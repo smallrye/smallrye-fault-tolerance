@@ -17,12 +17,11 @@
 package io.smallrye.faulttolerance;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
+import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -296,21 +295,21 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasTimeout()) {
-            long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
+            long timeoutMs = timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit());
             result = new CompletionStageTimeout<>(result, point.toString(), timeoutMs, timer);
         }
 
         if (operation.hasRateLimit()) {
             result = new CompletionStageRateLimit<>(result, point.toString(),
                     operation.getRateLimit().value(),
-                    getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
-                    getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
+                    timeInMillis(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
+                    timeInMillis(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
                     operation.getRateLimit().type(),
                     SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasCircuitBreaker()) {
-            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
+            long delayInMillis = timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CompletionStageCircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
@@ -327,7 +326,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
+            long maxDurationMs = timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
@@ -366,21 +365,21 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasTimeout()) {
-            long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
+            long timeoutMs = timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit());
             result = new Timeout<>(result, point.toString(), timeoutMs, timer);
         }
 
         if (operation.hasRateLimit()) {
             result = new RateLimit<>(result, point.toString(),
                     operation.getRateLimit().value(),
-                    getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
-                    getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
+                    timeInMillis(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
+                    timeInMillis(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
                     operation.getRateLimit().type(),
                     SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasCircuitBreaker()) {
-            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
+            long delayInMillis = timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
@@ -397,7 +396,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
+            long maxDurationMs = timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
@@ -437,7 +436,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasTimeout()) {
-            long timeoutMs = getTimeInMs(operation.getTimeout().value(), operation.getTimeout().unit());
+            long timeoutMs = timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit());
             Timeout<Future<T>> timeout = new Timeout<>(result, point.toString(), timeoutMs, timer);
             result = new AsyncTimeout<>(timeout, asyncExecutor);
         }
@@ -445,14 +444,14 @@ public class FaultToleranceInterceptor {
         if (operation.hasRateLimit()) {
             result = new RateLimit<>(result, point.toString(),
                     operation.getRateLimit().value(),
-                    getTimeInMs(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
-                    getTimeInMs(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
+                    timeInMillis(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
+                    timeInMillis(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
                     operation.getRateLimit().type(),
                     SystemStopwatch.INSTANCE);
         }
 
         if (operation.hasCircuitBreaker()) {
-            long delayInMillis = getTimeInMs(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
+            long delayInMillis = timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
                     delayInMillis,
@@ -469,7 +468,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            long maxDurationMs = getTimeInMs(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
+            long maxDurationMs = timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
 
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
@@ -499,18 +498,18 @@ public class FaultToleranceInterceptor {
     }
 
     private Supplier<BackOff> prepareRetryBackoff(FaultToleranceOperation operation) {
-        long delayMs = getTimeInMs(operation.getRetry().delay(), operation.getRetry().delayUnit());
+        long delayMs = timeInMillis(operation.getRetry().delay(), operation.getRetry().delayUnit());
 
-        long jitterMs = getTimeInMs(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
+        long jitterMs = timeInMillis(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
         Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
         if (operation.hasExponentialBackoff()) {
             int factor = operation.getExponentialBackoff().factor();
-            long maxDelay = getTimeInMs(operation.getExponentialBackoff().maxDelay(),
+            long maxDelay = timeInMillis(operation.getExponentialBackoff().maxDelay(),
                     operation.getExponentialBackoff().maxDelayUnit());
             return () -> new ExponentialBackOff(delayMs, factor, jitter, maxDelay);
         } else if (operation.hasFibonacciBackoff()) {
-            long maxDelay = getTimeInMs(operation.getFibonacciBackoff().maxDelay(),
+            long maxDelay = timeInMillis(operation.getFibonacciBackoff().maxDelay(),
                     operation.getFibonacciBackoff().maxDelayUnit());
             return () -> new FibonacciBackOff(delayMs, jitter, maxDelay);
         } else if (operation.hasCustomBackoff()) {
@@ -578,10 +577,6 @@ public class FaultToleranceInterceptor {
         }
 
         return fallbackFunction;
-    }
-
-    private long getTimeInMs(long time, ChronoUnit unit) {
-        return Duration.of(time, unit).toMillis();
     }
 
     private ExceptionDecision createExceptionDecision(Class<? extends Throwable>[] consideredExpected,
