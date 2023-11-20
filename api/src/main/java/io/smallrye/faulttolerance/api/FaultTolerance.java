@@ -300,9 +300,9 @@ public interface FaultTolerance<T> {
         TimeoutBuilder<T, R> withTimeout();
 
         /**
-         * Configures whether the guarded action should be offloaded to another thread. This is only possible
-         * for asynchronous actions. If this builder was not created using {@code createAsync}, this method
-         * throws an exception.
+         * Configures whether the guarded action should be offloaded to another thread. Thread offload is
+         * only possible for asynchronous actions. If this builder was not created using {@code createAsync},
+         * attempting to configure thread offload throws an exception.
          *
          * @param value whether the guarded action should be offloaded to another thread
          * @return this fault tolerance builder
