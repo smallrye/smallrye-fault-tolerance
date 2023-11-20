@@ -29,8 +29,9 @@ jobs:
         # we want: all LTS versions (that we care about), latest GA, upcoming
         - 11
         - 17
-        - 20
-        - 21-ea
+        - 21
+        # JBoss Logging doesn't seem to work correctly
+        #- 22-ea
         os:
         - ubuntu-latest
         - windows-latest
