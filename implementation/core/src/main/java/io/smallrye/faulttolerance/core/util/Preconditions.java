@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.core.util;
 
-public class Preconditions {
+public final class Preconditions {
     private Preconditions() {
         // avoid instantiation
     }
@@ -13,6 +13,20 @@ public class Preconditions {
     }
 
     public static <T> T check(T value, boolean test, String message) {
+        if (!test) {
+            throw new IllegalArgumentException(message + ", was " + value);
+        }
+        return value;
+    }
+
+    public static long check(long value, boolean test, String message) {
+        if (!test) {
+            throw new IllegalArgumentException(message + ", was " + value);
+        }
+        return value;
+    }
+
+    public static int check(int value, boolean test, String message) {
         if (!test) {
             throw new IllegalArgumentException(message + ", was " + value);
         }
