@@ -15,8 +15,9 @@
  */
 package io.smallrye.faulttolerance.config;
 
+import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
+
 import java.lang.annotation.Annotation;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -397,10 +398,10 @@ public class FaultToleranceOperation {
         }
 
         if (retry != null) {
-            long retryMaxDuration = Duration.of(retry.maxDuration(), retry.durationUnit()).toMillis();
+            long retryMaxDuration = timeInMillis(retry.maxDuration(), retry.durationUnit());
             if (retryMaxDuration > 0) {
                 if (exponentialBackoff != null) {
-                    long maxDelay = Duration.of(exponentialBackoff.maxDelay(), exponentialBackoff.maxDelayUnit()).toMillis();
+                    long maxDelay = timeInMillis(exponentialBackoff.maxDelay(), exponentialBackoff.maxDelayUnit());
                     if (retryMaxDuration <= maxDelay) {
                         throw new FaultToleranceDefinitionException("Invalid @ExponentialBackoff on " + methodDescriptor
                                 + ": @Retry.maxDuration should be greater than maxDelay");
@@ -408,7 +409,7 @@ public class FaultToleranceOperation {
                 }
 
                 if (fibonacciBackoff != null) {
-                    long maxDelay = Duration.of(fibonacciBackoff.maxDelay(), fibonacciBackoff.maxDelayUnit()).toMillis();
+                    long maxDelay = timeInMillis(fibonacciBackoff.maxDelay(), fibonacciBackoff.maxDelayUnit());
                     if (retryMaxDuration <= maxDelay) {
                         throw new FaultToleranceDefinitionException("Invalid @FibonacciBackoff on " + methodDescriptor
                                 + ": @Retry.maxDuration should be greater than maxDelay");

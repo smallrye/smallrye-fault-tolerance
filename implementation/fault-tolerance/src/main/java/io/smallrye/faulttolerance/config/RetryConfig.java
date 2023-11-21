@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.config;
 
-import java.time.Duration;
+import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
@@ -26,9 +26,9 @@ public interface RetryConfig extends Retry, Config {
             throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + method()
                     + ": maxDuration shouldn't be lower than 0");
         }
-        long maxDuration = Duration.of(maxDuration(), durationUnit()).toMillis();
+        long maxDuration = timeInMillis(maxDuration(), durationUnit());
         if (maxDuration > 0) {
-            long delay = Duration.of(delay(), delayUnit()).toMillis();
+            long delay = timeInMillis(delay(), delayUnit());
             if (maxDuration <= delay) {
                 throw new FaultToleranceDefinitionException(INVALID_RETRY_ON + method()
                         + ": maxDuration should be greater than delay");
