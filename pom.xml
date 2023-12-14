@@ -59,7 +59,7 @@
         <version.smallrye-context-propagation>2.1.0</version.smallrye-context-propagation>
         <version.smallrye-common>2.2.0</version.smallrye-common>
         <version.opentracing>0.33.0</version.opentracing>
-        <version.vertx>4.5.0</version.vertx>
+        <version.vertx>4.5.1</version.vertx>
 
         <version.arquillian>1.8.0.Final</version.arquillian>
         <version.arquillian-weld>3.0.2.Final</version.arquillian-weld>
