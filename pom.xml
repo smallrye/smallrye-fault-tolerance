@@ -66,7 +66,7 @@
         <version.assertj>3.24.2</version.assertj>
         <version.awaitility>4.2.0</version.awaitility>
         <version.junit-jupiter>5.10.1</version.junit-jupiter>
-        <version.mutiny>2.5.2</version.mutiny>
+        <version.mutiny>2.5.3</version.mutiny>
         <version.rxjava3>3.1.8</version.rxjava3>
         <version.testng>6.14.3</version.testng>
         <version.weld-api>5.0.SP3</version.weld-api>
