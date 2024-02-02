@@ -62,7 +62,7 @@
         <version.vertx>4.5.2</version.vertx>
 
         <version.arquillian>1.8.0.Final</version.arquillian>
-        <version.arquillian-weld>3.0.2.Final</version.arquillian-weld>
+        <version.arquillian-weld>4.0.0.Final</version.arquillian-weld>
         <version.assertj>3.25.2</version.assertj>
         <version.awaitility>4.2.0</version.awaitility>
         <version.junit-jupiter>5.10.1</version.junit-jupiter>
