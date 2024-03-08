@@ -104,6 +104,9 @@ Smooth time windows enforce a uniform distribution of invocations under a rate c
 If recent rate of invocations is under the limit, a subsequent burst of invocations is allowed during a shorter time span, but the calculated rate is never exceeded.
 This kind of rate limiting is also called _token bucket_ or _leaky bucket (as a meter)_ rate limiting, with the additional property that all work units are considered to have the same size.
 
+With fixed and rolling time windows, rejected invocations always count towards the limit, so if a caller continuously invokes the guarded method faster than the configuration allows, all invocations are rejected until the caller slows down.
+With smooth time windows, rejected invocations do not count towards the recent rate of invocations.
+
 Example usage:
 
 [source,java]
