@@ -31,7 +31,8 @@ public class CompletionStageRateLimit<V> extends RateLimit<CompletionStage<V>> {
     private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) {
         CompletableFuture<V> result = new CompletableFuture<>();
 
-        if (timeWindow.record()) {
+        long retryAfter = timeWindow.record();
+        if (retryAfter == 0) {
             try {
                 LOG.trace("Task permitted by rate limit");
                 ctx.fireEvent(RateLimitEvents.DecisionMade.PERMITTED);
@@ -42,7 +43,7 @@ public class CompletionStageRateLimit<V> extends RateLimit<CompletionStage<V>> {
         } else {
             LOG.debugf("%s rate limit exceeded", description);
             ctx.fireEvent(RateLimitEvents.DecisionMade.REJECTED);
-            result.completeExceptionally(new RateLimitException(description + " rate limit exceeded"));
+            result.completeExceptionally(new RateLimitException(retryAfter, description + " rate limit exceeded"));
         }
 
         return result;

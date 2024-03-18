@@ -23,23 +23,23 @@ final class NaiveRollingWindow implements TimeWindow {
     }
 
     @Override
-    public synchronized boolean record() {
+    public synchronized long record() {
         long now = stopwatch.elapsedTimeInMillis();
         long validity = now - timeWindowInMillis; // all entries before or at this timestamp have expired
 
         timestamps.removeIf(it -> it <= validity);
 
-        boolean allowInvocation = timestamps.size() < maxInvocations;
+        long result = timestamps.size() < maxInvocations ? 0 : timestamps.get(0) - now + timeWindowInMillis;
 
-        if (!timestamps.isEmpty()) {
+        if (result == 0 && minSpacingInMillis != 0 && !timestamps.isEmpty()) {
             long timeFromPrevious = now - timestamps.get(timestamps.size() - 1);
             if (timeFromPrevious < minSpacingInMillis) {
-                allowInvocation = false;
+                result = minSpacingInMillis - timeFromPrevious;
             }
         }
 
         timestamps.add(now);
 
-        return allowInvocation;
+        return result;
     }
 }

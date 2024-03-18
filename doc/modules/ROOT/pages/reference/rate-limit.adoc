@@ -30,6 +30,11 @@ public void doSomething() {
 }
 ----
 
+The `RateLimitException` class has a method `getRetryAfterMillis()` which returns the number of milliseconds after which the user may retry the rejected invocation.
+Retrying sooner is guaranteed to be rejected again.
+Note that this information is accurate only at the time the invocation is rejected.
+It may be invalidated by any subsequent or concurrent invocations, so there is no guarantee that a retry attempt after the given number of milliseconds will in fact be permitted.
+
 === Lifecycle
 
 Rate limit needs to maintain some state between invocations: the number of recent invocations, the time stamp of last invocation, and so on.

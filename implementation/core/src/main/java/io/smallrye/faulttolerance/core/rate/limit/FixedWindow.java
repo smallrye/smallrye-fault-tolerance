@@ -10,7 +10,7 @@ final class FixedWindow implements TimeWindow {
     private final long timeWindowInMillis;
     private final long minSpacingInMillis;
 
-    private long currentPermits; // could be int, but that would require guarding against underflow
+    private long currentPermits; // could be `int`, but that would require guarding against underflow
     private long nextRefresh;
 
     private long lastInvocation;
@@ -27,7 +27,7 @@ final class FixedWindow implements TimeWindow {
     }
 
     @Override
-    public synchronized boolean record() {
+    public synchronized long record() {
         long now = stopwatch.elapsedTimeInMillis();
         if (now >= nextRefresh) {
             currentPermits = maxInvocations;
@@ -36,14 +36,17 @@ final class FixedWindow implements TimeWindow {
             nextRefresh += timeWindowInMillis * (1 + (now - nextRefresh) / timeWindowInMillis);
         }
 
-        boolean allowInvocation = currentPermits > 0;
-        if (allowInvocation && minSpacingInMillis != 0 && now - lastInvocation < minSpacingInMillis) {
-            allowInvocation = false;
+        long result = currentPermits > 0 ? 0 : nextRefresh - now;
+        if (result == 0 && minSpacingInMillis != 0) {
+            long timeFromPrevious = now - lastInvocation;
+            if (timeFromPrevious < minSpacingInMillis) {
+                result = minSpacingInMillis - timeFromPrevious;
+            }
         }
 
         currentPermits--;
         lastInvocation = now;
 
-        return allowInvocation;
+        return result;
     }
 }

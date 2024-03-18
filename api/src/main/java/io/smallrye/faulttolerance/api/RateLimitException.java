@@ -21,18 +21,60 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceExceptio
  * The exception thrown when an invocation exceeds the configured rate limit.
  */
 public class RateLimitException extends FaultToleranceException {
+    private final long retryAfterMillis;
+
     public RateLimitException() {
+        super();
+        this.retryAfterMillis = -1;
+    }
+
+    public RateLimitException(long retryAfterMillis) {
+        super();
+        this.retryAfterMillis = retryAfterMillis;
     }
 
     public RateLimitException(Throwable t) {
         super(t);
+        this.retryAfterMillis = -1;
+    }
+
+    public RateLimitException(long retryAfterMillis, Throwable t) {
+        super(t);
+        this.retryAfterMillis = retryAfterMillis;
     }
 
     public RateLimitException(String message) {
         super(message);
+        this.retryAfterMillis = -1;
+    }
+
+    public RateLimitException(long retryAfterMillis, String message) {
+        super(message);
+        this.retryAfterMillis = retryAfterMillis;
     }
 
     public RateLimitException(String message, Throwable t) {
         super(message, t);
+        this.retryAfterMillis = -1;
+    }
+
+    public RateLimitException(long retryAfterMillis, String message, Throwable t) {
+        super(message, t);
+        this.retryAfterMillis = retryAfterMillis;
+    }
+
+    /**
+     * Returns the number of milliseconds after which the user may retry the rejected invocation.
+     * Retrying sooner is guaranteed to be rejected again. Note that this information is accurate
+     * only at the time the invocation is rejected. It may be invalidated by any subsequent
+     * or concurrent invocations, so there is no guarantee that a retry attempt after the given
+     * number of milliseconds will in fact be permitted.
+     * <p>
+     * Returns a negative number when the information is not known.
+     *
+     * @return the minimum number of milliseconds after which retrying makes sense
+     */
+    public long getRetryAfterMillis() {
+        return retryAfterMillis;
     }
 }

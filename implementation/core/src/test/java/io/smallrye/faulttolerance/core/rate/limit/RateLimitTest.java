@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,12 +41,18 @@ public class RateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("2");
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(100L);
 
         stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
 
@@ -54,7 +61,10 @@ public class RateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("4");
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(100L);
     }
 
     @Test
@@ -82,13 +92,19 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("1", "2");
         assertThat(exceptions).hasSize(2);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(100L);
         });
 
         stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
         threads.clear();
@@ -138,11 +154,18 @@ public class RateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
+        // 1 x 10: min spacing violated (but rate limit not exceeded yet)
+        // 2 x 100: rate limit exceeded
+        assertThat(exceptions.stream().mapToLong(it -> ((RateLimitException) it).getRetryAfterMillis()).sum())
+                .isEqualTo(210);
 
         stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
         threads.clear();
@@ -164,7 +187,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("2");
         assertThat(exceptions).hasSize(1);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
     }
 
@@ -180,19 +206,28 @@ public class RateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("2");
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(100L);
 
         stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
 
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("3");
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
     }
 
     @Test
@@ -220,13 +255,19 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("1", "2");
         assertThat(exceptions).hasSize(2);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(100L);
         });
 
         stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
         threads.clear();
@@ -248,7 +289,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("3");
         assertThat(exceptions).hasSize(1);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(50L);
         });
     }
 
@@ -279,11 +323,18 @@ public class RateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e).isExactlyInstanceOf(RateLimitException.class);
         });
+        // 1 x 10: min spacing violated (but rate limit not exceeded yet)
+        // 2 x 100: rate limit exceeded
+        assertThat(exceptions.stream().mapToLong(it -> ((RateLimitException) it).getRetryAfterMillis()).sum())
+                .isEqualTo(210);
 
         stopwatch.setCurrentValue(50);
 
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(150);
         threads.clear();
@@ -305,7 +356,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("2");
         assertThat(exceptions).hasSize(1);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
     }
 
@@ -319,7 +373,10 @@ public class RateLimitTest {
         String result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("1");
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(50);
 
@@ -336,7 +393,10 @@ public class RateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(() -> "ignored"));
         assertThat(result).isEqualTo("4");
         assertThatCode(() -> rateLimit.apply(new InvocationContext<>(() -> "ignored")))
-                .isExactlyInstanceOf(RateLimitException.class);
+                .isExactlyInstanceOf(RateLimitException.class)
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
     }
 
     @Test
@@ -364,7 +424,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("1");
         assertThat(exceptions).hasSize(3);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(50L);
         });
 
         stopwatch.setCurrentValue(50);
@@ -391,7 +454,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("3");
         assertThat(exceptions).hasSize(1);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(50L);
         });
     }
 
@@ -420,7 +486,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("1");
         assertThat(exceptions).hasSize(3);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
 
         stopwatch.setCurrentValue(50);
@@ -447,7 +516,10 @@ public class RateLimitTest {
         assertThat(results).containsExactlyInAnyOrder("3");
         assertThat(exceptions).hasSize(1);
         assertThat(exceptions).allSatisfy(e -> {
-            assertThat(e).isExactlyInstanceOf(RateLimitException.class);
+            assertThat(e).isExactlyInstanceOf(RateLimitException.class)
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
     }
 }
