@@ -27,7 +27,7 @@ final class RingBufferRollingWindow implements TimeWindow {
     }
 
     @Override
-    public synchronized boolean record() {
+    public synchronized long record() {
         long now = stopwatch.elapsedTimeInMillis();
         long validity = now - timeWindowInMillis; // all entries before or at this timestamp have expired
 
@@ -36,12 +36,15 @@ final class RingBufferRollingWindow implements TimeWindow {
         }
 
         boolean isFull = isFull();
-        boolean allowInvocation = !isFull;
+        long result = !isFull ? 0 : timestamps[tail] - now + timeWindowInMillis;
 
-        if (allowInvocation && minSpacingInMillis != 0 && head >= 0) {
+        if (result == 0 && minSpacingInMillis != 0 && head >= 0) {
             long previous = timestamps[head];
-            if (previous != Long.MAX_VALUE && now - previous < minSpacingInMillis) {
-                allowInvocation = false;
+            if (previous != Long.MAX_VALUE) {
+                long timeFromPrevious = now - previous;
+                if (timeFromPrevious < minSpacingInMillis) {
+                    result = minSpacingInMillis - timeFromPrevious;
+                }
             }
         }
 
@@ -51,7 +54,7 @@ final class RingBufferRollingWindow implements TimeWindow {
         advanceHead();
         timestamps[head] = now;
 
-        return allowInvocation;
+        return result;
     }
 
     private boolean isFull() {

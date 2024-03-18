@@ -17,6 +17,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,14 +62,22 @@ public class CompletionStageRateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(100L);
 
         stopwatch.setCurrentValue(50);
 
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
 
@@ -79,7 +88,11 @@ public class CompletionStageRateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(100L);
     }
 
     @Test
@@ -111,7 +124,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(100L);
         });
 
         stopwatch.setCurrentValue(50);
@@ -119,7 +136,11 @@ public class CompletionStageRateLimitTest {
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
         threads.clear();
@@ -173,13 +194,21 @@ public class CompletionStageRateLimitTest {
                     .isExactlyInstanceOf(ExecutionException.class)
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
+        // 1 x 10: min spacing violated (but rate limit not exceeded yet)
+        // 2 x 100: rate limit exceeded
+        assertThat(exceptions.stream().mapToLong(it -> ((RateLimitException) it.getCause()).getRetryAfterMillis()).sum())
+                .isEqualTo(210);
 
         stopwatch.setCurrentValue(50);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
         threads.clear();
@@ -203,7 +232,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
     }
 
@@ -223,14 +256,22 @@ public class CompletionStageRateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(100L);
 
         stopwatch.setCurrentValue(50);
 
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
 
@@ -239,7 +280,11 @@ public class CompletionStageRateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
     }
 
     @Test
@@ -271,7 +316,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(100L);
         });
 
         stopwatch.setCurrentValue(50);
@@ -279,7 +328,11 @@ public class CompletionStageRateLimitTest {
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(100);
         threads.clear();
@@ -303,7 +356,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(50L);
         });
     }
 
@@ -338,13 +395,21 @@ public class CompletionStageRateLimitTest {
                     .isExactlyInstanceOf(ExecutionException.class)
                     .hasCauseExactlyInstanceOf(RateLimitException.class);
         });
+        // 1 x 10: min spacing violated (but rate limit not exceeded yet)
+        // 2 x 100: rate limit exceeded
+        assertThat(exceptions.stream().mapToLong(it -> ((RateLimitException) it.getCause()).getRetryAfterMillis()).sum())
+                .isEqualTo(210);
 
         stopwatch.setCurrentValue(50);
 
         CompletionStage<String> result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(150);
         threads.clear();
@@ -368,7 +433,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
     }
 
@@ -386,7 +455,11 @@ public class CompletionStageRateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
 
         stopwatch.setCurrentValue(50);
 
@@ -405,7 +478,11 @@ public class CompletionStageRateLimitTest {
         result = rateLimit.apply(new InvocationContext<>(null));
         assertThatThrownBy(result.toCompletableFuture()::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(RateLimitException.class);
+                .hasCauseInstanceOf(RateLimitException.class)
+                .cause()
+                .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                .extracting(RateLimitException::getRetryAfterMillis)
+                .isEqualTo(50L);
     }
 
     @Test
@@ -437,7 +514,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(50L);
         });
 
         stopwatch.setCurrentValue(50);
@@ -467,7 +548,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(50L);
         });
     }
 
@@ -500,7 +585,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
 
         stopwatch.setCurrentValue(50);
@@ -530,7 +619,11 @@ public class CompletionStageRateLimitTest {
         assertThat(exceptions).allSatisfy(e -> {
             assertThat(e)
                     .isExactlyInstanceOf(ExecutionException.class)
-                    .hasCauseExactlyInstanceOf(RateLimitException.class);
+                    .hasCauseExactlyInstanceOf(RateLimitException.class)
+                    .cause()
+                    .asInstanceOf(InstanceOfAssertFactories.throwable(RateLimitException.class))
+                    .extracting(RateLimitException::getRetryAfterMillis)
+                    .isEqualTo(10L);
         });
     }
 }

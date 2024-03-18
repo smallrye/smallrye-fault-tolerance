@@ -9,6 +9,7 @@ final class SmoothWindow implements TimeWindow {
     private final int maxInvocations;
     private final long minSpacingInMillis;
     private final double refreshPermitsPerMillis;
+    private final double millisToRefreshOnePermit; // could be `long`, but we always use it as `double`
 
     private double currentPermits;
 
@@ -19,16 +20,17 @@ final class SmoothWindow implements TimeWindow {
         this.stopwatch = stopwatch.start();
 
         this.refreshPermitsPerMillis = (double) maxInvocations / (double) timeWindowInMillis;
+        this.millisToRefreshOnePermit = (double) timeWindowInMillis / (double) maxInvocations;
         this.maxInvocations = maxInvocations;
         this.minSpacingInMillis = minSpacingInMillis;
 
-        this.currentPermits = 1;
+        this.currentPermits = 1.0;
         this.lastInvocation = -minSpacingInMillis;
         this.lastPermitRefresh = 0;
     }
 
     @Override
-    public synchronized boolean record() {
+    public synchronized long record() {
         long now = stopwatch.elapsedTimeInMillis();
 
         double permitsToRefresh = (now - lastPermitRefresh) * refreshPermitsPerMillis;
@@ -37,16 +39,19 @@ final class SmoothWindow implements TimeWindow {
             lastPermitRefresh = now;
         }
 
-        boolean allowInvocation = currentPermits >= 1.0;
-        if (allowInvocation && minSpacingInMillis != 0 && now - lastInvocation < minSpacingInMillis) {
-            allowInvocation = false;
+        long result = currentPermits >= 1.0 ? 0 : Math.round((1.0 - currentPermits) * millisToRefreshOnePermit);
+        if (result == 0 && minSpacingInMillis != 0) {
+            long timeFromPrevious = now - lastInvocation;
+            if (timeFromPrevious < minSpacingInMillis) {
+                result = minSpacingInMillis - timeFromPrevious;
+            }
         }
 
-        if (allowInvocation) {
+        if (result == 0) {
             currentPermits--;
         }
         lastInvocation = now;
 
-        return allowInvocation;
+        return result;
     }
 }

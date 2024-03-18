@@ -48,14 +48,15 @@ public class RateLimit<V> implements FaultToleranceStrategy<V> {
     }
 
     private V doApply(InvocationContext<V> ctx) throws Exception {
-        if (timeWindow.record()) {
+        long retryAfter = timeWindow.record();
+        if (retryAfter == 0) {
             LOG.trace("Task permitted by rate limit");
             ctx.fireEvent(RateLimitEvents.DecisionMade.PERMITTED);
             return delegate.apply(ctx);
         } else {
             LOG.debugf("%s rate limit exceeded", description);
             ctx.fireEvent(RateLimitEvents.DecisionMade.REJECTED);
-            throw new RateLimitException(description + " rate limit exceeded");
+            throw new RateLimitException(retryAfter, description + " rate limit exceeded");
         }
     }
 }
