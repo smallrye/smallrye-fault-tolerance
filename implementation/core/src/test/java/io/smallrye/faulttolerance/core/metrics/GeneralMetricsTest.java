@@ -19,8 +19,7 @@ public class GeneralMetricsTest {
     public void successfulInvocation() throws Exception {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
-        MetricsCollector<String> collector = new MetricsCollector<>(invocation(), metrics, false,
-                false, false, false, false, false);
+        MetricsCollector<String> collector = new MetricsCollector<>(invocation(), metrics, new MockMeteredOperation());
         assertThat(collector.apply(new InvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
 
         assertThat(metrics.valueReturned).isEqualTo(1);
@@ -31,13 +30,54 @@ public class GeneralMetricsTest {
     public void failingInvocation() {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
-        MetricsCollector<Void> collector = new MetricsCollector<>(invocation(), metrics, false,
-                false, false, false, false, false);
+        MetricsCollector<Void> collector = new MetricsCollector<>(invocation(), metrics, new MockMeteredOperation());
         assertThatThrownBy(() -> collector.apply(new InvocationContext<>(TestException::doThrow)))
                 .isExactlyInstanceOf(TestException.class);
 
         assertThat(metrics.valueReturned).isEqualTo(0);
         assertThat(metrics.exceptionThrown).isEqualTo(1);
+    }
+
+    private static class MockMeteredOperation implements MeteredOperation {
+        @Override
+        public boolean isAsynchronous() {
+            return false;
+        }
+
+        @Override
+        public boolean hasBulkhead() {
+            return false;
+        }
+
+        @Override
+        public boolean hasCircuitBreaker() {
+            return false;
+        }
+
+        @Override
+        public boolean hasFallback() {
+            return false;
+        }
+
+        @Override
+        public boolean hasRateLimit() {
+            return false;
+        }
+
+        @Override
+        public boolean hasRetry() {
+            return false;
+        }
+
+        @Override
+        public boolean hasTimeout() {
+            return false;
+        }
+
+        @Override
+        public String name() {
+            return "mock";
+        }
     }
 
     private static class MockMetricsRecorder implements MetricsRecorder {

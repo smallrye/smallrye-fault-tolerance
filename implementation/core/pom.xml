@@ -29,7 +29,7 @@
 
     <properties>
         <!--suppress CheckTagEmptyBody -->
-        <jacoco.argLine /> <!-- will be set by the JaCoCo Maven plugin when active -->
+        <jacoco.argLine></jacoco.argLine> <!-- will be set by the JaCoCo Maven plugin when active -->
     </properties>
 
     <dependencies>
@@ -52,6 +52,17 @@
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging-processor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.microprofile.metrics</groupId>
+            <artifactId>microprofile-metrics-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

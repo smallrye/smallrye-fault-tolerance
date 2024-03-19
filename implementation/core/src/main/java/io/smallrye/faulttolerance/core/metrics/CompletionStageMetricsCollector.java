@@ -11,8 +11,8 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 
 public class CompletionStageMetricsCollector<V> extends MetricsCollector<CompletionStage<V>> {
     public CompletionStageMetricsCollector(FaultToleranceStrategy<CompletionStage<V>> delegate, MetricsRecorder metrics,
-            boolean hasBulkhead, boolean hasCircuitBreaker, boolean hasRateLimit, boolean hasRetry, boolean hasTimeout) {
-        super(delegate, metrics, true, hasBulkhead, hasCircuitBreaker, hasRateLimit, hasRetry, hasTimeout);
+            MeteredOperation operation) {
+        super(delegate, metrics, operation);
     }
 
     @Override

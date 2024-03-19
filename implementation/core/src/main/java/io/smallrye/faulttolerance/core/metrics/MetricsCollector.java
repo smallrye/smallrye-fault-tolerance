@@ -43,16 +43,15 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     private final AtomicLong runningExecutions = new AtomicLong();
     private final AtomicLong waitingExecutions = new AtomicLong();
 
-    public MetricsCollector(FaultToleranceStrategy<V> delegate, MetricsRecorder metrics, boolean isAsync,
-            boolean hasBulkhead, boolean hasCircuitBreaker, boolean hasRateLimit, boolean hasRetry, boolean hasTimeout) {
+    public MetricsCollector(FaultToleranceStrategy<V> delegate, MetricsRecorder metrics, MeteredOperation operation) {
         this.delegate = delegate;
         this.metrics = metrics;
-        this.isAsync = isAsync;
-        this.hasBulkhead = hasBulkhead;
-        this.hasCircuitBreaker = hasCircuitBreaker;
-        this.hasRateLimit = hasRateLimit;
-        this.hasRetry = hasRetry;
-        this.hasTimeout = hasTimeout;
+        this.isAsync = operation.isAsynchronous();
+        this.hasBulkhead = operation.hasBulkhead();
+        this.hasCircuitBreaker = operation.hasCircuitBreaker();
+        this.hasRateLimit = operation.hasRateLimit();
+        this.hasRetry = operation.hasRetry();
+        this.hasTimeout = operation.hasTimeout();
 
         this.state = CircuitBreakerState.CLOSED;
         this.closedStart = System.nanoTime();
