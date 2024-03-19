@@ -239,7 +239,7 @@ public interface FaultTolerance<T> {
     interface Builder<T, R> {
         /**
          * Assigns a description to the resulting set of configured fault tolerance strategies. The description
-         * is used in logging messages and exception messages.
+         * is used in logging messages and exception messages, and also as an identifier for metrics .
          * <p>
          * The description may be an arbitrary string. Duplicates are permitted.
          * <p>

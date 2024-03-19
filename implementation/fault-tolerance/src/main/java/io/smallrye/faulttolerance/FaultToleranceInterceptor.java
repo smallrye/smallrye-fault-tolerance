@@ -73,7 +73,6 @@ import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
-import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -102,7 +101,7 @@ import io.smallrye.faulttolerance.internal.InterceptionInvoker;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
-import io.smallrye.faulttolerance.metrics.MeteredOperationImpl;
+import io.smallrye.faulttolerance.metrics.CdiMeteredOperationImpl;
 
 /**
  * The interceptor for fault tolerance strategies.
@@ -347,8 +346,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            MeteredOperation meteredOperation = new MeteredOperationImpl(operation, specCompatibility);
-            result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(meteredOperation, point),
+            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
+            result = new CompletionStageMetricsCollector<>(result, metricsProvider.create(meteredOperation),
                     meteredOperation);
         }
 
@@ -417,8 +416,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            MeteredOperation meteredOperation = new MeteredOperationImpl(operation, specCompatibility);
-            result = new MetricsCollector<>(result, getMetricsRecorder(meteredOperation, point), meteredOperation);
+            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
+            result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
         return result;
@@ -488,8 +487,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            MeteredOperation meteredOperation = new MeteredOperationImpl(operation, specCompatibility);
-            result = new MetricsCollector<>(result, getMetricsRecorder(meteredOperation, point), meteredOperation);
+            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
+            result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
         result = new FutureExecution<>(result, asyncExecutor);
@@ -590,9 +589,5 @@ public class FaultToleranceInterceptor {
             return SetOfThrowables.EMPTY;
         }
         return SetOfThrowables.create(Arrays.asList(throwableClasses));
-    }
-
-    private MetricsRecorder getMetricsRecorder(MeteredOperation operation, InterceptionPoint point) {
-        return cache.getMetrics(point, () -> metricsProvider.create(operation));
     }
 }

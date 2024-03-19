@@ -3,13 +3,17 @@ package io.smallrye.faulttolerance.metrics;
 import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
+import io.smallrye.faulttolerance.internal.InterceptionPoint;
 
-public final class MeteredOperationImpl implements MeteredOperation {
+public final class CdiMeteredOperationImpl implements MeteredOperation {
     private final FaultToleranceOperation operation;
+    private final InterceptionPoint interceptionPoint;
     private final SpecCompatibility specCompatibility;
 
-    public MeteredOperationImpl(FaultToleranceOperation operation, SpecCompatibility specCompatibility) {
+    public CdiMeteredOperationImpl(FaultToleranceOperation operation, InterceptionPoint interceptionPoint,
+            SpecCompatibility specCompatibility) {
         this.operation = operation;
+        this.interceptionPoint = interceptionPoint;
         this.specCompatibility = specCompatibility;
     }
 
@@ -51,5 +55,10 @@ public final class MeteredOperationImpl implements MeteredOperation {
     @Override
     public String name() {
         return operation.getName();
+    }
+
+    @Override
+    public Object cacheKey() {
+        return interceptionPoint;
     }
 }

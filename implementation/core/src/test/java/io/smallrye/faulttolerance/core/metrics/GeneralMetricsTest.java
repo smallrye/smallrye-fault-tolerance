@@ -78,6 +78,11 @@ public class GeneralMetricsTest {
         public String name() {
             return "mock";
         }
+
+        @Override
+        public Object cacheKey() {
+            return name();
+        }
     }
 
     private static class MockMetricsRecorder implements MetricsRecorder {

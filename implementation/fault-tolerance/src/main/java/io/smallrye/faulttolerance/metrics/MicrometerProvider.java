@@ -1,5 +1,8 @@
 package io.smallrye.faulttolerance.metrics;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -20,17 +23,20 @@ public class MicrometerProvider implements MetricsProvider {
     @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
     boolean metricsEnabled;
 
-    @Override
-    public MetricsRecorder create(MeteredOperation operation) {
-        if (metricsEnabled) {
-            return new MicrometerRecorder(registry, operation);
-        } else {
-            return MetricsRecorder.NOOP;
-        }
-    }
+    private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
 
     @Override
     public boolean isEnabled() {
         return metricsEnabled;
+    }
+
+    @Override
+    public MetricsRecorder create(MeteredOperation operation) {
+        if (metricsEnabled) {
+            return cache.computeIfAbsent(operation.cacheKey(),
+                    ignored -> new MicrometerRecorder(registry, operation));
+        } else {
+            return MetricsRecorder.NOOP;
+        }
     }
 }

@@ -17,6 +17,7 @@ import io.smallrye.faulttolerance.core.apiimpl.BuilderEagerDependencies;
 import io.smallrye.faulttolerance.core.apiimpl.BuilderLazyDependencies;
 import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
+import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.timer.Timer;
 
 public class CdiFaultToleranceSpi implements FaultToleranceSpi {
@@ -43,6 +44,9 @@ public class CdiFaultToleranceSpi implements FaultToleranceSpi {
         @Inject
         CircuitBreakerMaintenanceImpl cbMaintenance;
 
+        @Inject
+        MetricsProvider metricsProvider;
+
         @Override
         public boolean ftEnabled() {
             return ftEnabled;
@@ -61,6 +65,11 @@ public class CdiFaultToleranceSpi implements FaultToleranceSpi {
         @Override
         public Timer timer() {
             return executorHolder.getTimer();
+        }
+
+        @Override
+        public MetricsProvider metricsProvider() {
+            return metricsProvider;
         }
     }
 
