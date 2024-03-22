@@ -14,7 +14,7 @@ import io.smallrye.metrics.setup.MetricCdiInjectionExtension;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@ExtendWith(WeldWithFaultToleranceExtension.class)
+@ExtendWith({ WeldWithFaultToleranceExtension.class, ResetSmallRyeMetricsExtension.class })
 @AddExtensions({ FaultToleranceExtension.class, ConfigExtension.class, MetricCdiInjectionExtension.class })
 public @interface FaultToleranceBasicTest {
 }

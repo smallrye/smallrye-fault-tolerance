@@ -32,6 +32,22 @@ Those are described in the reference guides:
 * xref:reference/retry.adoc#metrics[Retry]
 * xref:reference/timeout.adoc#metrics[Timeout]
 
+== Timer Metrics
+
+For task scheduling purposes (e.g. watching timeouts or delaying retries), {smallrye-fault-tolerance} maintains one thread called the _timer thread_.
+Most of the time, it is kept sleeping (parked), it only wakes up (unparks) when necessary to submit tasks to executors.
+
+The behavior of the timer thread can be observed through the following metrics:
+
+[cols="1,5"]
+|===
+| Name | `ft.timer.scheduled`
+| Type | `Gauge<Integer>`
+| Unit | None
+| Description | The number of tasks that are currently scheduled (for future execution) on the timer.
+| Tags | None
+|===
+
 == Micrometer Support
 
 In addition to the MicroProfile Metrics support, {smallrye-fault-tolerance} also provides support for https://micrometer.io/[Micrometer].
@@ -114,6 +130,11 @@ Metric types are mapped as closely as possible:
 | `ft.ratelimit.calls.total`
 | counter
 | counter
+| *
+
+| `ft.timer.scheduled`
+| gauge
+| gauge
 | *
 |===
 

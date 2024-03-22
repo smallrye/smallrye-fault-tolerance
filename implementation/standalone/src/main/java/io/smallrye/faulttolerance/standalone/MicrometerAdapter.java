@@ -5,9 +5,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
+import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 import io.smallrye.faulttolerance.core.metrics.MicrometerRecorder;
+import io.smallrye.faulttolerance.core.timer.Timer;
 
 public final class MicrometerAdapter implements MetricsAdapter {
     private final MeterRegistry registry;
@@ -16,7 +18,9 @@ public final class MicrometerAdapter implements MetricsAdapter {
         this.registry = registry;
     }
 
-    MetricsProvider createMetricsProvider() {
+    MetricsProvider createMetricsProvider(Timer timer) {
+        registry.gauge(MetricsConstants.TIMER_SCHEDULED, timer, Timer::countScheduledTasks);
+
         return new MetricsProvider() {
             private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
 

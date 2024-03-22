@@ -26,5 +26,5 @@ public final class MetricsConstants {
 
     public static final String RATE_LIMIT_CALLS_TOTAL = "ft.ratelimit.calls.total";
 
-    public static final String TIMER_QUEUE = "ft.timer.queue";
+    public static final String TIMER_SCHEDULED = "ft.timer.scheduled";
 }

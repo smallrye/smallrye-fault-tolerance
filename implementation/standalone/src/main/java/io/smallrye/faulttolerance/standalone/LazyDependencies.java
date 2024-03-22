@@ -55,7 +55,7 @@ final class LazyDependencies implements BuilderLazyDependencies {
                     if (metricsAdapter instanceof NoopAdapter) {
                         metricsProvider = ((NoopAdapter) metricsAdapter).createMetricsProvider();
                     } else if (metricsAdapter instanceof MicrometerAdapter) {
-                        metricsProvider = ((MicrometerAdapter) metricsAdapter).createMetricsProvider();
+                        metricsProvider = ((MicrometerAdapter) metricsAdapter).createMetricsProvider(timer);
                     } else {
                         throw new IllegalStateException("Invalid metrics adapter: " + metricsAdapter);
                     }
