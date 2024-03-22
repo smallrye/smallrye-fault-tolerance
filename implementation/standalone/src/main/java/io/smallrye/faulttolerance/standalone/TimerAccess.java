@@ -5,6 +5,7 @@ package io.smallrye.faulttolerance.standalone;
  * <p>
  * Implementations must be thread-safe.
  */
+@Deprecated(forRemoval = true)
 public interface TimerAccess {
     /**
      * Returns the number of tasks that are currently scheduled for execution by the timer.
@@ -12,5 +13,6 @@ public interface TimerAccess {
      *
      * @return the number of currently scheduled tasks
      */
+    @Deprecated(forRemoval = true)
     int countScheduledTasks();
 }

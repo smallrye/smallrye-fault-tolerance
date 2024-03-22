@@ -40,6 +40,7 @@ public final class StandaloneFaultTolerance {
      *
      * @return read-only view into the SmallRye Fault Tolerance timer
      */
+    @Deprecated(forRemoval = true)
     public static synchronized TimerAccess timerAccess() {
         // we should expose timer metrics out of the box, but this will have to do for now
         return new TimerAccessImpl(getLazyDependencies().timer());
