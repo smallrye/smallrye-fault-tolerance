@@ -10,6 +10,7 @@ import org.eclipse.microprofile.metrics.annotation.RegistryType;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
@@ -28,16 +29,16 @@ public class CdiMetricsTest {
 
         assertThat(guarded.call()).isEqualTo("fallback");
 
-        assertThat(metrics.counter("ft.invocations.total",
+        assertThat(metrics.counter(MetricsConstants.INVOCATIONS_TOTAL,
                 new Tag("method", NAME),
                 new Tag("result", "valueReturned"),
                 new Tag("fallback", "applied"))
                 .getCount()).isEqualTo(1);
 
-        assertThat(metrics.counter("ft.retry.retries.total",
+        assertThat(metrics.counter(MetricsConstants.RETRY_RETRIES_TOTAL,
                 new Tag("method", NAME))
                 .getCount()).isEqualTo(3);
-        assertThat(metrics.counter("ft.retry.calls.total",
+        assertThat(metrics.counter(MetricsConstants.RETRY_CALLS_TOTAL,
                 new Tag("method", NAME),
                 new Tag("retried", "true"),
                 new Tag("retryResult", "maxRetriesReached"))

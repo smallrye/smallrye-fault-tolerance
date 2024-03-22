@@ -16,6 +16,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.standalone.Configuration;
 import io.smallrye.faulttolerance.standalone.MetricsAdapter;
@@ -70,16 +71,16 @@ public class StandaloneMetricsTest {
 
         assertThat(guarded.call()).isEqualTo("fallback");
 
-        assertThat(metrics.counter("ft.invocations.total", List.of(
+        assertThat(metrics.counter(MetricsConstants.INVOCATIONS_TOTAL, List.of(
                 Tag.of("method", NAME),
                 Tag.of("result", "valueReturned"),
                 Tag.of("fallback", "applied")))
                 .count()).isEqualTo(1.0);
 
-        assertThat(metrics.counter("ft.retry.retries.total", List.of(
+        assertThat(metrics.counter(MetricsConstants.RETRY_RETRIES_TOTAL, List.of(
                 Tag.of("method", NAME)))
                 .count()).isEqualTo(3.0);
-        assertThat(metrics.counter("ft.retry.calls.total", List.of(
+        assertThat(metrics.counter(MetricsConstants.RETRY_CALLS_TOTAL, List.of(
                 Tag.of("method", NAME),
                 Tag.of("retried", "true"),
                 Tag.of("retryResult", "maxRetriesReached")))
