@@ -1,7 +1,7 @@
-package io.smallrye.faulttolerance.metrics;
+package io.smallrye.faulttolerance.core.metrics;
 
-final class MetricConstants {
-    private MetricConstants() {
+final class MetricsConstants {
+    private MetricsConstants() {
         // avoid instantiation
     }
 

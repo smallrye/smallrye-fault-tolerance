@@ -334,8 +334,25 @@ This may change in the future, though possibly only in the CDI implementation.
 
 == Metrics
 
-At the moment, the programmatic API of {smallrye-fault-tolerance} is not integrated with metrics.
-This will change in the future, though possibly only in the CDI implementation.
+The programmatic API is integrated with metrics.
+All metrics, as described xref:reference/metrics.adoc[in the Metrics reference guide] and the linked guides, are supported.
+The only difference is the value of the `method` tag.
+With the programmatic API, the `method` tag will be set to the _description_ of the guarded operation, provided on the `FaultTolerance` builder.
+
+[source,java]
+----
+private static final FaultTolerance<String> guarded = FaultTolerance.<String>create()
+    .withDescription("hello") // <1>
+    .withFallback().handler(() -> "fallback").done()
+    .build();
+----
+
+<1> A description of `hello` is set, it will be used as a value of the `method` tag in all metrics.
+
+It is possible to create multiple `FaultTolerance` objects with the same description.
+In this case, it won't be possbile to distinguish the different `FaultTolerance` objects in metrics; their values will be aggregated.
+
+If no description is provided, a random UUID is used.
 
 == Integration Concerns
 

@@ -37,6 +37,9 @@ import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
+import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
+import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -291,6 +294,12 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 fallbackBuilder.whenPredicate));
             }
 
+            if (lazyDependencies.metricsProvider().isEnabled()) {
+                MeteredOperation meteredOperation = buildMeteredOperation();
+                result = new MetricsCollector<>(result, lazyDependencies.metricsProvider().create(meteredOperation),
+                        meteredOperation);
+            }
+
             return result;
         }
 
@@ -362,12 +371,24 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 fallbackBuilder.whenPredicate));
             }
 
+            if (lazyDependencies.metricsProvider().isEnabled()) {
+                MeteredOperation meteredOperation = buildMeteredOperation();
+                result = new CompletionStageMetricsCollector<>(result,
+                        lazyDependencies.metricsProvider().create(meteredOperation), meteredOperation);
+            }
+
             // thread offload is always enabled
             if (!offloadToAnotherThread) {
                 result = new RememberEventLoop<>(result, lazyDependencies.eventLoop());
             }
 
             return result;
+        }
+
+        private MeteredOperation buildMeteredOperation() {
+            return new BasicMeteredOperationImpl(description, isAsync, bulkheadBuilder != null,
+                    circuitBreakerBuilder != null, fallbackBuilder != null, rateLimitBuilder != null,
+                    retryBuilder != null, timeoutBuilder != null);
         }
 
         private static ExceptionDecision createExceptionDecision(Collection<Class<? extends Throwable>> consideredExpected,

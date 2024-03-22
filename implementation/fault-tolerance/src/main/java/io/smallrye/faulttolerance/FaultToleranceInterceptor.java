@@ -70,8 +70,9 @@ import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
-import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
+import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -100,7 +101,7 @@ import io.smallrye.faulttolerance.internal.InterceptionInvoker;
 import io.smallrye.faulttolerance.internal.InterceptionPoint;
 import io.smallrye.faulttolerance.internal.RequestScopeActivator;
 import io.smallrye.faulttolerance.internal.StrategyCache;
-import io.smallrye.faulttolerance.metrics.MetricsProvider;
+import io.smallrye.faulttolerance.metrics.CdiMeteredOperationImpl;
 
 /**
  * The interceptor for fault tolerance strategies.
@@ -345,9 +346,9 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            result = new CompletionStageMetricsCollector<>(result, getMetricsRecorder(operation, point),
-                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRateLimit(),
-                    operation.hasRetry(), operation.hasTimeout());
+            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
+            result = new CompletionStageMetricsCollector<>(result, metricsProvider.create(meteredOperation),
+                    meteredOperation);
         }
 
         if (!operation.isThreadOffloadRequired()) {
@@ -415,9 +416,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), false,
-                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRateLimit(),
-                    operation.hasRetry(), operation.hasTimeout());
+            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
+            result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
         return result;
@@ -487,9 +487,8 @@ public class FaultToleranceInterceptor {
         }
 
         if (metricsProvider.isEnabled()) {
-            result = new MetricsCollector<>(result, getMetricsRecorder(operation, point), true,
-                    operation.hasBulkhead(), operation.hasCircuitBreaker(), operation.hasRateLimit(),
-                    operation.hasRetry(), operation.hasTimeout());
+            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
+            result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
         result = new FutureExecution<>(result, asyncExecutor);
@@ -590,9 +589,5 @@ public class FaultToleranceInterceptor {
             return SetOfThrowables.EMPTY;
         }
         return SetOfThrowables.create(Arrays.asList(throwableClasses));
-    }
-
-    private MetricsRecorder getMetricsRecorder(FaultToleranceOperation operation, InterceptionPoint point) {
-        return cache.getMetrics(point, () -> metricsProvider.create(operation));
     }
 }

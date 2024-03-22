@@ -124,7 +124,8 @@ Micrometer recommends that libraries should not configure them out of the box, s
 
 The following implementation makes sure Micrometer emits the same quantiles as MicroProfile Metrics for all fault tolerance metrics:
 
-```java
+[source,java]
+----
 static final MeterFilter ENABLE_HISTOGRAMS = new MeterFilter() {
     @Override
     public DistributionStatisticConfig configure(Meter.Id id, DistributionStatisticConfig config) {
@@ -137,7 +138,7 @@ static final MeterFilter ENABLE_HISTOGRAMS = new MeterFilter() {
         return config;
     }
 };
-```
+----
 
 == Disabling Metrics
 
