@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.async;
 
 import static io.smallrye.faulttolerance.core.async.AsyncLogger.LOG;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -15,7 +16,7 @@ public class RememberEventLoop<V> implements FaultToleranceStrategy<CompletionSt
 
     public RememberEventLoop(FaultToleranceStrategy<CompletionStage<V>> delegate, EventLoop eventLoop) {
         this.delegate = delegate;
-        this.eventLoop = eventLoop;
+        this.eventLoop = checkNotNull(eventLoop, "Event loop must be set");
     }
 
     @Override

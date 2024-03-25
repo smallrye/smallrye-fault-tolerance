@@ -129,6 +129,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         private RetryBuilderImpl<T, R> retryBuilder;
         private TimeoutBuilderImpl<T, R> timeoutBuilder;
         private boolean offloadToAnotherThread;
+        private Executor offloadExecutor;
 
         public BuilderImpl(BuilderEagerDependencies eagerDependencies, Supplier<BuilderLazyDependencies> lazyDependencies,
                 Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
@@ -184,6 +185,16 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             }
 
             this.offloadToAnotherThread = value;
+            return this;
+        }
+
+        @Override
+        public Builder<T, R> withThreadOffloadExecutor(Executor executor) {
+            if (!isAsync) {
+                throw new IllegalStateException("Thread offload executor may only be set for asynchronous invocations");
+            }
+
+            this.offloadExecutor = Preconditions.checkNotNull(executor, "Thread offload executor must be set");
             return this;
         }
 
@@ -307,7 +318,9 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             FaultToleranceStrategy<CompletionStage<V>> result = invocation();
 
             // thread offload is always enabled
-            Executor executor = offloadToAnotherThread ? lazyDependencies.asyncExecutor() : DirectExecutor.INSTANCE;
+            Executor executor = offloadToAnotherThread
+                    ? (offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor())
+                    : DirectExecutor.INSTANCE;
             result = new CompletionStageExecution<>(result, executor);
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
