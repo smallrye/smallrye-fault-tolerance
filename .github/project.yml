@@ -1,4 +1,4 @@
 name: SmallRye Fault Tolerance
 release:
-  current-version: 6.3.0-RC1
+  current-version: 6.3.0-RC2
   next-version: 6.3.0-SNAPSHOT
