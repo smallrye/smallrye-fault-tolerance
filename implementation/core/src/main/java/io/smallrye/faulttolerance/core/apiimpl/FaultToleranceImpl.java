@@ -117,10 +117,9 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     @Override
     public void run(Runnable action) {
         try {
-            T unusedResult = asyncSupport == null ? null : asyncSupport.createComplete(null);
             call(() -> {
                 action.run();
-                return unusedResult;
+                return asyncSupport == null ? null : asyncSupport.createComplete(null);
             });
         } catch (RuntimeException e) {
             throw e;
