@@ -23,6 +23,11 @@ public class CompletableSupport<T> implements AsyncSupport<T, Completable> {
     }
 
     @Override
+    public Completable createComplete(T value) {
+        return Completable.complete();
+    }
+
+    @Override
     public CompletionStage<T> toCompletionStage(Invoker<Completable> invoker) throws Exception {
         return invoker.proceed().toCompletionStage(null);
     }

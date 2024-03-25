@@ -25,6 +25,11 @@ public class UniSupport<T> implements AsyncSupport<T, Uni<T>> {
     }
 
     @Override
+    public Uni<T> createComplete(T value) {
+        return Uni.createFrom().item(value);
+    }
+
+    @Override
     public CompletionStage<T> toCompletionStage(Invoker<Uni<T>> invoker) throws Exception {
         return invoker.proceed().subscribeAsCompletionStage();
     }

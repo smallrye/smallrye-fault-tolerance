@@ -114,6 +114,21 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         return asyncSupport.fromCompletionStage(wrapper);
     }
 
+    @Override
+    public void run(Runnable action) {
+        try {
+            T unusedResult = asyncSupport == null ? null : asyncSupport.createComplete(null);
+            call(() -> {
+                action.run();
+                return unusedResult;
+            });
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static final class BuilderImpl<T, R> implements Builder<T, R> {
         private final BuilderEagerDependencies eagerDependencies;
         private final Supplier<BuilderLazyDependencies> lazyDependencies;

@@ -23,6 +23,11 @@ public class SingleSupport<T> implements AsyncSupport<T, Single<T>> {
     }
 
     @Override
+    public Single<T> createComplete(T value) {
+        return Single.just(value);
+    }
+
+    @Override
     public CompletionStage<T> toCompletionStage(Invoker<Single<T>> invoker) throws Exception {
         return invoker.proceed().toCompletionStage();
     }
