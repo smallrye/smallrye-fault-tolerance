@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -302,7 +303,7 @@ public interface FaultTolerance<T> {
         /**
          * Configures whether the guarded action should be offloaded to another thread. Thread offload is
          * only possible for asynchronous actions. If this builder was not created using {@code createAsync},
-         * attempting to configure thread offload throws an exception.
+         * attempting to enable thread offload throws an exception.
          *
          * @param value whether the guarded action should be offloaded to another thread
          * @return this fault tolerance builder
@@ -310,6 +311,19 @@ public interface FaultTolerance<T> {
          * @see AsynchronousNonBlocking @AsynchronousNonBlocking
          */
         Builder<T, R> withThreadOffload(boolean value);
+
+        /**
+         * Configures the executor to use when offloading the guarded action to another thread. Thread
+         * offload is only possible for asynchronous actions. If this builder was not created using
+         * {@code createAsync}, this method throws an exception.
+         * <p>
+         * If this method is not called, the guarded action is offloaded to the default executor
+         * provided by the integrator.
+         *
+         * @param executor the executor to which the guarded action should be offloaded
+         * @return this fault tolerance builder
+         */
+        Builder<T, R> withThreadOffloadExecutor(Executor executor);
 
         /**
          * Returns a ready-to-use instance of {@code FaultTolerance} or guarded {@code Callable}, depending on

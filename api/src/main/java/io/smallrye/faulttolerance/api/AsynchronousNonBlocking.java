@@ -28,9 +28,9 @@ import io.smallrye.common.annotation.Experimental;
  * the result of the asynchronous execution, when it completes.
  * <p>
  * Before the asynchronous execution completes, the {@code CompletionStage} returned to the caller is incomplete.
- * Once the asynchronous execution completes, the {@code CompletionStage} returned to the caller assumes behavior
- * that is equivalent to the {@code CompletionStage} returned by the guarded method. If the guarded method
- * synchronously throws an exception, the returned {@code CompletionStage} completes with that exception.
+ * Once the asynchronous execution completes, the {@code CompletionStage} returned to the caller becomes equivalent
+ * to the {@code CompletionStage} returned by the guarded method. If the guarded method synchronously throws
+ * an exception, the returned {@code CompletionStage} completes with that exception.
  * <p>
  * If a method marked with this annotation doesn't declare return type of {@code CompletionStage},
  * {@link org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException
