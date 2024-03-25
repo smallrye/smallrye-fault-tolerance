@@ -29,6 +29,10 @@ class CoroutineSupport<T> : AsyncSupport<T, Any?> {
         return parameterTypes.isNotEmpty() && parameterTypes.last() == Continuation::class.java
     }
 
+    override fun createComplete(value: T): Any? {
+        return value
+    }
+
     override fun toCompletionStage(invoker: Invoker<Any?>): CompletionStage<T> {
         val future = CompletableFuture<T>()
 

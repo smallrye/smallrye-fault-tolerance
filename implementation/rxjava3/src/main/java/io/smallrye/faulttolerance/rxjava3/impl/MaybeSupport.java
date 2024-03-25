@@ -23,6 +23,11 @@ public class MaybeSupport<T> implements AsyncSupport<T, Maybe<T>> {
     }
 
     @Override
+    public Maybe<T> createComplete(T value) {
+        return Maybe.just(value);
+    }
+
+    @Override
     public CompletionStage<T> toCompletionStage(Invoker<Maybe<T>> invoker) throws Exception {
         return invoker.proceed().toCompletionStage(null);
     }

@@ -22,14 +22,30 @@ public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
 
     @Override
     public T call(Callable<T> action) throws Exception {
+        return instance().call(action);
+    }
+
+    @Override
+    public T get(Supplier<T> action) {
+        return instance().get(action);
+    }
+
+    @Override
+    public void run(Runnable action) {
+        instance().run(action);
+    }
+
+    private FaultTolerance<T> instance() {
+        FaultTolerance<T> instance = this.instance;
         if (instance == null) {
             synchronized (this) {
+                instance = this.instance;
                 if (instance == null) {
                     instance = builder.get();
+                    this.instance = instance;
                 }
             }
         }
-
-        return instance.call(action);
+        return instance;
     }
 }

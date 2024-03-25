@@ -91,10 +91,10 @@ public class StandaloneMetricsTimerTest {
 
     public CompletionStage<String> action() throws InterruptedException {
         barrier.await();
-        return CompletableFuture.completedStage("hello");
+        return CompletableFuture.completedFuture("hello");
     }
 
     public CompletionStage<String> fallback() {
-        return CompletableFuture.completedStage("fallback");
+        return CompletableFuture.completedFuture("fallback");
     }
 }

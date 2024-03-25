@@ -11,6 +11,8 @@ public interface AsyncSupport<V, AT> {
 
     boolean applies(Class<?>[] parameterTypes, Class<?> returnType);
 
+    AT createComplete(V value);
+
     CompletionStage<V> toCompletionStage(Invoker<AT> invoker) throws Exception;
 
     AT fromCompletionStage(Invoker<CompletionStage<V>> invoker) throws Exception;

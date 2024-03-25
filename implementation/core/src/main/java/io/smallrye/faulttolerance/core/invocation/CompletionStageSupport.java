@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.invocation;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletionStage;
@@ -18,6 +19,11 @@ public class CompletionStageSupport<T> implements AsyncSupport<T, CompletionStag
     @Override
     public boolean applies(Class<?>[] parameterTypes, Class<?> returnType) {
         return CompletionStage.class.equals(returnType);
+    }
+
+    @Override
+    public CompletionStage<T> createComplete(T value) {
+        return completedFuture(value);
     }
 
     @Override
