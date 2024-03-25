@@ -15,6 +15,8 @@ final class LazyDependencies implements BuilderLazyDependencies {
     private final EventLoop eventLoop;
     private final Timer timer;
 
+    private volatile MetricsProvider metricsProvider;
+
     LazyDependencies(Configuration config) {
         this.enabled = config.enabled();
         this.executor = config.executor();
@@ -45,13 +47,24 @@ final class LazyDependencies implements BuilderLazyDependencies {
 
     @Override
     public MetricsProvider metricsProvider() {
-        if (metricsAdapter instanceof NoopAdapter) {
-            return ((NoopAdapter) metricsAdapter).createMetricsProvider();
-        } else if (metricsAdapter instanceof MicrometerAdapter) {
-            return ((MicrometerAdapter) metricsAdapter).createMetricsProvider();
-        } else {
-            throw new IllegalStateException("Invalid metrics adapter: " + metricsAdapter);
+        MetricsProvider metricsProvider = this.metricsProvider;
+        if (metricsProvider == null) {
+            synchronized (this) {
+                metricsProvider = this.metricsProvider;
+                if (metricsProvider == null) {
+                    if (metricsAdapter instanceof NoopAdapter) {
+                        metricsProvider = ((NoopAdapter) metricsAdapter).createMetricsProvider();
+                    } else if (metricsAdapter instanceof MicrometerAdapter) {
+                        metricsProvider = ((MicrometerAdapter) metricsAdapter).createMetricsProvider(timer);
+                    } else {
+                        throw new IllegalStateException("Invalid metrics adapter: " + metricsAdapter);
+                    }
+                    this.metricsProvider = metricsProvider;
+                }
+            }
         }
+
+        return metricsProvider;
     }
 
     void shutdown() throws InterruptedException {

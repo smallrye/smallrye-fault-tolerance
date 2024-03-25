@@ -1,9 +1,12 @@
 package io.smallrye.faulttolerance.standalone.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
-import java.util.List;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -13,22 +16,21 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
-import io.smallrye.faulttolerance.core.util.TestException;
+import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 import io.smallrye.faulttolerance.standalone.Configuration;
 import io.smallrye.faulttolerance.standalone.MetricsAdapter;
 import io.smallrye.faulttolerance.standalone.MicrometerAdapter;
 import io.smallrye.faulttolerance.standalone.StandaloneFaultTolerance;
 
-// needs to stay in sync with `CdiMetricsTest`
-public class StandaloneMetricsTest {
-    private static final String NAME = StandaloneMetricsTest.class.getName() + " programmatic usage";
-
+// needs to stay in sync with `CdiMetricsTimerTest`
+public class StandaloneMetricsTimerTest {
     static ExecutorService executor;
     static MeterRegistry metrics;
+
+    static Barrier barrier;
 
     @BeforeAll
     public static void setUp() {
@@ -54,6 +56,8 @@ public class StandaloneMetricsTest {
                 executor.awaitTermination(1, TimeUnit.SECONDS);
             }
         });
+
+        barrier = Barrier.interruptible();
     }
 
     @AfterAll
@@ -63,35 +67,34 @@ public class StandaloneMetricsTest {
 
     @Test
     public void test() throws Exception {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
-                .withDescription(NAME)
+        Callable<CompletionStage<String>> guarded = FaultTolerance.createAsyncCallable(this::action)
+                .withThreadOffload(true)
+                .withTimeout().duration(1, ChronoUnit.MINUTES).done()
                 .withFallback().handler(this::fallback).done()
-                .withRetry().maxRetries(3).done()
                 .build();
 
-        assertThat(guarded.call()).isEqualTo("fallback");
+        CompletableFuture<String> future = guarded.call().toCompletableFuture();
 
-        assertThat(metrics.counter(MetricsConstants.INVOCATIONS_TOTAL, List.of(
-                Tag.of("method", NAME),
-                Tag.of("result", "valueReturned"),
-                Tag.of("fallback", "applied")))
-                .count()).isEqualTo(1.0);
+        assertThat(future).isNotCompleted();
 
-        assertThat(metrics.counter(MetricsConstants.RETRY_RETRIES_TOTAL, List.of(
-                Tag.of("method", NAME)))
-                .count()).isEqualTo(3.0);
-        assertThat(metrics.counter(MetricsConstants.RETRY_CALLS_TOTAL, List.of(
-                Tag.of("method", NAME),
-                Tag.of("retried", "true"),
-                Tag.of("retryResult", "maxRetriesReached")))
-                .count()).isEqualTo(1.0);
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            assertThat(metrics.get(MetricsConstants.TIMER_SCHEDULED).gauge().value()).isEqualTo(1.0);
+        });
+
+        barrier.open();
+
+        assertThat(future).succeedsWithin(2, TimeUnit.SECONDS)
+                .isEqualTo("hello");
+
+        assertThat(metrics.get(MetricsConstants.TIMER_SCHEDULED).gauge().value()).isEqualTo(0.0);
     }
 
-    public String action() throws TestException {
-        throw new TestException();
+    public CompletionStage<String> action() throws InterruptedException {
+        barrier.await();
+        return CompletableFuture.completedStage("hello");
     }
 
-    public String fallback() {
-        return "fallback";
+    public CompletionStage<String> fallback() {
+        return CompletableFuture.completedStage("fallback");
     }
 }
