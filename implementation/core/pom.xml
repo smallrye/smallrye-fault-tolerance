@@ -20,7 +20,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
-        <version>6.3.0-SNAPSHOT</version>
+        <version>6.3.0-RC2</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-core</artifactId>
@@ -29,7 +29,7 @@
 
     <properties>
         <!--suppress CheckTagEmptyBody -->
-        <jacoco.argLine></jacoco.argLine> <!-- will be set by the JaCoCo Maven plugin when active -->
+        <jacoco.argLine /> <!-- will be set by the JaCoCo Maven plugin when active -->
     </properties>
 
     <dependencies>
