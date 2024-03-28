@@ -71,7 +71,7 @@
         <version.testng>7.9.0</version.testng>
         <version.weld-api>5.0.SP3</version.weld-api>
         <version.weld-core>5.1.2.Final</version.weld-core>
-        <version.weld-junit5>4.0.2.Final</version.weld-junit5>
+        <version.weld-junit5>4.0.3.Final</version.weld-junit5>
 
         <version.jacoco-maven-plugin>0.8.11</version.jacoco-maven-plugin>
         <version.pitest-maven>1.15.8</version.pitest-maven>
