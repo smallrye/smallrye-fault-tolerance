@@ -8,6 +8,7 @@ import io.smallrye.faulttolerance.core.retry.SyncDelay;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
 import io.smallrye.faulttolerance.core.timer.TestTimer;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.ResultDecision;
 
 /**
  * Factory methods for fault tolerance strategies that are easier to use than their constructors.
@@ -21,7 +22,7 @@ final class Strategies {
     }
 
     static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {
-        return new Retry<>(delegate, "retry", ExceptionDecision.ALWAYS_FAILURE,
+        return new Retry<>(delegate, "retry", ResultDecision.ALWAYS_EXPECTED, ExceptionDecision.ALWAYS_FAILURE,
                 10, 0, SyncDelay.NONE, new TestStopwatch());
     }
 

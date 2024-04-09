@@ -60,6 +60,8 @@ import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
+import io.smallrye.faulttolerance.core.util.PredicateBasedResultDecision;
+import io.smallrye.faulttolerance.core.util.ResultDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
@@ -306,7 +308,9 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
                 result = new Retry<>(result, description,
-                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
+                        createResultDecision(retryBuilder.whenResultPredicate),
+                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn,
+                                retryBuilder.whenExceptionPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
                         SystemStopwatch.INSTANCE);
             }
@@ -377,7 +381,9 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
                 result = new CompletionStageRetry<>(result, description,
-                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn, retryBuilder.whenPredicate),
+                        createResultDecision(retryBuilder.whenResultPredicate),
+                        createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn,
+                                retryBuilder.whenExceptionPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis,
                         () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
                         SystemStopwatch.INSTANCE);
@@ -418,13 +424,23 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     retryBuilder != null, timeoutBuilder != null);
         }
 
+        private static ResultDecision createResultDecision(Predicate<Object> whenResultPredicate) {
+            if (whenResultPredicate != null) {
+                // the builder API accepts a predicate that returns `true` when a result is considered failure,
+                // but `[CompletionStage]Retry` accepts a predicate that returns `true` when a result is
+                // considered success -- hence the negation
+                return new PredicateBasedResultDecision(whenResultPredicate.negate());
+            }
+            return ResultDecision.ALWAYS_EXPECTED;
+        }
+
         private static ExceptionDecision createExceptionDecision(Collection<Class<? extends Throwable>> consideredExpected,
-                Collection<Class<? extends Throwable>> consideredFailure, Predicate<Throwable> whenPredicate) {
-            if (whenPredicate != null) {
+                Collection<Class<? extends Throwable>> consideredFailure, Predicate<Throwable> whenExceptionPredicate) {
+            if (whenExceptionPredicate != null) {
                 // the builder API accepts a predicate that returns `true` when an exception is considered failure,
                 // but `PredicateBasedExceptionDecision` accepts a predicate that returns `true` when an exception
                 // is considered success -- hence the negation
-                return new PredicateBasedExceptionDecision(whenPredicate.negate());
+                return new PredicateBasedExceptionDecision(whenExceptionPredicate.negate());
             }
             return new SetBasedExceptionDecision(createSetOfThrowables(consideredFailure),
                     createSetOfThrowables(consideredExpected), true);
@@ -756,7 +772,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             private Collection<Class<? extends Throwable>> retryOn = Collections.singleton(Exception.class);
             private Collection<Class<? extends Throwable>> abortOn = Collections.emptySet();
             private boolean setBasedExceptionDecisionDefined = false;
-            private Predicate<Throwable> whenPredicate;
+            private Predicate<Throwable> whenExceptionPredicate;
+            private Predicate<Object> whenResultPredicate;
 
             private ExponentialBackoffBuilderImpl<T, R> exponentialBackoffBuilder;
             private FibonacciBackoffBuilderImpl<T, R> fibonacciBackoffBuilder;
@@ -818,8 +835,14 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             }
 
             @Override
-            public RetryBuilder<T, R> when(Predicate<Throwable> value) {
-                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+            public RetryBuilder<T, R> whenResult(Predicate<Object> value) {
+                this.whenResultPredicate = Preconditions.checkNotNull(value, "Result predicate must be set");
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T, R> whenException(Predicate<Throwable> value) {
+                this.whenExceptionPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
@@ -858,8 +881,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             @Override
             public Builder<T, R> done() {
-                if (whenPredicate != null && setBasedExceptionDecisionDefined) {
-                    throw new IllegalStateException("The when() method may not be combined with retryOn() / abortOn()");
+                if (whenExceptionPredicate != null && setBasedExceptionDecisionDefined) {
+                    throw new IllegalStateException("The whenException() method may not be combined with retryOn()/abortOn()");
                 }
 
                 int backoffStrategies = 0;

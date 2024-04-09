@@ -64,6 +64,7 @@ import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.api.RateLimit;
+import io.smallrye.faulttolerance.api.RetryWhen;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
@@ -196,6 +197,16 @@ public class FaultToleranceExtension implements Extension {
                         event.addDefinitionError(LOG.backoffAnnotationWithoutRetry(backoffAnnotation.getSimpleName(),
                                 annotatedType.getJavaClass()));
                     }
+                }
+
+                if (annotatedMethod.isAnnotationPresent(RetryWhen.class)
+                        && !annotatedMethod.isAnnotationPresent(Retry.class)) {
+                    event.addDefinitionError(LOG.retryWhenAnnotationWithoutRetry(method.method));
+                }
+
+                if (annotatedType.isAnnotationPresent(RetryWhen.class)
+                        && !annotatedType.isAnnotationPresent(Retry.class)) {
+                    event.addDefinitionError(LOG.retryWhenAnnotationWithoutRetry(annotatedType.getJavaClass()));
                 }
 
                 if (annotatedMethod.isAnnotationPresent(Asynchronous.class)

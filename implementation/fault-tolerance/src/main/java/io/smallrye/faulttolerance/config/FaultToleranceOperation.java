@@ -32,6 +32,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
@@ -39,6 +40,7 @@ import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.api.RateLimit;
+import io.smallrye.faulttolerance.api.RetryWhen;
 import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
@@ -64,7 +66,8 @@ public class FaultToleranceOperation {
                 TimeoutConfigImpl.create(method),
                 ExponentialBackoffConfigImpl.create(method),
                 FibonacciBackoffConfigImpl.create(method),
-                CustomBackoffConfigImpl.create(method));
+                CustomBackoffConfigImpl.create(method),
+                RetryWhenConfigImpl.create(method));
     }
 
     private final Class<?> beanClass;
@@ -88,6 +91,7 @@ public class FaultToleranceOperation {
     private final ExponentialBackoffConfig exponentialBackoff;
     private final FibonacciBackoffConfig fibonacciBackoff;
     private final CustomBackoffConfig customBackoff;
+    private final RetryWhenConfig retryWhen;
 
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
@@ -105,7 +109,8 @@ public class FaultToleranceOperation {
             TimeoutConfig timeout,
             ExponentialBackoffConfig exponentialBackoff,
             FibonacciBackoffConfig fibonacciBackoff,
-            CustomBackoffConfig customBackoff) {
+            CustomBackoffConfig customBackoff,
+            RetryWhenConfig retryWhen) {
         this.beanClass = beanClass;
         this.methodDescriptor = methodDescriptor;
 
@@ -127,6 +132,7 @@ public class FaultToleranceOperation {
         this.exponentialBackoff = exponentialBackoff;
         this.fibonacciBackoff = fibonacciBackoff;
         this.customBackoff = customBackoff;
+        this.retryWhen = retryWhen;
     }
 
     public Class<?> getBeanClass() {
@@ -322,6 +328,14 @@ public class FaultToleranceOperation {
         return customBackoff;
     }
 
+    public boolean hasRetryWhen() {
+        return retryWhen != null;
+    }
+
+    public RetryWhen getRetryWhen() {
+        return retryWhen;
+    }
+
     public String getName() {
         return beanClass.getCanonicalName() + "." + methodDescriptor.name;
     }
@@ -376,6 +390,7 @@ public class FaultToleranceOperation {
         }
 
         validateRetryBackoff();
+        validateRetryWhen();
     }
 
     private void validateRetryBackoff() {
@@ -415,6 +430,29 @@ public class FaultToleranceOperation {
                                 + ": @Retry.maxDuration should be greater than maxDelay");
                     }
                 }
+            }
+        }
+    }
+
+    private void validateRetryWhen() {
+        if (retryWhen == null) {
+            return;
+        }
+
+        retryWhen.validate();
+
+        if (retry == null) {
+            throw new FaultToleranceDefinitionException("Invalid @RetryWhen on " + methodDescriptor + ": missing @Retry");
+        }
+
+        if (retryWhen.exception() != AlwaysOnException.class) {
+            if (retry.abortOn().length != 0) {
+                throw new FaultToleranceDefinitionException("Invalid @RetryWhen.exception on " + methodDescriptor
+                        + ": must not be combined with @Retry.abortOn");
+            }
+            if (retry.retryOn().length != 1 || retry.retryOn()[0] != Exception.class) {
+                throw new FaultToleranceDefinitionException("Invalid @RetryWhen.exception on " + methodDescriptor
+                        + ": must not be combined with @Retry.retryOn");
             }
         }
     }
@@ -471,6 +509,9 @@ public class FaultToleranceOperation {
         }
         if (customBackoff != null) {
             customBackoff.materialize();
+        }
+        if (retryWhen != null) {
+            retryWhen.materialize();
         }
     }
 

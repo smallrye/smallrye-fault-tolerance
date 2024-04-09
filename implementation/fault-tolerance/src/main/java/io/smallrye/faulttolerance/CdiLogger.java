@@ -37,4 +37,9 @@ interface CdiLogger extends BasicLogger {
     DefinitionException bothAsyncAndAsyncNonBlockingPresent(MethodDescriptor method);
 
     DefinitionException bothAsyncAndAsyncNonBlockingPresent(Class<?> clazz);
+
+    @Message(id = 6, value = "@RetryWhen present on '%s', but @Retry is missing")
+    DefinitionException retryWhenAnnotationWithoutRetry(MethodDescriptor method);
+
+    DefinitionException retryWhenAnnotationWithoutRetry(Class<?> clazz);
 }
