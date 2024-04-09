@@ -19,6 +19,7 @@ import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.api.RateLimit;
+import io.smallrye.faulttolerance.api.RetryWhen;
 
 /**
  * Created in the CDI extension to capture effective annotations for each
@@ -57,6 +58,7 @@ public class FaultToleranceMethod {
     public CustomBackoff customBackoff;
     public ExponentialBackoff exponentialBackoff;
     public FibonacciBackoff fibonacciBackoff;
+    public RetryWhen retryWhen;
 
     // types of annotations that were declared directly on the method;
     // other annotations, if present, were declared on the type
@@ -67,7 +69,7 @@ public class FaultToleranceMethod {
             return false;
         }
 
-        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff)
+        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff, @RetryWhen)
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
         return applyFaultTolerance != null

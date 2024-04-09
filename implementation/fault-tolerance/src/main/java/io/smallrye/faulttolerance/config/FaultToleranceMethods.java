@@ -23,6 +23,7 @@ import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.api.RateLimit;
+import io.smallrye.faulttolerance.api.RetryWhen;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
@@ -53,6 +54,7 @@ public class FaultToleranceMethods {
         result.customBackoff = getAnnotation(CustomBackoff.class, method, annotationsPresentDirectly);
         result.exponentialBackoff = getAnnotation(ExponentialBackoff.class, method, annotationsPresentDirectly);
         result.fibonacciBackoff = getAnnotation(FibonacciBackoff.class, method, annotationsPresentDirectly);
+        result.retryWhen = getAnnotation(RetryWhen.class, method, annotationsPresentDirectly);
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 
@@ -104,6 +106,7 @@ public class FaultToleranceMethods {
         result.customBackoff = getAnnotation(CustomBackoff.class, method, beanClass, annotationsPresentDirectly);
         result.exponentialBackoff = getAnnotation(ExponentialBackoff.class, method, beanClass, annotationsPresentDirectly);
         result.fibonacciBackoff = getAnnotation(FibonacciBackoff.class, method, beanClass, annotationsPresentDirectly);
+        result.retryWhen = getAnnotation(RetryWhen.class, method, beanClass, annotationsPresentDirectly);
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 

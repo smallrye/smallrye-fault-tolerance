@@ -95,7 +95,7 @@ This configuration takes precedence over `retryOn`.
 [[metrics]]
 == Metrics
 
-Rate limit exposes the following metrics:
+Retry exposes the following metrics:
 
 [cols="1,5"]
 |===
@@ -182,6 +182,59 @@ For `@CustomBackoff`, computing the delays between retry attempts is delegated t
 This is an advanced option.
 
 For more information about these backoff strategies, see the javadoc of the annotations.
+
+=== Predicate-Based `@Retry`
+
+include::partial$srye-feature.adoc[]
+
+By default, an operation is retried only if it fails and the exception is assignable to one of the classes defined in `@Retry.retryOn` (and not assignable to any of the classes defined in `@Retry.abortOn`).
+With the `@RetryWhen` annotation, it is possible to instead define a custom predicate for the exception, as well as a predicate for the result.
+
+The `@RetryWhen` annotation may be present on any program element (method or class) that also has the `@Retry` annotation.
+For example:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @RetryWhen(
+        result = IsNull.class, // <1>
+        exception = IsRuntimeException.class // <2>
+    )
+    public String hello() {
+        ...
+    }
+
+    public static final class IsNull implements Predicate<Object> {
+        @Override
+        public boolean test(Object o) {
+            return o == null;
+        }
+    }
+
+    public static final class IsRuntimeException implements Predicate<Throwable> {
+        @Override
+        public boolean test(Throwable throwable) {
+            return throwable instanceof RuntimeException;
+        }
+    }
+}
+----
+
+<1> When the method returns `null`, it will be retried.
+<2> When the method throws a `RuntimeException`, it will be retried.
+
+All other results are considered expected and are not retried.
+
+It is an error to specify `@RetryWhen.exception` if `@Retry.retryOn` / `@Retry.abortOn` is specified.
+Specifying `@RetryWhen.result` together with `@Retry.retryOn` / `@Retry.abortOn` is possible, although perhaps not the best idea.
+
+It is an error to add a `@RetryWhen` annotation to a program element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@RetryWhen` on a method).
+
+For more information about `@RetryWhen`, see the javadoc of the annotation.
 
 [[inspecting-exception-cause-chains]]
 === Inspecting Exception Cause Chains

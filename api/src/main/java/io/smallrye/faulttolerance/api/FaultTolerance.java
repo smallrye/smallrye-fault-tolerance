@@ -839,6 +839,24 @@ public interface FaultTolerance<T> {
             }
 
             /**
+             * Sets a predicate to determine when a result should be considered failure and retry
+             * should be attempted. All results that do not match this predicate are implicitly
+             * considered success.
+             *
+             * @param value the predicate, must not be {@code null}
+             * @return this retry builder
+             */
+            RetryBuilder<T, R> whenResult(Predicate<Object> value);
+
+            /**
+             * @deprecated use {@link #whenException(Predicate)}
+             */
+            @Deprecated(forRemoval = true)
+            default RetryBuilder<T, R> when(Predicate<Throwable> value) {
+                return whenException(value);
+            }
+
+            /**
              * Sets a predicate to determine when an exception should be considered failure
              * and retry should be attempted. This is a more general variant of {@link #retryOn(Collection) retryOn}.
              * Note that there is no generalized {@link #abortOn(Collection) abortOn}, because all exceptions
@@ -847,9 +865,9 @@ public interface FaultTolerance<T> {
              * If this method is called, {@code retryOn} and {@code abortOn} may not be called.
              *
              * @param value the predicate, must not be {@code null}
-             * @return this fallback builder
+             * @return this retry builder
              */
-            RetryBuilder<T, R> when(Predicate<Throwable> value);
+            RetryBuilder<T, R> whenException(Predicate<Throwable> value);
 
             /**
              * Configures retry to use an exponential backoff instead of the default constant backoff.

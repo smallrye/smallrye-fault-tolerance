@@ -13,21 +13,25 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.ResultDecision;
 
 public class Retry<V> implements FaultToleranceStrategy<V> {
     final FaultToleranceStrategy<V> delegate;
     final String description;
 
+    private final ResultDecision resultDecision;
     private final ExceptionDecision exceptionDecision;
     final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
     final long maxTotalDurationInMillis;
     private final Supplier<SyncDelay> delayBetweenRetries;
     final Stopwatch stopwatch;
 
-    public Retry(FaultToleranceStrategy<V> delegate, String description, ExceptionDecision exceptionDecision,
-            long maxRetries, long maxTotalDurationInMillis, Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+    public Retry(FaultToleranceStrategy<V> delegate, String description, ResultDecision resultDecision,
+            ExceptionDecision exceptionDecision, long maxRetries, long maxTotalDurationInMillis,
+            Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
+        this.resultDecision = checkNotNull(resultDecision, "Result decision must be set");
         this.exceptionDecision = checkNotNull(exceptionDecision, "Exception decision must be set");
         this.maxRetries = maxRetries < 0 ? Long.MAX_VALUE : maxRetries;
         this.maxTotalDurationInMillis = maxTotalDurationInMillis <= 0 ? Long.MAX_VALUE : maxTotalDurationInMillis;
@@ -86,9 +90,13 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
             try {
                 V result = delegate.apply(ctx);
-                ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
-                return result;
+                if (shouldAbortRetryingOnResult(result)) {
+                    ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
+                    return result;
+                }
+                lastFailure = null;
             } catch (InterruptedException e) {
+                ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 throw e;
             } catch (Throwable e) {
                 if (Thread.interrupted()) {
@@ -96,7 +104,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                     throw new InterruptedException();
                 }
 
-                if (shouldAbortRetrying(e)) {
+                if (shouldAbortRetryingOnException(e)) {
                     ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                     throw e;
                 }
@@ -116,12 +124,15 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         if (lastFailure != null) {
             throw sneakyThrow(lastFailure);
         } else {
-            // this branch should never be taken
             throw new FaultToleranceException(description + " reached max retries or max retry duration");
         }
     }
 
-    boolean shouldAbortRetrying(Throwable e) {
+    boolean shouldAbortRetryingOnResult(Object value) {
+        return resultDecision.isConsideredExpected(value);
+    }
+
+    boolean shouldAbortRetryingOnException(Throwable e) {
         return exceptionDecision.isConsideredExpected(e);
     }
 }

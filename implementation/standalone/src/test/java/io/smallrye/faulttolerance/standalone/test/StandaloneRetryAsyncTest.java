@@ -4,6 +4,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +27,7 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetry() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
                 .withRetry().maxRetries(3).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
                 .build();
@@ -39,7 +40,7 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetryWithAbortOn() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
                 .withRetry().maxRetries(3).abortOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
                 .build();
@@ -52,7 +53,7 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetryWithRetryOn() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
                 .withRetry().maxRetries(3).retryOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
                 .build();
@@ -64,9 +65,9 @@ public class StandaloneRetryAsyncTest {
     }
 
     @Test
-    public void asyncRetryWithWhen() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
-                .withRetry().maxRetries(3).when(e -> e instanceof RuntimeException).done()
+    public void asyncRetryWithWhenException() {
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
+                .withRetry().maxRetries(3).whenException(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof TestException).done()
                 .build();
 
@@ -77,10 +78,23 @@ public class StandaloneRetryAsyncTest {
     }
 
     @Test
+    public void asyncRetryWithWhenResult() {
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionReturnNull)
+                .withRetry().maxRetries(3).whenResult(Objects::isNull).done()
+                .withFallback().handler(this::fallback).done()
+                .build();
+
+        assertThat(guarded.get())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("fallback");
+        assertThat(counter).hasValue(4); // 1 initial invocation + 3 retries
+    }
+
+    @Test
     public void synchronousFlow() {
         // this is usually a mistake, because it only guards the synchronous execution
         // only testing it here to verify that indeed asynchronous fault tolerance doesn't apply
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = FaultTolerance.createSupplier(this::actionFail)
                 .withRetry().maxRetries(3).abortOn(TestException.class).done()
                 .withFallback().handler(this::fallback).done()
                 .build();
@@ -92,9 +106,14 @@ public class StandaloneRetryAsyncTest {
         assertThat(counter).hasValue(1); // 1 initial invocation
     }
 
-    public CompletionStage<String> action() {
+    public CompletionStage<String> actionFail() {
         counter.incrementAndGet();
         return failedFuture(new TestException());
+    }
+
+    public CompletionStage<String> actionReturnNull() {
+        counter.incrementAndGet();
+        return completedFuture(null);
     }
 
     public CompletionStage<String> fallback() {

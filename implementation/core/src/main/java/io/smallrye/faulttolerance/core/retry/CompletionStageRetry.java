@@ -17,15 +17,17 @@ import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.ResultDecision;
 
 public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
     private final Supplier<AsyncDelay> delayBetweenRetries;
 
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            ExceptionDecision exceptionDecision, long maxRetries, long maxTotalDurationInMillis,
-            Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+            ResultDecision resultDecision, ExceptionDecision exceptionDecision, long maxRetries,
+            long maxTotalDurationInMillis, Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
         // the SyncDelay.NONE is ignored here, we have our own AsyncDelay
-        super(delegate, description, exceptionDecision, maxRetries, maxTotalDurationInMillis, SyncDelay.NONE, stopwatch);
+        super(delegate, description, resultDecision, exceptionDecision, maxRetries, maxTotalDurationInMillis,
+                SyncDelay.NONE, stopwatch);
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
     }
 
@@ -87,10 +89,14 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
             delegate.apply(ctx).whenComplete((value, exception) -> {
                 if (exception == null) {
-                    ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
-                    result.complete(value);
+                    if (shouldAbortRetryingOnResult(value)) {
+                        ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
+                        result.complete(value);
+                    } else {
+                        propagateCompletion(doRetry(ctx, attempt + 1, delay, stopwatch, exception), result);
+                    }
                 } else {
-                    if (shouldAbortRetrying(exception)) {
+                    if (shouldAbortRetryingOnException(exception)) {
                         ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                         result.completeExceptionally(exception);
                     } else {
@@ -101,7 +107,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
             return result;
         } catch (Throwable e) {
-            if (shouldAbortRetrying(e)) {
+            if (shouldAbortRetryingOnException(e)) {
                 ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 return failedFuture(e);
             } else {

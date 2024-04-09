@@ -63,7 +63,7 @@ public class MutinyRetryTest {
     @Test
     public void retryWithWhen() {
         Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
-                .withRetry().maxRetries(3).when(e -> e instanceof RuntimeException).done()
+                .withRetry().maxRetries(3).whenException(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof TestException).done()
                 .build();
 

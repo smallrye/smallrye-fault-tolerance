@@ -29,6 +29,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import jakarta.annotation.Priority;
@@ -46,8 +47,10 @@ import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import io.smallrye.common.annotation.Identifier;
+import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.NeverOnResult;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
@@ -93,6 +96,9 @@ import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
+import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
+import io.smallrye.faulttolerance.core.util.PredicateBasedResultDecision;
+import io.smallrye.faulttolerance.core.util.ResultDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 import io.smallrye.faulttolerance.internal.FallbackMethod;
@@ -332,7 +338,9 @@ public class FaultToleranceInterceptor {
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new CompletionStageRetry<>(result, point.toString(),
-                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
+                    createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
+                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
+                            operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new TimerDelay(backoff.get(), timer),
@@ -402,7 +410,9 @@ public class FaultToleranceInterceptor {
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new Retry<>(result, point.toString(),
-                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
+                    createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
+                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
+                            operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
@@ -473,7 +483,9 @@ public class FaultToleranceInterceptor {
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new Retry<>(result, point.toString(),
-                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn()),
+                    createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
+                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
+                            operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
@@ -516,8 +528,8 @@ public class FaultToleranceInterceptor {
             return () -> {
                 CustomBackoffStrategy instance;
                 try {
-                    instance = strategy.newInstance();
-                } catch (InstantiationException | IllegalAccessException e) {
+                    instance = strategy.getConstructor().newInstance();
+                } catch (ReflectiveOperationException e) {
                     throw sneakyThrow(e);
                 }
                 instance.init(delayMs);
@@ -578,8 +590,36 @@ public class FaultToleranceInterceptor {
         return fallbackFunction;
     }
 
+    private ResultDecision createResultDecision(Class<? extends Predicate<Object>> whenResult) {
+        if (whenResult != null && whenResult != NeverOnResult.class) {
+            Predicate<Object> predicate;
+            try {
+                predicate = whenResult.getConstructor().newInstance();
+            } catch (ReflectiveOperationException e) {
+                throw sneakyThrow(e);
+            }
+            return new PredicateBasedResultDecision(predicate.negate());
+        }
+        return ResultDecision.ALWAYS_EXPECTED;
+    }
+
     private ExceptionDecision createExceptionDecision(Class<? extends Throwable>[] consideredExpected,
             Class<? extends Throwable>[] consideredFailure) {
+        return new SetBasedExceptionDecision(createSetOfThrowables(consideredFailure),
+                createSetOfThrowables(consideredExpected), specCompatibility.inspectExceptionCauseChain());
+    }
+
+    private ExceptionDecision createExceptionDecision(Class<? extends Throwable>[] consideredExpected,
+            Class<? extends Throwable>[] consideredFailure, Class<? extends Predicate<Throwable>> whenException) {
+        if (whenException != null && whenException != AlwaysOnException.class) {
+            Predicate<Throwable> predicate;
+            try {
+                predicate = whenException.getConstructor().newInstance();
+            } catch (ReflectiveOperationException e) {
+                throw sneakyThrow(e);
+            }
+            return new PredicateBasedExceptionDecision(predicate.negate());
+        }
         return new SetBasedExceptionDecision(createSetOfThrowables(consideredFailure),
                 createSetOfThrowables(consideredExpected), specCompatibility.inspectExceptionCauseChain());
     }
