@@ -36,6 +36,18 @@ public class SetOfThrowables {
         this.classes = classes;
     }
 
+    boolean isEmpty() {
+        return classes.isEmpty();
+    }
+
+    boolean isAll() {
+        if (classes.size() == 1) {
+            Class<? extends Throwable> clazz = classes.iterator().next();
+            return clazz == Throwable.class || clazz == Exception.class;
+        }
+        return false;
+    }
+
     /**
      * @param searchedFor a class to check
      * @return whether {@code searchedFor} is a subtype of (at least) one of the types in this set.

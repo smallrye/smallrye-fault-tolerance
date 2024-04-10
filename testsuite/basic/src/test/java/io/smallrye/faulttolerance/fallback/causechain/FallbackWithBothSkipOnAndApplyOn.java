@@ -7,7 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 
 @ApplicationScoped
-public class MyService {
+public class FallbackWithBothSkipOnAndApplyOn {
     @Fallback(fallbackMethod = "fallback", skipOn = ExpectedOutcomeException.class, applyOn = IOException.class)
     public void hello(Exception e) throws Exception {
         throw e;

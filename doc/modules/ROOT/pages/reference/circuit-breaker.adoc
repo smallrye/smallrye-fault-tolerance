@@ -242,34 +242,41 @@ include::partial$non-compat.adoc[]
 
 The `@CircuitBreaker` annotation can specify that certain exceptions should be treated as failures (`failOn`) and others as successes (`skipOn`).
 The specification limits this to inspecting the actual exception that was thrown.
-However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+However, in many cases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
 
 For that reason, in the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
 To be specific, in case a `@CircuitBreaker` method throws an exception, the decision process is:
 
-1. If the exception is assignable to one of the `skipOn` exceptions, the circuit breaker treats it as a success.
-2. Otherwise, if the exception is assignable to one of the `failOn` exceptions, the circuit breaker treats it as a failure.
-3. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `skipOn` exceptions, the circuit breaker treats it as a success.
-4. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `failOn` exceptions, the circuit breaker treats it as a failure.
+1. If the `skipOn` exceptions are not default and the exception is assignable to one of the `skipOn` exceptions, the circuit breaker treats it as a success.
+2. Otherwise, if the `failOn` exceptions are not default and the exception is assignable to one of the `failOn` exceptions, the circuit breaker treats it as a failure.
+3. Otherwise, if the exception is assignable to one of the `skipOn` exceptions or its cause chain contains an exception assignable to one of the `skipOn` exceptions, the circuit breaker treats it as a success.
+4. Otherwise, if the exception is assignable to one of the `failOn` exceptions or its cause chain contains an exception assignable to one of the `failOn` exceptions, the circuit breaker treats it as a failure.
 5. Otherwise, the exception is treated as a success.
 
-For example, say we have this method:
+For example:
 
 [source,java]
 ----
 @CircuitBreaker(requestVolumeThreshold = 10,
-    skipOn = ExpectedOutcomeException.class,
-    failOn = IOException.class)
+    skipOn = ExpectedOutcomeException.class, // <1>
+    failOn = IOException.class) // <2>
 public Result doSomething() {
     ...
 }
 ----
 
-If `doSomething` throws an `ExpectedOutcomeException`, the circuit breaker treats it as a success.
-If `doSomething` throws an `IOException`, the circuit breaker treats it as a failure.
-If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, the circuit breaker treats it as a success.
-If `doSomething` throws a `WrapperException` whose cause is `IOException`, the circuit breaker treats it as a failure.
+<1> If `doSomething` throws an `ExpectedOutcomeException`, or a `WrapperException` whose cause is `ExpectedOutcomeException`, the circuit breaker treats it as a success.
+<2> If `doSomething` throws an `IOException`, or a `WrapperException` whose cause is `IOException`, the circuit breaker treats it as a failure.
 
-Comparing with the `@CircuitBreaker` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
-Note that these steps are executed if and only if the thrown exception matches neither `failOn` nor `skipOn`.
-If the thrown exception matches either of them, the cause chain is not inspected at all.
+[source,java]
+----
+@CircuitBreaker(requestVolumeThreshold = 10,
+    skipOn = ExpectedOutcomeException.class) // <1> <2>
+public Result doSomething() {
+    ...
+}
+----
+
+<1> If `doSomething` throws an `ExpectedOutcomeException`, or a `WrapperException` whose cause is `ExpectedOutcomeException`, the circuit breaker treats it as a success.
+<2> There's no `failOn`, so the 2nd step in the algorithm above is skipped.
+This is what turns the `WrapperException` whose cause is `ExpectedOutcomeException` into a success.

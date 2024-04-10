@@ -625,7 +625,7 @@ public class FaultToleranceInterceptor {
     }
 
     private SetOfThrowables createSetOfThrowables(Class<? extends Throwable>[] throwableClasses) {
-        if (throwableClasses == null) {
+        if (throwableClasses == null || throwableClasses.length == 0) {
             return SetOfThrowables.EMPTY;
         }
         return SetOfThrowables.create(Arrays.asList(throwableClasses));

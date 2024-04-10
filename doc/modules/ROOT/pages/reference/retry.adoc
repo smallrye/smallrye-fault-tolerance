@@ -245,34 +245,41 @@ include::partial$non-compat.adoc[]
 
 The `@Retry` annotation can specify that certain exceptions should be treated as failures (`retryOn`) and others as successes (`abortOn`).
 The specification limits this to inspecting the actual exception that was thrown.
-However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+However, in many cases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
 
 For that reason, in the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
 To be specific, in case a `@Retry` method throws an exception, the decision process is:
 
-1. If the exception is assignable to one of the `abortOn` exceptions, retry is aborted and the exception is rethrown.
-2. Otherwise, if the exception is assignable to one of the `retryOn` exceptions, retry is attempted.
-3. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `abortOn` exceptions, retry is aborted and the exception is rethrown.
-4. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `retryOn` exceptions, retry is attempted.
+1. If the `abortOn` exceptions are not default and the exception is assignable to one of the `abortOn` exceptions, retry is aborted and the exception is rethrown.
+2. Otherwise, if the `retryOn` exceptions are not default and the exception is assignable to one of the `retryOn` exceptions, retry is attempted.
+3. Otherwise, if the exception is assignable to one of the `abortOn` exceptions or its cause chain contains an exception assignable to one of the `abortOn` exceptions, retry is aborted and the exception is rethrown.
+4. Otherwise, if the exception is assignable to one of the `retryOn` exceptions or its cause chain contains an exception assignable to one of the `retryOn` exceptions, retry is attempted.
 5. Otherwise, the exception is rethrown.
 
-For example, say we have this method:
+For example:
 
 [source,java]
 ----
 @Retry(maxRetries = 5,
-    abortOn = ExpectedOutcomeException.class,
-    retryOn = IOException.class)
+    abortOn = ExpectedOutcomeException.class, // <1>
+    retryOn = IOException.class) // <2>
 public Result doSomething() {
     ...
 }
 ----
 
-If `doSomething` throws an `ExpectedOutcomeException`, retry is aborted and the exception is thrown.
-If `doSomething` throws an `IOException`, retry is attempted.
-If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, retry is aborted and the exception is thrown.
-If `doSomething` throws a `WrapperException` whose cause is `IOException`, retry is attempted.
+<1> If `doSomething` throws an `ExpectedOutcomeException`, or a `WrapperException` whose cause is `ExpectedOutcomeException`, retry is aborted and the exception is thrown.
+<2> If `doSomething` throws an `IOException`, or a `WrapperException` whose cause is `IOException`, retry is attempted.
 
-Comparing with the `@Retry` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
-Note that these steps are executed if and only if the thrown exception matches neither `abortOn` nor `retryOn`.
-If the thrown exception matches either of them, the cause chain is not inspected at all.
+[source,java]
+----
+@Retry(maxRetries = 5,
+    abortOn = ExpectedOutcomeException.class) // <1> <2>
+public Result doSomething() {
+    ...
+}
+----
+
+<1> If `doSomething` throws an `ExpectedOutcomeException`, or a `WrapperException` whose cause is `ExpectedOutcomeException`, retry is aborted and the exception is thrown.
+<2> There's no `retryOn`, so the 2nd step in the algorithm above is skipped.
+This is what turns the `WrapperException` whose cause is `ExpectedOutcomeException` into an aborted retry.
