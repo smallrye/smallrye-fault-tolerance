@@ -13,24 +13,95 @@ import io.smallrye.faulttolerance.util.WithSystemProperty;
 @FaultToleranceBasicTest
 public class FallbackWithExceptionCauseChainTest {
     @Test
-    public void test(MyService bean) {
-        assertThatCode(() -> bean.hello(new RuntimeException())).isExactlyInstanceOf(RuntimeException.class);
-        assertThatCode(() -> bean.hello(new RuntimeException(new IOException()))).doesNotThrowAnyException();
+    public void bothSkipOnAndApplyOn(FallbackWithBothSkipOnAndApplyOn bean) {
+        assertThatCode(() -> bean.hello(new RuntimeException()))
+                .isExactlyInstanceOf(RuntimeException.class);
+        assertThatCode(() -> bean.hello(new RuntimeException(new IOException())))
+                .doesNotThrowAnyException();
         assertThatCode(() -> bean.hello(new RuntimeException(new ExpectedOutcomeException())))
                 .isExactlyInstanceOf(RuntimeException.class);
 
-        assertThatCode(() -> bean.hello(new Exception())).isExactlyInstanceOf(Exception.class);
-        assertThatCode(() -> bean.hello(new Exception(new IOException()))).doesNotThrowAnyException();
-        assertThatCode(() -> bean.hello(new Exception(new ExpectedOutcomeException()))).isExactlyInstanceOf(Exception.class);
+        assertThatCode(() -> bean.hello(new Exception()))
+                .isExactlyInstanceOf(Exception.class);
+        assertThatCode(() -> bean.hello(new Exception(new IOException())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new Exception(new ExpectedOutcomeException())))
+                .isExactlyInstanceOf(Exception.class);
 
-        assertThatCode(() -> bean.hello(new IOException())).doesNotThrowAnyException();
-        assertThatCode(() -> bean.hello(new IOException(new Exception()))).doesNotThrowAnyException();
-        assertThatCode(() -> bean.hello(new IOException(new ExpectedOutcomeException()))).doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException()))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException(new Exception())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException(new ExpectedOutcomeException())))
+                .doesNotThrowAnyException();
 
-        assertThatCode(() -> bean.hello(new ExpectedOutcomeException())).isExactlyInstanceOf(ExpectedOutcomeException.class);
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException()))
+                .isExactlyInstanceOf(ExpectedOutcomeException.class);
         assertThatCode(() -> bean.hello(new ExpectedOutcomeException(new Exception())))
                 .isExactlyInstanceOf(ExpectedOutcomeException.class);
         assertThatCode(() -> bean.hello(new ExpectedOutcomeException(new IOException())))
                 .isExactlyInstanceOf(ExpectedOutcomeException.class);
+    }
+
+    @Test
+    public void skipOn(FallbackWithSkipOn bean) {
+        assertThatCode(() -> bean.hello(new RuntimeException()))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new RuntimeException(new IOException())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new RuntimeException(new ExpectedOutcomeException())))
+                .isExactlyInstanceOf(RuntimeException.class);
+
+        assertThatCode(() -> bean.hello(new Exception()))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new Exception(new IOException())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new Exception(new ExpectedOutcomeException())))
+                .isExactlyInstanceOf(Exception.class);
+
+        assertThatCode(() -> bean.hello(new IOException()))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException(new Exception())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException(new ExpectedOutcomeException())))
+                .isExactlyInstanceOf(IOException.class);
+
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException()))
+                .isExactlyInstanceOf(ExpectedOutcomeException.class);
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException(new Exception())))
+                .isExactlyInstanceOf(ExpectedOutcomeException.class);
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException(new IOException())))
+                .isExactlyInstanceOf(ExpectedOutcomeException.class);
+    }
+
+    @Test
+    public void applyOn(FallbackWithApplyOn bean) {
+        assertThatCode(() -> bean.hello(new RuntimeException()))
+                .isExactlyInstanceOf(RuntimeException.class);
+        assertThatCode(() -> bean.hello(new RuntimeException(new IOException())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new RuntimeException(new ExpectedOutcomeException())))
+                .isExactlyInstanceOf(RuntimeException.class);
+
+        assertThatCode(() -> bean.hello(new Exception()))
+                .isExactlyInstanceOf(Exception.class);
+        assertThatCode(() -> bean.hello(new Exception(new IOException())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new Exception(new ExpectedOutcomeException())))
+                .isExactlyInstanceOf(Exception.class);
+
+        assertThatCode(() -> bean.hello(new IOException()))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException(new Exception())))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> bean.hello(new IOException(new ExpectedOutcomeException())))
+                .doesNotThrowAnyException();
+
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException()))
+                .isExactlyInstanceOf(ExpectedOutcomeException.class);
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException(new Exception())))
+                .isExactlyInstanceOf(ExpectedOutcomeException.class);
+        assertThatCode(() -> bean.hello(new ExpectedOutcomeException(new IOException())))
+                .doesNotThrowAnyException();
     }
 }

@@ -252,24 +252,24 @@ include::partial$non-compat.adoc[]
 
 The `@Fallback` annotation can specify that certain exceptions should be treated as failures (`applyOn`) and others as successes (`skipOn`).
 The specification limits this to inspecting the actual exception that was thrown.
-However, in many usecases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
+However, in many cases, exceptions are wrapped and the exception the user wants to decide on is only present in the cause chain.
 
 For that reason, in the non-compatible mode, if the actual thrown exception isn't known failure or known success, {smallrye-fault-tolerance} inspects the cause chain.
 To be specific, in case a `@Fallback` method throws an exception, the decision process is:
 
-1. If the exception is assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown.
-2. Otherwise, if the exception is assignable to one of the `applyOn` exceptions, fallback is applied.
-3. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown.
-4. Otherwise, if the cause chain of the exception contains an exception assignable to one of the `applyOn` exceptions, fallback is applied.
+1. If the `skipOn` exceptions are not default and the exception is assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown.
+2. Otherwise, if the `applyOn` exceptions are not default and the exception is assignable to one of the `applyOn` exceptions, fallback is applied.
+3. Otherwise, if the exception is assignable to one of the `skipOn` exceptions or its cause chain contains an exception assignable to one of the `skipOn` exceptions, fallback is skipped and the exception is rethrown.
+4. Otherwise, if the exception is assignable to one of the `applyOn` exceptions or its cause chain contains an exception assignable to one of the `applyOn` exceptions, fallback is applied.
 5. Otherwise, the exception is rethrown.
 
-For example, say we have this method:
+For example:
 
 [source,java]
 ----
 @Fallback(fallbackMethod = "fallback",
-    skipOn = ExpectedOutcomeException.class,
-    applyOn = IOException.class)
+    skipOn = ExpectedOutcomeException.class, // <1>
+    applyOn = IOException.class) // <2>
 public Result doSomething() {
     ...
 }
@@ -279,11 +279,22 @@ public Result fallback() {
 }
 ----
 
-If `doSomething` throws an `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
-If `doSomething` throws an `IOException`, fallback is applied.
-If `doSomething` throws a `WrapperException` whose cause is `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
-If `doSomething` throws a `WrapperException` whose cause is `IOException`, fallback is applied.
+<1> If `doSomething` throws an `ExpectedOutcomeException`, or a `WrapperException` whose cause is `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
+<2> If `doSomething` throws an `IOException`, or a `WrapperException` whose cause is `IOException`, fallback is applied.
 
-Comparing with the `@Fallback` specification, {smallrye-fault-tolerance} inserts 2 more steps into the decision process that inspect the cause chain.
-Note that these steps are executed if and only if the thrown exception matches neither `skipOn` nor `applyOn`.
-If the thrown exception matches either of them, the cause chain is not inspected at all.
+[source,java]
+----
+@Fallback(fallbackMethod = "fallback",
+    skipOn = ExpectedOutcomeException.class) // <1> <2>
+public Result doSomething() {
+    ...
+}
+
+public Result fallback() {
+    ...
+}
+----
+
+<1> If `doSomething` throws an `ExpectedOutcomeException`, or a `WrapperException` whose cause is `ExpectedOutcomeException`, fallback is skipped and the exception is thrown.
+<2> There's no `applyOn`, so the 2nd step in the algorithm above is skipped.
+This is what turns the `WrapperException` whose cause is `ExpectedOutcomeException` into a skipped fallback.
