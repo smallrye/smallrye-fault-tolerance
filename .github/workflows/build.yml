@@ -30,8 +30,9 @@ jobs:
         - 11
         - 17
         - 21
-        # JBoss Logging doesn't seem to work correctly
-        #- 22-ea
+        - 22
+        # Currently incompatible with awaitility; java.lang.NumberFormatException: For input string: "23-beta"
+        #- 23-ea
         os:
         - ubuntu-latest
         - windows-latest
