@@ -52,7 +52,7 @@
         <version.microprofile-metrics-api>4.0.1</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.3</version.microprofile-context-propagation-api>
         <!-- smallrye-config is purely used for testing -->
-        <version.smallrye-config>3.7.1</version.smallrye-config>
+        <version.smallrye-config>3.8.0</version.smallrye-config>
         <!-- smallrye-metrics is purely used for testing -->
         <version.smallrye-metrics>4.0.0</version.smallrye-metrics>
         <!-- smallrye-context-propagation is purely used for testing -->
