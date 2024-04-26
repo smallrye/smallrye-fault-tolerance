@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import io.smallrye.faulttolerance.core.bulkhead.TwoSemaphoreBulkhead;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
@@ -270,7 +271,9 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             FaultToleranceStrategy<T> result = invocation();
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
-                result = new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit);
+                result = bulkheadBuilder.queueSize <= 0
+                    ? new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit)
+                    : new TwoSemaphoreBulkhead<>(result, description, bulkheadBuilder.limit, bulkheadBuilder.queueSize);
             }
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
@@ -343,7 +346,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new CompletionStageThreadPoolBulkhead<>(result, description, bulkheadBuilder.limit,
-                        bulkheadBuilder.queueSize);
+                        Math.abs(bulkheadBuilder.queueSize));
             }
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
@@ -477,7 +480,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             private final BuilderImpl<T, R> parent;
 
             private int limit = 10;
-            private int queueSize = 10;
+            private int queueSize = -10;
 
             private Runnable onAccepted;
             private Runnable onRejected;
@@ -495,10 +498,6 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             @Override
             public BulkheadBuilder<T, R> queueSize(int value) {
-                if (!parent.isAsync) {
-                    throw new IllegalStateException("Bulkhead queue size may only be set for asynchronous invocations");
-                }
-
                 this.queueSize = Preconditions.check(value, value >= 1, "Queue size must be >= 1");
                 return this;
             }
