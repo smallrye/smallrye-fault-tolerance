@@ -68,7 +68,7 @@
         <version.junit-jupiter>5.10.2</version.junit-jupiter>
         <version.mutiny>2.6.0</version.mutiny>
         <version.rxjava3>3.1.8</version.rxjava3>
-        <version.testng>7.10.1</version.testng>
+        <version.testng>7.10.2</version.testng>
         <version.weld-api>5.0.SP3</version.weld-api>
         <version.weld-core>5.1.2.Final</version.weld-core>
         <version.weld-junit5>4.0.3.Final</version.weld-junit5>
