@@ -37,7 +37,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
 
-        <version.jakarta-annotations>2.1.1</version.jakarta-annotations>
+        <version.jakarta-annotations>3.0.0</version.jakarta-annotations>
         <version.jakarta-cdi>4.0.1</version.jakarta-cdi>
         <version.jakarta-interceptors>2.1.0</version.jakarta-interceptors>
         <version.javapoet>1.13.0</version.javapoet>
