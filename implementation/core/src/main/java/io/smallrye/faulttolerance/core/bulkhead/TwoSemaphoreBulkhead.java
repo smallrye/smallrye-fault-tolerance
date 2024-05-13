@@ -11,13 +11,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static io.smallrye.faulttolerance.core.bulkhead.BulkheadLogger.LOG;
 
 /**
- * Thread pool style bulkhead for {@code Future} asynchronous executions.
+ * Thread pool style bulkhead for asynchronous executions in client's thread pool,
+ * in particular, in virtual threads.
  * <p>
  * Since this bulkhead is already executed on an extra thread, we don't have to
  * submit tasks to another executor or use an actual queue. We just limit
- * the task execution by semaphores. This kinda defeats the purpose of bulkheads,
- * but is the easiest way to implement them for {@code Future}. We do it properly
- * for {@code CompletionStage}, which is much more useful anyway.
+ * the task execution by semaphores.
  */
 public class TwoSemaphoreBulkhead<V> extends BulkheadBase<V> {
     private final int queueSize;
