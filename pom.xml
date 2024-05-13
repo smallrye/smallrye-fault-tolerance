@@ -74,7 +74,7 @@
         <version.weld-junit5>4.0.3.Final</version.weld-junit5>
 
         <version.jacoco-maven-plugin>0.8.12</version.jacoco-maven-plugin>
-        <version.pitest-maven>1.16.0</version.pitest-maven>
+        <version.pitest-maven>1.16.1</version.pitest-maven>
         <version.pitest-junit5-plugin>1.2.1</version.pitest-junit5-plugin>
 
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
