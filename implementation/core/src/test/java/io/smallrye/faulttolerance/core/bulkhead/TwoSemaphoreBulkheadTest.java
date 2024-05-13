@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.bulkhead;
 
 import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.async.FutureCancellationEvent;
 import io.smallrye.faulttolerance.core.util.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestThread;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
@@ -289,5 +290,96 @@ class TwoSemaphoreBulkheadTest {
         assertEquals(98, failure);
         assertEquals(0, concurrent.get());
         assertEquals(102, total.get());
+    }
+
+    @Test
+    void _cancel_future () {
+        TestInvocation<Integer> invocation = TestInvocation.of(()->{
+                Thread.sleep(95000);
+                return 42;
+            });
+        TwoSemaphoreBulkhead<Integer> bulkhead = new TwoSemaphoreBulkhead<>(invocation, "q200c2", 2, 100);
+
+        Future<Integer> f = executor.submit(()->bulkhead.
+            apply(new InvocationContext<>(()->{
+                AssertionError e = new AssertionError("InvocationContext.call");
+                e.printStackTrace();
+                throw e;
+            })));
+
+        assertFalse(f.isDone());
+        assertFalse(f.isCancelled());
+        f.cancel(true);
+        assertTrue(f.isDone());
+        assertTrue(f.isCancelled());
+        try {
+            f.get();
+            fail();
+        } catch (Exception e) {
+            assertEquals("java.util.concurrent.CancellationException", e.toString());
+        }
+    }
+
+    @Test
+    void _cancel_event () throws Exception {
+        TestInvocation<Integer> invocation = TestInvocation.of(()->{
+            Thread.sleep(1200);
+            return 42;
+        });
+        TwoSemaphoreBulkhead<Integer> bulkhead = new TwoSemaphoreBulkhead<>(invocation, "q200c2", 1, 100);
+
+        executor.submit(()->bulkhead.apply(new InvocationContext<>(null)));// -1 permit
+
+        InvocationContext<Integer> ctx = new InvocationContext<>(()->{
+            AssertionError e = new AssertionError("InvocationContext.call");
+            e.printStackTrace();
+            throw e;
+        });
+
+        Future<Integer> f = executor.submit(()->bulkhead.apply(ctx));
+
+        assertFalse(f.isDone());
+        assertFalse(f.isCancelled());
+        Thread.sleep(100);// time to register event handler
+        ctx.fireEvent(FutureCancellationEvent.NONINTERRUPTIBLE);
+        try {
+            f.get();
+            fail();
+        } catch (Exception e) {
+            assertEquals("java.util.concurrent.ExecutionException: java.util.concurrent.CancellationException", e.toString());
+        }
+        assertTrue(f.isDone());
+        assertFalse(f.isCancelled());
+    }
+
+    @Test
+    void _cancel_event_interrupt () throws InterruptedException {
+        TestInvocation<Integer> invocation = TestInvocation.of(()->{
+            Thread.sleep(95000);
+            return 42;
+        });
+        TwoSemaphoreBulkhead<Integer> bulkhead = new TwoSemaphoreBulkhead<>(invocation, "q200c2", 2, 100);
+
+        InvocationContext<Integer> ctx = new InvocationContext<>(()->{
+            AssertionError e = new AssertionError("InvocationContext.call");
+            e.printStackTrace();
+            throw e;
+        });
+
+        Future<Integer> f = executor.submit(()->bulkhead.
+            apply(ctx));
+
+        assertFalse(f.isDone());
+        assertFalse(f.isCancelled());
+        Thread.sleep(200);// time to register event handler
+        ctx.fireEvent(FutureCancellationEvent.INTERRUPTIBLE);
+        try {
+            f.get();
+            fail();
+        } catch (Exception e) {
+            assertEquals("java.util.concurrent.ExecutionException: java.lang.InterruptedException: sleep interrupted", e.toString());
+        }
+        assertTrue(f.isDone());
+        assertFalse(f.isCancelled());
     }
 }
