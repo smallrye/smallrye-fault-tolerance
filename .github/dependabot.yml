@@ -1,11 +1,10 @@
 version: 2
 updates:
 - package-ecosystem: maven
-  directory: "/"
+  directory: /
   schedule:
     interval: daily
-  open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: org.jboss.weld:weld-junit5
-    versions:
-    - ">= 3.a, < 4"
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: daily
