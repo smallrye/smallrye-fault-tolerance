@@ -59,7 +59,7 @@ jobs:
           git push
           git push --tags
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         name: tck-report
         with:
           name: tck-report
