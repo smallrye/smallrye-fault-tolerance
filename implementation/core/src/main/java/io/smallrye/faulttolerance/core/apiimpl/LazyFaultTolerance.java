@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.core.apiimpl;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import io.smallrye.faulttolerance.api.FaultTolerance;
@@ -9,7 +10,7 @@ public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
     private final Supplier<FaultTolerance<T>> builder;
     private final Class<?> asyncType;
 
-    private volatile FaultTolerance<T> instance;
+    private final AtomicReference<FaultTolerance<T>> instance = new AtomicReference<>(null);
 
     LazyFaultTolerance(Supplier<FaultTolerance<T>> builder, Class<?> asyncType) {
         this.builder = builder;
@@ -36,15 +37,13 @@ public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
     }
 
     private FaultTolerance<T> instance() {
-        FaultTolerance<T> instance = this.instance;
+        FaultTolerance<T> instance = this.instance.get();
         if (instance == null) {
-            synchronized (this) {
-                instance = this.instance;
-                if (instance == null) {
-                    instance = builder.get();
-                    this.instance = instance;
-                }
+            instance = builder.get();
+            if (this.instance.compareAndSet(null, instance)) {
+                return instance;
             }
+            instance = this.instance.get();
         }
         return instance;
     }
