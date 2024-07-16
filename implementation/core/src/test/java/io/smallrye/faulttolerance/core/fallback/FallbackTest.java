@@ -1,11 +1,15 @@
 package io.smallrye.faulttolerance.core.fallback;
 
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 import static io.smallrye.faulttolerance.core.util.TestThread.runOnTestThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.function.Function;
+
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.TestException;
@@ -26,7 +30,13 @@ public class FallbackTest {
     public void immediatelyReturning_allExceptionsSupported_valueThenException() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                ctx -> TestException.doThrow(), ExceptionDecision.ALWAYS_FAILURE));
+                ctx -> {
+                    try {
+                        return TestException.doThrow();
+                    } catch (TestException e) {
+                        throw sneakyThrow(e);
+                    }
+                }, ExceptionDecision.ALWAYS_FAILURE));
         assertThat(result.await()).isEqualTo("foobar");
     }
 
@@ -59,7 +69,13 @@ public class FallbackTest {
     public void immediatelyReturning_noExceptionSupported_valueThenException() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
         TestThread<String> result = runOnTestThread(new Fallback<>(invocation, "test invocation",
-                ctx -> TestException.doThrow(), ExceptionDecision.ALWAYS_EXPECTED));
+                ctx -> {
+                    try {
+                        return TestException.doThrow();
+                    } catch (TestException e) {
+                        throw sneakyThrow(e);
+                    }
+                }, ExceptionDecision.ALWAYS_EXPECTED));
         assertThat(result.await()).isEqualTo("foobar");
     }
 
@@ -101,9 +117,13 @@ public class FallbackTest {
     public void waitingOnParty_interruptedInFallback() throws InterruptedException {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
         Party party = Party.create(1);
-        FallbackFunction<String> fallback = ctx -> {
-            party.participant().attend();
-            return "fallback";
+        Function<FailureContext, String> fallback = ctx -> {
+            try {
+                party.participant().attend();
+                return "fallback";
+            } catch (InterruptedException e) {
+                throw sneakyThrow(e);
+            }
         };
         TestThread<String> executingThread = runOnTestThread(new Fallback<>(invocation, "test invocation",
                 fallback, ExceptionDecision.ALWAYS_FAILURE));
@@ -137,7 +157,7 @@ public class FallbackTest {
     @Test
     public void selfInterruptedInFallback_value() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
-        FallbackFunction<String> fallback = ctx -> {
+        Function<FailureContext, String> fallback = ctx -> {
             Thread.currentThread().interrupt();
             return "fallback";
         };
@@ -149,7 +169,7 @@ public class FallbackTest {
     @Test
     public void selfInterruptedInFallback_exception() {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
-        FallbackFunction<String> fallback = ctx -> {
+        Function<FailureContext, String> fallback = ctx -> {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };

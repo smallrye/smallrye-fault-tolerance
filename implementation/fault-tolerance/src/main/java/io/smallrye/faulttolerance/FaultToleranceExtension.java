@@ -60,6 +60,7 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
+import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
@@ -100,8 +101,9 @@ public class FaultToleranceExtension implements Extension {
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOG.activated(getImplementationVersion().orElse("unknown"));
 
-        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff) alone do _not_ trigger
-        // the fault tolerance interceptor, only in combination with other fault tolerance annotations
+        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff, @RetryWhen, @BeforeRetry)
+        // do _not_ trigger the fault tolerance interceptor alone, only in combination
+        // with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(
@@ -117,6 +119,8 @@ public class FaultToleranceExtension implements Extension {
                 FaultToleranceInterceptor.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultFallbackHandlerProvider.class),
                 DefaultFallbackHandlerProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultBeforeRetryHandlerProvider.class),
+                DefaultBeforeRetryHandlerProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultAsyncExecutorProvider.class),
                 DefaultAsyncExecutorProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(ExecutorHolder.class),
@@ -207,6 +211,16 @@ public class FaultToleranceExtension implements Extension {
                 if (annotatedType.isAnnotationPresent(RetryWhen.class)
                         && !annotatedType.isAnnotationPresent(Retry.class)) {
                     event.addDefinitionError(LOG.retryWhenAnnotationWithoutRetry(annotatedType.getJavaClass()));
+                }
+
+                if (annotatedMethod.isAnnotationPresent(BeforeRetry.class)
+                        && !annotatedMethod.isAnnotationPresent(Retry.class)) {
+                    event.addDefinitionError(LOG.beforeRetryAnnotationWithoutRetry(method.method));
+                }
+
+                if (annotatedType.isAnnotationPresent(BeforeRetry.class)
+                        && !annotatedType.isAnnotationPresent(Retry.class)) {
+                    event.addDefinitionError(LOG.beforeRetryAnnotationWithoutRetry(annotatedType.getJavaClass()));
                 }
 
                 if (annotatedMethod.isAnnotationPresent(Asynchronous.class)

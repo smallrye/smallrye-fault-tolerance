@@ -50,7 +50,7 @@ public class CompletionStageRetryTest {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldNotRetryOnSuccess",
                 ResultDecision.ALWAYS_EXPECTED, ExceptionDecision.ALWAYS_FAILURE, 3, 1000L, AsyncDelay.NONE,
-                new TestStopwatch());
+                new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldNotRetryOnSuccess");
@@ -67,7 +67,7 @@ public class CompletionStageRetryTest {
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldNotRetryOnSuccess",
                 ResultDecision.ALWAYS_FAILURE, ExceptionDecision.ALWAYS_FAILURE, 3, 1000L, AsyncDelay.NONE,
-                new TestStopwatch());
+                new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get)
@@ -92,7 +92,7 @@ public class CompletionStageRetryTest {
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnError",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                3, 1000L, AsyncDelay.NONE, new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get).isInstanceOf(ExecutionException.class)
@@ -114,7 +114,7 @@ public class CompletionStageRetryTest {
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldPropagateAbortOnErrorInCSCreation",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                3, 1000L, AsyncDelay.NONE, new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get).isInstanceOf(ExecutionException.class)
@@ -140,7 +140,7 @@ public class CompletionStageRetryTest {
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnce",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                3, 1000L, AsyncDelay.NONE, new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldRetryOnce");
@@ -167,7 +167,7 @@ public class CompletionStageRetryTest {
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryOnceOnCsFailure",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                3, 1000L, AsyncDelay.NONE, new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldRetryOnceOnCsFailure");
@@ -194,7 +194,7 @@ public class CompletionStageRetryTest {
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                3, 1000L, AsyncDelay.NONE, new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThat(result.toCompletableFuture().get()).isEqualTo("shouldRetryMaxTimesAndSucceed");
@@ -215,7 +215,7 @@ public class CompletionStageRetryTest {
         CompletionStageRetry<String> retry = new CompletionStageRetry<>(execution, "shouldRetryMaxTimesAndSucceed",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
-                3, 1000L, AsyncDelay.NONE, new TestStopwatch());
+                3, 1000L, AsyncDelay.NONE, new TestStopwatch(), null);
 
         CompletionStage<String> result = retry.apply(new InvocationContext<>(() -> completedFuture("ignored")));
         assertThatThrownBy(result.toCompletableFuture()::get).isInstanceOf(ExecutionException.class)

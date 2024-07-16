@@ -870,6 +870,22 @@ public interface FaultTolerance<T> {
             RetryBuilder<T, R> whenException(Predicate<Throwable> value);
 
             /**
+             * Sets a before retry handler, which is called before each retry, but not before the original attempt.
+             *
+             * @param value the before retry handler, must not be {@code null}
+             * @return this retry builder
+             */
+            RetryBuilder<T, R> beforeRetry(Runnable value);
+
+            /**
+             * Sets a before retry handler, which is called before each retry, but not before the original attempt.
+             *
+             * @param value the before retry handler, must not be {@code null}
+             * @return this retry builder
+             */
+            RetryBuilder<T, R> beforeRetry(Consumer<Throwable> value);
+
+            /**
              * Configures retry to use an exponential backoff instead of the default constant backoff.
              * <p>
              * Only one backoff strategy may be configured, so calling {@link #withFibonacciBackoff()}

@@ -236,6 +236,65 @@ It is an error to add a `@RetryWhen` annotation to a program element that doesn'
 
 For more information about `@RetryWhen`, see the javadoc of the annotation.
 
+=== Before Retry Actions
+
+include::partial$srye-feature.adoc[]
+
+The `@BeforeRetry` annotation supports specifying an action that should be performed before any retry.
+The action will _not_ be performed before the initial attempt.
+
+The `@BeforeRetry` annotation may be present on any program element (method or class) that also has the `@Retry` annotation.
+For example:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @BeforeRetry(methodName = "beforeRetry") // <1>
+    public String hello() {
+        ...
+    }
+
+    public void beforeRetry() { // <2>
+        ...
+    }
+}
+----
+
+<1> Specifies that before retrying, the `beforeRetry` method should be called.
+<2> The method must return `void` and have no parameters.
+
+Alternatively, it is possible to specify a class that is an implementation of the `BeforeRetryHandler` interface:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @BeforeRetry(MyBeforeRetry.class) // <1>
+    public String hello() {
+        ...
+    }
+
+    public static class MyBeforeRetry implements BeforeRetryHandler {
+        public void handle(ExecutionContext context) {
+            ...
+        }
+    }
+}
+----
+
+<1> Specifies that the `MyBeforeRetry` handler should be called before retrying.
+
+It is only possible to specify one option; specifying both `value` and `methodName` leads to a deployment problem.
+
+Note that the before retry action must fast and non-blocking (i.e., it must not do any IO or long-running computations) and must not throw an exception.
+
 [[inspecting-exception-cause-chains]]
 === Inspecting Exception Cause Chains
 

@@ -8,10 +8,12 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
@@ -24,10 +26,11 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
 
     public CompletionStageRetry(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
             ResultDecision resultDecision, ExceptionDecision exceptionDecision, long maxRetries,
-            long maxTotalDurationInMillis, Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+            long maxTotalDurationInMillis, Supplier<AsyncDelay> delayBetweenRetries, Stopwatch stopwatch,
+            Consumer<FailureContext> beforeRetry) {
         // the SyncDelay.NONE is ignored here, we have our own AsyncDelay
         super(delegate, description, resultDecision, exceptionDecision, maxRetries, maxTotalDurationInMillis,
-                SyncDelay.NONE, stopwatch);
+                SyncDelay.NONE, stopwatch, beforeRetry);
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
     }
 
@@ -81,6 +84,14 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
                 return failedFuture(lastFailure);
             } else {
                 return failedFuture(new FaultToleranceException(description + " reached max retry duration"));
+            }
+        }
+
+        if (beforeRetry != null) {
+            try {
+                beforeRetry.accept(new FailureContext(lastFailure, ctx));
+            } catch (Exception e) {
+                LOG.warn("Before retry action has thrown an exception", e);
             }
         }
 

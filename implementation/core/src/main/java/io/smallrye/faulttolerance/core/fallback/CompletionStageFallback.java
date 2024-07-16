@@ -6,14 +6,16 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 
 public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
     public CompletionStageFallback(FaultToleranceStrategy<CompletionStage<V>> delegate, String description,
-            FallbackFunction<CompletionStage<V>> fallback, ExceptionDecision exceptionDecision) {
+            Function<FailureContext, CompletionStage<V>> fallback, ExceptionDecision exceptionDecision) {
         super(delegate, description, fallback, exceptionDecision);
     }
 
@@ -53,8 +55,7 @@ public class CompletionStageFallback<V> extends Fallback<CompletionStage<V>> {
             try {
                 LOG.debugf("%s invocation failed, invoking fallback", description);
                 ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
-                FallbackContext<CompletionStage<V>> fallbackContext = new FallbackContext<>(exception, ctx);
-                propagateCompletion(fallback.call(fallbackContext), result);
+                propagateCompletion(fallback.apply(new FailureContext(exception, ctx)), result);
             } catch (Exception e) {
                 result.completeExceptionally(e);
             }

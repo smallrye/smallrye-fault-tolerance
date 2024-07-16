@@ -23,7 +23,7 @@ final class Strategies {
 
     static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {
         return new Retry<>(delegate, "retry", ResultDecision.ALWAYS_EXPECTED, ExceptionDecision.ALWAYS_FAILURE,
-                10, 0, SyncDelay.NONE, new TestStopwatch());
+                10, 0, SyncDelay.NONE, new TestStopwatch(), null);
     }
 
     static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate) {
