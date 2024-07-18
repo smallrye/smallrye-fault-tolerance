@@ -10,6 +10,7 @@ import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.TestInvocation;
@@ -57,7 +58,7 @@ public class FutureFallbackTest {
         assertThatThrownBy(result::await).isExactlyInstanceOf(RuntimeException.class);
     }
 
-    private Future<String> fallback(FallbackContext<?> ctx) {
+    private Future<String> fallback(FailureContext ctx) {
         return completedFuture("fallback");
     }
 }

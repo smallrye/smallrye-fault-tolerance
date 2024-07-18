@@ -5,7 +5,7 @@ import java.util.Arrays;
 
 import jakarta.interceptor.InvocationContext;
 
-import io.smallrye.faulttolerance.core.fallback.FallbackContext;
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.NormalMethodInvoker;
 import io.smallrye.faulttolerance.core.invocation.SpecialMethodInvoker;
@@ -31,7 +31,7 @@ public final class FallbackMethod {
 
     // ---
 
-    public Invoker<?> createInvoker(FallbackContext<?> ctx) throws ReflectiveOperationException {
+    public Invoker<?> createInvoker(FailureContext ctx) throws ReflectiveOperationException {
         InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
         Object[] arguments = interceptionContext.getParameters();
         if (arguments == null) {

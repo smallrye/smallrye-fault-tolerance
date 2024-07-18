@@ -63,7 +63,7 @@ public final class FallbackMethodCandidates {
 
             Set<Method> withExceptionParam = Collections.emptySet();
             if (allowExceptionParam) {
-                withExceptionParam = SecurityActions.findFallbackMethodsWithExceptionParammeter(point.beanClass(),
+                withExceptionParam = SecurityActions.findFallbackMethodsWithExceptionParameter(point.beanClass(),
                         guardedMethod.getDeclaringClass(), fallbackMethodName,
                         guardedMethod.getGenericParameterTypes(), guardedMethod.getGenericReturnType());
                 for (Method method : withExceptionParam) {

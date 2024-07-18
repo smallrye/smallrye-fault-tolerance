@@ -14,6 +14,7 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
+import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -59,6 +60,7 @@ public class FaultToleranceMethod {
     public ExponentialBackoff exponentialBackoff;
     public FibonacciBackoff fibonacciBackoff;
     public RetryWhen retryWhen;
+    public BeforeRetry beforeRetry;
 
     // types of annotations that were declared directly on the method;
     // other annotations, if present, were declared on the type
@@ -69,7 +71,7 @@ public class FaultToleranceMethod {
             return false;
         }
 
-        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff, @RetryWhen)
+        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff, @RetryWhen, @BeforeRetry)
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
         return applyFaultTolerance != null

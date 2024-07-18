@@ -42,4 +42,9 @@ interface CdiLogger extends BasicLogger {
     DefinitionException retryWhenAnnotationWithoutRetry(MethodDescriptor method);
 
     DefinitionException retryWhenAnnotationWithoutRetry(Class<?> clazz);
+
+    @Message(id = 7, value = "@BeforeRetry present on '%s', but @Retry is missing")
+    DefinitionException beforeRetryAnnotationWithoutRetry(MethodDescriptor method);
+
+    DefinitionException beforeRetryAnnotationWithoutRetry(Class<?> clazz);
 }

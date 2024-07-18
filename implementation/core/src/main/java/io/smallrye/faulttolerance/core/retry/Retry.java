@@ -4,10 +4,12 @@ import static io.smallrye.faulttolerance.core.retry.RetryLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
@@ -25,10 +27,11 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     final long maxTotalDurationInMillis;
     private final Supplier<SyncDelay> delayBetweenRetries;
     final Stopwatch stopwatch;
+    final Consumer<FailureContext> beforeRetry;
 
     public Retry(FaultToleranceStrategy<V> delegate, String description, ResultDecision resultDecision,
             ExceptionDecision exceptionDecision, long maxRetries, long maxTotalDurationInMillis,
-            Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch) {
+            Supplier<SyncDelay> delayBetweenRetries, Stopwatch stopwatch, Consumer<FailureContext> beforeRetry) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
         this.resultDecision = checkNotNull(resultDecision, "Result decision must be set");
@@ -37,6 +40,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         this.maxTotalDurationInMillis = maxTotalDurationInMillis <= 0 ? Long.MAX_VALUE : maxTotalDurationInMillis;
         this.delayBetweenRetries = checkNotNull(delayBetweenRetries, "Delay must be set");
         this.stopwatch = checkNotNull(stopwatch, "Stopwatch must be set");
+        this.beforeRetry = beforeRetry;
     }
 
     @Override
@@ -85,6 +89,14 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 // `RetryTest`). Hence this second explicit check.
                 if (runningStopwatch.elapsedTimeInMillis() >= maxTotalDurationInMillis) {
                     break;
+                }
+
+                if (beforeRetry != null) {
+                    try {
+                        beforeRetry.accept(new FailureContext(lastFailure, ctx));
+                    } catch (Exception e) {
+                        LOG.warn("Before retry action has thrown an exception", e);
+                    }
                 }
             }
 

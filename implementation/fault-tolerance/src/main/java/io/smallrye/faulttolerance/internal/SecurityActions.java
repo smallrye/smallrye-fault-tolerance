@@ -67,10 +67,10 @@ final class SecurityActions {
 
         Set<Method> result;
         if (System.getSecurityManager() == null) {
-            result = doFindFallbackMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
+            result = findMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
         } else {
             result = AccessController.doPrivileged((PrivilegedExceptionAction<Set<Method>>) () -> {
-                return doFindFallbackMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
+                return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
             });
         }
 
@@ -93,17 +93,42 @@ final class SecurityActions {
      * @param returnType return type of the guarded method
      * @return the fallback method or {@code null} if none exists
      */
-    static Set<Method> findFallbackMethodsWithExceptionParammeter(Class<?> beanClass, Class<?> declaringClass,
+    static Set<Method> findFallbackMethodsWithExceptionParameter(Class<?> beanClass, Class<?> declaringClass,
             String name, Type[] parameterTypes, Type returnType) throws PrivilegedActionException {
         if (System.getSecurityManager() == null) {
-            return doFindFallbackMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
+            return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
         }
         return AccessController.doPrivileged((PrivilegedExceptionAction<Set<Method>>) () -> {
-            return doFindFallbackMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
+            return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
         });
     }
 
-    private static Set<Method> doFindFallbackMethod(Class<?> beanClass, Class<?> declaringClass, String name,
+    /**
+     * Finds a before retry method for given guarded method. If the guarded method is present on given {@code beanClass}
+     * and is actually declared by given {@code declaringClass}, then a before retry method of given {@code name},
+     * with no parameters and return type of {@code void}, is searched for on the {@code beanClass} and its superclasses and
+     * superinterfaces, according to the specification rules. Returns {@code null} if no matching before retry method exists.
+     *
+     * @param beanClass the class of the bean that has the guarded method
+     * @param declaringClass the class that actually declares the guarded method (can be a supertype of bean class)
+     * @param name name of the before retry method
+     * @return the before retry method or {@code null} if none exists
+     */
+    static Method findBeforeRetryMethod(Class<?> beanClass, Class<?> declaringClass, String name)
+            throws PrivilegedActionException {
+        Set<Method> result;
+        if (System.getSecurityManager() == null) {
+            result = findMethod(beanClass, declaringClass, name, new Type[0], void.class, false);
+        } else {
+            result = AccessController.doPrivileged((PrivilegedExceptionAction<Set<Method>>) () -> {
+                return findMethod(beanClass, declaringClass, name, new Type[0], void.class, false);
+            });
+        }
+
+        return result.isEmpty() ? null : result.iterator().next();
+    }
+
+    private static Set<Method> findMethod(Class<?> beanClass, Class<?> declaringClass, String name,
             Type[] expectedParameterTypes, Type expectedReturnType, boolean expectedExceptionParameter) {
 
         Set<Method> result = new HashSet<>();
@@ -122,14 +147,14 @@ final class SecurityActions {
         // we fake this by checking that the matching method has the same name as one of the method declared on
         // the declaring class or any of its superclasses or any of its implemented interfaces (this is actually
         // quite precise, the only false positive would occur in presence of overloads)
-        Set<String> possibleFallbackMethodNames = findPossibleFallbackMethodNames(declaringClass);
+        Set<String> declaredMethodNames = findDeclaredMethodNames(declaringClass);
 
         Class<?> clazz = beanClass;
         while (true) {
             Set<Method> methods = getMethodsFromClass(clazz, name, expectedParameterTypes, expectedReturnType,
                     expectedExceptionParameter, declaringClass, actualMapping, expectedMapping);
             for (Method method : methods) {
-                if (possibleFallbackMethodNames.contains(method.getName())) {
+                if (declaredMethodNames.contains(method.getName())) {
                     result.add(method);
                     if (!expectedExceptionParameter) {
                         return result;
@@ -149,7 +174,7 @@ final class SecurityActions {
             Set<Method> methods = getMethodsFromClass(iface, name, expectedParameterTypes, expectedReturnType,
                     expectedExceptionParameter, declaringClass, actualMapping, expectedMapping);
             for (Method method : methods) {
-                if (possibleFallbackMethodNames.contains(method.getName())) {
+                if (declaredMethodNames.contains(method.getName())) {
                     result.add(method);
                     if (!expectedExceptionParameter) {
                         return result;
@@ -161,7 +186,7 @@ final class SecurityActions {
         return result;
     }
 
-    private static Set<String> findPossibleFallbackMethodNames(Class<?> declaringClass) {
+    private static Set<String> findDeclaredMethodNames(Class<?> declaringClass) {
         Set<String> result = new HashSet<>();
 
         Class<?> clazz = declaringClass;

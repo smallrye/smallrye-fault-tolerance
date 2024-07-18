@@ -35,6 +35,7 @@ import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
+import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
@@ -67,7 +68,8 @@ public class FaultToleranceOperation {
                 ExponentialBackoffConfigImpl.create(method),
                 FibonacciBackoffConfigImpl.create(method),
                 CustomBackoffConfigImpl.create(method),
-                RetryWhenConfigImpl.create(method));
+                RetryWhenConfigImpl.create(method),
+                BeforeRetryConfigImpl.create(method));
     }
 
     private final Class<?> beanClass;
@@ -92,6 +94,7 @@ public class FaultToleranceOperation {
     private final FibonacciBackoffConfig fibonacciBackoff;
     private final CustomBackoffConfig customBackoff;
     private final RetryWhenConfig retryWhen;
+    private final BeforeRetryConfig beforeRetry;
 
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
@@ -110,7 +113,8 @@ public class FaultToleranceOperation {
             ExponentialBackoffConfig exponentialBackoff,
             FibonacciBackoffConfig fibonacciBackoff,
             CustomBackoffConfig customBackoff,
-            RetryWhenConfig retryWhen) {
+            RetryWhenConfig retryWhen,
+            BeforeRetryConfig beforeRetry) {
         this.beanClass = beanClass;
         this.methodDescriptor = methodDescriptor;
 
@@ -133,6 +137,7 @@ public class FaultToleranceOperation {
         this.fibonacciBackoff = fibonacciBackoff;
         this.customBackoff = customBackoff;
         this.retryWhen = retryWhen;
+        this.beforeRetry = beforeRetry;
     }
 
     public Class<?> getBeanClass() {
@@ -336,6 +341,14 @@ public class FaultToleranceOperation {
         return retryWhen;
     }
 
+    public boolean hasBeforeRetry() {
+        return beforeRetry != null;
+    }
+
+    public BeforeRetry getBeforeRetry() {
+        return beforeRetry;
+    }
+
     public String getName() {
         return beanClass.getCanonicalName() + "." + methodDescriptor.name;
     }
@@ -391,6 +404,7 @@ public class FaultToleranceOperation {
 
         validateRetryBackoff();
         validateRetryWhen();
+        validateBeforeRetry();
     }
 
     private void validateRetryBackoff() {
@@ -457,6 +471,18 @@ public class FaultToleranceOperation {
         }
     }
 
+    private void validateBeforeRetry() {
+        if (beforeRetry == null) {
+            return;
+        }
+
+        beforeRetry.validate();
+
+        if (retry == null) {
+            throw new FaultToleranceDefinitionException("Invalid @BeforeRetry on " + methodDescriptor + ": missing @Retry");
+        }
+    }
+
     /**
      * Ensures all configuration of this fault tolerance operation is loaded. Subsequent method invocations
      * on this instance are guaranteed to not touch MP Config.
@@ -512,6 +538,9 @@ public class FaultToleranceOperation {
         }
         if (retryWhen != null) {
             retryWhen.materialize();
+        }
+        if (beforeRetry != null) {
+            beforeRetry.materialize();
         }
     }
 

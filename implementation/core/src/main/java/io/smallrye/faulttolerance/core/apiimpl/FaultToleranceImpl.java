@@ -21,6 +21,7 @@ import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.RateLimitType;
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
@@ -32,7 +33,6 @@ import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
-import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
@@ -312,12 +312,13 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn,
                                 retryBuilder.whenExceptionPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
-                        SystemStopwatch.INSTANCE);
+                        SystemStopwatch.INSTANCE,
+                        retryBuilder.beforeRetry != null ? ctx -> retryBuilder.beforeRetry.accept(ctx.failure) : null);
             }
 
             // fallback is always enabled
             if (fallbackBuilder != null) {
-                FallbackFunction<T> fallbackFunction = ctx -> fallbackBuilder.handler.apply(ctx.failure);
+                Function<FailureContext, T> fallbackFunction = ctx -> fallbackBuilder.handler.apply(ctx.failure);
                 result = new Fallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
                                 fallbackBuilder.whenPredicate));
@@ -386,7 +387,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 retryBuilder.whenExceptionPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis,
                         () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
-                        SystemStopwatch.INSTANCE);
+                        SystemStopwatch.INSTANCE,
+                        retryBuilder.beforeRetry != null ? ctx -> retryBuilder.beforeRetry.accept(ctx.failure) : null);
             }
 
             // fallback is always enabled
@@ -396,8 +398,8 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     throw new FaultToleranceException("Unknown async type: " + asyncType);
                 }
 
-                FallbackFunction<CompletionStage<V>> fallbackFunction = ctx -> asyncSupport.fallbackResultToCompletionStage(
-                        fallbackBuilder.handler.apply(ctx.failure));
+                Function<FailureContext, CompletionStage<V>> fallbackFunction = ctx -> asyncSupport
+                        .fallbackResultToCompletionStage(fallbackBuilder.handler.apply(ctx.failure));
 
                 result = new CompletionStageFallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
@@ -774,6 +776,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             private boolean setBasedExceptionDecisionDefined = false;
             private Predicate<Throwable> whenExceptionPredicate;
             private Predicate<Object> whenResultPredicate;
+            private Consumer<Throwable> beforeRetry;
 
             private ExponentialBackoffBuilderImpl<T, R> exponentialBackoffBuilder;
             private FibonacciBackoffBuilderImpl<T, R> fibonacciBackoffBuilder;
@@ -843,6 +846,19 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             @Override
             public RetryBuilder<T, R> whenException(Predicate<Throwable> value) {
                 this.whenExceptionPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T, R> beforeRetry(Runnable value) {
+                Preconditions.checkNotNull(value, "Before retry handler must be set");
+                this.beforeRetry = ignored -> value.run();
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T, R> beforeRetry(Consumer<Throwable> value) {
+                this.beforeRetry = Preconditions.checkNotNull(value, "Before retry handler must be set");
                 return this;
             }
 

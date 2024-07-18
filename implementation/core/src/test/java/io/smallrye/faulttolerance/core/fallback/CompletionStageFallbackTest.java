@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.fallback;
 
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,7 +43,13 @@ public class CompletionStageFallbackTest {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> TestException.doThrow(),
+                "test invocation", ctx -> {
+                    try {
+                        return TestException.doThrow();
+                    } catch (TestException e) {
+                        throw sneakyThrow(e);
+                    }
+                },
                 ExceptionDecision.ALWAYS_FAILURE);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");
@@ -151,7 +158,13 @@ public class CompletionStageFallbackTest {
         TestInvocation<CompletionStage<String>> invocation = TestInvocation.of(() -> completedFuture("foobar"));
         CompletionStageExecution<String> execution = new CompletionStageExecution<>(invocation, executor);
         CompletionStageFallback<String> fallback = new CompletionStageFallback<>(execution,
-                "test invocation", ctx -> TestException.doThrow(),
+                "test invocation", ctx -> {
+                    try {
+                        return TestException.doThrow();
+                    } catch (TestException e) {
+                        throw sneakyThrow(e);
+                    }
+                },
                 ExceptionDecision.ALWAYS_EXPECTED);
         CompletionStage<String> result = fallback.apply(new InvocationContext<>(null));
         assertThat(result.toCompletableFuture().get()).isEqualTo("foobar");

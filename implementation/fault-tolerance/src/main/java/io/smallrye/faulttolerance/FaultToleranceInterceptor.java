@@ -29,6 +29,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -43,15 +45,18 @@ import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
 
+import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
 import io.smallrye.common.annotation.Identifier;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
+import io.smallrye.faulttolerance.api.BeforeRetryHandler;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.NeverOnResult;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
+import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
 import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
@@ -67,7 +72,6 @@ import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
-import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
@@ -101,6 +105,7 @@ import io.smallrye.faulttolerance.core.util.PredicateBasedResultDecision;
 import io.smallrye.faulttolerance.core.util.ResultDecision;
 import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
+import io.smallrye.faulttolerance.internal.BeforeRetryMethod;
 import io.smallrye.faulttolerance.internal.FallbackMethod;
 import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
 import io.smallrye.faulttolerance.internal.InterceptionInvoker;
@@ -128,6 +133,8 @@ public class FaultToleranceInterceptor {
 
     private final FallbackHandlerProvider fallbackHandlerProvider;
 
+    private final BeforeRetryHandlerProvider beforeRetryHandlerProvider;
+
     private final MetricsProvider metricsProvider;
 
     private final ExecutorService asyncExecutor;
@@ -150,6 +157,7 @@ public class FaultToleranceInterceptor {
             FaultToleranceOperationProvider operationProvider,
             StrategyCache cache,
             FallbackHandlerProvider fallbackHandlerProvider,
+            BeforeRetryHandlerProvider beforeRetryHandlerProvider,
             MetricsProvider metricsProvider,
             ExecutorHolder executorHolder,
             RequestContextIntegration requestContextIntegration,
@@ -160,6 +168,7 @@ public class FaultToleranceInterceptor {
         this.operationProvider = operationProvider;
         this.cache = cache;
         this.fallbackHandlerProvider = fallbackHandlerProvider;
+        this.beforeRetryHandlerProvider = beforeRetryHandlerProvider;
         this.metricsProvider = metricsProvider;
         asyncExecutor = executorHolder.getAsyncExecutor();
         eventLoop = executorHolder.getEventLoop();
@@ -344,7 +353,8 @@ public class FaultToleranceInterceptor {
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new TimerDelay(backoff.get(), timer),
-                    SystemStopwatch.INSTANCE);
+                    SystemStopwatch.INSTANCE,
+                    operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
 
         if (operation.hasFallback()) {
@@ -416,7 +426,8 @@ public class FaultToleranceInterceptor {
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
-                    SystemStopwatch.INSTANCE);
+                    SystemStopwatch.INSTANCE,
+                    operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
 
         if (operation.hasFallback()) {
@@ -489,7 +500,8 @@ public class FaultToleranceInterceptor {
                     operation.getRetry().maxRetries(),
                     maxDurationMs,
                     () -> new ThreadSleepDelay(backoff.get()),
-                    SystemStopwatch.INSTANCE);
+                    SystemStopwatch.INSTANCE,
+                    operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
 
         if (operation.hasFallback()) {
@@ -540,7 +552,8 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private <V> FallbackFunction<V> prepareFallbackFunction(InterceptionPoint point, FaultToleranceOperation operation) {
+    private <V> Function<FailureContext, V> prepareFallbackFunction(InterceptionPoint point,
+            FaultToleranceOperation operation) {
         AsyncSupport asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
 
         String fallbackMethodName = operation.getFallback().fallbackMethod();
@@ -548,7 +561,7 @@ public class FaultToleranceInterceptor {
                 ? cache.getFallbackMethodCandidates(point, fallbackMethodName)
                 : null;
 
-        FallbackFunction<V> fallbackFunction;
+        Function<FailureContext, V> fallbackFunction;
 
         if (candidates != null) {
             fallbackFunction = ctx -> {
@@ -570,7 +583,7 @@ public class FaultToleranceInterceptor {
             FallbackHandler<V> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
                 fallbackFunction = ctx -> {
-                    ExecutionContextImpl executionContext = new ExecutionContextImpl(
+                    ExecutionContext executionContext = new ExecutionContextImpl(
                             ctx.invocationContext.get(InvocationContext.class), ctx.failure);
                     V result = fallbackHandler.handle(executionContext);
                     if (asyncSupport != null) {
@@ -588,6 +601,40 @@ public class FaultToleranceInterceptor {
         }
 
         return fallbackFunction;
+    }
+
+    private Consumer<FailureContext> prepareBeforeRetryFunction(InterceptionPoint point, FaultToleranceOperation operation) {
+        String methodName = operation.getBeforeRetry().methodName();
+        BeforeRetryMethod method = !"".equals(methodName)
+                ? cache.getBeforeRetryMethod(point, methodName)
+                : null;
+
+        Consumer<FailureContext> beforeRetryFunction;
+
+        if (method != null) {
+            beforeRetryFunction = ctx -> {
+                try {
+                    method.createInvoker(ctx).proceed();
+                } catch (InvocationTargetException e) {
+                    throw sneakyThrow(e.getCause());
+                } catch (Throwable e) {
+                    throw new FaultToleranceException("Error during before retry method invocation", e);
+                }
+            };
+        } else {
+            BeforeRetryHandler beforeRetryHandler = beforeRetryHandlerProvider.get(operation);
+            if (beforeRetryHandler != null) {
+                beforeRetryFunction = ctx -> {
+                    ExecutionContext executionContext = new ExecutionContextImpl(
+                            ctx.invocationContext.get(InvocationContext.class), ctx.failure);
+                    beforeRetryHandler.handle(executionContext);
+                };
+            } else {
+                throw new FaultToleranceException("Could not obtain before retry handler for " + point);
+            }
+        }
+
+        return beforeRetryFunction;
     }
 
     private ResultDecision createResultDecision(Class<? extends Predicate<Object>> whenResult) {
