@@ -46,6 +46,7 @@ jobs:
         MAVEN_GPG_PASSPHRASE: ${{secrets.MAVEN_GPG_PASSPHRASE}}
       run: |
         java -version
+        mvn --version
         git config --global user.name "SmallRye CI"
         git config --global user.email "smallrye@googlegroups.com"
         git checkout -b release
