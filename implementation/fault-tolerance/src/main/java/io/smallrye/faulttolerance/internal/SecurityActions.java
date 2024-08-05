@@ -27,8 +27,10 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -134,11 +136,10 @@ final class SecurityActions {
         Set<Method> result = new HashSet<>();
 
         TypeMapping expectedMapping = TypeMapping.createFor(beanClass, declaringClass);
-        TypeMapping actualMapping = new TypeMapping();
 
         // if we find a matching method on the bean class or one of its superclasses or superinterfaces,
         // then we have to check that the method is either identical to or an override of a method that:
-        // - is declared on a class which is a supertype of the declaring class, or
+        // - is declared on a class which is a superclass of the declaring class, or
         // - is declared on an interface which implemented by the declaring class
         //
         // this is to satisfy the specification, which says: fallback method must be on the same class, a superclass
@@ -149,8 +150,27 @@ final class SecurityActions {
         // quite precise, the only false positive would occur in presence of overloads)
         Set<String> declaredMethodNames = findDeclaredMethodNames(declaringClass);
 
-        Class<?> clazz = beanClass;
-        while (true) {
+        Deque<ClassWithTypeMapping> worklist = new ArrayDeque<>();
+        {
+            // add all superclasses first, so that they're preferred
+            // interfaces are added during worklist iteration
+            Class<?> clazz = beanClass;
+            TypeMapping typeMapping = new TypeMapping();
+            worklist.add(new ClassWithTypeMapping(clazz, typeMapping));
+            while (clazz.getSuperclass() != null) {
+                Class<?> superclass = clazz.getSuperclass();
+                Type genericSuperclass = clazz.getGenericSuperclass();
+                typeMapping = typeMapping.getDirectSupertypeMapping(superclass, genericSuperclass);
+                worklist.add(new ClassWithTypeMapping(superclass, typeMapping));
+
+                clazz = clazz.getSuperclass();
+            }
+        }
+        while (!worklist.isEmpty()) {
+            ClassWithTypeMapping classWithTypeMapping = worklist.removeFirst();
+            Class<?> clazz = classWithTypeMapping.clazz;
+            TypeMapping actualMapping = classWithTypeMapping.typeMapping;
+
             Set<Method> methods = getMethodsFromClass(clazz, name, expectedParameterTypes, expectedReturnType,
                     expectedExceptionParameter, declaringClass, actualMapping, expectedMapping);
             for (Method method : methods) {
@@ -162,24 +182,11 @@ final class SecurityActions {
                 }
             }
 
-            if (clazz.getSuperclass() == null) {
-                break;
-            }
-
-            actualMapping = actualMapping.getSuperclassMapping(clazz);
-            clazz = clazz.getSuperclass();
-        }
-
-        for (Class<?> iface : beanClass.getInterfaces()) {
-            Set<Method> methods = getMethodsFromClass(iface, name, expectedParameterTypes, expectedReturnType,
-                    expectedExceptionParameter, declaringClass, actualMapping, expectedMapping);
-            for (Method method : methods) {
-                if (declaredMethodNames.contains(method.getName())) {
-                    result.add(method);
-                    if (!expectedExceptionParameter) {
-                        return result;
-                    }
-                }
+            for (int i = 0; i < clazz.getInterfaces().length; i++) {
+                Class<?> iface = clazz.getInterfaces()[i];
+                Type genericIface = clazz.getGenericInterfaces()[i];
+                worklist.add(new ClassWithTypeMapping(iface,
+                        actualMapping.getDirectSupertypeMapping(iface, genericIface)));
             }
         }
 
@@ -189,18 +196,18 @@ final class SecurityActions {
     private static Set<String> findDeclaredMethodNames(Class<?> declaringClass) {
         Set<String> result = new HashSet<>();
 
-        Class<?> clazz = declaringClass;
-        while (clazz != null) {
+        Deque<Class<?>> worklist = new ArrayDeque<>();
+        worklist.add(declaringClass);
+        while (!worklist.isEmpty()) {
+            Class<?> clazz = worklist.removeFirst();
             for (Method m : clazz.getDeclaredMethods()) {
                 result.add(m.getName());
             }
-            clazz = clazz.getSuperclass();
-        }
 
-        for (Class<?> iface : declaringClass.getInterfaces()) {
-            for (Method m : iface.getMethods()) {
-                result.add(m.getName());
+            if (clazz.getSuperclass() != null) {
+                worklist.add(clazz.getSuperclass());
             }
+            Collections.addAll(worklist, clazz.getInterfaces());
         }
 
         return result;
@@ -362,6 +369,16 @@ final class SecurityActions {
         }
     }
 
+    private static class ClassWithTypeMapping {
+        private final Class<?> clazz;
+        private final TypeMapping typeMapping;
+
+        private ClassWithTypeMapping(Class<?> clazz, TypeMapping typeMapping) {
+            this.clazz = clazz;
+            this.typeMapping = typeMapping;
+        }
+    }
+
     private static class TypeMapping {
         private final Map<Type, Type> map;
 
@@ -393,7 +410,7 @@ final class SecurityActions {
                 if (current.getSuperclass() == null) {
                     break;
                 }
-                result = result.getSuperclassMapping(current);
+                result = result.getDirectSupertypeMapping(current.getSuperclass(), current.getGenericSuperclass());
                 current = current.getSuperclass();
             }
 
@@ -405,17 +422,10 @@ final class SecurityActions {
             return result != null ? result : type;
         }
 
-        private TypeMapping getSuperclassMapping(Class<?> current) {
-            return new TypeMapping(mappingForSuperclass(current, this.map));
-        }
-
-        private static Map<Type, Type> mappingForSuperclass(Class<?> clazz, Map<Type, Type> previousMapping) {
-            Class<?> superclass = clazz.getSuperclass();
-            TypeVariable<?>[] typeParameters = superclass.getTypeParameters();
-
-            Type genericSuperclass = clazz.getGenericSuperclass();
-            Type[] typeArguments = (genericSuperclass instanceof ParameterizedType)
-                    ? ((ParameterizedType) genericSuperclass).getActualTypeArguments()
+        private TypeMapping getDirectSupertypeMapping(Class<?> supertype, Type genericSupertype) {
+            TypeVariable<?>[] typeParameters = supertype.getTypeParameters();
+            Type[] typeArguments = (genericSupertype instanceof ParameterizedType)
+                    ? ((ParameterizedType) genericSupertype).getActualTypeArguments()
                     : new Type[0];
 
             Map<Type, Type> result = new HashMap<>();
@@ -425,12 +435,12 @@ final class SecurityActions {
                 if (typeArgument instanceof Class) {
                     result.put(typeParameters[i], typeArgument);
                 } else {
-                    Type type = previousMapping.get(typeArgument);
+                    Type type = map.get(typeArgument);
                     result.put(typeParameters[i], type != null ? type : typeArgument);
                 }
             }
 
-            return result;
+            return new TypeMapping(result);
         }
     }
 }
