@@ -558,7 +558,7 @@ public class FaultToleranceInterceptor {
 
         String fallbackMethodName = operation.getFallback().fallbackMethod();
         FallbackMethodCandidates candidates = !"".equals(fallbackMethodName)
-                ? cache.getFallbackMethodCandidates(point, fallbackMethodName)
+                ? cache.getFallbackMethodCandidates(point, operation)
                 : null;
 
         Function<FailureContext, V> fallbackFunction;
@@ -606,7 +606,7 @@ public class FaultToleranceInterceptor {
     private Consumer<FailureContext> prepareBeforeRetryFunction(InterceptionPoint point, FaultToleranceOperation operation) {
         String methodName = operation.getBeforeRetry().methodName();
         BeforeRetryMethod method = !"".equals(methodName)
-                ? cache.getBeforeRetryMethod(point, methodName)
+                ? cache.getBeforeRetryMethod(point, operation)
                 : null;
 
         Consumer<FailureContext> beforeRetryFunction;

@@ -8,11 +8,8 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
-import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
 import io.smallrye.faulttolerance.autoconfig.Config;
-import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
-import io.smallrye.faulttolerance.internal.InterceptionPoint;
 
 @AutoConfig
 public interface FallbackConfig extends Fallback, Config {
@@ -27,21 +24,9 @@ public interface FallbackConfig extends Fallback, Config {
             throw new FaultToleranceDefinitionException(e);
         }
 
-        if (!"".equals(fallbackMethod())) {
-            if (!Fallback.DEFAULT.class.equals(value())) {
-                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
-                        + ": fallback handler class and fallback method can't be specified both at the same time");
-            }
-
-            SpecCompatibility specCompatibility = SpecCompatibility.createFromConfig();
-            FallbackMethodCandidates candidates = FallbackMethodCandidates.create(
-                    new InterceptionPoint(beanClass(), guardedMethod), fallbackMethod(),
-                    specCompatibility.allowFallbackMethodExceptionParameter());
-            if (candidates.isEmpty()) {
-                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
-                        + ": can't find fallback method '" + fallbackMethod()
-                        + "' with matching parameter types and return type");
-            }
+        if (!"".equals(fallbackMethod()) && !DEFAULT.class.equals(value())) {
+            throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
+                    + ": fallback handler class and fallback method can't be specified both at the same time");
         }
 
         if (!Fallback.DEFAULT.class.equals(value())) {

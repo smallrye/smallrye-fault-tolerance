@@ -14,6 +14,16 @@ final class KotlinSupport {
         return params > 0 && method.getParameterTypes()[params - 1].getName().equals(KOTLIN_CONTINUATION);
     }
 
+    static boolean isSuspendingFunction(Type[] parameterTypes) {
+        int params = parameterTypes.length;
+        if (params > 0) {
+            Type last = parameterTypes[params - 1];
+            return last instanceof Class && last.getTypeName().equals(KOTLIN_CONTINUATION)
+                    || last instanceof ParameterizedType && last.getTypeName().startsWith(KOTLIN_CONTINUATION);
+        }
+        return false;
+    }
+
     static Type getSuspendingFunctionResultType(Method method) {
         if (!isSuspendingFunction(method)) {
             throw new IllegalArgumentException("Not a suspend function: " + method);

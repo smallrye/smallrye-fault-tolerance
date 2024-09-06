@@ -22,6 +22,8 @@ import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
+import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
+
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
@@ -74,7 +76,7 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
                     }
                 }
             } catch (PrivilegedActionException e) {
-                throw new IllegalStateException("Unable to get declared methods of " + beanClass);
+                throw new FaultToleranceDefinitionException(e);
             }
             beanClass = beanClass.getSuperclass();
         }

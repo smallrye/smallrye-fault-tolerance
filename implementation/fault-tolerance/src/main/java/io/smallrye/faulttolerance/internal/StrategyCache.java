@@ -8,6 +8,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.SpecCompatibility;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 
 @Singleton
@@ -29,12 +30,12 @@ public class StrategyCache {
         return (FaultToleranceStrategy<V>) strategies.computeIfAbsent(point, ignored -> producer.get());
     }
 
-    public FallbackMethodCandidates getFallbackMethodCandidates(InterceptionPoint point, String fallbackMethodName) {
+    public FallbackMethodCandidates getFallbackMethodCandidates(InterceptionPoint point, FaultToleranceOperation operation) {
         return fallbackMethods.computeIfAbsent(point, ignored -> FallbackMethodCandidates.create(
-                point, fallbackMethodName, specCompatibility.allowFallbackMethodExceptionParameter()));
+                operation, specCompatibility.allowFallbackMethodExceptionParameter()));
     }
 
-    public BeforeRetryMethod getBeforeRetryMethod(InterceptionPoint point, String fallbackMethodName) {
-        return beforeRetryMethods.computeIfAbsent(point, ignored -> BeforeRetryMethod.find(point, fallbackMethodName));
+    public BeforeRetryMethod getBeforeRetryMethod(InterceptionPoint point, FaultToleranceOperation operation) {
+        return beforeRetryMethods.computeIfAbsent(point, ignored -> BeforeRetryMethod.create(operation));
     }
 }

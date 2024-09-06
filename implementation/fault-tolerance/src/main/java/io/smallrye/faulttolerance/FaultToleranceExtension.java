@@ -176,7 +176,7 @@ public class FaultToleranceExtension implements Extension {
     void collectFaultToleranceOperations(@Observes ProcessManagedBean<?> event) {
         AnnotatedType<?> annotatedType = event.getAnnotatedBeanClass();
         for (AnnotatedMethod<?> annotatedMethod : annotatedType.getMethods()) {
-            FaultToleranceMethod method = FaultToleranceMethods.create(annotatedMethod);
+            FaultToleranceMethod method = FaultToleranceMethods.create(annotatedType.getJavaClass(), annotatedMethod);
             if (method.isLegitimate()) {
                 FaultToleranceOperation operation = FaultToleranceOperation.create(method);
                 operation.validate();

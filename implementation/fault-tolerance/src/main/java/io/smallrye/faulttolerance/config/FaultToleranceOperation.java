@@ -18,8 +18,11 @@ package io.smallrye.faulttolerance.config;
 import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -32,6 +35,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
@@ -45,6 +49,7 @@ import io.smallrye.faulttolerance.api.RetryWhen;
 import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
+import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
 
 /**
  * Fault tolerance operation metadata.
@@ -69,7 +74,10 @@ public class FaultToleranceOperation {
                 FibonacciBackoffConfigImpl.create(method),
                 CustomBackoffConfigImpl.create(method),
                 RetryWhenConfigImpl.create(method),
-                BeforeRetryConfigImpl.create(method));
+                BeforeRetryConfigImpl.create(method),
+                method.fallbackMethod,
+                method.fallbackMethodsWithExceptionParameter,
+                method.beforeRetryMethod);
     }
 
     private final Class<?> beanClass;
@@ -96,6 +104,10 @@ public class FaultToleranceOperation {
     private final RetryWhenConfig retryWhen;
     private final BeforeRetryConfig beforeRetry;
 
+    private final Method fallbackMethod;
+    private final List<Method> fallbackMethodsWithExceptionParameter;
+    private final Method beforeRetryMethod;
+
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
             ApplyFaultToleranceConfig applyFaultTolerance,
@@ -114,7 +126,10 @@ public class FaultToleranceOperation {
             FibonacciBackoffConfig fibonacciBackoff,
             CustomBackoffConfig customBackoff,
             RetryWhenConfig retryWhen,
-            BeforeRetryConfig beforeRetry) {
+            BeforeRetryConfig beforeRetry,
+            MethodDescriptor fallbackMethod,
+            List<MethodDescriptor> fallbackMethodsWithExceptionParameter,
+            MethodDescriptor beforeRetryMethod) {
         this.beanClass = beanClass;
         this.methodDescriptor = methodDescriptor;
 
@@ -138,6 +153,40 @@ public class FaultToleranceOperation {
         this.customBackoff = customBackoff;
         this.retryWhen = retryWhen;
         this.beforeRetry = beforeRetry;
+
+        if (fallbackMethod != null) {
+            try {
+                this.fallbackMethod = SecurityActions.setAccessible(fallbackMethod.reflect());
+            } catch (NoSuchMethodException e) {
+                throw new FaultToleranceDefinitionException(e);
+            }
+        } else {
+            this.fallbackMethod = null;
+        }
+
+        if (fallbackMethodsWithExceptionParameter != null) {
+            List<Method> result = new ArrayList<>();
+            for (MethodDescriptor m : fallbackMethodsWithExceptionParameter) {
+                try {
+                    result.add(SecurityActions.setAccessible(m.reflect()));
+                } catch (NoSuchMethodException e) {
+                    throw new FaultToleranceDefinitionException(e);
+                }
+            }
+            this.fallbackMethodsWithExceptionParameter = result;
+        } else {
+            this.fallbackMethodsWithExceptionParameter = null;
+        }
+
+        if (beforeRetryMethod != null) {
+            try {
+                this.beforeRetryMethod = SecurityActions.setAccessible(beforeRetryMethod.reflect());
+            } catch (NoSuchMethodException e) {
+                throw new FaultToleranceDefinitionException(e);
+            }
+        } else {
+            this.beforeRetryMethod = null;
+        }
     }
 
     public Class<?> getBeanClass() {
@@ -349,6 +398,18 @@ public class FaultToleranceOperation {
         return beforeRetry;
     }
 
+    public Method getFallbackMethod() {
+        return fallbackMethod;
+    }
+
+    public List<Method> getFallbackMethodsWithExceptionParameter() {
+        return fallbackMethodsWithExceptionParameter;
+    }
+
+    public Method getBeforeRetryMethod() {
+        return beforeRetryMethod;
+    }
+
     public String getName() {
         return beanClass.getCanonicalName() + "." + methodDescriptor.name;
     }
@@ -402,9 +463,26 @@ public class FaultToleranceOperation {
             timeout.validate();
         }
 
+        validateFallback();
         validateRetryBackoff();
         validateRetryWhen();
         validateBeforeRetry();
+    }
+
+    private void validateFallback() {
+        if (fallback == null) {
+            return;
+        }
+
+        if (!"".equals(fallback.fallbackMethod())) {
+            FallbackMethodCandidates candidates = FallbackMethodCandidates.create(this,
+                    SpecCompatibility.createFromConfig().allowFallbackMethodExceptionParameter());
+            if (candidates.isEmpty()) {
+                throw new FaultToleranceDefinitionException("Invalid @Fallback on " + methodDescriptor
+                        + ": can't find fallback method '" + fallback.fallbackMethod()
+                        + "' with matching parameter types and return type");
+            }
+        }
     }
 
     private void validateRetryBackoff() {
@@ -480,6 +558,12 @@ public class FaultToleranceOperation {
 
         if (retry == null) {
             throw new FaultToleranceDefinitionException("Invalid @BeforeRetry on " + methodDescriptor + ": missing @Retry");
+        }
+
+        if (!"".equals(beforeRetry.methodName()) && beforeRetryMethod == null) {
+            throw new FaultToleranceDefinitionException("Invalid @BeforeRetry on " + methodDescriptor
+                    + ": can't find before retry method '" + beforeRetry.methodName()
+                    + "' with no parameter and return type of 'void'");
         }
     }
 

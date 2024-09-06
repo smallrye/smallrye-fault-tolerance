@@ -1,19 +1,18 @@
 package io.smallrye.faulttolerance.internal;
 
 import java.lang.reflect.Method;
-import java.security.PrivilegedActionException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
+import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
 public final class FallbackMethodCandidates {
     private final FallbackMethod withoutExceptionParam;
     private final Map<Class<?>, FallbackMethod> withExceptionParam;
 
-    private FallbackMethodCandidates(Method withoutExceptionParam, Set<Method> withExceptionParam) {
+    private FallbackMethodCandidates(Method withoutExceptionParam, List<Method> withExceptionParam) {
         this.withoutExceptionParam = FallbackMethod.withoutExceptionParameter(withoutExceptionParam);
 
         Map<Class<?>, FallbackMethod> map = new HashMap<>();
@@ -49,31 +48,13 @@ public final class FallbackMethodCandidates {
         return withoutExceptionParam;
     }
 
-    public static FallbackMethodCandidates create(InterceptionPoint point, String fallbackMethodName,
-            boolean allowExceptionParam) {
-        try {
-            Method guardedMethod = point.method();
-
-            Method withoutExceptionParam = SecurityActions.findFallbackMethod(point.beanClass(),
-                    guardedMethod.getDeclaringClass(), fallbackMethodName,
-                    guardedMethod.getGenericParameterTypes(), guardedMethod.getGenericReturnType());
-            if (withoutExceptionParam != null) {
-                SecurityActions.setAccessible(withoutExceptionParam);
-            }
-
-            Set<Method> withExceptionParam = Collections.emptySet();
-            if (allowExceptionParam) {
-                withExceptionParam = SecurityActions.findFallbackMethodsWithExceptionParameter(point.beanClass(),
-                        guardedMethod.getDeclaringClass(), fallbackMethodName,
-                        guardedMethod.getGenericParameterTypes(), guardedMethod.getGenericReturnType());
-                for (Method method : withExceptionParam) {
-                    SecurityActions.setAccessible(method);
-                }
-            }
-
-            return new FallbackMethodCandidates(withoutExceptionParam, withExceptionParam);
-        } catch (PrivilegedActionException e) {
-            throw new FaultToleranceException("Could not obtain fallback method " + fallbackMethodName, e);
+    public static FallbackMethodCandidates create(FaultToleranceOperation operation, boolean allowExceptionParam) {
+        Method withoutExceptionParam = operation.getFallbackMethod();
+        List<Method> withExceptionParam = Collections.emptyList();
+        if (allowExceptionParam && operation.getFallbackMethodsWithExceptionParameter() != null) {
+            withExceptionParam = operation.getFallbackMethodsWithExceptionParameter();
         }
+
+        return new FallbackMethodCandidates(withoutExceptionParam, withExceptionParam);
     }
 }
