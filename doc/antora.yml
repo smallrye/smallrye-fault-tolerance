@@ -10,7 +10,7 @@ asciidoc:
     smallrye-fault-tolerance-version: '6.4.1'
 
     microprofile-fault-tolerance: MicroProfile Fault Tolerance
-    microprofile-fault-tolerance-version: '4.0.2'
-    microprofile-fault-tolerance-url: https://download.eclipse.org/microprofile/microprofile-fault-tolerance-4.0/microprofile-fault-tolerance-spec-4.0.html
+    microprofile-fault-tolerance-version: '4.1'
+    microprofile-fault-tolerance-url: https://download.eclipse.org/microprofile/microprofile-fault-tolerance-4.1/microprofile-fault-tolerance-spec-4.1.html
 
     vertx4-version: '4.5.8'

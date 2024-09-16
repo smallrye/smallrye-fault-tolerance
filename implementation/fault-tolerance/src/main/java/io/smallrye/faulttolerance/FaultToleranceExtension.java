@@ -25,6 +25,7 @@ import java.lang.reflect.Type;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,10 +71,12 @@ import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
+import io.smallrye.faulttolerance.metrics.CompoundMetricsProvider;
 import io.smallrye.faulttolerance.metrics.MetricsIntegration;
 import io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider;
 import io.smallrye.faulttolerance.metrics.MicrometerProvider;
 import io.smallrye.faulttolerance.metrics.NoopProvider;
+import io.smallrye.faulttolerance.metrics.OpenTelemetryProvider;
 
 public class FaultToleranceExtension implements Extension {
 
@@ -88,14 +91,46 @@ public class FaultToleranceExtension implements Extension {
     private final ConcurrentMap<String, FaultToleranceOperation> faultToleranceOperations = new ConcurrentHashMap<>();
 
     private final ConcurrentMap<String, Set<String>> existingCircuitBreakerNames = new ConcurrentHashMap<>();
-    private final MetricsIntegration metricsIntegration;
+
+    private final Set<MetricsIntegration> metricsIntegrations;
+
+    private static boolean isPresent(String className) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (ClassNotFoundException ignored) {
+            // not present
+            return false;
+        }
+    }
+
+    private static Set<MetricsIntegration> allPresentMetrics() {
+        Set<MetricsIntegration> result = EnumSet.noneOf(MetricsIntegration.class);
+        if (isPresent("org.eclipse.microprofile.metrics.MetricRegistry")) {
+            result.add(MetricsIntegration.MICROPROFILE_METRICS);
+        }
+        if (isPresent("io.opentelemetry.api.metrics.Meter")) {
+            result.add(MetricsIntegration.OPENTELEMETRY);
+        }
+        if (isPresent("io.micrometer.core.instrument.MeterRegistry")) {
+            result.add(MetricsIntegration.MICROMETER);
+        }
+        if (result.isEmpty()) {
+            result.add(MetricsIntegration.NOOP);
+        }
+        return result;
+    }
 
     public FaultToleranceExtension() {
-        this(MetricsIntegration.MICROPROFILE_METRICS);
+        this(allPresentMetrics());
     }
 
     public FaultToleranceExtension(MetricsIntegration metricsIntegration) {
-        this.metricsIntegration = metricsIntegration;
+        this(EnumSet.of(metricsIntegration));
+    }
+
+    public FaultToleranceExtension(Set<MetricsIntegration> metricsIntegrations) {
+        this.metricsIntegrations = EnumSet.copyOf(metricsIntegrations);
     }
 
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
@@ -129,18 +164,6 @@ public class FaultToleranceExtension implements Extension {
                 DefaultFaultToleranceOperationProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultExistingCircuitBreakerNames.class),
                 DefaultExistingCircuitBreakerNames.class.getName());
-        switch (metricsIntegration) {
-            case MICROPROFILE_METRICS:
-                bbd.addAnnotatedType(bm.createAnnotatedType(MicroProfileMetricsProvider.class),
-                        MicroProfileMetricsProvider.class.getName());
-                break;
-            case MICROMETER:
-                bbd.addAnnotatedType(bm.createAnnotatedType(MicrometerProvider.class), MicrometerProvider.class.getName());
-                break;
-            case NOOP:
-                bbd.addAnnotatedType(bm.createAnnotatedType(NoopProvider.class), NoopProvider.class.getName());
-                break;
-        }
         bbd.addAnnotatedType(bm.createAnnotatedType(StrategyCache.class), StrategyCache.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CircuitBreakerMaintenanceImpl.class),
                 CircuitBreakerMaintenanceImpl.class.getName());
@@ -151,6 +174,31 @@ public class FaultToleranceExtension implements Extension {
                 CdiFaultToleranceSpi.EagerDependencies.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CdiFaultToleranceSpi.LazyDependencies.class),
                 CdiFaultToleranceSpi.LazyDependencies.class.getName());
+
+        if (metricsIntegrations.size() > 1) {
+            bbd.addAnnotatedType(bm.createAnnotatedType(CompoundMetricsProvider.class),
+                    CompoundMetricsProvider.class.getName());
+        }
+        for (MetricsIntegration metricsIntegration : metricsIntegrations) {
+            switch (metricsIntegration) {
+                case MICROPROFILE_METRICS:
+                    bbd.addAnnotatedType(bm.createAnnotatedType(MicroProfileMetricsProvider.class),
+                            MicroProfileMetricsProvider.class.getName());
+                    break;
+                case OPENTELEMETRY:
+                    bbd.addAnnotatedType(bm.createAnnotatedType(OpenTelemetryProvider.class),
+                            OpenTelemetryProvider.class.getName());
+                    break;
+                case MICROMETER:
+                    bbd.addAnnotatedType(bm.createAnnotatedType(MicrometerProvider.class),
+                            MicrometerProvider.class.getName());
+                    break;
+                case NOOP:
+                    bbd.addAnnotatedType(bm.createAnnotatedType(NoopProvider.class),
+                            NoopProvider.class.getName());
+                    break;
+            }
+        }
     }
 
     void changeInterceptorPriority(@Observes ProcessAnnotatedType<FaultToleranceInterceptor> event) {

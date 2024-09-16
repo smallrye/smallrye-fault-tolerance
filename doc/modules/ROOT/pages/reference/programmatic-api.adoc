@@ -350,7 +350,7 @@ private static final FaultTolerance<String> guarded = FaultTolerance.<String>cre
 <1> A description of `hello` is set, it will be used as a value of the `method` tag in all metrics.
 
 It is possible to create multiple `FaultTolerance` objects with the same description.
-In this case, it won't be possbile to distinguish the different `FaultTolerance` objects in metrics; their values will be aggregated.
+In this case, it won't be possible to distinguish the different `FaultTolerance` objects in metrics; their values will be aggregated.
 
 If no description is provided, a random UUID is used.
 
