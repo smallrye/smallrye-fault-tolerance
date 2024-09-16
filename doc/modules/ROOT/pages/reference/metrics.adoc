@@ -1,6 +1,6 @@
 = Metrics
 
-{smallrye-fault-tolerance} exposes metrics to MicroProfile Metrics, as {microprofile-fault-tolerance-url}#_integration_with_microprofile_metrics[specified] by {microprofile-fault-tolerance}.
+{smallrye-fault-tolerance} exposes metrics, as {microprofile-fault-tolerance-url}#_integration_with_microprofile_metrics_and_microprofile_telemetry[specified] by {microprofile-fault-tolerance}.
 
 [[general]]
 == General Metrics
@@ -10,7 +10,10 @@ For all methods guarded with some fault tolerance strategy, the following metric
 [cols="1,5"]
 |===
 | Name | `ft.invocations.total`
-| Type | `Counter`
+| Type
+a| * MP Metrics: `Counter`
+* OpenTelemetry: `LongCounter`
+* Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the method was called.
 | Tags
@@ -42,7 +45,10 @@ The behavior of the timer thread can be observed through the following metrics:
 [cols="1,5"]
 |===
 | Name | `ft.timer.scheduled`
-| Type | `Gauge<Integer>`
+| Type
+a| * MP Metrics: `Gauge<Integer>`
+* OpenTelemetry: `LongUpDownCounter`
+* Micrometer: `Gauge`
 | Unit | None
 | Description | The number of tasks that are currently scheduled (for future execution) on the timer.
 | Tags
@@ -51,95 +57,8 @@ a| * `id` - the ID of the timer, to distinguish multiple timers in a multi-appli
 
 == Micrometer Support
 
-In addition to the MicroProfile Metrics support, {smallrye-fault-tolerance} also provides support for https://micrometer.io/[Micrometer].
-The set of metrics emitted to Micrometer is the same as the set of metrics emitted to MicroProfile Metrics, using the same metric names and tags.
-Metric types are mapped as closely as possible:
-
-|===
-| Name | MicroProfile Metrics | Micrometer | Note
-
-| `ft.invocations.total`
-| counter
-| counter
-|
-
-| `ft.retry.calls.total`
-| counter
-| counter
-|
-
-| `ft.retry.retries.total`
-| counter
-| counter
-|
-
-| `ft.timeout.calls.total`
-| counter
-| counter
-|
-
-| `ft.timeout.executionDuration`
-| histogram
-| timer
-|
-
-| `ft.circuitbreaker.calls.total`
-| counter
-| counter
-|
-
-| `ft.circuitbreaker.state.total`
-| gauge
-| time gauge
-|
-
-| `ft.circuitbreaker.state.current`
-| gauge
-| gauge
-| *
-
-| `ft.circuitbreaker.opened.total`
-| counter
-| counter
-|
-
-| `ft.bulkhead.calls.total`
-| counter
-| counter
-|
-
-| `ft.bulkhead.executionsRunning`
-| gauge
-| gauge
-|
-
-| `ft.bulkhead.executionsWaiting`
-| gauge
-| gauge
-|
-
-| `ft.bulkhead.runningDuration`
-| histogram
-| timer
-|
-
-| `ft.bulkhead.waitingDuration`
-| histogram
-| timer
-|
-
-| `ft.ratelimit.calls.total`
-| counter
-| counter
-| *
-
-| `ft.timer.scheduled`
-| gauge
-| gauge
-| *
-|===
-
-{empty}* This is a {smallrye-fault-tolerance} feature, not specified by {microprofile-fault-tolerance}.
+In addition to the MicroProfile Metrics and OpenTelemetry support (as specified by {microprofile-fault-tolerance}), {smallrye-fault-tolerance} also provides support for https://micrometer.io/[Micrometer].
+The set of metrics emitted to Micrometer is the same, using the same metric names and tags.
 
 Note that distribution summaries in Micrometer, including timers, do not emit quantiles by default.
 Micrometer recommends that libraries should not configure them out of the box, so if you need them, you should use a `MeterFilter`.

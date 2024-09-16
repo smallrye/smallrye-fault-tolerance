@@ -40,7 +40,8 @@ After `StandaloneFaultTolerance.shutdown()`, it is not possible to reinitialize 
 === Metrics
 
 In the standalone implementation, MicroProfile Metrics make no sense, as that is exclusively based on CDI.
-It is however possible to integrate with Micrometer.
+It is however possible to integrate with OpenTelemetry or Micrometer.
 
-The `Configuration.metricsAdapter()` method must be implemented and return an instance of `io.smallrye.faulttolerance.standalone.MicrometerAdapter`.
-The constructor of `MicrometerAdapter` accepts the Micrometer registry (`MeterRegistry`) to which metrics shall be emitted.
+The `Configuration.metricsAdapter()` method must be implemented and return an instance of `io.smallrye.faulttolerance.standalone.OpenTelemetryAdapter` or `io.smallrye.faulttolerance.standalone.MicrometerAdapter`.
+The constructor of `OpenTelemetryAdapter` accepts the `Meter` to which metrics shall be emitted.
+The constructor of `MicrometerAdapter` accepts the `MeterRegistry` to which metrics shall be emitted.

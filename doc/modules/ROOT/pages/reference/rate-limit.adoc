@@ -133,7 +133,10 @@ Rate limit exposes the following metrics:
 [cols="1,5"]
 |===
 | Name | `ft.ratelimit.calls.total`
-| Type | `Counter`
+| Type
+a| * MP Metrics: `Counter`
+* OpenTelemetry: `LongCounter`
+* Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the rate limit logic was run. This is usually once per method call, but may be zero times if the circuit breaker prevented execution or more than once if the method call was retried.
 | Tags

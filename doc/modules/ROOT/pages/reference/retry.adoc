@@ -100,7 +100,10 @@ Retry exposes the following metrics:
 [cols="1,5"]
 |===
 | Name | `ft.retry.calls.total`
-| Type | `Counter`
+| Type
+a| * MP Metrics: `Counter`
+* OpenTelemetry: `LongCounter`
+* Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the retry logic was run. This will always be once per method call.
 | Tags
@@ -112,7 +115,10 @@ a| * `method` - the fully qualified method name
 [cols="1,5"]
 |===
 | Name | `ft.retry.retries.total`
-| Type | `Counter`
+| Type
+a| * MP Metrics: `Counter`
+* OpenTelemetry: `LongCounter`
+* Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the method was retried
 | Tags
