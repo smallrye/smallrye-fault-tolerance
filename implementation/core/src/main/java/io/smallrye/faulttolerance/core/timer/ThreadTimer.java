@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
 import io.smallrye.faulttolerance.core.util.RunnableWrapper;
@@ -18,10 +19,10 @@ import io.smallrye.faulttolerance.core.util.RunnableWrapper;
  * Starts one thread that processes submitted tasks in a loop and when it's time for a task to run,
  * it gets submitted to the executor. The default executor is provided by a caller, so the caller
  * must shut down this timer <em>before</em> shutting down the executor.
- * <p>
- * At most one timer may exist.
  */
 public final class ThreadTimer implements Timer {
+    private static final AtomicInteger COUNTER = new AtomicInteger(0);
+
     private static final Comparator<Task> TASK_COMPARATOR = (o1, o2) -> {
         // two different instances are never equal
         if (o1 == o2) {
@@ -40,7 +41,7 @@ public final class ThreadTimer implements Timer {
         return System.identityHashCode(o1) < System.identityHashCode(o2) ? -1 : 1;
     };
 
-    private static volatile ThreadTimer INSTANCE;
+    private final int id;
 
     private final SortedSet<Task> tasks = new ConcurrentSkipListSet<>(TASK_COMPARATOR);
 
@@ -57,17 +58,9 @@ public final class ThreadTimer implements Timer {
      * @param defaultExecutor default {@link Executor} used for running scheduled tasks, unless an executor
      *        is provided when {@linkplain #schedule(long, Runnable, Executor) scheduling} a task
      */
-    public static synchronized ThreadTimer create(Executor defaultExecutor) {
-        ThreadTimer instance = INSTANCE;
-        if (instance == null) {
-            instance = new ThreadTimer(defaultExecutor);
-            INSTANCE = instance;
-            return instance;
-        }
-        throw new IllegalStateException("Timer already exists");
-    }
+    public ThreadTimer(Executor defaultExecutor) {
+        this.id = COUNTER.incrementAndGet();
 
-    private ThreadTimer(Executor defaultExecutor) {
         this.defaultExecutor = checkNotNull(defaultExecutor, "Executor must be set");
 
         this.thread = new Thread(() -> {
@@ -112,10 +105,15 @@ public final class ThreadTimer implements Timer {
                     LOG.unexpectedExceptionInTimerLoop(e);
                 }
             }
-        }, "SmallRye Fault Tolerance Timer");
+        }, "SmallRye Fault Tolerance Timer " + id);
         thread.start();
 
-        LOG.createdTimer();
+        LOG.createdTimer(id);
+    }
+
+    @Override
+    public int getId() {
+        return id;
     }
 
     @Override
@@ -144,17 +142,13 @@ public final class ThreadTimer implements Timer {
     @Override
     public void shutdown() throws InterruptedException {
         if (running.compareAndSet(true, false)) {
-            try {
-                LOG.shutdownTimer();
-                thread.interrupt();
-                thread.join();
-            } finally {
-                INSTANCE = null;
-            }
+            LOG.shutdownTimer(id);
+            thread.interrupt();
+            thread.join();
         }
     }
 
-    private static class Task implements TimerTask, Runnable {
+    private class Task implements TimerTask, Runnable {
         // scheduled: present in the `tasks` queue
         // running: not present in the `tasks` queue && `runnable != null`
         // finished or cancelled: not present in the `tasks` queue && `runnable == null`
@@ -169,29 +163,22 @@ public final class ThreadTimer implements Timer {
 
         @Override
         public boolean isDone() {
-            ThreadTimer timer = INSTANCE;
-            if (timer != null) {
-                boolean queued = timer.tasks.contains(this);
-                if (queued) {
-                    return false;
-                } else {
-                    return runnable == null;
-                }
+            boolean queued = tasks.contains(this);
+            if (queued) {
+                return false;
+            } else {
+                return runnable == null;
             }
-            return true; // ?
         }
 
         @Override
         public boolean cancel() {
-            ThreadTimer timer = INSTANCE;
-            if (timer != null) {
-                // can't cancel if it's already running
-                boolean removed = timer.tasks.remove(this);
-                if (removed) {
-                    runnable = null;
-                    LOG.cancelledTimerTask(this);
-                    return true;
-                }
+            // can't cancel if it's already running
+            boolean removed = tasks.remove(this);
+            if (removed) {
+                runnable = null;
+                LOG.cancelledTimerTask(this);
+                return true;
             }
             return false;
         }
@@ -211,7 +198,7 @@ public final class ThreadTimer implements Timer {
         }
     }
 
-    private static final class TaskWithExecutor extends Task {
+    private final class TaskWithExecutor extends Task {
         private final Executor executor;
 
         TaskWithExecutor(long startTime, Runnable runnable, Executor executor) {

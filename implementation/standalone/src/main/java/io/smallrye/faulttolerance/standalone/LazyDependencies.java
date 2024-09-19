@@ -22,7 +22,7 @@ final class LazyDependencies implements BuilderLazyDependencies {
         this.executor = config.executor();
         this.metricsAdapter = config.metricsAdapter();
         this.eventLoop = EventLoop.get();
-        this.timer = ThreadTimer.create(executor);
+        this.timer = new ThreadTimer(executor);
     }
 
     @Override

@@ -30,6 +30,11 @@ public final class TestTimer implements Timer {
     }
 
     @Override
+    public int getId() {
+        return 0;
+    }
+
+    @Override
     public TimerTask schedule(long delayInMillis, Runnable task) {
         if (alreadyUsed.compareAndSet(false, true)) {
             executingThread = new Thread(() -> {

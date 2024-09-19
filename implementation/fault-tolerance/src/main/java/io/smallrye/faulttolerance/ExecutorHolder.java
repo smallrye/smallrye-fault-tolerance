@@ -25,7 +25,7 @@ public class ExecutorHolder {
     public ExecutorHolder(AsyncExecutorProvider asyncExecutorProvider) {
         this.asyncExecutor = asyncExecutorProvider.get();
         this.eventLoop = EventLoop.get();
-        this.timer = ThreadTimer.create(asyncExecutor);
+        this.timer = new ThreadTimer(asyncExecutor);
         this.shouldShutdownAsyncExecutor = asyncExecutorProvider instanceof DefaultAsyncExecutorProvider;
     }
 
