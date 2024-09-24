@@ -227,6 +227,34 @@ public interface FaultTolerance<T> {
     }
 
     /**
+     * Casts this {@link FaultTolerance} object so that it guards actions of a different type.
+     * Since the type of the action is only used in fallback, this is usually safe; if this
+     * {@code FaultTolerance} object contains a fallback, this method throws an exception.
+     * <p>
+     * Note that this method may only be used to cast <em>synchronous</em> {@code FaultTolerance}.
+     * If this {@code FaultTolerance} object guards asynchronous actions, this method throws
+     * an exception.
+     *
+     * @param <U> type of value of the guarded action
+     */
+    <U> FaultTolerance<U> cast();
+
+    /**
+     * Casts this {@link FaultTolerance} object so that it guards actions of a different type.
+     * Since the type of the action is only used in fallback, this is usually safe; if this
+     * {@code FaultTolerance} object contains a fallback, this method throws an exception.
+     * <p>
+     * Note that this method may only be used to cast <em>asynchronous</em> {@code FaultTolerance}
+     * of given type (such as {@code CompletionStage} or {@code Uni}). If this {@code FaultTolerance}
+     * object guards synchronous actions or asynchronous actions of different type, this method
+     * throws an exception.
+     *
+     * @param asyncType the asynchronous type, such as {@code CompletionStage} or {@code Uni}
+     * @param <U> type of value of the guarded action
+     */
+    <U> FaultTolerance<U> castAsync(Class<?> asyncType);
+
+    /**
      * A builder for configuring fault tolerance strategies. A fault tolerance strategy is included in the resulting
      * set if the corresponding {@code with[Strategy]} method is called. Each strategy has its own builder to configure
      * the necessary attributes, and each such builder has a {@code done()} method that returns back to this builder.
