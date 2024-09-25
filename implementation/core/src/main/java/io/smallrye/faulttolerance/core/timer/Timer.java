@@ -10,6 +10,13 @@ import java.util.concurrent.Executor;
  */
 public interface Timer {
     /**
+     * Returns the ID of this timer. Timer IDs are guaranteed to be unique.
+     *
+     * @return the ID of this timer
+     */
+    int getId();
+
+    /**
      * Schedules the {@code task} to be executed in {@code delayInMillis} on this timer's
      * default {@link Executor}.
      * <p>

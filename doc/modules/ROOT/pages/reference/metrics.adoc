@@ -45,7 +45,8 @@ The behavior of the timer thread can be observed through the following metrics:
 | Type | `Gauge<Integer>`
 | Unit | None
 | Description | The number of tasks that are currently scheduled (for future execution) on the timer.
-| Tags | None
+| Tags
+a| * `id` - the ID of the timer, to distinguish multiple timers in a multi-application environment
 |===
 
 == Micrometer Support

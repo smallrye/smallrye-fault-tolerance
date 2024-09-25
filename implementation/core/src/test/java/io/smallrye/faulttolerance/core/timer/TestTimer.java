@@ -8,6 +8,11 @@ public class TestTimer implements Timer {
     private final Queue<Task> tasks = new ConcurrentLinkedQueue<>();
 
     @Override
+    public int getId() {
+        return 0;
+    }
+
+    @Override
     public TimerTask schedule(long delayInMillis, Runnable runnable) {
         Task task = new Task(runnable);
         tasks.add(task);

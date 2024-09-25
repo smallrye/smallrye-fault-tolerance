@@ -22,7 +22,7 @@ public class ThreadTimerTest {
     @BeforeEach
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
-        timer = ThreadTimer.create(executor);
+        timer = new ThreadTimer(executor);
     }
 
     @AfterEach

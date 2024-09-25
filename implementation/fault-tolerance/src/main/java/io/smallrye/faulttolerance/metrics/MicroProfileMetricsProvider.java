@@ -11,6 +11,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.metrics.Metadata;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.MetricUnits;
+import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
 
 import io.smallrye.faulttolerance.ExecutorHolder;
@@ -42,7 +43,8 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
                 .withName(MetricsConstants.TIMER_SCHEDULED)
                 .withUnit(MetricUnits.NONE)
                 .build();
-        registry.gauge(metadata, executorHolder.getTimer(), Timer::countScheduledTasks);
+        Timer timer = executorHolder.getTimer();
+        registry.gauge(metadata, timer, Timer::countScheduledTasks, new Tag("id", "" + timer.getId()));
     }
 
     @Override

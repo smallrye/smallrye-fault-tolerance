@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.metrics;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,6 +11,7 @@ import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.smallrye.faulttolerance.ExecutorHolder;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
@@ -34,7 +36,9 @@ public class MicrometerProvider implements MetricsProvider {
 
     @PostConstruct
     void init() {
-        registry.gauge(MetricsConstants.TIMER_SCHEDULED, executorHolder.getTimer(), Timer::countScheduledTasks);
+        Timer timer = executorHolder.getTimer();
+        registry.gauge(MetricsConstants.TIMER_SCHEDULED, Collections.singletonList(Tag.of("id", "" + timer.getId())),
+                timer, Timer::countScheduledTasks);
     }
 
     @Override

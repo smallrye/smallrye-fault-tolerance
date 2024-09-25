@@ -35,7 +35,7 @@ public class ThreadTimerStressTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
         executor = Executors.newFixedThreadPool(POOL_SIZE);
-        timer = ThreadTimer.create(executor);
+        timer = new ThreadTimer(executor);
 
         // precreate all threads in the pool
         // if we didn't do this, the first few iterations would be dominated

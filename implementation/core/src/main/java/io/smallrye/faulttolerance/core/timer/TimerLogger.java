@@ -14,13 +14,13 @@ import org.jboss.logging.annotations.Transform;
 interface TimerLogger extends BasicLogger {
     TimerLogger LOG = Logger.getMessageLogger(TimerLogger.class, TimerLogger.class.getPackage().getName());
 
-    @Message(id = NONE, value = "Timer created")
+    @Message(id = NONE, value = "Timer %s created")
     @LogMessage(level = Logger.Level.TRACE)
-    void createdTimer();
+    void createdTimer(int id);
 
-    @Message(id = NONE, value = "Timer shut down")
+    @Message(id = NONE, value = "Timer %s shut down")
     @LogMessage(level = Logger.Level.TRACE)
-    void shutdownTimer();
+    void shutdownTimer(int id);
 
     @Message(id = NONE, value = "Scheduled timer task %s to run in %s millis")
     @LogMessage(level = Logger.Level.TRACE)

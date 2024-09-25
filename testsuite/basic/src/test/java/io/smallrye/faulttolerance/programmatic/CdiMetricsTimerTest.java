@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.temporal.ChronoUnit;
+import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.microprofile.metrics.Gauge;
 import org.eclipse.microprofile.metrics.MetricID;
 import org.eclipse.microprofile.metrics.MetricRegistry;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
@@ -43,7 +45,7 @@ public class CdiMetricsTimerTest {
         assertThat(future).isNotCompleted();
 
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
-            assertThat(metrics.getGauge(new MetricID(MetricsConstants.TIMER_SCHEDULED)).getValue()).isEqualTo(1);
+            assertThat(findTimerGauge(metrics).getValue()).isEqualTo(1);
         });
 
         barrier.open();
@@ -51,7 +53,7 @@ public class CdiMetricsTimerTest {
         assertThat(future).succeedsWithin(2, TimeUnit.SECONDS)
                 .isEqualTo("hello");
 
-        assertThat(metrics.getGauge(new MetricID(MetricsConstants.TIMER_SCHEDULED)).getValue()).isEqualTo(0);
+        assertThat(findTimerGauge(metrics).getValue()).isEqualTo(0);
     }
 
     public CompletionStage<String> action() throws InterruptedException {
@@ -61,5 +63,12 @@ public class CdiMetricsTimerTest {
 
     public CompletionStage<String> fallback() {
         return CompletableFuture.completedFuture("fallback");
+    }
+
+    private static Gauge<?> findTimerGauge(MetricRegistry metrics) {
+        SortedMap<MetricID, Gauge> timers = metrics.getGauges(
+                (id, metric) -> id.getName().equals(MetricsConstants.TIMER_SCHEDULED));
+        assertThat(timers).hasSize(1);
+        return timers.values().iterator().next();
     }
 }

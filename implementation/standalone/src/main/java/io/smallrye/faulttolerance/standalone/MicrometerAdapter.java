@@ -1,9 +1,11 @@
 package io.smallrye.faulttolerance.standalone;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -19,7 +21,8 @@ public final class MicrometerAdapter implements MetricsAdapter {
     }
 
     MetricsProvider createMetricsProvider(Timer timer) {
-        registry.gauge(MetricsConstants.TIMER_SCHEDULED, timer, Timer::countScheduledTasks);
+        registry.gauge(MetricsConstants.TIMER_SCHEDULED, Collections.singletonList(Tag.of("id", "" + timer.getId())),
+                timer, Timer::countScheduledTasks);
 
         return new MetricsProvider() {
             private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
