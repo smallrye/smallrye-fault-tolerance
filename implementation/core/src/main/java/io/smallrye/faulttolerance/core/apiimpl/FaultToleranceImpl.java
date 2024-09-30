@@ -75,6 +75,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     private final FaultToleranceStrategy<S> strategy;
     private final AsyncSupport<V, T> asyncSupport;
     private final EventHandlers eventHandlers;
+    private final boolean hasFallback;
 
     // Circuit breakers created using the programmatic API are registered with `CircuitBreakerMaintenance`
     // in two phases:
@@ -94,10 +95,12 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     // but that instance is never used. The useful `FaultTolerance` instance is held by the actual bean instance,
     // which is created lazily, on the first method invocation on the client proxy.
 
-    FaultToleranceImpl(FaultToleranceStrategy<S> strategy, AsyncSupport<V, T> asyncSupport, EventHandlers eventHandlers) {
+    FaultToleranceImpl(FaultToleranceStrategy<S> strategy, AsyncSupport<V, T> asyncSupport,
+            EventHandlers eventHandlers, boolean hasFallback) {
         this.strategy = strategy;
         this.asyncSupport = asyncSupport;
         this.eventHandlers = eventHandlers;
+        this.hasFallback = hasFallback;
     }
 
     @Override
@@ -128,6 +131,33 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public <U> FaultTolerance<U> cast() {
+        if (asyncSupport != null) {
+            throw new IllegalStateException("This FaultTolerance object guards synchronous actions, use `castAsync()`");
+        }
+        if (hasFallback) {
+            throw new IllegalStateException("This FaultTolerance object contains fallback, cannot cast");
+        }
+        return (FaultTolerance<U>) this;
+    }
+
+    @Override
+    public <U> FaultTolerance<U> castAsync(Class<?> asyncType) {
+        if (asyncSupport == null) {
+            throw new IllegalStateException("This FaultTolerance object guards synchronous actions, use `cast()`");
+        }
+        AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
+        if (this.asyncSupport != asyncSupport) {
+            throw new IllegalStateException("This FaultTolerance object guards actions that "
+                    + this.asyncSupport.doesDescription() + ", cannot cast to " + asyncType);
+        }
+        if (hasFallback) {
+            throw new IllegalStateException("This FaultTolerance object contains fallback, cannot cast");
+        }
+        return (FaultTolerance<U>) this;
     }
 
     public static final class BuilderImpl<T, R> implements Builder<T, R> {
@@ -257,13 +287,13 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
         private FaultTolerance<T> buildSync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
             FaultToleranceStrategy<T> strategy = buildSyncStrategy(lazyDependencies);
-            return new FaultToleranceImpl<>(strategy, (AsyncSupport<T, T>) null, eventHandlers);
+            return new FaultToleranceImpl<>(strategy, (AsyncSupport<T, T>) null, eventHandlers, fallbackBuilder != null);
         }
 
         private <V> FaultTolerance<T> buildAsync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
             FaultToleranceStrategy<CompletionStage<V>> strategy = buildAsyncStrategy(lazyDependencies);
             AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
-            return new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers);
+            return new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers, fallbackBuilder != null);
         }
 
         private FaultToleranceStrategy<T> buildSyncStrategy(BuilderLazyDependencies lazyDependencies) {

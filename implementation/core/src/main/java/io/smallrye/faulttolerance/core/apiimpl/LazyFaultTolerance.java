@@ -38,6 +38,18 @@ public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
         instance().run(action);
     }
 
+    @Override
+    public <U> FaultTolerance<U> cast() {
+        // TODO breaks laziness
+        return instance().cast();
+    }
+
+    @Override
+    public <U> FaultTolerance<U> castAsync(Class<?> asyncType) {
+        // TODO breaks laziness
+        return instance().castAsync(asyncType);
+    }
+
     private FaultTolerance<T> instance() {
         FaultTolerance<T> instance = this.instance;
         if (instance == null) {
