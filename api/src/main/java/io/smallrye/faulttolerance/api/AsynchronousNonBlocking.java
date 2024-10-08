@@ -21,7 +21,7 @@ import io.smallrye.common.annotation.Experimental;
  * When a method marked with this annotation is called, the method call is allowed to proceed on the original thread.
  * It is assumed that the guarded method will, at some point, perform some non-blocking asynchronous operation(s),
  * such as non-blocking IO, and that it synchronously returns a {@code CompletionStage}. It is further assumed that
- * the completion of the asynchronos non-blocking operation(s) executed by the guarded method is followed by
+ * the completion of the asynchronous non-blocking operation(s) executed by the guarded method is followed by
  * completion of the returned {@code CompletionStage}.
  * <p>
  * When the guarded method returns, a {@code CompletionStage} is returned to the caller and can be used to access
@@ -34,8 +34,7 @@ import io.smallrye.common.annotation.Experimental;
  * <p>
  * If a method marked with this annotation doesn't declare return type of {@code CompletionStage},
  * {@link org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException
- * FaultToleranceDefinitionException}
- * occurs during deployment.
+ * FaultToleranceDefinitionException} occurs during deployment.
  * <p>
  * If a class is annotated with this annotation, all its methods are treated as if they were marked with this annotation.
  * If one of the methods doesn't return {@code CompletionStage}, {@code FaultToleranceDefinitionException}

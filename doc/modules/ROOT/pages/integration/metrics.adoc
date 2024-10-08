@@ -1,49 +1,41 @@
 = Metrics
 
-{smallrye-fault-tolerance} provides support for MicroProfile Metrics and Micrometer.
+{smallrye-fault-tolerance} provides support for MicroProfile Metrics, OpenTelemetry and Micrometer.
 Alternatively, metrics may be completely disabled at the integration level.
 
 As usual, this integration is based on CDI.
-{smallrye-fault-tolerance} includes an internal interface `MetricsProvider` and 3 different implementations.
-Exactly 1 bean of type `MetricsProvider` must exist.
-An instance of that bean is used to interact with the metrics system.
+{smallrye-fault-tolerance} includes an internal interface `MetricsProvider` and these implementations:
 
-There are 2 ways to select which metrics provider bean exists:
+* `io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider`
+* `io.smallrye.faulttolerance.metrics.OpenTelemetryProvider`
+* `io.smallrye.faulttolerance.metrics.MicrometerProvider`
+* `io.smallrye.faulttolerance.metrics.NoopProvider`
 
-- using a constructor of the Portable Extension,
-- altering the set of discovered types.
+There are 2 possible ways how to integrate metrics:
+
+* exactly 1 class from the list above is a bean;
+* more than 1 class from the list above is a bean, in which case, `io.smallrye.faulttolerance.metrics.CompoundMetricsProvider` must also be a bean.
+
+NOTE: Only the _names_ of the classes listed above are treated as public.
+That is, the classes should be treated as opaque, no guarantees about their internals are made.
+
+== Default Integration
+
+In case the integrator uses the CDI Portable Extension `FaultToleranceExtension` and lets the container create an instance, metrics presence is discovered automatically.
+All present metrics systems are used.
 
 == Using a `FaultToleranceExtension` Constructor
 
 In case the integrator uses the CDI Portable Extension `FaultToleranceExtension` and creates its instance manually, they can use a constructor.
 
-In addition to a zero-parameter constructor, there's a constructor that takes a `MetricsIntegration` parameter.
+In addition to a zero-parameter constructor, which is used in the default integration as described above, there are constructors that take a parameter of `MetricsIntegration` or `Set<MetricsIntegration>`.
+
 `MetricsIntegration` is an enum with these values:
 
 * `MICROPROFILE_METRICS`: use MicroProfile Metrics integration
+* `OPENTELEMETRY`: use OpenTelemetry (MicroProfile Telemetry) integration
 * `MICROMETER`: use Micrometer integration
 * `NOOP`: no metrics
-
-As mentioned above, this is only useful if the integrator creates an instance of the extension themselves.
-If the integrator relies on the CDI container to discover and instantiate the extension, the zero-parameter constructor is used, which defaults to `MICROPROFILE_METRICS`.
-Such integrator can use the 2nd approach of altering the set of discovered types.
-
-== Altering the Set of Discovered Types
-
-The integrator may select the metrics provider by making sure that the correct implementation is discovered during CDI type discovery.
-The existing metrics providers are:
-
-* `io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider`
-* `io.smallrye.faulttolerance.metrics.MicrometerProvider`
-* `io.smallrye.faulttolerance.metrics.NoopProvider`
-
-NOTE: Only the _names_ of the classes listed above are treated as public.
-That is, the classes should be treated as opaque, no guarantees about their internals are made.
-
-Exactly one of these classes must be discovered during CDI type discovery.
-
-NOTE: Integrators that rely on the CDI container to instantiate `FaultToleranceExtension` must be aware that in this case, the extension adds `MicroProfileMetricsProvider` to the set of discovered types.
-If they want to use a different metrics provider, they need to veto the `MicroProfileMetricsProvider` type.
 
 == Metrics Providers
 
@@ -51,14 +43,23 @@ Metrics providers have additional requirements, as described below.
 
 === MicroProfile Metrics
 
-If MicroProfile Metrics are used, the integrator must ensure that the following artifacts are present:
+If MicroProfile Metrics should be used, the integrator must ensure that the following artifacts are present:
 
 * `org.eclipse.microprofile.metrics:microprofile-metrics-api`;
 * some implementation of MicroProfile Metrics.
 
+=== OpenTelemetry
+
+If OpenTelemetry should be used, the integrator must ensure that the following artifact is present:
+
+* `io.opentelemetry:opentelemetry-api`.
+
+Further, a bean of type `io.opentelemetry.api.metrics.Meter` must exist.
+This bean is used to emit the actual metrics.
+
 === Micrometer
 
-If Micrometer is used, the integrator must ensure that the following artifact is present:
+If Micrometer should be used, the integrator must ensure that the following artifact is present:
 
 * `io.micrometer:micrometer-core`.
 

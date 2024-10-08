@@ -67,7 +67,10 @@ Bulkhead exposes the following metrics:
 [cols="1,5"]
 |===
 | Name | `ft.bulkhead.calls.total`
-| Type | `Counter`
+| Type
+a| * MP Metrics: `Counter`
+* OpenTelemetry: `LongCounter`
+* Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the bulkhead logic was run. This is usually once per method call, but may be zero times if the circuit breaker or rate limit prevented execution or more than once if the method call was retried.
 | Tags
@@ -78,7 +81,10 @@ a| * `method` - the fully qualified method name
 [cols="1,5"]
 |===
 | Name | `ft.bulkhead.executionsRunning`
-| Type | `Gauge<Long>`
+| Type
+a| * MP Metrics: `Gauge<Long>`
+* OpenTelemetry: `LongUpDownCounter`
+* Micrometer: `Gauge`
 | Unit | None
 | Description | Number of currently running executions.
 | Tags
@@ -88,7 +94,10 @@ a| * `method` - the fully qualified method name
 [cols="1,5"]
 |===
 | Name | `ft.bulkhead.executionsWaiting`
-| Type | `Gauge<Long>`
+| Type
+a| * MP Metrics: `Gauge<Long>`
+* OpenTelemetry: `LongUpDownCounter`
+* Micrometer: `Gauge`
 | Unit | None
 | Description | Number of executions currently waiting in the queue.
 | Tags
@@ -99,8 +108,14 @@ a| * `method` - the fully qualified method name
 [cols="1,5"]
 |===
 | Name | `ft.bulkhead.runningDuration`
-| Type | `Histogram`
-| Unit | Nanoseconds
+| Type
+a| * MP Metrics: `Histogram`
+* OpenTelemetry: `DoubleHistogram` with explicit bucket boundaries `[0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]`
+* Micrometer: `Timer`
+| Unit
+a| * MP Metrics: nanoseconds
+* OpenTelemetry: seconds
+* Micrometer: nanoseconds
 | Description | Histogram of the time that method executions spent running.
 | Tags
 a| * `method` - the fully qualified method name
@@ -109,8 +124,14 @@ a| * `method` - the fully qualified method name
 [cols="1,5"]
 |===
 | Name | `ft.bulkhead.waitingDuration`
-| Type | `Histogram`
-| Unit | Nanoseconds
+| Type
+a| * MP Metrics: `Histogram`
+* OpenTelemetry: `DoubleHistogram` with explicit bucket boundaries `[0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]`
+* Micrometer: `Timer`
+| Unit
+a| * MP Metrics: nanoseconds
+* OpenTelemetry: seconds
+* Micrometer: nanoseconds
 | Description | Histogram of the time that method executions spent waiting in the queue.
 | Tags
 a| * `method` - the fully qualified method name
