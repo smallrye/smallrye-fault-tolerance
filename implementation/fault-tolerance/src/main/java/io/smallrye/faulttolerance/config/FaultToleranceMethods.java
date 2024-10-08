@@ -2,7 +2,12 @@ package io.smallrye.faulttolerance.config;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.security.PrivilegedActionException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import jakarta.enterprise.inject.spi.AnnotatedMethod;
@@ -13,6 +18,7 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
+import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
@@ -29,12 +35,12 @@ import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
 public class FaultToleranceMethods {
-    public static FaultToleranceMethod create(AnnotatedMethod<?> method) {
+    public static FaultToleranceMethod create(Class<?> beanClass, AnnotatedMethod<?> method) {
         Set<Class<? extends Annotation>> annotationsPresentDirectly = new HashSet<>();
 
         FaultToleranceMethod result = new FaultToleranceMethod();
 
-        result.beanClass = method.getDeclaringType().getJavaClass();
+        result.beanClass = beanClass;
         result.method = createMethodDescriptor(method);
 
         result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, annotationsPresentDirectly);
@@ -60,6 +66,12 @@ public class FaultToleranceMethods {
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 
+        try {
+            searchForMethods(result, beanClass, method.getJavaMember());
+        } catch (PrivilegedActionException e) {
+            throw new FaultToleranceDefinitionException(e);
+        }
+
         return result;
     }
 
@@ -80,6 +92,8 @@ public class FaultToleranceMethods {
         }
         return cdiMethod.getDeclaringType().getAnnotation(annotationType);
     }
+
+    // ---
 
     public static FaultToleranceMethod create(Class<?> beanClass, Method method) {
         Set<Class<? extends Annotation>> annotationsPresentDirectly = new HashSet<>();
@@ -113,6 +127,12 @@ public class FaultToleranceMethods {
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 
+        try {
+            searchForMethods(result, beanClass, method);
+        } catch (PrivilegedActionException e) {
+            throw new FaultToleranceDefinitionException(e);
+        }
+
         return result;
     }
 
@@ -143,5 +163,54 @@ public class FaultToleranceMethods {
             clazz = clazz.getSuperclass();
         }
         return null;
+    }
+
+    // ---
+
+    private static void searchForMethods(FaultToleranceMethod result, Class<?> beanClass, Method method)
+            throws PrivilegedActionException {
+        if (result.fallback != null) {
+            FallbackConfig fallbackConfig = FallbackConfigImpl.create(result);
+            if (fallbackConfig != null) {
+                String fallbackMethod = fallbackConfig.fallbackMethod();
+                if (!"".equals(fallbackMethod)) {
+                    Class<?> declaringClass = method.getDeclaringClass();
+                    Type[] parameterTypes = method.getGenericParameterTypes();
+                    Type returnType = method.getGenericReturnType();
+                    result.fallbackMethod = createMethodDescriptorIfNotNull(
+                            SecurityActions.findFallbackMethod(beanClass, declaringClass, fallbackMethod,
+                                    parameterTypes, returnType));
+                    result.fallbackMethodsWithExceptionParameter = createMethodDescriptorsIfNotEmpty(
+                            SecurityActions.findFallbackMethodsWithExceptionParameter(beanClass, declaringClass, fallbackMethod,
+                                    parameterTypes, returnType));
+                }
+            }
+        }
+
+        if (result.beforeRetry != null) {
+            BeforeRetryConfig beforeRetryConfig = BeforeRetryConfigImpl.create(result);
+            if (beforeRetryConfig != null) {
+                String beforeRetryMethod = beforeRetryConfig.methodName();
+                if (!"".equals(beforeRetryMethod)) {
+                    result.beforeRetryMethod = createMethodDescriptorIfNotNull(
+                            SecurityActions.findBeforeRetryMethod(beanClass, method.getDeclaringClass(), beforeRetryMethod));
+                }
+            }
+        }
+    }
+
+    private static MethodDescriptor createMethodDescriptorIfNotNull(Method reflectiveMethod) {
+        return reflectiveMethod == null ? null : createMethodDescriptor(reflectiveMethod);
+    }
+
+    private static List<MethodDescriptor> createMethodDescriptorsIfNotEmpty(Collection<Method> reflectiveMethods) {
+        if (reflectiveMethods.isEmpty()) {
+            return null;
+        }
+        List<MethodDescriptor> result = new ArrayList<>(reflectiveMethods.size());
+        for (Method reflectiveMethod : reflectiveMethods) {
+            result.add(createMethodDescriptor(reflectiveMethod));
+        }
+        return result;
     }
 }

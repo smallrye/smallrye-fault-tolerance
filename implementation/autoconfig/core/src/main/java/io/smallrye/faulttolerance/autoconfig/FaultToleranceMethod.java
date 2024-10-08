@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.autoconfig;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -65,6 +66,10 @@ public class FaultToleranceMethod {
     // types of annotations that were declared directly on the method;
     // other annotations, if present, were declared on the type
     public Set<Class<? extends Annotation>> annotationsPresentDirectly;
+
+    public MethodDescriptor fallbackMethod;
+    public List<MethodDescriptor> fallbackMethodsWithExceptionParameter;
+    public MethodDescriptor beforeRetryMethod;
 
     public boolean isLegitimate() {
         if (!KotlinSupport.isLegitimate(method)) {

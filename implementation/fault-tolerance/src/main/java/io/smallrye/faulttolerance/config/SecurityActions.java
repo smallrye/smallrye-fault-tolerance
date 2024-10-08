@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.smallrye.faulttolerance.internal;
+package io.smallrye.faulttolerance.config;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.GenericArrayType;
@@ -40,14 +40,16 @@ final class SecurityActions {
     private SecurityActions() {
     }
 
-    static void setAccessible(final AccessibleObject accessibleObject) {
+    static <T extends AccessibleObject> T setAccessible(T accessibleObject) {
         if (System.getSecurityManager() == null) {
             accessibleObject.setAccessible(true);
-        }
-        AccessController.doPrivileged((PrivilegedAction<AccessibleObject>) () -> {
-            accessibleObject.setAccessible(true);
             return accessibleObject;
-        });
+        } else {
+            return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
+                accessibleObject.setAccessible(true);
+                return accessibleObject;
+            });
+        }
     }
 
     /**
@@ -85,7 +87,7 @@ final class SecurityActions {
      * {@code parameterTypes} and {@code returnType}, then fallback methods of given {@code name}, with parameter types
      * and return type matching the parameter types and return type of the guarded method, and with one additional
      * parameter assignable to {@code Throwable} at the end of parameter list, is searched for on the {@code beanClass}
-     * and its superclasses and superinterfaces, according to the specification rules. Returns {@code null} if no
+     * and its superclasses and superinterfaces, according to the specification rules. Returns an empty set if no
      * matching fallback method exists.
      *
      * @param beanClass the class of the bean that has the guarded method
@@ -93,7 +95,7 @@ final class SecurityActions {
      * @param name name of the fallback method
      * @param parameterTypes parameter types of the guarded method
      * @param returnType return type of the guarded method
-     * @return the fallback method or {@code null} if none exists
+     * @return the fallback methods or an empty set if none exists
      */
     static Set<Method> findFallbackMethodsWithExceptionParameter(Class<?> beanClass, Class<?> declaringClass,
             String name, Type[] parameterTypes, Type returnType) throws PrivilegedActionException {
