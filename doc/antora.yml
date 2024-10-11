@@ -1,16 +1,16 @@
 name: smallrye-fault-tolerance
 title: SmallRye Fault Tolerance
-version: main
+version: 6.5.0
 nav:
 - modules/ROOT/nav.adoc
 
 asciidoc:
   attributes:
     smallrye-fault-tolerance: SmallRye Fault Tolerance
-    smallrye-fault-tolerance-version: '6.4.1'
+    smallrye-fault-tolerance-version: '6.5.0'
 
     microprofile-fault-tolerance: MicroProfile Fault Tolerance
-    microprofile-fault-tolerance-version: '4.1'
+    microprofile-fault-tolerance-version: '4.1.1'
     microprofile-fault-tolerance-url: https://download.eclipse.org/microprofile/microprofile-fault-tolerance-4.1/microprofile-fault-tolerance-spec-4.1.html
 
     vertx4-version: '4.5.8'
