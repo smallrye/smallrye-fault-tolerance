@@ -39,6 +39,10 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
 
     @PostConstruct
     void init() {
+        if (!metricsEnabled) {
+            return;
+        }
+
         Metadata metadata = Metadata.builder()
                 .withName(MetricsConstants.TIMER_SCHEDULED)
                 .withUnit(MetricUnits.NONE)

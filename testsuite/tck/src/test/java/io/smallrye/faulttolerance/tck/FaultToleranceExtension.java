@@ -31,6 +31,7 @@ public class FaultToleranceExtension implements LoadableExtension {
         builder.service(ApplicationArchiveProcessor.class, RetryTckOnMac.class);
         builder.service(DeploymentExceptionTransformer.class, TckDeploymentExceptionTransformer.class);
         builder.observer(CleanupMetricRegistries.class);
+        builder.observer(ForceOtelBean.class);
     }
 
 }
