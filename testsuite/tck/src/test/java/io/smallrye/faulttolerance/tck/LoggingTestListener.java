@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.tck;
 
 import org.jboss.logging.Logger;
-import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
 
@@ -26,17 +25,5 @@ public class LoggingTestListener implements ITestListener {
     @Override
     public void onTestSkipped(ITestResult result) {
         LOG.info("Skipped " + result.getTestClass().getName() + "#" + result.getMethod().getMethodName());
-    }
-
-    @Override
-    public void onTestFailedButWithinSuccessPercentage(ITestResult result) {
-    }
-
-    @Override
-    public void onStart(ITestContext context) {
-    }
-
-    @Override
-    public void onFinish(ITestContext context) {
     }
 }
