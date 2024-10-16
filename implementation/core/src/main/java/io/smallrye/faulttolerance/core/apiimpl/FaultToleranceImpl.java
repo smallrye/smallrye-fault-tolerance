@@ -37,9 +37,11 @@ import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
-import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.DelegatingCompletionStageMetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.DelegatingMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
-import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
+import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
+import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -103,20 +105,30 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         this.hasFallback = hasFallback;
     }
 
-    @Override
-    public T call(Callable<T> action) throws Exception {
+    T call(Callable<T> action, MeteredOperationName meteredOperationName) throws Exception {
         if (asyncSupport == null) {
             InvocationContext<T> ctx = new InvocationContext<>(action);
+            if (meteredOperationName != null) {
+                ctx.set(MeteredOperationName.class, meteredOperationName);
+            }
             eventHandlers.register(ctx);
             return ((FaultToleranceStrategy<T>) strategy).apply(ctx);
         }
 
         Invoker<T> invoker = new CallableInvoker<>(action);
         InvocationContext<CompletionStage<V>> ctx = new InvocationContext<>(() -> asyncSupport.toCompletionStage(invoker));
+        if (meteredOperationName != null) {
+            ctx.set(MeteredOperationName.class, meteredOperationName);
+        }
         eventHandlers.register(ctx);
         Invoker<CompletionStage<V>> wrapper = new StrategyInvoker<>(null,
                 (FaultToleranceStrategy<CompletionStage<V>>) strategy, ctx);
         return asyncSupport.fromCompletionStage(wrapper);
+    }
+
+    @Override
+    public T call(Callable<T> action) throws Exception {
+        return call(action, null);
     }
 
     @Override
@@ -259,7 +271,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             }
         }
 
-        private FaultTolerance<T> build(BuilderLazyDependencies lazyDependencies) {
+        private FaultToleranceImpl<?, ?, T> build(BuilderLazyDependencies lazyDependencies) {
             Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler = null;
             if (circuitBreakerBuilder != null && circuitBreakerBuilder.name != null) {
                 cbMaintenanceEventHandler = eagerDependencies.cbMaintenance()
@@ -285,12 +297,13 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             return isAsync ? buildAsync(lazyDependencies, eventHandlers) : buildSync(lazyDependencies, eventHandlers);
         }
 
-        private FaultTolerance<T> buildSync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
+        private FaultToleranceImpl<T, T, T> buildSync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
             FaultToleranceStrategy<T> strategy = buildSyncStrategy(lazyDependencies);
-            return new FaultToleranceImpl<>(strategy, (AsyncSupport<T, T>) null, eventHandlers, fallbackBuilder != null);
+            return new FaultToleranceImpl<>(strategy, null, eventHandlers, fallbackBuilder != null);
         }
 
-        private <V> FaultTolerance<T> buildAsync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
+        private <V> FaultToleranceImpl<V, CompletionStage<V>, T> buildAsync(BuilderLazyDependencies lazyDependencies,
+                EventHandlers eventHandlers) {
             FaultToleranceStrategy<CompletionStage<V>> strategy = buildAsyncStrategy(lazyDependencies);
             AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
             return new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers, fallbackBuilder != null);
@@ -354,10 +367,10 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 fallbackBuilder.whenPredicate));
             }
 
-            if (lazyDependencies.metricsProvider().isEnabled()) {
-                MeteredOperation meteredOperation = buildMeteredOperation();
-                result = new MetricsCollector<>(result, lazyDependencies.metricsProvider().create(meteredOperation),
-                        meteredOperation);
+            MetricsProvider metricsProvider = lazyDependencies.metricsProvider();
+            if (metricsProvider.isEnabled()) {
+                MeteredOperation defaultOperation = buildMeteredOperation();
+                result = new DelegatingMetricsCollector<>(result, metricsProvider, defaultOperation);
             }
 
             return result;
@@ -436,10 +449,10 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 fallbackBuilder.whenPredicate));
             }
 
-            if (lazyDependencies.metricsProvider().isEnabled()) {
-                MeteredOperation meteredOperation = buildMeteredOperation();
-                result = new CompletionStageMetricsCollector<>(result,
-                        lazyDependencies.metricsProvider().create(meteredOperation), meteredOperation);
+            MetricsProvider metricsProvider = lazyDependencies.metricsProvider();
+            if (metricsProvider.isEnabled()) {
+                MeteredOperation defaultOperation = buildMeteredOperation();
+                result = new DelegatingCompletionStageMetricsCollector<>(result, metricsProvider, defaultOperation);
             }
 
             // thread offload is always enabled

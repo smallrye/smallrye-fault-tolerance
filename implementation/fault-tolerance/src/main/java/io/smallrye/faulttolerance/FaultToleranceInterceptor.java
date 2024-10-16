@@ -78,6 +78,7 @@ import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
+import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
@@ -210,14 +211,16 @@ public class FaultToleranceInterceptor {
             throw new FaultToleranceException("Configured fault tolerance '" + identifier
                     + "' is not created by the FaultTolerance API, this is not supported");
         }
+        LazyFaultTolerance<Object> lazyFaultTolerance = (LazyFaultTolerance<Object>) faultTolerance;
 
-        Class<?> asyncType = ((LazyFaultTolerance<?>) faultTolerance).internalGetAsyncType();
+        Class<?> asyncType = lazyFaultTolerance.internalGetAsyncType();
+        MeteredOperationName meteredOperationName = new MeteredOperationName(operation.getName());
 
         AsyncSupport<?, ?> forOperation = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
         AsyncSupport<?, ?> fromConfigured = asyncType == null ? null : AsyncSupportRegistry.get(new Class[0], asyncType);
 
         if (forOperation == null && fromConfigured == null) {
-            return faultTolerance.call(interceptionContext::proceed);
+            return lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
         } else if (forOperation == null) {
             throw new FaultToleranceException("Configured fault tolerance '" + identifier
                     + "' expects the operation to " + fromConfigured.mustDescription()
@@ -231,7 +234,7 @@ public class FaultToleranceInterceptor {
                     + "' expects the operation to " + fromConfigured.mustDescription()
                     + ", but it " + forOperation.doesDescription() + ": " + operation);
         } else {
-            return faultTolerance.call(interceptionContext::proceed);
+            return lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
         }
     }
 

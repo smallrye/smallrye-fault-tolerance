@@ -13,7 +13,7 @@ import io.smallrye.common.annotation.Experimental;
 
 /**
  * A special interceptor binding annotation to apply preconfigured fault tolerance.
- * If {@code @ApplyFaultTolerance("&lt;identifier>")} is present on a business method,
+ * If {@code @ApplyFaultTolerance("<identifier>")} is present on a business method,
  * then a bean of type {@link FaultTolerance} with qualifier
  * {@link io.smallrye.common.annotation.Identifier @Identifier("&lt;identifier>")}
  * must exist. Such bean serves as a preconfigured set of fault tolerance strategies
@@ -42,8 +42,8 @@ import io.smallrye.common.annotation.Experimental;
  * <p>
  * A single preconfigured fault tolerance can even be applied to multiple methods with different
  * return types, as long as the constraint on method asynchrony described above is obeyed. In such
- * case, it is customary to declare the fault tolerance instance as {@code FaultTolerance&lt;Object>}
- * for synchronous methods, {@code FaultTolerance&lt;CompletionStage&lt;Object>>} for asynchronous
+ * case, it is customary to declare the fault tolerance instance as {@code FaultTolerance<Object>}
+ * for synchronous methods, {@code FaultTolerance<CompletionStage<Object>>} for asynchronous
  * methods that return {@code CompletionStage}, and so on. Note that this effectively precludes
  * defining a useful fallback, because fallback can only be defined when the value type is known.
  */
