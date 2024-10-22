@@ -28,6 +28,7 @@ import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
 import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
+import io.smallrye.faulttolerance.core.bulkhead.SemaphoreThreadPoolBulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
@@ -313,7 +314,10 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             FaultToleranceStrategy<T> result = invocation();
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
-                result = new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit);
+                result = bulkheadBuilder.queueingEnabled
+                        ? new SemaphoreThreadPoolBulkhead<>(result, description, bulkheadBuilder.limit,
+                                bulkheadBuilder.queueSize)
+                        : new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit);
             }
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
@@ -523,6 +527,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             private int limit = 10;
             private int queueSize = 10;
+            private boolean queueingEnabled;
 
             private Runnable onAccepted;
             private Runnable onRejected;
@@ -530,6 +535,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             BulkheadBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
+                this.queueingEnabled = parent.isAsync;
             }
 
             @Override
@@ -540,11 +546,17 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             @Override
             public BulkheadBuilder<T, R> queueSize(int value) {
-                if (!parent.isAsync) {
+                if (!queueingEnabled) {
                     throw new IllegalStateException("Bulkhead queue size may only be set for asynchronous invocations");
                 }
 
                 this.queueSize = Preconditions.check(value, value >= 1, "Queue size must be >= 1");
+                return this;
+            }
+
+            @Override
+            public BulkheadBuilder<T, R> enableVirtualThreadsQueueing() {
+                this.queueingEnabled = true;
                 return this;
             }
 

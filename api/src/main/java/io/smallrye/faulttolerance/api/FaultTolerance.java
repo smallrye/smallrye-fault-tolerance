@@ -410,6 +410,18 @@ public interface FaultTolerance<T> {
             BulkheadBuilder<T, R> queueSize(int value);
 
             /**
+             * Enables bulkhead queueing for synchronous actions executed on virtual threads.
+             * This makes it possible to call {@link #queueSize(int)} even if this builder does
+             * not configure fault tolerance for asynchronous actions.
+             * <p>
+             * If you use this method, you <strong>have to ensure</strong> that the guard
+             * is executed on a virtual thread.
+             *
+             * @return this bulkhead builder
+             */
+            BulkheadBuilder<T, R> enableVirtualThreadsQueueing();
+
+            /**
              * Sets a callback that will be invoked when this bulkhead accepts an invocation.
              * In case of asynchronous actions, accepting into bulkhead doesn't mean the action
              * is immediately invoked; the invocation is first put into a queue and may wait there.
