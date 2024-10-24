@@ -67,13 +67,6 @@ jobs:
       shell: bash
       run: mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml -Dorg.eclipse.microprofile.fault.tolerance.tck.timeout.multiplier=3.0 -DslowMachine
 
-    - name: Upload TCK report
-      if: ${{ matrix.java == '11' && matrix.os == 'ubuntu-latest' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: tck-report
-        path: testsuite/tck/target/surefire-reports
-
   quality:
     needs:
     - build

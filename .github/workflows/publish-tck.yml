@@ -1,0 +1,42 @@
+name: Publish TCK
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        description: Tag version to perform release
+        type: string
+
+jobs:
+  publish-tck:
+    name: Publish TCK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java:
+        - 11
+        - 17
+        - 21
+
+    steps:
+    - name: Checkout ${{ inputs.version }}
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.version }}
+
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: ${{ matrix.java }}
+
+    - name: Run TCK and generate report for JDK ${{ matrix.java }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ZIP_NAME: smallrye-fault-tolerance-${{ inputs.version }}-tck-results-java-${{ matrix.java }}.zip
+      run: |
+        mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml -Dpublish-tck
+        cd testsuite/tck/target
+        zip -r $ZIP_NAME surefire-reports/
+        gh release upload ${{ inputs.version }} $ZIP_NAME
