@@ -95,7 +95,6 @@
     <modules>
         <module>api</module>
         <module>implementation</module>
-        <module>testsuite</module>
     </modules>
 
     <dependencyManagement>
@@ -392,6 +391,19 @@
     </dependencyManagement>
 
     <profiles>
+        <profile>
+            <id>not-release</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>!true</value>
+                </property>
+            </activation>
+            <modules>
+                <module>testsuite</module>
+            </modules>
+        </profile>
+
         <profile>
             <id>release</id>
             <activation>
