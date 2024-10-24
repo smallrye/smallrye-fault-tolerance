@@ -1,81 +1,37 @@
 name: SmallRye Release
 
+run-name: Release ${{github.event.inputs.tag || github.ref_name}}
+
 on:
-  pull_request:
-    types:
-    - closed
-    paths:
-    - '.github/project.yml'
+  push:
+    tags:
+    - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+
+permissions:
+  attestations: write
+  id-token: write
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    if: ${{github.event.pull_request.merged == true}}
-    env:
-      GITHUB_TOKEN: ${{secrets.RELEASE_TOKEN}}
+  perform-release:
+    name: Perform Release
+    uses: smallrye/.github/.github/workflows/perform-release.yml@main
+    secrets: inherit
+    with:
+      version: ${{github.event.inputs.tag || github.ref_name}}
 
-    steps:
-    - name: Retrieve project metadata
-      id: metadata
-      uses: radcortez/project-metadata-action@main
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        metadata-file-path: '.github/project.yml'
-
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        token: ${{secrets.RELEASE_TOKEN}}
-
-    - name: Set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 11
-        server-id: 'oss.sonatype'
-        server-username: 'MAVEN_DEPLOY_USERNAME'
-        server-password: 'MAVEN_DEPLOY_TOKEN'
-        gpg-private-key: ${{secrets.MAVEN_GPG_PRIVATE_KEY}}
-        gpg-passphrase: 'MAVEN_GPG_PASSPHRASE'
-
-    - name: Maven release ${{steps.metadata.outputs.current-version}}
-      env:
-        MAVEN_DEPLOY_USERNAME: ${{secrets.MAVEN_DEPLOY_USERNAME}}
-        MAVEN_DEPLOY_TOKEN: ${{secrets.MAVEN_DEPLOY_TOKEN}}
-        MAVEN_GPG_PASSPHRASE: ${{secrets.MAVEN_GPG_PASSPHRASE}}
-      run: |
-        java -version
-        mvn --version
-        git config --global user.name "SmallRye CI"
-        git config --global user.email "smallrye@googlegroups.com"
-        git checkout -b release
-        sed -i -e 's|^version: main|version: ${{steps.metadata.outputs.current-version}}|' doc/antora.yml
-        sed -i -e 's|smallrye-fault-tolerance-version: .*|smallrye-fault-tolerance-version: '"'"'${{steps.metadata.outputs.current-version}}'"'"'|' doc/antora.yml
-        MP_FT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.microprofile-fault-tolerance -q -DforceStdout)
-        sed -i -e 's|microprofile-fault-tolerance-version: .*|microprofile-fault-tolerance-version: '"'$MP_FT_VERSION'"'|' doc/antora.yml
-        VERTX_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.vertx -q -DforceStdout)
-        sed -i -e 's|vertx4-version: .*|vertx4-version: '"'$VERTX_VERSION'"'|' doc/antora.yml
-        git commit -a -m 'Amendments before release'
-        mvn -B release:prepare -Prelease -DreleaseVersion=${{steps.metadata.outputs.current-version}} -DdevelopmentVersion=${{steps.metadata.outputs.next-version}}
-        git checkout ${{github.base_ref}}
-        git rebase release
-        mvn -B release:perform -Prelease
-        sed -i -e 's|https://smallrye.io/docs/smallrye-fault-tolerance/.*/index.html|https://smallrye.io/docs/smallrye-fault-tolerance/${{steps.metadata.outputs.current-version}}/index.html|' README.adoc
-        sed -i -e 's|^version: ${{steps.metadata.outputs.current-version}}|version: main|' doc/antora.yml
-        git commit -a -m 'Amendments after release'
-        git push
-        git push --tags
-
-    - name: TCK report
-      uses: actions/upload-artifact@v4
-      with:
-        name: tck-report
-        path: testsuite/tck/target/surefire-reports
-
-    - name: Milestone release
-      uses: radcortez/milestone-release-action@main
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN}}
-        milestone-title: ${{steps.metadata.outputs.current-version}}
-        milestone-next: ${{steps.metadata.outputs.next-version}}
+  publish-tck:
+    name: Publish TCK Report
+    uses: ./.github/workflows/publish-tck.yml
+    secrets: inherit
+    with:
+      version: ${{github.event.inputs.tag || github.ref_name}}
