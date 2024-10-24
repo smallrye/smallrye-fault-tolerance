@@ -1,0 +1,86 @@
+name: SmallRye Prepare Release
+
+on:
+  pull_request:
+    types:
+    - closed
+    paths:
+    - '.github/project.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  before-release:
+    name: Before release
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.merged == true}}
+
+    steps:
+    - name: Retrieve project metadata
+      id: metadata
+      uses: radcortez/project-metadata-action@main
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        metadata-file-path: '.github/project.yml'
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: Before release
+      run: |
+        java -version
+        mvn --version
+        git config --global user.name "SmallRye CI"
+        git config --global user.email "smallrye@googlegroups.com"
+        sed -i -e 's|^version: main|version: ${{steps.metadata.outputs.current-version}}|' doc/antora.yml
+        sed -i -e 's|smallrye-fault-tolerance-version: .*|smallrye-fault-tolerance-version: '"'"'${{steps.metadata.outputs.current-version}}'"'"'|' doc/antora.yml
+        MP_FT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.microprofile-fault-tolerance -q -DforceStdout)
+        sed -i -e 's|microprofile-fault-tolerance-version: .*|microprofile-fault-tolerance-version: '"'$MP_FT_VERSION'"'|' doc/antora.yml
+        VERTX_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.vertx -q -DforceStdout)
+        sed -i -e 's|vertx4-version: .*|vertx4-version: '"'$VERTX_VERSION'"'|' doc/antora.yml
+        git add -A .
+        git commit -a -m 'Amendments before release'
+        git push
+
+  prepare-release:
+    name: Prepare release
+    needs: before-release
+    if: ${{ github.event.pull_request.merged == true}}
+
+    uses: smallrye/.github/.github/workflows/prepare-release.yml@main
+    secrets: inherit
+    with:
+      ref: ${{ github.ref }}
+
+  after-release:
+    name: After release
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    if: ${{ github.event.pull_request.merged == true}}
+
+    steps:
+    - name: Retrieve project metadata
+      id: metadata
+      uses: radcortez/project-metadata-action@main
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        metadata-file-path: '.github/project.yml'
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+
+    - name: After release
+      run: |
+        git config --global user.name "SmallRye CI"
+        git config --global user.email "smallrye@googlegroups.com"
+        sed -i -e 's|https://smallrye.io/docs/smallrye-fault-tolerance/.*/index.html|https://smallrye.io/docs/smallrye-fault-tolerance/${{steps.metadata.outputs.current-version}}/index.html|' README.adoc
+        sed -i -e 's|^version: ${{steps.metadata.outputs.current-version}}|version: main|' doc/antora.yml
+        git add -A .
+        git commit -a -m 'Amendments after release'
+        git push
