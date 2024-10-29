@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.composition;
 
+import static io.smallrye.faulttolerance.core.FaultToleranceContextUtil.sync;
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.composition.Strategies.fallback;
 import static io.smallrye.faulttolerance.core.composition.Strategies.retry;
@@ -10,28 +11,28 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.retry.TestInvocation;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class FallbackAndRetryTest {
     @Test
-    public void shouldFallbackAfterRetrying() throws Exception {
+    public void shouldFallbackAfterRetrying() throws Throwable {
         FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
 
-        assertThat(operation.apply(new InvocationContext<>(TestException::doThrow)))
+        assertThat(operation.apply(sync(TestException::doThrow)).awaitBlocking())
                 .isEqualTo("fallback after TestException");
     }
 
     @Test
-    public void shouldNotFallbackOnSuccess() throws Exception {
+    public void shouldNotFallbackOnSuccess() throws Throwable {
         FaultToleranceStrategy<String> operation = fallback(retry(invocation()));
 
-        assertThat(operation.apply(new InvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
+        assertThat(operation.apply(sync(() -> "foobar")).awaitBlocking())
+                .isEqualTo("foobar");
     }
 
     @Test
-    public void shouldNotFallbackOnSuccessAtSecondAttempt() throws Exception {
+    public void shouldNotFallbackOnSuccessAtSecondAttempt() throws Throwable {
         AtomicInteger failures = new AtomicInteger(0);
 
         FaultToleranceStrategy<String> operation = fallback(
@@ -43,6 +44,7 @@ public class FallbackAndRetryTest {
                                 },
                                 () -> String.format("success after %d failures", failures.get()))));
 
-        assertThat(operation.apply(new InvocationContext<>(() -> "unreachable"))).isEqualTo("success after 3 failures");
+        assertThat(operation.apply(sync(null)).awaitBlocking())
+                .isEqualTo("success after 3 failures");
     }
 }

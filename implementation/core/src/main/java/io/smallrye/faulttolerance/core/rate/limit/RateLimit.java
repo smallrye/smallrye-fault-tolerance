@@ -6,15 +6,17 @@ import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.api.RateLimitType;
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 
 public class RateLimit<V> implements FaultToleranceStrategy<V> {
-    final FaultToleranceStrategy<V> delegate;
-    final String description;
+    private final FaultToleranceStrategy<V> delegate;
+    private final String description;
 
-    final TimeWindow timeWindow;
+    private final TimeWindow timeWindow;
 
     public RateLimit(FaultToleranceStrategy<V> delegate, String description, int maxInvocations, long timeWindowInMillis,
             long minSpacingInMillis, RateLimitType type, Stopwatch stopwatch) {
@@ -38,25 +40,29 @@ public class RateLimit<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(InvocationContext<V> ctx) throws Exception {
+    public Future<V> apply(FaultToleranceContext<V> ctx) {
         LOG.trace("RateLimit started");
         try {
-            return doApply(ctx);
+            Completer<V> result = Completer.create();
+
+            long retryAfter = timeWindow.record();
+            if (retryAfter == 0) {
+                try {
+                    LOG.trace("Task permitted by rate limit");
+                    ctx.fireEvent(RateLimitEvents.DecisionMade.PERMITTED);
+                    delegate.apply(ctx).thenComplete(result);
+                } catch (Exception e) {
+                    result.completeWithError(e);
+                }
+            } else {
+                LOG.debugf("%s rate limit exceeded", description);
+                ctx.fireEvent(RateLimitEvents.DecisionMade.REJECTED);
+                result.completeWithError(new RateLimitException(retryAfter, description + " rate limit exceeded"));
+            }
+
+            return result.future();
         } finally {
             LOG.trace("RateLimit finished");
-        }
-    }
-
-    private V doApply(InvocationContext<V> ctx) throws Exception {
-        long retryAfter = timeWindow.record();
-        if (retryAfter == 0) {
-            LOG.trace("Task permitted by rate limit");
-            ctx.fireEvent(RateLimitEvents.DecisionMade.PERMITTED);
-            return delegate.apply(ctx);
-        } else {
-            LOG.debugf("%s rate limit exceeded", description);
-            ctx.fireEvent(RateLimitEvents.DecisionMade.REJECTED);
-            throw new RateLimitException(retryAfter, description + " rate limit exceeded");
         }
     }
 }

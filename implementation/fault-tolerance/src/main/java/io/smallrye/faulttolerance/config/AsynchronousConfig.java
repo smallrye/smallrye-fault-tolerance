@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.config;
 
 import java.util.StringJoiner;
-import java.util.concurrent.Future;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
@@ -17,7 +16,7 @@ public interface AsynchronousConfig extends Asynchronous, Config {
     default void validate() {
         Class<?>[] parameterTypes = method().parameterTypes;
         Class<?> returnType = method().returnType;
-        if (Future.class.equals(returnType) || AsyncSupportRegistry.isKnown(parameterTypes, returnType)) {
+        if (java.util.concurrent.Future.class.equals(returnType) || AsyncSupportRegistry.isKnown(parameterTypes, returnType)) {
             return;
         }
 

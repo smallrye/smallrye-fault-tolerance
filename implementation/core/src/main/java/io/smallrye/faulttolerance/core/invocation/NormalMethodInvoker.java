@@ -7,8 +7,6 @@ import java.util.function.Function;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 
 public class NormalMethodInvoker<V> implements Invoker<V> {
-    static final Object[] EMPTY_ARRAY = new Object[0];
-
     private final Method method;
     private final Object target;
     private final Object[] arguments;

@@ -2,8 +2,9 @@ package io.smallrye.faulttolerance.core.util;
 
 import java.util.concurrent.Callable;
 
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.Future;
 
 public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     private final Callable<V> result;
@@ -17,7 +18,7 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(InvocationContext<V> ctx) throws Exception {
-        return result.call();
+    public Future<V> apply(FaultToleranceContext<V> ctx) {
+        return Future.from(result);
     }
 }

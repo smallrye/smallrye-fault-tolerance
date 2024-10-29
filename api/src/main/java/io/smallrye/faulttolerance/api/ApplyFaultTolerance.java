@@ -46,6 +46,14 @@ import io.smallrye.common.annotation.Experimental;
  * for synchronous methods, {@code FaultTolerance<CompletionStage<Object>>} for asynchronous
  * methods that return {@code CompletionStage}, and so on. Note that this effectively precludes
  * defining a useful fallback, because fallback can only be defined when the value type is known.
+ * <p>
+ * Note that this annotation has the same differences to the standard MicroProfile Fault Tolerance
+ * as {@link FaultTolerance}:
+ * <ul>
+ * <li>asynchronous actions of type {@link java.util.concurrent.Future} are not supported;</li>
+ * <li>the fallback, circuit breaker and retry strategies always inspect the cause chain of exceptions,
+ * following the behavior of SmallRye Fault Tolerance in the non-compatible mode.</li>
+ * </ul>
  */
 @Inherited
 @Documented

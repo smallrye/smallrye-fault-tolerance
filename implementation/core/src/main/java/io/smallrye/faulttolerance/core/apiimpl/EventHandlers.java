@@ -3,7 +3,7 @@ package io.smallrye.faulttolerance.core.apiimpl;
 import java.util.function.Consumer;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.bulkhead.BulkheadEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimitEvents;
@@ -55,7 +55,7 @@ final class EventHandlers {
         this.timeoutOnFinished = Callbacks.wrap(timeoutOnFinished);
     }
 
-    void register(InvocationContext<?> ctx) {
+    void register(FaultToleranceContext<?> ctx) {
         if (bulkheadOnAccepted != null || bulkheadOnRejected != null) {
             ctx.registerEventHandler(BulkheadEvents.DecisionMade.class, event -> {
                 if (event.accepted) {

@@ -1,13 +1,10 @@
 package io.smallrye.faulttolerance.kotlin.impl
 
+import io.smallrye.faulttolerance.core.Completer
+import io.smallrye.faulttolerance.core.Future
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport
+import io.smallrye.faulttolerance.core.invocation.ConstantInvoker
 import io.smallrye.faulttolerance.core.invocation.Invoker
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletableFuture.completedFuture
-import java.util.concurrent.CompletableFuture.failedFuture
-import java.util.concurrent.CompletionStage
-import java.util.concurrent.ExecutionException
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
@@ -33,8 +30,13 @@ class CoroutineSupport<T> : AsyncSupport<T, Any?> {
         return value
     }
 
-    override fun toCompletionStage(invoker: Invoker<Any?>): CompletionStage<T> {
-        val future = CompletableFuture<T>()
+    override fun toFuture(invoker: Invoker<Any?>): Future<T> {
+        if (invoker is ConstantInvoker) {
+            // special case because `ConstantInvoker` throws on all other methods
+            return Future.of(invoker.proceed() as T)
+        }
+
+        val completer = Completer.create<T>()
 
         val index = invoker.parametersCount() - 1
         val previousContinuation = invoker.replaceArgument(index, Continuation::class.java) { originalContinuation ->
@@ -44,8 +46,8 @@ class CoroutineSupport<T> : AsyncSupport<T, Any?> {
 
                 override fun resumeWith(result: Result<T>) {
                     result.fold(
-                            onSuccess = { value -> future.complete(value) },
-                            onFailure = { exception -> future.completeExceptionally(exception) }
+                            onSuccess = { value -> completer.complete(value) },
+                            onFailure = { exception -> completer.completeWithError(exception) }
                     )
                 }
             }
@@ -54,50 +56,35 @@ class CoroutineSupport<T> : AsyncSupport<T, Any?> {
         try {
             val result = invoker.proceed()
             if (result !== COROUTINE_SUSPENDED) {
-                return completedFuture(result as T)
+                completer.complete(result as T)
             }
         } catch (e: Exception) {
-            return failedFuture(e)
+            completer.completeWithError(e)
         } finally {
             invoker.replaceArgument(index, Continuation::class.java) { previousContinuation }
         }
 
-        return future
+        return completer.future()
     }
 
-    override fun fromCompletionStage(invoker: Invoker<CompletionStage<T>>): Any? {
+    override fun fromFuture(invoker: Invoker<Future<T>>): Any? {
         // remember the continuation early, though there should be no harm in looking it up later
         val index = invoker.parametersCount() - 1
         val continuation = invoker.getArgument(index, Continuation::class.java) as Continuation<T>
 
-        val completableFuture = invoker.proceed().toCompletableFuture()
+        val future = invoker.proceed()
 
-        if (completableFuture.isDone) {
-            try {
-                return completableFuture.get()
-            } catch (e: ExecutionException) {
-                throw e.cause!!
-            }
+        if (future.isComplete) {
+            return future.awaitBlocking()
         }
 
-        completableFuture.whenComplete { value, exception ->
-            if (exception == null) {
+        future.then { value, error ->
+            if (error == null) {
                 continuation.resume(value)
             } else {
-                continuation.resumeWithException(exception)
+                continuation.resumeWithException(error)
             }
         }
         return COROUTINE_SUSPENDED
-    }
-
-    // ---
-
-    override fun fallbackResultToCompletionStage(value: Any?): CompletionStage<T> {
-        if (value === COROUTINE_SUSPENDED) {
-            // should never happen
-            throw FaultToleranceException("Unexpected $value")
-        } else {
-            return completedFuture(value as T)
-        }
     }
 }

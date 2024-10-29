@@ -20,7 +20,7 @@ public final class BeforeRetryMethod {
     }
 
     public Invoker<?> createInvoker(FailureContext ctx) throws ReflectiveOperationException {
-        InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
+        InvocationContext interceptionContext = ctx.context.get(InvocationContext.class);
         Object[] arguments = interceptionContext.getParameters();
         if (arguments == null) {
             arguments = EMPTY_ARRAY;

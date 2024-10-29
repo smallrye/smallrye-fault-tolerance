@@ -1,9 +1,7 @@
 package io.smallrye.faulttolerance.mutiny.impl;
 
-import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
-
-import java.util.concurrent.CompletionStage;
-
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.mutiny.Uni;
@@ -30,25 +28,30 @@ public class UniSupport<T> implements AsyncSupport<T, Uni<T>> {
     }
 
     @Override
-    public CompletionStage<T> toCompletionStage(Invoker<Uni<T>> invoker) throws Exception {
-        return invoker.proceed().subscribeAsCompletionStage();
+    public Future<T> toFuture(Invoker<Uni<T>> invoker) {
+        Completer<T> completer = Completer.create();
+        try {
+            invoker.proceed().subscribe().with(completer::complete, completer::completeWithError);
+        } catch (Exception e) {
+            completer.completeWithError(e);
+        }
+        return completer.future();
     }
 
     @Override
-    public Uni<T> fromCompletionStage(Invoker<CompletionStage<T>> invoker) {
-        return Uni.createFrom().completionStage(() -> {
+    public Uni<T> fromFuture(Invoker<Future<T>> invoker) {
+        return Uni.createFrom().emitter(em -> {
             try {
-                return invoker.proceed();
+                invoker.proceed().then((value, error) -> {
+                    if (error == null) {
+                        em.complete(value);
+                    } else {
+                        em.fail(error);
+                    }
+                });
             } catch (Exception e) {
-                throw sneakyThrow(e);
+                em.fail(e);
             }
         });
-    }
-
-    // ---
-
-    @Override
-    public CompletionStage<T> fallbackResultToCompletionStage(Uni<T> uni) {
-        return uni.subscribeAsCompletionStage();
     }
 }

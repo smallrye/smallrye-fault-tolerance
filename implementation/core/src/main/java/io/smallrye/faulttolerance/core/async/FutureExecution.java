@@ -3,52 +3,58 @@ package io.smallrye.faulttolerance.core.async;
 import static io.smallrye.faulttolerance.core.async.AsyncLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.Future;
 
 /**
- * Unlike {@link CompletionStageExecution}, this is supposed to be the <em>first</em> strategy
+ * Unlike {@link ThreadOffload}, this is supposed to be the <em>first</em> strategy
  * in the chain. The remaining strategies are executed on an extra thread. This allows using
- * the <em>synchronous</em> strategies to implement {@code Future}-based {@code @Asynchronous}
- * invocations, with two exceptions:
+ * <em>synchronous</em> execution of other strategies to implement {@code Future}-based
+ * {@code @Asynchronous} invocations, with two exceptions:
  * <ul>
- * <li>timeouts, where {@code AsyncTimeout} is needed in front of {@code Timeout};</li>
- * <li>bulkheads, where {@code FutureThreadPoolBulkhead} is used instead of {@code SemaphoreBulkhead}
- * simply because that's what the spec requires.</li>
+ * <li>timeouts, where {@code FutureTimeout} is needed in front of {@code Timeout};</li>
+ * <li>bulkheads, where {@code FutureBulkhead} is used instead of {@code Bulkhead}.</li>
  * </ul>
  */
-public class FutureExecution<V> implements FaultToleranceStrategy<Future<V>> {
-    private final FaultToleranceStrategy<Future<V>> delegate;
+public class FutureExecution<V> implements FaultToleranceStrategy<java.util.concurrent.Future<V>> {
+    private final FaultToleranceStrategy<java.util.concurrent.Future<V>> delegate;
     private final Executor executor;
 
-    public FutureExecution(FaultToleranceStrategy<Future<V>> delegate, Executor executor) {
+    public FutureExecution(FaultToleranceStrategy<java.util.concurrent.Future<V>> delegate, Executor executor) {
         this.delegate = delegate;
         this.executor = checkNotNull(executor, "Executor must be set");
     }
 
     @Override
-    public Future<V> apply(InvocationContext<Future<V>> ctx) {
+    public Future<java.util.concurrent.Future<V>> apply(FaultToleranceContext<java.util.concurrent.Future<V>> ctx) {
         LOG.trace("FutureExecution started");
         try {
-            return doApply(ctx);
+            return Future.of(doApply(ctx));
         } finally {
             LOG.trace("FutureExecution finished");
         }
     }
 
-    private Future<V> doApply(InvocationContext<Future<V>> ctx) {
-        FutureTask<Future<V>> task = new FutureTask<>(() -> delegate.apply(ctx));
+    private java.util.concurrent.Future<V> doApply(FaultToleranceContext<java.util.concurrent.Future<V>> ctx) {
+        FutureTask<java.util.concurrent.Future<V>> task = new FutureTask<>(() -> {
+            try {
+                return delegate.apply(ctx).awaitBlocking();
+            } catch (Throwable e) {
+                return failedFuture(e);
+            }
+        });
         executor.execute(task);
-        return new Future<V>() {
+        return new java.util.concurrent.Future<>() {
             @Override
             public boolean cancel(boolean mayInterruptIfRunning) {
                 ctx.fireEvent(mayInterruptIfRunning

@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.rxjava3.impl;
 
-import java.util.concurrent.CompletionStage;
-
 import io.reactivex.rxjava3.core.Completable;
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 
@@ -28,17 +28,30 @@ public class CompletableSupport<T> implements AsyncSupport<T, Completable> {
     }
 
     @Override
-    public CompletionStage<T> toCompletionStage(Invoker<Completable> invoker) throws Exception {
-        return invoker.proceed().toCompletionStage(null);
+    public Future<T> toFuture(Invoker<Completable> invoker) {
+        Completer<T> completer = Completer.create();
+        try {
+            invoker.proceed().subscribe(() -> completer.complete(null), completer::completeWithError);
+        } catch (Exception e) {
+            completer.completeWithError(e);
+        }
+        return completer.future();
     }
 
     @Override
-    public Completable fromCompletionStage(Invoker<CompletionStage<T>> invoker) {
-        return Completable.defer(() -> Completable.fromCompletionStage(invoker.proceed()));
-    }
-
-    @Override
-    public CompletionStage<T> fallbackResultToCompletionStage(Completable completable) {
-        return completable.toCompletionStage(null);
+    public Completable fromFuture(Invoker<Future<T>> invoker) {
+        return Completable.defer(() -> Completable.create(sub -> {
+            try {
+                invoker.proceed().then((value, error) -> {
+                    if (error == null) {
+                        sub.onComplete();
+                    } else {
+                        sub.onError(error);
+                    }
+                });
+            } catch (Exception e) {
+                sub.onError(e);
+            }
+        }));
     }
 }

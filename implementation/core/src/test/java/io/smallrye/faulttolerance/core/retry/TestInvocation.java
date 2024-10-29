@@ -4,8 +4,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.Future;
 
 public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     private final int initialFailuresCount;
@@ -18,8 +19,8 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
         return new TestInvocation<>(0, null, result);
     }
 
-    public static <V> TestInvocation<V> initiallyFailing(int initialFailuresCount, Supplier<? extends Exception> initialFailure,
-            Callable<V> result) {
+    public static <V> TestInvocation<V> initiallyFailing(int initialFailuresCount,
+            Supplier<? extends Exception> initialFailure, Callable<V> result) {
         return new TestInvocation<>(initialFailuresCount, initialFailure, result);
     }
 
@@ -30,14 +31,14 @@ public final class TestInvocation<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(InvocationContext<V> ctx) throws Exception {
+    public Future<V> apply(FaultToleranceContext<V> ctx) {
         int invocations = invocationCounter.incrementAndGet();
 
         if (initialFailuresCount > 0 && invocations <= initialFailuresCount) {
-            throw initialFailure.get();
+            return Future.ofError(initialFailure.get());
         }
 
-        return result.call();
+        return Future.from(result);
     }
 
     public int numberOfInvocations() {

@@ -4,10 +4,10 @@ import java.util.Objects;
 
 public final class FailureContext {
     public final Throwable failure;
-    public final InvocationContext<?> invocationContext;
+    public final FaultToleranceContext<?> context;
 
-    public FailureContext(Throwable failure, InvocationContext<?> invocationContext) {
+    public FailureContext(Throwable failure, FaultToleranceContext<?> context) {
         this.failure = Objects.requireNonNull(failure);
-        this.invocationContext = Objects.requireNonNull(invocationContext);
+        this.context = Objects.requireNonNull(context);
     }
 }

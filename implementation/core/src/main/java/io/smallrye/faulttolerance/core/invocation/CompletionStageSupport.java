@@ -1,9 +1,13 @@
 package io.smallrye.faulttolerance.core.invocation;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.failedFuture;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.Future;
 
 public class CompletionStageSupport<T> implements AsyncSupport<T, CompletionStage<T>> {
     @Override
@@ -27,23 +31,40 @@ public class CompletionStageSupport<T> implements AsyncSupport<T, CompletionStag
     }
 
     @Override
-    public CompletionStage<T> toCompletionStage(Invoker<CompletionStage<T>> invoker) throws Exception {
-        return invoker.proceed();
-    }
-
-    @Override
-    public CompletionStage<T> fromCompletionStage(Invoker<CompletionStage<T>> invoker) {
+    public Future<T> toFuture(Invoker<CompletionStage<T>> invoker) {
+        Completer<T> completer = Completer.create();
         try {
-            return invoker.proceed();
+            invoker.proceed().whenComplete((value, error) -> {
+                if (error == null) {
+                    completer.complete(value);
+                } else {
+                    if (error instanceof CompletionException) {
+                        completer.completeWithError(error.getCause());
+                    } else {
+                        completer.completeWithError(error);
+                    }
+                }
+            });
         } catch (Exception e) {
-            return failedFuture(e);
+            completer.completeWithError(e);
         }
+        return completer.future();
     }
 
-    // ---
-
     @Override
-    public CompletionStage<T> fallbackResultToCompletionStage(CompletionStage<T> completionStage) {
-        return completionStage;
+    public CompletionStage<T> fromFuture(Invoker<Future<T>> invoker) {
+        CompletableFuture<T> result = new CompletableFuture<>();
+        try {
+            invoker.proceed().then((value, error) -> {
+                if (error == null) {
+                    result.complete(value);
+                } else {
+                    result.completeExceptionally(error);
+                }
+            });
+        } catch (Exception e) {
+            result.completeExceptionally(e);
+        }
+        return result;
     }
 }

@@ -31,8 +31,8 @@ public final class FallbackMethod {
 
     // ---
 
-    public Invoker<?> createInvoker(FailureContext ctx) throws ReflectiveOperationException {
-        InvocationContext interceptionContext = ctx.invocationContext.get(InvocationContext.class);
+    public <T> Invoker<T> createInvoker(FailureContext ctx) throws ReflectiveOperationException {
+        InvocationContext interceptionContext = ctx.context.get(InvocationContext.class);
         Object[] arguments = interceptionContext.getParameters();
         if (arguments == null) {
             arguments = EMPTY_ARRAY;

@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.circuit.breaker;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
-import io.smallrye.faulttolerance.core.InvocationContextEvent;
+import io.smallrye.faulttolerance.core.FaultToleranceEvent;
 
 public class CircuitBreakerEvents {
     public enum Result {
@@ -10,7 +10,7 @@ public class CircuitBreakerEvents {
         PREVENTED,
     }
 
-    public enum StateTransition implements InvocationContextEvent {
+    public enum StateTransition implements FaultToleranceEvent {
         TO_CLOSED(CircuitBreakerState.CLOSED),
         TO_OPEN(CircuitBreakerState.OPEN),
         TO_HALF_OPEN(CircuitBreakerState.HALF_OPEN),
@@ -23,7 +23,7 @@ public class CircuitBreakerEvents {
         }
     }
 
-    public enum Finished implements InvocationContextEvent {
+    public enum Finished implements FaultToleranceEvent {
         SUCCESS(Result.SUCCESS),
         FAILURE(Result.FAILURE),
         PREVENTED(Result.PREVENTED),

@@ -8,25 +8,37 @@ It is an interface that looks like this:
 [source,java]
 ----
 interface FaultToleranceStrategy<V> {
-    V apply(InvocationContext<V> ctx) throws Exception;
+    Future<V> apply(FaultToleranceContext<V> ctx);
 }
 ----
 
-The `InvocationContext` is a `Callable` that represents the method invocation guarded by this fault tolerance strategy.
-The fault tolerance strategy does its work around `ctx.call()`.
-It can catch exceptions, invoke `ctx.call()` multiple times, invoke something else, etc.
+NOTE: The `Future` type here is _not_ a `java.util.concurrent.Future`.
+It comes from {smallrye-fault-tolerance} and it could be described as a very bare-bones variant of `CompletableFuture`, except it's split into `Completer` and `Future`.
+It is not supposed to be used outside of this project.
+
+The `FaultToleranceContext` is a `Supplier<Future<V>>` that represents the method invocation guarded by this fault tolerance strategy.
+The fault tolerance strategy does its work around `ctx.get()`.
+It can catch exceptions, invoke `ctx.get()` multiple times, invoke something else, etc.
 As an example, let's consider this strategy, applicable to methods that return a `String`:
 
 [source,java]
 ----
 public class MyStringFallback implements FaultToleranceStrategy<String> {
     @Override
-    public String apply(InvocationContext<String> ctx) {
+    public Future<String> apply(FaultToleranceContext<String> ctx) {
+        Completer<String> completer = Completer.create();
         try {
-            return ctx.call();
+            ctx.get().then((value, error) -> {
+                if (error == null) {
+                    completer.complete(value);
+                } else {
+                    completer.complete("my string value");
+                }
+            });
         } catch (Exception ignored) {
-            return "my string value";
+            completer.complete("my string value");
         }
+        return completer.future();
     }
 }
 ----
@@ -49,21 +61,29 @@ public class MyStringFallback implements FaultToleranceStrategy<String> {
     }
 
     @Override
-    public String apply(InvocationContext<String> ctx) {
+    public Future<String> apply(FaultToleranceContext<String> ctx) {
+        Completer<String> completer = Completer.create();
         try {
-            return delegate.apply(ctx);
+            delegate.apply(ctx).then((value, error) -> {
+                if (error == null) {
+                    completer.complete(value);
+                } else {
+                    completer.complete("my string value");
+                }
+            });
         } catch (Exception ignored) {
-            return "my string value";
+            completer.complete("my string value");
         }
+        return completer.future();
     }
 }
 ----
 
-We see that one strategy delegates to another, passing the `InvocationContext` along.
+We see that one strategy delegates to another, passing the `FaultToleranceContext` along.
 In fact, all the implementations in {smallrye-fault-tolerance} are written like this: they expect to be used in a chain, so they take another `FaultToleranceStrategy` to which they delegate.
-But if all strategies have this form, when is `ctx.call()` actually invoked?
+But if all strategies have this form, when is `ctx.get()` actually invoked?
 Good question!
-The ultimate `ctx.call()` invocation is done by a special fault tolerance strategy which is called, well, `Invocation`.
+The ultimate `ctx.get()` invocation is done by a special fault tolerance strategy which is called, well, `Invocation`.
 
 As an example which uses real {microprofile-fault-tolerance} annotations, let's consider this method:
 
@@ -85,7 +105,7 @@ Fallback(
     Retry(
         Timeout(
             Invocation(
-                // ctx.call() will happen here
+                // ctx.get() will happen here
                 // that will, in turn, invoke doSomething()
             )
         )

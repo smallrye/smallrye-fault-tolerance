@@ -1,6 +1,8 @@
 package io.smallrye.faulttolerance.core.retry;
 
-import io.smallrye.faulttolerance.core.util.Preconditions;
+import static io.smallrye.faulttolerance.core.util.Preconditions.check;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+
 import io.smallrye.faulttolerance.core.util.Primitives;
 
 /**
@@ -15,14 +17,14 @@ public class ExponentialBackOff implements BackOff {
     private long lastDelay;
 
     public ExponentialBackOff(long initialDelayInMillis, int factor, Jitter jitter, long maxDelayInMillis) {
-        this.initialDelayInMillis = Preconditions.check(initialDelayInMillis, initialDelayInMillis >= 0,
+        this.initialDelayInMillis = check(initialDelayInMillis, initialDelayInMillis >= 0,
                 "Initial delay must be >= 0");
-        this.factor = Preconditions.check(factor, factor >= 1, "Factor must be >= 1");
-        this.jitter = Preconditions.checkNotNull(jitter, "Jitter must be set");
+        this.factor = check(factor, factor >= 1, "Factor must be >= 1");
+        this.jitter = checkNotNull(jitter, "Jitter must be set");
         this.maxDelayInMillis = maxDelayInMillis <= 0 ? Long.MAX_VALUE : maxDelayInMillis;
 
         if (maxDelayInMillis > 0) {
-            Preconditions.check(initialDelayInMillis, initialDelayInMillis < maxDelayInMillis,
+            check(initialDelayInMillis, initialDelayInMillis < maxDelayInMillis,
                     "Initial delay must be < max delay");
         }
     }

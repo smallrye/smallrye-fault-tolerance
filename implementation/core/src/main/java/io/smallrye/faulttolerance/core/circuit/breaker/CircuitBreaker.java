@@ -9,8 +9,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.stopwatch.RunningStopwatch;
 import io.smallrye.faulttolerance.core.stopwatch.Stopwatch;
 import io.smallrye.faulttolerance.core.timer.Timer;
@@ -21,18 +23,18 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     public static final int STATE_OPEN = 1;
     public static final int STATE_HALF_OPEN = 2;
 
-    final FaultToleranceStrategy<V> delegate;
-    final String description;
+    private final FaultToleranceStrategy<V> delegate;
+    private final String description;
 
     private final ExceptionDecision exceptionDecision;
-    final long delayInMillis;
-    final int rollingWindowSize;
-    final int failureThreshold;
-    final int successThreshold;
-    final Stopwatch stopwatch;
-    final Timer timer;
+    private final long delayInMillis;
+    private final int rollingWindowSize;
+    private final int failureThreshold;
+    private final int successThreshold;
+    private final Stopwatch stopwatch;
+    private final Timer timer;
 
-    final AtomicReference<State> state;
+    private final AtomicReference<State> state;
 
     public CircuitBreaker(FaultToleranceStrategy<V> delegate, String description, ExceptionDecision exceptionDecision,
             long delayInMillis, int requestVolumeThreshold, double failureRatio, int successThreshold,
@@ -54,49 +56,52 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(InvocationContext<V> ctx) throws Exception {
+    public Future<V> apply(FaultToleranceContext<V> ctx) {
         LOG.trace("CircuitBreaker started");
         try {
-            return doApply(ctx);
+            // this is the only place where `state` can be dereferenced!
+            // it must be passed through as a parameter to all the state methods,
+            // so that they don't see the circuit breaker moving to a different state under them
+            State currentState = state.get();
+            switch (currentState.id) {
+                case STATE_CLOSED:
+                    return inClosed(ctx, currentState);
+                case STATE_OPEN:
+                    return inOpen(ctx, currentState);
+                case STATE_HALF_OPEN:
+                    return inHalfOpen(ctx, currentState);
+                default:
+                    throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
+            }
         } finally {
             LOG.trace("CircuitBreaker finished");
         }
     }
 
-    private V doApply(InvocationContext<V> ctx) throws Exception {
-        // this is the only place where `state` can be dereferenced!
-        // it must be passed through as a parameter to all the state methods,
-        // so that they don't see the circuit breaker moving to a different state under them
-        State state = this.state.get();
-        switch (state.id) {
-            case STATE_CLOSED:
-                return inClosed(ctx, state);
-            case STATE_OPEN:
-                return inOpen(ctx, state);
-            case STATE_HALF_OPEN:
-                return inHalfOpen(ctx, state);
-            default:
-                throw new AssertionError("Invalid circuit breaker state: " + state.id);
-        }
-    }
-
-    boolean isConsideredSuccess(Throwable e) {
-        return exceptionDecision.isConsideredExpected(e);
-    }
-
-    private V inClosed(InvocationContext<V> ctx, State state) throws Exception {
+    private Future<V> inClosed(FaultToleranceContext<V> ctx, State state) {
         try {
             LOG.trace("Circuit breaker closed, invocation allowed");
-            V result = delegate.apply(ctx);
-            inClosedHandleResult(true, ctx, state);
-            return result;
+
+            Completer<V> result = Completer.create();
+
+            delegate.apply(ctx).then((value, error) -> {
+                if (error == null) {
+                    inClosedHandleResult(true, ctx, state);
+                    result.complete(value);
+                } else {
+                    inClosedHandleResult(exceptionDecision.isConsideredExpected(error), ctx, state);
+                    result.completeWithError(error);
+                }
+            });
+
+            return result.future();
         } catch (Throwable e) {
-            inClosedHandleResult(isConsideredSuccess(e), ctx, state);
-            throw e;
+            inClosedHandleResult(exceptionDecision.isConsideredExpected(e), ctx, state);
+            return Future.ofError(e);
         }
     }
 
-    final void inClosedHandleResult(boolean isSuccess, InvocationContext<V> ctx, State state) {
+    private void inClosedHandleResult(boolean isSuccess, FaultToleranceContext<V> ctx, State state) {
         ctx.fireEvent(isSuccess ? CircuitBreakerEvents.Finished.SUCCESS : CircuitBreakerEvents.Finished.FAILURE);
         boolean failureThresholdReached = isSuccess
                 ? state.rollingWindow.recordSuccess()
@@ -107,40 +112,64 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    private V inOpen(InvocationContext<V> ctx, State state) throws Exception {
+    private Future<V> inOpen(FaultToleranceContext<V> ctx, State state) {
         if (state.runningStopwatch.elapsedTimeInMillis() < delayInMillis) {
             LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
                     "Circuit breaker open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
-            throw new CircuitBreakerOpenException(description + " circuit breaker is open");
+            return Future.ofError(new CircuitBreakerOpenException(description + " circuit breaker is open"));
         } else {
             LOG.trace("Delay elapsed synchronously, circuit breaker moving to half-open");
             toHalfOpen(ctx, state);
             // start over to re-read current state; no hard guarantee that it's HALF_OPEN at this point
-            return doApply(ctx);
+            // this is the only place where `state` can be dereferenced!
+            // it must be passed through as a parameter to all the state methods,
+            // so that they don't see the circuit breaker moving to a different state under them
+            State currentState = this.state.get();
+            switch (currentState.id) {
+                case STATE_CLOSED:
+                    return inClosed(ctx, currentState);
+                case STATE_OPEN:
+                    return inOpen(ctx, currentState);
+                case STATE_HALF_OPEN:
+                    return inHalfOpen(ctx, currentState);
+                default:
+                    throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
+            }
         }
     }
 
-    private V inHalfOpen(InvocationContext<V> ctx, State state) throws Exception {
+    private Future<V> inHalfOpen(FaultToleranceContext<V> ctx, State state) {
         if (state.probeAttempts.incrementAndGet() > successThreshold) {
             LOG.debugOrTrace(description + " invocation prevented by circuit breaker",
                     "Circuit breaker half-open, invocation prevented");
             ctx.fireEvent(CircuitBreakerEvents.Finished.PREVENTED);
-            throw new CircuitBreakerOpenException(description + " circuit breaker is half-open");
+            return Future.ofError(new CircuitBreakerOpenException(description + " circuit breaker is half-open"));
         }
 
         try {
             LOG.trace("Circuit breaker half-open, probe invocation allowed");
-            V result = delegate.apply(ctx);
-            inHalfOpenHandleResult(true, ctx, state);
-            return result;
+
+            Completer<V> result = Completer.create();
+
+            delegate.apply(ctx).then((value, error) -> {
+                if (error == null) {
+                    inHalfOpenHandleResult(true, ctx, state);
+                    result.complete(value);
+                } else {
+                    inHalfOpenHandleResult(exceptionDecision.isConsideredExpected(error), ctx, state);
+                    result.completeWithError(error);
+                }
+            });
+
+            return result.future();
         } catch (Throwable e) {
-            inHalfOpenHandleResult(isConsideredSuccess(e), ctx, state);
-            throw e;
+            inHalfOpenHandleResult(exceptionDecision.isConsideredExpected(e), ctx, state);
+            return Future.ofError(e);
         }
     }
 
-    final void inHalfOpenHandleResult(boolean isSuccess, InvocationContext<V> ctx, State state) {
+    private void inHalfOpenHandleResult(boolean isSuccess, FaultToleranceContext<V> ctx, State state) {
         ctx.fireEvent(isSuccess ? CircuitBreakerEvents.Finished.SUCCESS : CircuitBreakerEvents.Finished.FAILURE);
         if (isSuccess) {
             int successes = state.consecutiveSuccesses.incrementAndGet();
@@ -154,7 +183,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    void toClosed(InvocationContext<V> ctx, State state) {
+    void toClosed(FaultToleranceContext<V> ctx, State state) {
         State newState = State.closed(rollingWindowSize, failureThreshold);
         boolean moved = this.state.compareAndSet(state, newState);
 
@@ -163,7 +192,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    void toOpen(InvocationContext<V> ctx, State state) {
+    void toOpen(FaultToleranceContext<V> ctx, State state) {
         State newState = State.open(stopwatch);
         boolean moved = this.state.compareAndSet(state, newState);
 
@@ -191,7 +220,7 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
         }
     }
 
-    void toHalfOpen(InvocationContext<V> ctx, State state) {
+    void toHalfOpen(FaultToleranceContext<V> ctx, State state) {
         State newState = State.halfOpen();
         boolean moved = this.state.compareAndSet(state, newState);
 

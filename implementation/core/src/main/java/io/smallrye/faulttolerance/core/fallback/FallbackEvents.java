@@ -1,13 +1,13 @@
 package io.smallrye.faulttolerance.core.fallback;
 
-import io.smallrye.faulttolerance.core.InvocationContextEvent;
+import io.smallrye.faulttolerance.core.FaultToleranceEvent;
 
 public class FallbackEvents {
-    public enum Defined implements InvocationContextEvent {
+    public enum Defined implements FaultToleranceEvent {
         INSTANCE
     }
 
-    public enum Applied implements InvocationContextEvent {
+    public enum Applied implements FaultToleranceEvent {
         INSTANCE
     }
 }

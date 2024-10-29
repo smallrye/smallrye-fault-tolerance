@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core;
 
+import static io.smallrye.faulttolerance.core.FaultToleranceContextUtil.sync;
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,13 +11,13 @@ import io.smallrye.faulttolerance.core.util.TestException;
 
 public class InvocationTest {
     @Test
-    public void identicalResult() throws Exception {
-        assertThat(invocation().apply(new InvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
+    public void sameResult() throws Throwable {
+        assertThat(invocation().apply(sync(() -> "foobar")).awaitBlocking()).isEqualTo("foobar");
     }
 
     @Test
-    public void identicalException() {
-        assertThatThrownBy(() -> invocation().apply(new InvocationContext<>(TestException::doThrow)))
+    public void sameError() {
+        assertThatThrownBy(invocation().apply(sync(TestException::doThrow))::awaitBlocking)
                 .isExactlyInstanceOf(TestException.class);
     }
 }

@@ -2,13 +2,13 @@ package io.smallrye.faulttolerance.core.apiimpl;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
+import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -22,31 +22,26 @@ import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.core.FailureContext;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
-import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
-import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
-import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
-import io.smallrye.faulttolerance.core.bulkhead.SemaphoreThreadPoolBulkhead;
+import io.smallrye.faulttolerance.core.async.ThreadOffload;
+import io.smallrye.faulttolerance.core.bulkhead.Bulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
-import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
-import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
+import io.smallrye.faulttolerance.core.invocation.ConstantInvoker;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
-import io.smallrye.faulttolerance.core.metrics.DelegatingCompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.DelegatingMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
-import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
-import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
 import io.smallrye.faulttolerance.core.retry.CustomBackOff;
 import io.smallrye.faulttolerance.core.retry.ExponentialBackOff;
@@ -57,7 +52,6 @@ import io.smallrye.faulttolerance.core.retry.Retry;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
 import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
-import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
@@ -69,13 +63,12 @@ import io.smallrye.faulttolerance.core.util.SetBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 
 // V = value type, e.g. String
-// S = strategy type, e.g. String or CompletionStage<String>
 // T = result type, e.g. String or CompletionStage<String> or Uni<String>
 //
-// in synchronous scenario, V = S = T
-// in asynchronous scenario, S = CompletionStage<V> and T is an async type that eventually produces V
-public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
-    private final FaultToleranceStrategy<S> strategy;
+// in synchronous scenario, V = T
+// in asynchronous scenario, T is an async type that eventually produces V
+public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
+    private final FaultToleranceStrategy<V> strategy;
     private final AsyncSupport<V, T> asyncSupport;
     private final EventHandlers eventHandlers;
     private final boolean hasFallback;
@@ -98,7 +91,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
     // but that instance is never used. The useful `FaultTolerance` instance is held by the actual bean instance,
     // which is created lazily, on the first method invocation on the client proxy.
 
-    FaultToleranceImpl(FaultToleranceStrategy<S> strategy, AsyncSupport<V, T> asyncSupport,
+    FaultToleranceImpl(FaultToleranceStrategy<V> strategy, AsyncSupport<V, T> asyncSupport,
             EventHandlers eventHandlers, boolean hasFallback) {
         this.strategy = strategy;
         this.asyncSupport = asyncSupport;
@@ -108,23 +101,28 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
     T call(Callable<T> action, MeteredOperationName meteredOperationName) throws Exception {
         if (asyncSupport == null) {
-            InvocationContext<T> ctx = new InvocationContext<>(action);
+            FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> Future.from((Callable<V>) action), false);
             if (meteredOperationName != null) {
                 ctx.set(MeteredOperationName.class, meteredOperationName);
             }
             eventHandlers.register(ctx);
-            return ((FaultToleranceStrategy<T>) strategy).apply(ctx);
+            try {
+                return (T) strategy.apply(ctx).awaitBlocking();
+            } catch (Exception e) {
+                throw e;
+            } catch (Throwable e) {
+                throw sneakyThrow(e);
+            }
         }
 
         Invoker<T> invoker = new CallableInvoker<>(action);
-        InvocationContext<CompletionStage<V>> ctx = new InvocationContext<>(() -> asyncSupport.toCompletionStage(invoker));
+        FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> asyncSupport.toFuture(invoker), true);
         if (meteredOperationName != null) {
             ctx.set(MeteredOperationName.class, meteredOperationName);
         }
         eventHandlers.register(ctx);
-        Invoker<CompletionStage<V>> wrapper = new StrategyInvoker<>(null,
-                (FaultToleranceStrategy<CompletionStage<V>>) strategy, ctx);
-        return asyncSupport.fromCompletionStage(wrapper);
+        Invoker<Future<V>> wrapper = new StrategyInvoker<>(null, strategy, ctx);
+        return asyncSupport.fromFuture(wrapper);
     }
 
     @Override
@@ -272,7 +270,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             }
         }
 
-        private FaultToleranceImpl<?, ?, T> build(BuilderLazyDependencies lazyDependencies) {
+        private FaultToleranceImpl<?, T> build(BuilderLazyDependencies lazyDependencies) {
             Consumer<CircuitBreakerEvents.StateTransition> cbMaintenanceEventHandler = null;
             if (circuitBreakerBuilder != null && circuitBreakerBuilder.name != null) {
                 cbMaintenanceEventHandler = eagerDependencies.cbMaintenance()
@@ -298,14 +296,13 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             return isAsync ? buildAsync(lazyDependencies, eventHandlers) : buildSync(lazyDependencies, eventHandlers);
         }
 
-        private FaultToleranceImpl<T, T, T> buildSync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
+        private FaultToleranceImpl<T, T> buildSync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
             FaultToleranceStrategy<T> strategy = buildSyncStrategy(lazyDependencies);
             return new FaultToleranceImpl<>(strategy, null, eventHandlers, fallbackBuilder != null);
         }
 
-        private <V> FaultToleranceImpl<V, CompletionStage<V>, T> buildAsync(BuilderLazyDependencies lazyDependencies,
-                EventHandlers eventHandlers) {
-            FaultToleranceStrategy<CompletionStage<V>> strategy = buildAsyncStrategy(lazyDependencies);
+        private <V> FaultToleranceImpl<V, T> buildAsync(BuilderLazyDependencies lazyDependencies, EventHandlers eventHandlers) {
+            FaultToleranceStrategy<V> strategy = buildAsyncStrategy(lazyDependencies);
             AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(new Class[0], asyncType);
             return new FaultToleranceImpl<>(strategy, asyncSupport, eventHandlers, fallbackBuilder != null);
         }
@@ -314,10 +311,10 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             FaultToleranceStrategy<T> result = invocation();
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
-                result = bulkheadBuilder.queueingEnabled
-                        ? new SemaphoreThreadPoolBulkhead<>(result, description, bulkheadBuilder.limit,
-                                bulkheadBuilder.queueSize)
-                        : new SemaphoreBulkhead<>(result, description, bulkheadBuilder.limit);
+                result = new Bulkhead<>(result, description,
+                        bulkheadBuilder.limit,
+                        bulkheadBuilder.queueSize,
+                        bulkheadBuilder.virtualThreadQueueingEnabled);
             }
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
@@ -358,14 +355,18 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                         createResultDecision(retryBuilder.whenResultPredicate),
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn,
                                 retryBuilder.whenExceptionPredicate),
-                        retryBuilder.maxRetries, retryBuilder.maxDurationInMillis, () -> new ThreadSleepDelay(backoff.get()),
+                        retryBuilder.maxRetries, retryBuilder.maxDurationInMillis,
+                        () -> new ThreadSleepDelay(backoff.get()),
+                        () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
                         SystemStopwatch.INSTANCE,
                         retryBuilder.beforeRetry != null ? ctx -> retryBuilder.beforeRetry.accept(ctx.failure) : null);
             }
 
             // fallback is always enabled
             if (fallbackBuilder != null) {
-                Function<FailureContext, T> fallbackFunction = ctx -> fallbackBuilder.handler.apply(ctx.failure);
+                Function<FailureContext, Future<T>> fallbackFunction = ctx -> {
+                    return Future.from(() -> fallbackBuilder.handler.apply(ctx.failure));
+                };
                 result = new Fallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
                                 fallbackBuilder.whenPredicate));
@@ -380,27 +381,29 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             return result;
         }
 
-        private <V> FaultToleranceStrategy<CompletionStage<V>> buildAsyncStrategy(BuilderLazyDependencies lazyDependencies) {
-            FaultToleranceStrategy<CompletionStage<V>> result = invocation();
+        private <V> FaultToleranceStrategy<V> buildAsyncStrategy(BuilderLazyDependencies lazyDependencies) {
+            FaultToleranceStrategy<V> result = invocation();
 
             // thread offload is always enabled
             Executor executor = offloadToAnotherThread
                     ? (offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor())
                     : DirectExecutor.INSTANCE;
-            result = new CompletionStageExecution<>(result, executor);
+            result = new ThreadOffload<>(result, executor);
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
-                result = new CompletionStageThreadPoolBulkhead<>(result, description, bulkheadBuilder.limit,
-                        bulkheadBuilder.queueSize);
+                result = new Bulkhead<>(result, description,
+                        bulkheadBuilder.limit,
+                        bulkheadBuilder.queueSize,
+                        bulkheadBuilder.virtualThreadQueueingEnabled);
             }
 
             if (lazyDependencies.ftEnabled() && timeoutBuilder != null) {
-                result = new CompletionStageTimeout<>(result, description, timeoutBuilder.durationInMillis,
+                result = new Timeout<>(result, description, timeoutBuilder.durationInMillis,
                         lazyDependencies.timer());
             }
 
             if (lazyDependencies.ftEnabled() && rateLimitBuilder != null) {
-                result = new CompletionStageRateLimit<>(result, description,
+                result = new RateLimit<>(result, description,
                         rateLimitBuilder.maxInvocations,
                         rateLimitBuilder.timeWindowInMillis,
                         rateLimitBuilder.minSpacingInMillis,
@@ -409,7 +412,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             }
 
             if (lazyDependencies.ftEnabled() && circuitBreakerBuilder != null) {
-                result = new CompletionStageCircuitBreaker<>(result, description,
+                result = new CircuitBreaker<>(result, description,
                         createExceptionDecision(circuitBreakerBuilder.skipOn, circuitBreakerBuilder.failOn,
                                 circuitBreakerBuilder.whenPredicate),
                         circuitBreakerBuilder.delayInMillis,
@@ -428,11 +431,12 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             if (lazyDependencies.ftEnabled() && retryBuilder != null) {
                 Supplier<BackOff> backoff = prepareRetryBackoff(retryBuilder);
 
-                result = new CompletionStageRetry<>(result, description,
+                result = new Retry<>(result, description,
                         createResultDecision(retryBuilder.whenResultPredicate),
                         createExceptionDecision(retryBuilder.abortOn, retryBuilder.retryOn,
                                 retryBuilder.whenExceptionPredicate),
                         retryBuilder.maxRetries, retryBuilder.maxDurationInMillis,
+                        () -> new ThreadSleepDelay(backoff.get()),
                         () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
                         SystemStopwatch.INSTANCE,
                         retryBuilder.beforeRetry != null ? ctx -> retryBuilder.beforeRetry.accept(ctx.failure) : null);
@@ -445,10 +449,16 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                     throw new FaultToleranceException("Unknown async type: " + asyncType);
                 }
 
-                Function<FailureContext, CompletionStage<V>> fallbackFunction = ctx -> asyncSupport
-                        .fallbackResultToCompletionStage(fallbackBuilder.handler.apply(ctx.failure));
+                Function<FailureContext, Future<V>> fallbackFunction = ctx -> {
+                    try {
+                        return asyncSupport.toFuture(ConstantInvoker.of(
+                                fallbackBuilder.handler.apply(ctx.failure)));
+                    } catch (Exception e) {
+                        return Future.ofError(e);
+                    }
+                };
 
-                result = new CompletionStageFallback<>(result, description, fallbackFunction,
+                result = new Fallback<>(result, description, fallbackFunction,
                         createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
                                 fallbackBuilder.whenPredicate));
             }
@@ -456,7 +466,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             MetricsProvider metricsProvider = lazyDependencies.metricsProvider();
             if (metricsProvider.isEnabled()) {
                 MeteredOperation defaultOperation = buildMeteredOperation();
-                result = new DelegatingCompletionStageMetricsCollector<>(result, metricsProvider, defaultOperation);
+                result = new DelegatingMetricsCollector<>(result, metricsProvider, defaultOperation);
             }
 
             // thread offload is always enabled
@@ -527,7 +537,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             private int limit = 10;
             private int queueSize = 10;
-            private boolean queueingEnabled;
+            private boolean virtualThreadQueueingEnabled;
 
             private Runnable onAccepted;
             private Runnable onRejected;
@@ -535,7 +545,6 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             BulkheadBuilderImpl(BuilderImpl<T, R> parent) {
                 this.parent = parent;
-                this.queueingEnabled = parent.isAsync;
             }
 
             @Override
@@ -546,7 +555,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             @Override
             public BulkheadBuilder<T, R> queueSize(int value) {
-                if (!queueingEnabled) {
+                if (!parent.isAsync && !virtualThreadQueueingEnabled) {
                     throw new IllegalStateException("Bulkhead queue size may only be set for asynchronous invocations");
                 }
 
@@ -556,7 +565,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
 
             @Override
             public BulkheadBuilder<T, R> enableVirtualThreadsQueueing() {
-                this.queueingEnabled = true;
+                this.virtualThreadQueueingEnabled = true;
                 return this;
             }
 

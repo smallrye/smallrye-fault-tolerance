@@ -6,7 +6,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 
 /**
- * Async delay based on {@link Timer}. Its default executor is the timer's {@link Executor}.
+ * Asynchronous delay based on {@link Timer}. Its default executor is the timer's {@link Executor}.
  */
 public class TimerDelay implements AsyncDelay {
     private final BackOff backOff;

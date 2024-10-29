@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.core.retry;
 
-import io.smallrye.faulttolerance.core.InvocationContextEvent;
+import io.smallrye.faulttolerance.core.FaultToleranceEvent;
 
 public class RetryEvents {
     public enum Result {
@@ -10,11 +10,11 @@ public class RetryEvents {
         MAX_DURATION_REACHED,
     }
 
-    public enum Retried implements InvocationContextEvent {
+    public enum Retried implements FaultToleranceEvent {
         INSTANCE
     }
 
-    public enum Finished implements InvocationContextEvent {
+    public enum Finished implements FaultToleranceEvent {
         VALUE_RETURNED(Result.VALUE_RETURNED),
         EXCEPTION_NOT_RETRYABLE(Result.EXCEPTION_NOT_RETRYABLE),
         MAX_RETRIES_REACHED(Result.MAX_RETRIES_REACHED),
