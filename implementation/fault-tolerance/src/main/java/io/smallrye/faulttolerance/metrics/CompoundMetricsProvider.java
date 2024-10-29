@@ -24,15 +24,15 @@ import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 @Alternative
 @Priority(1)
 public class CompoundMetricsProvider implements MetricsProvider {
-    @Inject
-    @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
-    boolean metricsEnabled;
-
-    private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
+    private final boolean metricsEnabled;
 
     private final MetricsProvider[] providers;
 
-    CompoundMetricsProvider() {
+    private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
+
+    @Inject
+    CompoundMetricsProvider(
+            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled) {
         CDI<Object> cdi = CDI.current();
         List<Class<? extends MetricsProvider>> allProviders = List.of(MicroProfileMetricsProvider.class,
                 OpenTelemetryProvider.class, MicrometerProvider.class);
@@ -42,9 +42,10 @@ public class CompoundMetricsProvider implements MetricsProvider {
             try {
                 providers.add(cdi.select(clazz).get());
             } catch (Exception ignored) {
-                // either the bean does not exist, or some of its dependencies are not injectable
+                // either the bean does not exist, or some of its dependencies does not exist
             }
         }
+        this.metricsEnabled = providers.isEmpty() ? false : metricsEnabled;
         this.providers = providers.toArray(new MetricsProvider[0]);
     }
 
@@ -57,6 +58,10 @@ public class CompoundMetricsProvider implements MetricsProvider {
     public MetricsRecorder create(MeteredOperation operation) {
         if (metricsEnabled) {
             return cache.computeIfAbsent(operation.cacheKey(), ignored -> {
+                if (providers.length == 1) {
+                    return providers[0].create(operation);
+                }
+
                 MetricsRecorder[] recorders = new MetricsRecorder[providers.length];
                 for (int i = 0; i < providers.length; i++) {
                     recorders[i] = providers[i].create(operation);

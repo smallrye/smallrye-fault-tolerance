@@ -4,8 +4,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -22,26 +22,23 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicrometerProvider implements MetricsProvider {
-    @Inject
-    MeterRegistry registry;
+    private final boolean metricsEnabled;
 
-    @Inject
-    @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
-    boolean metricsEnabled;
-
-    @Inject
-    ExecutorHolder executorHolder;
+    private final MeterRegistry registry;
 
     private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    void init() {
-        if (!metricsEnabled) {
-            return;
-        }
+    @Inject
+    MicrometerProvider(
+            // lazy for `CompoundMetricsProvider`
+            Provider<MeterRegistry> registry,
+            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled,
+            ExecutorHolder executorHolder) {
+        this.metricsEnabled = metricsEnabled;
+        this.registry = registry.get();
 
         Timer timer = executorHolder.getTimer();
-        registry.gauge(MetricsConstants.TIMER_SCHEDULED, Collections.singletonList(Tag.of("id", "" + timer.getId())),
+        this.registry.gauge(MetricsConstants.TIMER_SCHEDULED, Collections.singletonList(Tag.of("id", "" + timer.getId())),
                 timer, Timer::countScheduledTasks);
     }
 

@@ -3,8 +3,8 @@ package io.smallrye.faulttolerance.metrics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -24,31 +24,27 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicroProfileMetricsProvider implements MetricsProvider {
-    @Inject
-    @RegistryType(type = MetricRegistry.Type.BASE)
-    MetricRegistry registry;
+    private final boolean metricsEnabled;
 
-    @Inject
-    @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
-    boolean metricsEnabled;
-
-    @Inject
-    ExecutorHolder executorHolder;
+    private final MetricRegistry registry;
 
     private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    void init() {
-        if (!metricsEnabled) {
-            return;
-        }
+    @Inject
+    MicroProfileMetricsProvider(
+            // lazy for `CompoundMetricsProvider`
+            @RegistryType(type = MetricRegistry.Type.BASE) Provider<MetricRegistry> registry,
+            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled,
+            ExecutorHolder executorHolder) {
+        this.metricsEnabled = metricsEnabled;
+        this.registry = registry.get();
 
         Metadata metadata = Metadata.builder()
                 .withName(MetricsConstants.TIMER_SCHEDULED)
                 .withUnit(MetricUnits.NONE)
                 .build();
         Timer timer = executorHolder.getTimer();
-        registry.gauge(metadata, timer, Timer::countScheduledTasks, new Tag("id", "" + timer.getId()));
+        this.registry.gauge(metadata, timer, Timer::countScheduledTasks, new Tag("id", "" + timer.getId()));
     }
 
     @Override

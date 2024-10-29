@@ -3,8 +3,8 @@ package io.smallrye.faulttolerance.metrics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -22,27 +22,24 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class OpenTelemetryProvider implements MetricsProvider {
-    @Inject
-    Meter meter;
+    private final boolean metricsEnabled;
 
-    @Inject
-    @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true")
-    boolean metricsEnabled;
-
-    @Inject
-    ExecutorHolder executorHolder;
+    private final Meter meter;
 
     private final Map<Object, MetricsRecorder> cache = new ConcurrentHashMap<>();
 
-    @PostConstruct
-    void init() {
-        if (!metricsEnabled) {
-            return;
-        }
+    @Inject
+    OpenTelemetryProvider(
+            // lazy for `CompoundMetricsProvider`
+            Provider<Meter> meter,
+            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled,
+            ExecutorHolder executorHolder) {
+        this.metricsEnabled = metricsEnabled;
+        this.meter = meter.get();
 
         Timer timer = executorHolder.getTimer();
         Attributes attributes = Attributes.of(AttributeKey.stringKey("id"), "" + timer.getId());
-        meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
+        this.meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
                 .buildWithCallback(m -> m.record(timer.countScheduledTasks(), attributes));
     }
 
