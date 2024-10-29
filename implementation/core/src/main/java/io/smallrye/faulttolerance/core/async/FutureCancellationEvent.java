@@ -1,8 +1,8 @@
 package io.smallrye.faulttolerance.core.async;
 
-import io.smallrye.faulttolerance.core.InvocationContextEvent;
+import io.smallrye.faulttolerance.core.FaultToleranceEvent;
 
-public enum FutureCancellationEvent implements InvocationContextEvent {
+public enum FutureCancellationEvent implements FaultToleranceEvent {
     INTERRUPTIBLE(true),
     NONINTERRUPTIBLE(false);
 

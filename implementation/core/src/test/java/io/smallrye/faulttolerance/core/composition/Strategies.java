@@ -1,8 +1,10 @@
 package io.smallrye.faulttolerance.core.composition;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
+import io.smallrye.faulttolerance.core.retry.AsyncDelay;
 import io.smallrye.faulttolerance.core.retry.Retry;
 import io.smallrye.faulttolerance.core.retry.SyncDelay;
 import io.smallrye.faulttolerance.core.stopwatch.TestStopwatch;
@@ -17,13 +19,14 @@ import io.smallrye.faulttolerance.core.util.ResultDecision;
  */
 final class Strategies {
     static Fallback<String> fallback(FaultToleranceStrategy<String> delegate) {
-        return new Fallback<>(delegate, "fallback", ctx -> "fallback after " + ctx.failure.getClass().getSimpleName(),
+        return new Fallback<>(delegate, "fallback",
+                ctx -> Future.of("fallback after " + ctx.failure.getClass().getSimpleName()),
                 ExceptionDecision.ALWAYS_FAILURE);
     }
 
     static <V> Retry<V> retry(FaultToleranceStrategy<V> delegate) {
         return new Retry<>(delegate, "retry", ResultDecision.ALWAYS_EXPECTED, ExceptionDecision.ALWAYS_FAILURE,
-                10, 0, SyncDelay.NONE, new TestStopwatch(), null);
+                10, 0, SyncDelay.NONE, AsyncDelay.NONE, new TestStopwatch(), null);
     }
 
     static <V> CircuitBreaker<V> circuitBreaker(FaultToleranceStrategy<V> delegate) {

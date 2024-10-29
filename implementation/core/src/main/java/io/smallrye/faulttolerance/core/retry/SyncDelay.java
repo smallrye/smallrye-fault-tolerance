@@ -8,6 +8,6 @@ import java.util.function.Supplier;
 public interface SyncDelay {
     void sleep(Throwable cause) throws InterruptedException;
 
-    Supplier<SyncDelay> NONE = () -> (cause) -> {
+    Supplier<SyncDelay> NONE = () -> cause -> {
     };
 }

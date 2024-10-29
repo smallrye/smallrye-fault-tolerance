@@ -8,14 +8,14 @@ import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 
 public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
-    private final Supplier<FaultToleranceImpl<?, ?, T>> builder;
+    private final Supplier<FaultToleranceImpl<?, T>> builder;
     private final Class<?> asyncType;
 
     private final ReentrantLock lock = new ReentrantLock();
 
-    private volatile FaultToleranceImpl<?, ?, T> instance;
+    private volatile FaultToleranceImpl<?, T> instance;
 
-    LazyFaultTolerance(Supplier<FaultToleranceImpl<?, ?, T>> builder, Class<?> asyncType) {
+    LazyFaultTolerance(Supplier<FaultToleranceImpl<?, T>> builder, Class<?> asyncType) {
         this.builder = builder;
         this.asyncType = asyncType;
     }
@@ -55,8 +55,8 @@ public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
         return instance().castAsync(asyncType);
     }
 
-    private FaultToleranceImpl<?, ?, T> instance() {
-        FaultToleranceImpl<?, ?, T> instance = this.instance;
+    private FaultToleranceImpl<?, T> instance() {
+        FaultToleranceImpl<?, T> instance = this.instance;
         if (instance == null) {
             lock.lock();
             try {

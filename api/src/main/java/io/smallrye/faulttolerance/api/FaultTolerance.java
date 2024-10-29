@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -53,7 +52,7 @@ import io.smallrye.common.annotation.Experimental;
  * Tolerance and SmallRye Fault Tolerance. It shares the set of fault tolerance strategies, their invocation order
  * and behavior, their configuration properties, etc. Notable differences are:
  * <ul>
- * <li>asynchronous actions of type {@link Future} are not supported;</li>
+ * <li>asynchronous actions of type {@link java.util.concurrent.Future} are not supported;</li>
  * <li>the fallback, circuit breaker and retry strategies always inspect the cause chain of exceptions,
  * following the behavior of SmallRye Fault Tolerance in the non-compatible mode.</li>
  * </ul>
@@ -268,7 +267,7 @@ public interface FaultTolerance<T> {
     interface Builder<T, R> {
         /**
          * Assigns a description to the resulting set of configured fault tolerance strategies. The description
-         * is used in logging messages and exception messages, and also as an identifier for metrics .
+         * is used in logging messages and exception messages, and also as an identifier for metrics.
          * <p>
          * The description may be an arbitrary string. Duplicates are permitted.
          * <p>

@@ -2,32 +2,34 @@ package io.smallrye.faulttolerance.core.util;
 
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
 
 public final class TestThread<V> extends Thread {
-    private final FaultToleranceStrategy<V> invocation;
+    private final FaultToleranceStrategy<V> strategy;
+    private final boolean isAsync;
 
     private volatile V result;
     private volatile Throwable exception;
 
-    public static <V> TestThread<V> runOnTestThread(FaultToleranceStrategy<V> invocation) {
-        TestThread<V> thread = new TestThread<>(invocation);
+    public static <V> TestThread<V> runOnTestThread(FaultToleranceStrategy<V> strategy, boolean isAsync) {
+        TestThread<V> thread = new TestThread<>(strategy, isAsync);
         thread.start();
         return thread;
     }
 
-    private TestThread(FaultToleranceStrategy<V> invocation) {
+    private TestThread(FaultToleranceStrategy<V> strategy, boolean isAsync) {
         super("TestThread");
-        this.invocation = invocation;
+        this.strategy = strategy;
+        this.isAsync = isAsync;
     }
 
     @Override
     public void run() {
         try {
-            // `TestInvocation`s never call `ctx.call()`, so we can safely pass `null`
-            // (actually `TestInvocation`s are used instead of the `Invocation` to enable fine-grained testing)
-            result = invocation.apply(new InvocationContext<>(null));
+            // `TestInvocation` never calls `ctx.call()`, so we can safely pass `null`
+            // (`TestInvocation` is used instead of `Invocation` to enable fine-grained testing)
+            result = strategy.apply(new FaultToleranceContext<>(null, isAsync)).awaitBlocking();
         } catch (Throwable e) {
             exception = e;
         }

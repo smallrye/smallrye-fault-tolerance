@@ -14,6 +14,14 @@
   Only required during {smallrye-fault-tolerance} build.
 * `implementation/context-propagation`: Optional integration with MicroProfile Context Propagation.
   See xref:integration/context-propagation.adoc[Context Propagation integration].
+* `implementation/kotlin`: Optional integration with Kotlin.
+  See xref:integration/kotlin.adoc[Kotlin Integration Concerns].
+* `implementation/mutiny`: Optional integration with Mutiny.
+  See xref:integration/async-types.adoc[Additional Asynchronous Types Integration Concerns].
+* `implementation/rxjava3`: Optional integration with RxJava 3.
+  See xref:integration/async-types.adoc[Additional Asynchronous Types Integration Concerns].
+* `implementation/standalone`: Standalone implementation of the {smallrye-fault-tolerance} programmatic API.
+  See xref:integration/programmatic-api.adoc[Programmatic API Integration Concerns].
 * `implementation/tracing-propagation`: Optional integration between MicroProfile Context Propagation and OpenTracing.
   See xref:integration/opentracing.adoc[OpenTracing integration].
 * `implementation/vertx`: Optional integration of the Vert.x event loop.

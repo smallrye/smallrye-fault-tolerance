@@ -6,8 +6,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
-import io.smallrye.faulttolerance.core.InvocationContext;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.bulkhead.BulkheadEvents;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.fallback.FallbackEvents;
@@ -16,14 +18,14 @@ import io.smallrye.faulttolerance.core.retry.RetryEvents;
 import io.smallrye.faulttolerance.core.timeout.TimeoutEvents;
 
 public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
-    final FaultToleranceStrategy<V> delegate;
-    final MetricsRecorder metrics;
-    final boolean isAsync;
-    final boolean hasBulkhead;
-    final boolean hasCircuitBreaker;
-    final boolean hasRateLimit;
-    final boolean hasRetry;
-    final boolean hasTimeout;
+    private final FaultToleranceStrategy<V> delegate;
+    private final MetricsRecorder metrics;
+    private final boolean isAsync;
+    private final boolean hasBulkhead;
+    private final boolean hasCircuitBreaker;
+    private final boolean hasRateLimit;
+    private final boolean hasRetry;
+    private final boolean hasTimeout;
 
     // per-invocation metric values are stored in local variables in the `registerMetrics` method
     // shared metric values (for stateful fault tolerance strategies) are stored in fields below
@@ -84,29 +86,37 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(InvocationContext<V> ctx) throws Exception {
+    public Future<V> apply(FaultToleranceContext<V> ctx) {
         LOG.trace("MetricsCollector started");
         try {
-            return doApply(ctx);
+            registerMetrics(ctx);
+
+            Completer<V> result = Completer.create();
+
+            Future<V> originalResult;
+            try {
+                originalResult = delegate.apply(ctx);
+            } catch (Exception e) {
+                originalResult = Future.ofError(e);
+            }
+
+            originalResult.then((value, error) -> {
+                if (error == null) {
+                    ctx.fireEvent(GeneralMetricsEvents.ExecutionFinished.VALUE_RETURNED);
+                    result.complete(value);
+                } else {
+                    ctx.fireEvent(GeneralMetricsEvents.ExecutionFinished.EXCEPTION_THROWN);
+                    result.completeWithError(error);
+                }
+            });
+
+            return result.future();
         } finally {
             LOG.trace("MetricsCollector finished");
         }
     }
 
-    private V doApply(InvocationContext<V> ctx) throws Exception {
-        registerMetrics(ctx);
-
-        try {
-            V result = delegate.apply(ctx);
-            ctx.fireEvent(GeneralMetricsEvents.ExecutionFinished.VALUE_RETURNED);
-            return result;
-        } catch (Exception e) {
-            ctx.fireEvent(GeneralMetricsEvents.ExecutionFinished.EXCEPTION_THROWN);
-            throw e;
-        }
-    }
-
-    protected final void registerMetrics(InvocationContext<V> ctx) {
+    private void registerMetrics(FaultToleranceContext<V> ctx) {
         // general + fallback
 
         AtomicBoolean fallbackDefined = new AtomicBoolean(false);

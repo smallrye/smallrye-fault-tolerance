@@ -1,7 +1,5 @@
 package io.smallrye.faulttolerance;
 
-import java.util.concurrent.Future;
-
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -42,7 +40,7 @@ public class SpecCompatibility {
     public boolean isOperationPseudoAsynchronous(FaultToleranceOperation operation) {
         // we don't have a non-compatible mode for methods that return `Future`,
         // we actively discourage using them
-        boolean returnTypeMatches = Future.class.equals(operation.getReturnType());
+        boolean returnTypeMatches = java.util.concurrent.Future.class.equals(operation.getReturnType());
         return returnTypeMatches && operation.hasAsynchronous();
     }
 

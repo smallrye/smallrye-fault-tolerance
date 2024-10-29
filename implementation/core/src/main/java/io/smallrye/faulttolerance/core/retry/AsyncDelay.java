@@ -10,15 +10,6 @@ import java.util.function.Supplier;
  */
 public interface AsyncDelay {
     /**
-     * Runs the {@code task} after delay on an implementation-defined thread.
-     * <p>
-     * Equivalent to {@code after(task, null)}.
-     */
-    default void after(Throwable cause, Runnable task) {
-        after(cause, task, null);
-    }
-
-    /**
      * Runs the {@code task} after delay on given {@link Executor}.
      * If given {@code executor} is {@code null}, the task is executed on an implementation-defined thread.
      */

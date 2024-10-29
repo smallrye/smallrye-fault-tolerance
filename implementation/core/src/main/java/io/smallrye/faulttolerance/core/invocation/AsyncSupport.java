@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.core.invocation;
 
-import java.util.concurrent.CompletionStage;
+import io.smallrye.faulttolerance.core.Future;
 
 // V = value type, e.g. String
 // AT = async type that eventually produces V, e.g. CompletionStage<String> or Uni<String>
@@ -13,13 +13,7 @@ public interface AsyncSupport<V, AT> {
 
     AT createComplete(V value);
 
-    CompletionStage<V> toCompletionStage(Invoker<AT> invoker) throws Exception;
+    Future<V> toFuture(Invoker<AT> invoker);
 
-    AT fromCompletionStage(Invoker<CompletionStage<V>> invoker) throws Exception;
-
-    // ---
-
-    // only used for converting the return value of `FallbackHandler.handle()`,
-    // do not use elsewhere!
-    CompletionStage<V> fallbackResultToCompletionStage(AT asyncValue);
+    AT fromFuture(Invoker<Future<V>> invoker);
 }

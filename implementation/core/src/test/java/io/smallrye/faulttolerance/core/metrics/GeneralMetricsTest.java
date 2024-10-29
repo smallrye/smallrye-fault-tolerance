@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.metrics;
 
+import static io.smallrye.faulttolerance.core.FaultToleranceContextUtil.sync;
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9,18 +10,18 @@ import java.util.function.LongSupplier;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.core.InvocationContext;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 // TODO should have a test for all metrics
 public class GeneralMetricsTest {
     @Test
-    public void successfulInvocation() throws Exception {
+    public void successfulInvocation() throws Throwable {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
         MetricsCollector<String> collector = new MetricsCollector<>(invocation(), metrics, new MockMeteredOperation());
-        assertThat(collector.apply(new InvocationContext<>(() -> "foobar"))).isEqualTo("foobar");
+        assertThat(collector.apply(sync(() -> "foobar")).awaitBlocking())
+                .isEqualTo("foobar");
 
         assertThat(metrics.valueReturned).isEqualTo(1);
         assertThat(metrics.exceptionThrown).isEqualTo(0);
@@ -31,7 +32,7 @@ public class GeneralMetricsTest {
         MockMetricsRecorder metrics = new MockMetricsRecorder();
 
         MetricsCollector<Void> collector = new MetricsCollector<>(invocation(), metrics, new MockMeteredOperation());
-        assertThatThrownBy(() -> collector.apply(new InvocationContext<>(TestException::doThrow)))
+        assertThatThrownBy(collector.apply(sync(TestException::doThrow))::awaitBlocking)
                 .isExactlyInstanceOf(TestException.class);
 
         assertThat(metrics.valueReturned).isEqualTo(0);

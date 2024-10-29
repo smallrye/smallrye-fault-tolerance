@@ -24,11 +24,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -57,34 +54,30 @@ import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.NeverOnResult;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FailureContext;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
+import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
-import io.smallrye.faulttolerance.core.async.CompletionStageExecution;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
-import io.smallrye.faulttolerance.core.bulkhead.CompletionStageThreadPoolBulkhead;
-import io.smallrye.faulttolerance.core.bulkhead.FutureThreadPoolBulkhead;
-import io.smallrye.faulttolerance.core.bulkhead.SemaphoreBulkhead;
+import io.smallrye.faulttolerance.core.async.ThreadOffload;
+import io.smallrye.faulttolerance.core.bulkhead.Bulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
-import io.smallrye.faulttolerance.core.circuit.breaker.CompletionStageCircuitBreaker;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
-import io.smallrye.faulttolerance.core.fallback.AsyncFallbackFunction;
-import io.smallrye.faulttolerance.core.fallback.CompletionStageFallback;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
+import io.smallrye.faulttolerance.core.fallback.ThreadOffloadFallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
+import io.smallrye.faulttolerance.core.invocation.ConstantInvoker;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
-import io.smallrye.faulttolerance.core.metrics.CompletionStageMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
-import io.smallrye.faulttolerance.core.rate.limit.CompletionStageRateLimit;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
-import io.smallrye.faulttolerance.core.retry.CompletionStageRetry;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
 import io.smallrye.faulttolerance.core.retry.CustomBackOff;
 import io.smallrye.faulttolerance.core.retry.ExponentialBackOff;
@@ -95,11 +88,9 @@ import io.smallrye.faulttolerance.core.retry.Retry;
 import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
 import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
-import io.smallrye.faulttolerance.core.timeout.AsyncTimeout;
-import io.smallrye.faulttolerance.core.timeout.CompletionStageTimeout;
+import io.smallrye.faulttolerance.core.timeout.FutureTimeout;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.timer.Timer;
-import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.PredicateBasedResultDecision;
@@ -181,7 +172,7 @@ public class FaultToleranceInterceptor {
     }
 
     @AroundInvoke
-    public Object intercept(InvocationContext interceptionContext) throws Exception {
+    public Object intercept(InvocationContext interceptionContext) throws Throwable {
         Method method = interceptionContext.getMethod();
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
         InterceptionPoint point = new InterceptionPoint(beanClass, interceptionContext.getMethod());
@@ -238,57 +229,60 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private <V, AT> AT asyncFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
+    private <V, AT> AT asyncFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
             InterceptionPoint point) {
         AsyncSupport<V, AT> asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
         if (asyncSupport == null) {
             throw new FaultToleranceException("Unknown async invocation: " + operation);
         }
 
-        FaultToleranceStrategy<CompletionStage<V>> strategy = cache.getStrategy(point,
-                () -> prepareAsyncStrategy(operation, point));
+        FaultToleranceStrategy<V> strategy = cache.getStrategy(point, () -> prepareAsyncStrategy(operation, point));
 
-        Invoker<AT> invoker = new InterceptionInvoker<>(interceptionContext);
+        Invoker<AT> invoker = new InterceptionInvoker<>(invocationContext);
 
-        io.smallrye.faulttolerance.core.InvocationContext<CompletionStage<V>> ctx = invocationContext(
-                () -> asyncSupport.toCompletionStage(invoker), interceptionContext, operation);
+        FaultToleranceContext<V> ctx = faultToleranceContext(() -> asyncSupport.toFuture(invoker), invocationContext,
+                operation);
 
-        Invoker<CompletionStage<V>> wrapper = new StrategyInvoker<>(interceptionContext.getParameters(),
-                strategy, ctx);
+        Invoker<Future<V>> wrapper = new StrategyInvoker<>(invocationContext.getParameters(), strategy, ctx);
+        return asyncSupport.fromFuture(wrapper);
+    }
+
+    private <V> V syncFlow(FaultToleranceOperation operation, InvocationContext invocationContext, InterceptionPoint point)
+            throws Throwable {
+        FaultToleranceStrategy<V> strategy = cache.getStrategy(point, () -> prepareSyncStrategy(operation, point));
+
+        FaultToleranceContext<V> ctx = faultToleranceContext(
+                () -> Future.from(() -> (V) invocationContext.proceed()),
+                invocationContext, operation);
+
+        return strategy.apply(ctx).awaitBlocking();
+    }
+
+    private <V> java.util.concurrent.Future<V> futureFlow(FaultToleranceOperation operation,
+            InvocationContext invocationContext, InterceptionPoint point) throws Throwable {
+        FaultToleranceStrategy<java.util.concurrent.Future<V>> strategy = cache.getStrategy(point,
+                () -> prepareFutureStrategy(operation, point));
+
+        FaultToleranceContext<java.util.concurrent.Future<V>> ctx = faultToleranceContext(
+                () -> Future.from(() -> (java.util.concurrent.Future<V>) invocationContext.proceed()),
+                invocationContext, operation);
+
         try {
-            return asyncSupport.fromCompletionStage(wrapper);
-        } catch (Exception e) {
-            throw sneakyThrow(e);
+            // blocking is OK here because the first strategy in the chain, `FutureExecution`,
+            // returns an immediately complete `Future` that contains the `java.util.concurrent.Future`
+            return strategy.apply(ctx).awaitBlocking();
+        } catch (Throwable e) {
+            throw new ExecutionException(e);
         }
     }
 
-    private <T> T syncFlow(FaultToleranceOperation operation, InvocationContext interceptionContext, InterceptionPoint point)
-            throws Exception {
-        FaultToleranceStrategy<T> strategy = cache.getStrategy(point, () -> prepareSyncStrategy(operation, point));
+    private <T> FaultToleranceContext<T> faultToleranceContext(Supplier<Future<T>> callable,
+            InvocationContext invocationContext, FaultToleranceOperation operation) {
 
-        io.smallrye.faulttolerance.core.InvocationContext<T> ctx = invocationContext(
-                () -> (T) interceptionContext.proceed(), interceptionContext, operation);
+        FaultToleranceContext<T> result = new FaultToleranceContext<>(callable,
+                specCompatibility.isOperationTrulyAsynchronous(operation));
 
-        return strategy.apply(ctx);
-    }
-
-    private <T> Future<T> futureFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
-            InterceptionPoint point) throws Exception {
-        FaultToleranceStrategy<Future<T>> strategy = cache.getStrategy(point, () -> prepareFutureStrategy(operation, point));
-
-        io.smallrye.faulttolerance.core.InvocationContext<Future<T>> ctx = invocationContext(
-                () -> (Future<T>) interceptionContext.proceed(), interceptionContext, operation);
-
-        return strategy.apply(ctx);
-    }
-
-    private <T> io.smallrye.faulttolerance.core.InvocationContext<T> invocationContext(Callable<T> callable,
-            InvocationContext interceptionContext, FaultToleranceOperation operation) {
-
-        io.smallrye.faulttolerance.core.InvocationContext<T> result = new io.smallrye.faulttolerance.core.InvocationContext<>(
-                callable);
-
-        result.set(InvocationContext.class, interceptionContext);
+        result.set(InvocationContext.class, invocationContext);
 
         if (operation.hasCircuitBreaker() && operation.hasCircuitBreakerName()) {
             result.registerEventHandler(CircuitBreakerEvents.StateTransition.class,
@@ -298,28 +292,30 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    private <T> FaultToleranceStrategy<CompletionStage<T>> prepareAsyncStrategy(FaultToleranceOperation operation,
-            InterceptionPoint point) {
-        FaultToleranceStrategy<CompletionStage<T>> result = invocation();
+    private <T> FaultToleranceStrategy<T> prepareAsyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
+        FaultToleranceStrategy<T> result = invocation();
 
         result = new RequestScopeActivator<>(result, requestContextController);
 
-        Executor executor = operation.isThreadOffloadRequired() ? asyncExecutor : DirectExecutor.INSTANCE;
-        result = new CompletionStageExecution<>(result, executor);
+        if (operation.isThreadOffloadRequired()) {
+            result = new ThreadOffload<>(result, asyncExecutor);
+        }
 
         if (operation.hasBulkhead()) {
-            int size = operation.getBulkhead().value();
-            int queueSize = operation.getBulkhead().waitingTaskQueue();
-            result = new CompletionStageThreadPoolBulkhead<>(result, point.toString(), size, queueSize);
+            result = new Bulkhead<>(result, point.toString(),
+                    operation.getBulkhead().value(),
+                    operation.getBulkhead().waitingTaskQueue(),
+                    false);
         }
 
         if (operation.hasTimeout()) {
-            long timeoutMs = timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new CompletionStageTimeout<>(result, point.toString(), timeoutMs, timer);
+            result = new Timeout<>(result, point.toString(),
+                    timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit()),
+                    timer);
         }
 
         if (operation.hasRateLimit()) {
-            result = new CompletionStageRateLimit<>(result, point.toString(),
+            result = new RateLimit<>(result, point.toString(),
                     operation.getRateLimit().value(),
                     timeInMillis(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
                     timeInMillis(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
@@ -328,10 +324,9 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasCircuitBreaker()) {
-            long delayInMillis = timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
-            result = new CompletionStageCircuitBreaker<>(result, point.toString(),
+            result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
-                    delayInMillis,
+                    timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit()),
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
@@ -345,31 +340,29 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            long maxDurationMs = timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
-
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
-            result = new CompletionStageRetry<>(result, point.toString(),
+            result = new Retry<>(result, point.toString(),
                     createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
                     createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
                             operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
-                    maxDurationMs,
+                    timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit()),
+                    () -> new ThreadSleepDelay(backoff.get()),
                     () -> new TimerDelay(backoff.get(), timer),
                     SystemStopwatch.INSTANCE,
                     operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
 
         if (operation.hasFallback()) {
-            result = new CompletionStageFallback<>(result, point.toString(),
+            result = new Fallback<>(result, point.toString(),
                     prepareFallbackFunction(point, operation),
                     createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
         }
 
         if (metricsProvider.isEnabled()) {
             MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
-            result = new CompletionStageMetricsCollector<>(result, metricsProvider.create(meteredOperation),
-                    meteredOperation);
+            result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
         if (!operation.isThreadOffloadRequired()) {
@@ -383,12 +376,15 @@ public class FaultToleranceInterceptor {
         FaultToleranceStrategy<T> result = invocation();
 
         if (operation.hasBulkhead()) {
-            result = new SemaphoreBulkhead<>(result, point.toString(), operation.getBulkhead().value());
+            result = new Bulkhead<>(result, point.toString(),
+                    operation.getBulkhead().value(),
+                    operation.getBulkhead().waitingTaskQueue());
         }
 
         if (operation.hasTimeout()) {
-            long timeoutMs = timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit());
-            result = new Timeout<>(result, point.toString(), timeoutMs, timer);
+            result = new Timeout<>(result, point.toString(),
+                    timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit()),
+                    timer);
         }
 
         if (operation.hasRateLimit()) {
@@ -401,10 +397,9 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasCircuitBreaker()) {
-            long delayInMillis = timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
-                    delayInMillis,
+                    timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit()),
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
@@ -418,8 +413,6 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            long maxDurationMs = timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
-
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new Retry<>(result, point.toString(),
@@ -427,8 +420,9 @@ public class FaultToleranceInterceptor {
                     createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
                             operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
-                    maxDurationMs,
+                    timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit()),
                     () -> new ThreadSleepDelay(backoff.get()),
+                    () -> new TimerDelay(backoff.get(), timer),
                     SystemStopwatch.INSTANCE,
                     operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
@@ -447,22 +441,24 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    private <T> FaultToleranceStrategy<Future<T>> prepareFutureStrategy(FaultToleranceOperation operation,
+    private <T> FaultToleranceStrategy<java.util.concurrent.Future<T>> prepareFutureStrategy(FaultToleranceOperation operation,
             InterceptionPoint point) {
-        FaultToleranceStrategy<Future<T>> result = invocation();
+        FaultToleranceStrategy<java.util.concurrent.Future<T>> result = invocation();
 
         result = new RequestScopeActivator<>(result, requestContextController);
 
         if (operation.hasBulkhead()) {
-            int size = operation.getBulkhead().value();
-            int queueSize = operation.getBulkhead().waitingTaskQueue();
-            result = new FutureThreadPoolBulkhead<>(result, point.toString(), size, queueSize);
+            result = new Bulkhead<>(result, point.toString(),
+                    operation.getBulkhead().value(),
+                    operation.getBulkhead().waitingTaskQueue(),
+                    true);
         }
 
         if (operation.hasTimeout()) {
-            long timeoutMs = timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit());
-            Timeout<Future<T>> timeout = new Timeout<>(result, point.toString(), timeoutMs, timer);
-            result = new AsyncTimeout<>(timeout, asyncExecutor);
+            Timeout<java.util.concurrent.Future<T>> timeout = new Timeout<>(result, point.toString(),
+                    timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit()),
+                    timer);
+            result = new FutureTimeout<>(timeout, asyncExecutor);
         }
 
         if (operation.hasRateLimit()) {
@@ -475,10 +471,9 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasCircuitBreaker()) {
-            long delayInMillis = timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit());
             result = new CircuitBreaker<>(result, point.toString(),
                     createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
-                    delayInMillis,
+                    timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit()),
                     operation.getCircuitBreaker().requestVolumeThreshold(),
                     operation.getCircuitBreaker().failureRatio(),
                     operation.getCircuitBreaker().successThreshold(),
@@ -492,8 +487,6 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            long maxDurationMs = timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit());
-
             Supplier<BackOff> backoff = prepareRetryBackoff(operation);
 
             result = new Retry<>(result, point.toString(),
@@ -501,8 +494,9 @@ public class FaultToleranceInterceptor {
                     createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
                             operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
-                    maxDurationMs,
+                    timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit()),
                     () -> new ThreadSleepDelay(backoff.get()),
+                    () -> new TimerDelay(backoff.get(), timer),
                     SystemStopwatch.INSTANCE,
                     operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
@@ -555,44 +549,54 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private <V> Function<FailureContext, V> prepareFallbackFunction(InterceptionPoint point,
-            FaultToleranceOperation operation) {
-        AsyncSupport asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
+    // V = value type, e.g. String
+    // T = result type, e.g. String or CompletionStage<String> or Uni<String>
+    //
+    // in synchronous scenario, V = T
+    // in asynchronous scenario, T is an async type that eventually produces V
+    private <V, T> Function<FailureContext, Future<V>> prepareFallbackFunction(
+            InterceptionPoint point, FaultToleranceOperation operation) {
+        AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
 
         String fallbackMethodName = operation.getFallback().fallbackMethod();
         FallbackMethodCandidates candidates = !"".equals(fallbackMethodName)
                 ? cache.getFallbackMethodCandidates(point, operation)
                 : null;
 
-        Function<FailureContext, V> fallbackFunction;
+        Function<FailureContext, Future<V>> fallbackFunction;
 
         if (candidates != null) {
             fallbackFunction = ctx -> {
                 FallbackMethod fallbackMethod = candidates.select(ctx.failure.getClass());
                 if (fallbackMethod == null) {
-                    throw sneakyThrow(ctx.failure);
+                    return Future.ofError(ctx.failure);
                 }
 
                 try {
-                    Invoker<?> invoker = fallbackMethod.createInvoker(ctx);
-                    return asyncSupport == null ? (V) invoker.proceed() : (V) asyncSupport.toCompletionStage(invoker);
+                    Invoker<T> invoker = fallbackMethod.createInvoker(ctx);
+                    return asyncSupport == null
+                            ? Future.of((V) invoker.proceed())
+                            : (Future<V>) asyncSupport.toFuture(invoker);
                 } catch (InvocationTargetException e) {
-                    throw sneakyThrow(e.getCause());
-                } catch (Throwable e) {
-                    throw new FaultToleranceException("Error during fallback method invocation", e);
+                    return Future.ofError(e.getCause());
+                } catch (Exception e) {
+                    return Future.ofError(new FaultToleranceException("Error during fallback method invocation", e));
                 }
             };
         } else {
-            FallbackHandler<V> fallbackHandler = fallbackHandlerProvider.get(operation);
+            FallbackHandler<T> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
                 fallbackFunction = ctx -> {
                     ExecutionContext executionContext = new ExecutionContextImpl(
-                            ctx.invocationContext.get(InvocationContext.class), ctx.failure);
-                    V result = fallbackHandler.handle(executionContext);
-                    if (asyncSupport != null) {
-                        result = (V) asyncSupport.fallbackResultToCompletionStage(result);
+                            ctx.context.get(InvocationContext.class), ctx.failure);
+                    try {
+                        T result = fallbackHandler.handle(executionContext);
+                        return asyncSupport == null
+                                ? Future.of((V) result)
+                                : asyncSupport.toFuture(ConstantInvoker.of(result));
+                    } catch (Exception e) {
+                        return Future.ofError(e);
                     }
-                    return result;
                 };
             } else {
                 throw new FaultToleranceException("Could not obtain fallback handler for " + point);
@@ -600,7 +604,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (specCompatibility.isOperationTrulyAsynchronous(operation) && operation.isThreadOffloadRequired()) {
-            fallbackFunction = new AsyncFallbackFunction(fallbackFunction, asyncExecutor);
+            fallbackFunction = new ThreadOffloadFallbackFunction<>(fallbackFunction, asyncExecutor);
         }
 
         return fallbackFunction;
@@ -629,7 +633,7 @@ public class FaultToleranceInterceptor {
             if (beforeRetryHandler != null) {
                 beforeRetryFunction = ctx -> {
                     ExecutionContext executionContext = new ExecutionContextImpl(
-                            ctx.invocationContext.get(InvocationContext.class), ctx.failure);
+                            ctx.context.get(InvocationContext.class), ctx.failure);
                     beforeRetryHandler.handle(executionContext);
                 };
             } else {

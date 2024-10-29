@@ -6,7 +6,7 @@ import java.util.concurrent.Callable;
 
 /**
  * A "sentinel" fault tolerance strategy that does no processing, it only invokes the guarded {@link Callable}.
- * This is supposed to be used as the last fault tolerance stragegy in a chain.
+ * This is supposed to be used as the last fault tolerance strategy in a chain.
  * <p>
  * There's only one instance of this class, accessible using {@link #invocation()}.
  */
@@ -23,10 +23,12 @@ public final class Invocation<V> implements FaultToleranceStrategy<V> {
     }
 
     @Override
-    public V apply(InvocationContext<V> ctx) throws Exception {
+    public Future<V> apply(FaultToleranceContext<V> ctx) {
         LOG.trace("Guarded method invocation started");
         try {
-            return ctx.call();
+            return ctx.get();
+        } catch (Exception e) {
+            return Future.ofError(e);
         } finally {
             LOG.trace("Guarded method invocation finished");
         }

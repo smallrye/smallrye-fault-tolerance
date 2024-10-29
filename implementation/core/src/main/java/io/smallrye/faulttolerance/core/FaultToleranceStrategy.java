@@ -10,7 +10,7 @@ import java.util.concurrent.Callable;
  * just pass it down the chain.
  * Usually, the last strategy will be {@link Invocation}.
  * <p>
- * The {@code Callable}s are wrapped in an {@link InvocationContext}, which also provides support for out-of-band
+ * The {@code Callable}s are wrapped in an {@link FaultToleranceContext}, which also provides support for out-of-band
  * communication between fault tolerance strategies in a single chain.
  * <p>
  * The strategies must be thread-safe, as they are expected to be used simultaneously from multiple threads.
@@ -22,11 +22,10 @@ import java.util.concurrent.Callable;
 public interface FaultToleranceStrategy<V> {
     /**
      * Apply the fault tolerance strategy around the target {@link Callable}.
-     * The {@code Callable} is wrapped in an {@link InvocationContext}.
+     * The {@code Callable} is wrapped in an {@link FaultToleranceContext}.
      *
      * @param ctx the {@code InvocationContext} wrapping the {@code Callable} guarded by this fault tolerance strategy
      * @return result computed by the target {@code Callable}
-     * @throws Exception if result couldn't be computed
      */
-    V apply(InvocationContext<V> ctx) throws Exception;
+    Future<V> apply(FaultToleranceContext<V> ctx);
 }
