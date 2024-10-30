@@ -87,7 +87,7 @@ public class CompletionStageRetry<V> extends Retry<CompletionStage<V>> {
             }
         }
 
-        if (beforeRetry != null) {
+        if (beforeRetry != null && attempt > 0) {
             try {
                 beforeRetry.accept(new FailureContext(lastFailure, ctx));
             } catch (Exception e) {
