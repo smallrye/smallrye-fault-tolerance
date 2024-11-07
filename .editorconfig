@@ -9,3 +9,6 @@ indent_size = 4
 trim_trailing_whitespace = true
 end_of_line = lf
 insert_final_newline = true
+
+ij_continuation_indent_size = 8
+ij_any_align_multiline_parameters = false
