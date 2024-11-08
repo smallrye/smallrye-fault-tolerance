@@ -7,13 +7,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.ApplyGuard;
 
 @ApplicationScoped
 public class MyService {
     static final AtomicInteger COUNTER = new AtomicInteger(0);
 
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     public CompletionStage<String> hello() {
         COUNTER.incrementAndGet();
         return failedFuture(new IllegalArgumentException());

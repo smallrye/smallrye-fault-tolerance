@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.mutiny.Uni;
 
 @ApplicationScoped
@@ -12,7 +12,7 @@ public class MyService {
     static final AtomicInteger STRING_COUNTER = new AtomicInteger(0);
     static final AtomicInteger INT_COUNTER = new AtomicInteger(0);
 
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     public Uni<String> hello() {
         if (STRING_COUNTER.incrementAndGet() > 3) {
             return Uni.createFrom().item("hello");
@@ -20,7 +20,7 @@ public class MyService {
         return Uni.createFrom().failure(new IllegalArgumentException());
     }
 
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     public Uni<Integer> theAnswer() {
         if (INT_COUNTER.incrementAndGet() > 3) {
             return Uni.createFrom().item(42);

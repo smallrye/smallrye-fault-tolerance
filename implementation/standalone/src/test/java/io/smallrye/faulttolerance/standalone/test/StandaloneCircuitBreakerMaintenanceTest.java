@@ -13,28 +13,30 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneCircuitBreakerMaintenanceTest {
     @BeforeEach
     public void setUp() {
-        FaultTolerance.circuitBreakerMaintenance().resetAll();
+        CircuitBreakerMaintenance.get().resetAll();
     }
 
     @Test
     public void circuitBreakerEvents() throws Exception {
         assertThatThrownBy(() -> {
-            FaultTolerance.circuitBreakerMaintenance().currentState("my-cb");
+            CircuitBreakerMaintenance.get().currentState("my-cb");
         });
 
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withCircuitBreaker().requestVolumeThreshold(4).delay(1, ChronoUnit.SECONDS).name("my-cb").done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         AtomicInteger stateChanges = new AtomicInteger();
-        FaultTolerance.circuitBreakerMaintenance().onStateChange("my-cb", ignored -> stateChanges.incrementAndGet());
+        CircuitBreakerMaintenance.get().onStateChange("my-cb", ignored -> stateChanges.incrementAndGet());
 
         assertThat(stateChanges).hasValue(0);
 

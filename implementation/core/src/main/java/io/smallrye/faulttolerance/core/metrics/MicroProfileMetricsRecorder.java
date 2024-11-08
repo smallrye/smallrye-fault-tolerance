@@ -127,7 +127,7 @@ public class MicroProfileMetricsRecorder implements MetricsRecorder {
             registry.counter(BULKHEAD_CALLS_TOTAL, methodTag, BULKHEAD_RESULT_REJECTED).getCount();
 
             registry.histogram(BULKHEAD_RUNNING_DURATION_METADATA, methodTag).getCount();
-            if (operation.isAsynchronous()) {
+            if (operation.mayBeAsynchronous()) {
                 registry.histogram(BULKHEAD_WAITING_DURATION_METADATA, methodTag).getCount();
             }
         }

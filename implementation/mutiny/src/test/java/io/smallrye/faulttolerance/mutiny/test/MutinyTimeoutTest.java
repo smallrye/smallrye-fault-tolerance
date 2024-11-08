@@ -12,16 +12,17 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.mutiny.api.MutinyFaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.mutiny.Uni;
 
 public class MutinyTimeoutTest {
     @Test
     public void nonblockingAsyncTimeout() throws Exception {
-        Callable<Uni<String>> guarded = MutinyFaultTolerance.createCallable(this::nonblockingAction)
+        Callable<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withTimeout().duration(1, ChronoUnit.SECONDS).done()
                 .withFallback().applyOn(TimeoutException.class).handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptCallable(this::nonblockingAction);
 
         long time = timed(() -> {
             assertThat(guarded.call().subscribeAsCompletionStage())
@@ -33,11 +34,12 @@ public class MutinyTimeoutTest {
 
     @Test
     public void blockingAsyncTimeout() throws Exception {
-        Callable<Uni<String>> guarded = MutinyFaultTolerance.createCallable(this::blockingAction)
+        Callable<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withTimeout().duration(1, ChronoUnit.SECONDS).done()
                 .withFallback().applyOn(TimeoutException.class).handler(this::fallback).done()
                 .withThreadOffload(true) // async timeout doesn't interrupt the running thread
-                .build();
+                .build()
+                .adaptCallable(this::blockingAction);
 
         long time = timed(() -> {
             assertThat(guarded.call().subscribeAsCompletionStage())

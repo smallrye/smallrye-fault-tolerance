@@ -134,7 +134,7 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
                     .setUnit("seconds")
                     .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)
                     .build();
-            if (operation.isAsynchronous()) {
+            if (operation.mayBeAsynchronous()) {
                 this.bulkheadWaitingDuration = meter.histogramBuilder(BULKHEAD_WAITING_DURATION)
                         .setUnit("seconds")
                         .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)

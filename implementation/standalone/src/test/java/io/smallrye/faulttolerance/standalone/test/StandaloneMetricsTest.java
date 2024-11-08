@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.standalone.Configuration;
@@ -63,11 +63,12 @@ public class StandaloneMetricsTest {
 
     @Test
     public void test() throws Exception {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withDescription(NAME)
                 .withFallback().handler(this::fallback).done()
                 .withRetry().maxRetries(3).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         assertThat(guarded.call()).isEqualTo("fallback");
 

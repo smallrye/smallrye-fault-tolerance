@@ -13,7 +13,7 @@ public class ReuseMissingTest {
     public void test(MyService service) {
         assertThatCode(service::hello)
                 .isExactlyInstanceOf(FaultToleranceException.class)
-                .hasMessageContaining(
-                        "Can't resolve a bean of type io.smallrye.faulttolerance.api.FaultTolerance with qualifier @io.smallrye.common.annotation.Identifier(\"my-fault-tolerance\")");
+                .hasMessageContaining("Can't resolve a bean of type")
+                .hasMessageContaining("with qualifier @io.smallrye.common.annotation.Identifier(\"my-fault-tolerance\")");
     }
 }

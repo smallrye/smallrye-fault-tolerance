@@ -51,13 +51,19 @@ import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.BeforeRetryHandler;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.NeverOnResult;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
+import io.smallrye.faulttolerance.core.apiimpl.GuardImpl;
 import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
+import io.smallrye.faulttolerance.core.apiimpl.LazyGuard;
+import io.smallrye.faulttolerance.core.apiimpl.LazyTypedGuard;
+import io.smallrye.faulttolerance.core.apiimpl.TypedGuardImpl;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
 import io.smallrye.faulttolerance.core.async.ThreadOffload;
@@ -143,6 +149,10 @@ public class FaultToleranceInterceptor {
 
     private final Instance<FaultTolerance<?>> configuredFaultTolerance;
 
+    private final Instance<Guard> configuredGuard;
+
+    private final Instance<TypedGuard<?>> configuredTypedGuard;
+
     @Inject
     public FaultToleranceInterceptor(
             @Intercepted Bean<?> interceptedBean,
@@ -155,7 +165,9 @@ public class FaultToleranceInterceptor {
             RequestContextIntegration requestContextIntegration,
             CircuitBreakerMaintenanceImpl cbMaintenance,
             SpecCompatibility specCompatibility,
-            @Any Instance<FaultTolerance<?>> configuredFaultTolerance) {
+            @Any Instance<FaultTolerance<?>> configuredFaultTolerance,
+            @Any Instance<Guard> configuredGuard,
+            @Any Instance<TypedGuard<?>> configuredTypedGuard) {
         this.interceptedBean = interceptedBean;
         this.operationProvider = operationProvider;
         this.cache = cache;
@@ -169,6 +181,8 @@ public class FaultToleranceInterceptor {
         this.cbMaintenance = cbMaintenance;
         this.specCompatibility = specCompatibility;
         this.configuredFaultTolerance = configuredFaultTolerance;
+        this.configuredGuard = configuredGuard;
+        this.configuredTypedGuard = configuredTypedGuard;
     }
 
     @AroundInvoke
@@ -179,7 +193,9 @@ public class FaultToleranceInterceptor {
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
         if (operation.hasApplyFaultTolerance()) {
-            return preconfiguredFlow(operation, interceptionContext);
+            return applyFaultToleranceFlow(operation, interceptionContext);
+        } else if (operation.hasApplyGuard()) {
+            return applyGuardFlow(operation, interceptionContext);
         } else if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
             return asyncFlow(operation, interceptionContext, point);
         } else if (specCompatibility.isOperationPseudoAsynchronous(operation)) {
@@ -189,7 +205,12 @@ public class FaultToleranceInterceptor {
         }
     }
 
-    private Object preconfiguredFlow(FaultToleranceOperation operation, InvocationContext interceptionContext)
+    // V = value type, e.g. String
+    // T = result type, e.g. String or CompletionStage<String> or Uni<String>
+    //
+    // in synchronous scenario, V = T
+    // in asynchronous scenario, T is an async type that eventually produces V
+    private <V, T> T applyFaultToleranceFlow(FaultToleranceOperation operation, InvocationContext interceptionContext)
             throws Exception {
         String identifier = operation.getApplyFaultTolerance().value();
         Instance<FaultTolerance<?>> instance = configuredFaultTolerance.select(Identifier.Literal.of(identifier));
@@ -211,7 +232,7 @@ public class FaultToleranceInterceptor {
         AsyncSupport<?, ?> fromConfigured = asyncType == null ? null : AsyncSupportRegistry.get(new Class[0], asyncType);
 
         if (forOperation == null && fromConfigured == null) {
-            return lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
+            return (T) lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
         } else if (forOperation == null) {
             throw new FaultToleranceException("Configured fault tolerance '" + identifier
                     + "' expects the operation to " + fromConfigured.mustDescription()
@@ -225,18 +246,61 @@ public class FaultToleranceInterceptor {
                     + "' expects the operation to " + fromConfigured.mustDescription()
                     + ", but it " + forOperation.doesDescription() + ": " + operation);
         } else {
-            return lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
+            return (T) lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
         }
     }
 
+    // V = value type, e.g. String
+    // T = result type, e.g. String or CompletionStage<String> or Uni<String>
+    //
+    // in synchronous scenario, V = T
+    // in asynchronous scenario, T is an async type that eventually produces V
+    private <V, T> T applyGuardFlow(FaultToleranceOperation operation, InvocationContext interceptionContext) throws Exception {
+        String identifier = operation.getApplyGuard().value();
+        Instance<Guard> guardInstance = configuredGuard.select(Identifier.Literal.of(identifier));
+        Instance<TypedGuard<T>> typedGuardInstance = (Instance) configuredTypedGuard.select(Identifier.Literal.of(identifier));
+        if (!guardInstance.isResolvable() && !typedGuardInstance.isResolvable()) {
+            throw new FaultToleranceException("Can't resolve a bean of type " + Guard.class.getName()
+                    + " or " + TypedGuard.class.getName()
+                    + " with qualifier @" + Identifier.class.getName() + "(\"" + identifier + "\")");
+        }
+
+        MeteredOperationName meteredOperationName = new MeteredOperationName(operation.getName());
+
+        if (guardInstance.isResolvable()) {
+            Guard guard = guardInstance.get();
+            if (!(guard instanceof LazyGuard)) {
+                throw new FaultToleranceException("Configured Guard '" + identifier
+                        + "' is not created by the Guard API, this is not supported");
+            }
+            GuardImpl guardImpl = ((LazyGuard) guard).instance();
+
+            return guardImpl.guard(() -> (T) interceptionContext.proceed(),
+                    operation.getReturnType(), meteredOperationName);
+        } else /* typedGuardInstance.isResolvable() */ {
+            TypedGuard<T> guard = typedGuardInstance.get();
+            if (!(guard instanceof LazyTypedGuard)) {
+                throw new FaultToleranceException("Configured TypedGuard '" + identifier
+                        + "' is not created by the TypedGuard API, this is not supported");
+            }
+            TypedGuardImpl<V, T> guardImpl = ((LazyTypedGuard<V, T>) guard).instance();
+
+            return guardImpl.guard(() -> {
+                return (T) interceptionContext.proceed();
+            }, meteredOperationName);
+        }
+    }
+
+    // V = value type, e.g. String
+    // AT = async type that eventually produces V, e.g. CompletionStage<String> or Uni<String>
     private <V, AT> AT asyncFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
             InterceptionPoint point) {
-        AsyncSupport<V, AT> asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
+        AsyncSupport<V, AT> asyncSupport = cache.getAsyncSupport(point, operation);
         if (asyncSupport == null) {
             throw new FaultToleranceException("Unknown async invocation: " + operation);
         }
 
-        FaultToleranceStrategy<V> strategy = cache.getStrategy(point, () -> prepareAsyncStrategy(operation, point));
+        FaultToleranceStrategy<V> strategy = cache.getStrategy(point, () -> prepareStrategy(operation, point));
 
         Invoker<AT> invoker = new InterceptionInvoker<>(invocationContext);
 
@@ -249,7 +313,7 @@ public class FaultToleranceInterceptor {
 
     private <V> V syncFlow(FaultToleranceOperation operation, InvocationContext invocationContext, InterceptionPoint point)
             throws Throwable {
-        FaultToleranceStrategy<V> strategy = cache.getStrategy(point, () -> prepareSyncStrategy(operation, point));
+        FaultToleranceStrategy<V> strategy = cache.getStrategy(point, () -> prepareStrategy(operation, point));
 
         FaultToleranceContext<V> ctx = faultToleranceContext(
                 () -> Future.from(() -> (V) invocationContext.proceed()),
@@ -292,12 +356,14 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    private <T> FaultToleranceStrategy<T> prepareAsyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
+    private <T> FaultToleranceStrategy<T> prepareStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
         FaultToleranceStrategy<T> result = invocation();
 
-        result = new RequestScopeActivator<>(result, requestContextController);
+        if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
+            result = new RequestScopeActivator<>(result, requestContextController);
+        }
 
-        if (operation.isThreadOffloadRequired()) {
+        if (specCompatibility.isOperationTrulyAsynchronous(operation) && operation.isThreadOffloadRequired()) {
             result = new ThreadOffload<>(result, asyncExecutor);
         }
 
@@ -365,77 +431,8 @@ public class FaultToleranceInterceptor {
             result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
-        if (!operation.isThreadOffloadRequired()) {
+        if (specCompatibility.isOperationTrulyAsynchronous(operation) && !operation.isThreadOffloadRequired()) {
             result = new RememberEventLoop<>(result, eventLoop);
-        }
-
-        return result;
-    }
-
-    private <T> FaultToleranceStrategy<T> prepareSyncStrategy(FaultToleranceOperation operation, InterceptionPoint point) {
-        FaultToleranceStrategy<T> result = invocation();
-
-        if (operation.hasBulkhead()) {
-            result = new Bulkhead<>(result, point.toString(),
-                    operation.getBulkhead().value(),
-                    operation.getBulkhead().waitingTaskQueue());
-        }
-
-        if (operation.hasTimeout()) {
-            result = new Timeout<>(result, point.toString(),
-                    timeInMillis(operation.getTimeout().value(), operation.getTimeout().unit()),
-                    timer);
-        }
-
-        if (operation.hasRateLimit()) {
-            result = new RateLimit<>(result, point.toString(),
-                    operation.getRateLimit().value(),
-                    timeInMillis(operation.getRateLimit().window(), operation.getRateLimit().windowUnit()),
-                    timeInMillis(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit()),
-                    operation.getRateLimit().type(),
-                    SystemStopwatch.INSTANCE);
-        }
-
-        if (operation.hasCircuitBreaker()) {
-            result = new CircuitBreaker<>(result, point.toString(),
-                    createExceptionDecision(operation.getCircuitBreaker().skipOn(), operation.getCircuitBreaker().failOn()),
-                    timeInMillis(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit()),
-                    operation.getCircuitBreaker().requestVolumeThreshold(),
-                    operation.getCircuitBreaker().failureRatio(),
-                    operation.getCircuitBreaker().successThreshold(),
-                    SystemStopwatch.INSTANCE,
-                    timer);
-
-            String cbName = operation.hasCircuitBreakerName()
-                    ? operation.getCircuitBreakerName().value()
-                    : UUID.randomUUID().toString();
-            cbMaintenance.register(cbName, (CircuitBreaker<?>) result);
-        }
-
-        if (operation.hasRetry()) {
-            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
-
-            result = new Retry<>(result, point.toString(),
-                    createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
-                    createExceptionDecision(operation.getRetry().abortOn(), operation.getRetry().retryOn(),
-                            operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
-                    operation.getRetry().maxRetries(),
-                    timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit()),
-                    () -> new ThreadSleepDelay(backoff.get()),
-                    () -> new TimerDelay(backoff.get(), timer),
-                    SystemStopwatch.INSTANCE,
-                    operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
-        }
-
-        if (operation.hasFallback()) {
-            result = new Fallback<>(result, point.toString(),
-                    prepareFallbackFunction(point, operation),
-                    createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
-        }
-
-        if (metricsProvider.isEnabled()) {
-            MeteredOperation meteredOperation = new CdiMeteredOperationImpl(operation, point, specCompatibility);
-            result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
         return result;
@@ -556,7 +553,7 @@ public class FaultToleranceInterceptor {
     // in asynchronous scenario, T is an async type that eventually produces V
     private <V, T> Function<FailureContext, Future<V>> prepareFallbackFunction(
             InterceptionPoint point, FaultToleranceOperation operation) {
-        AsyncSupport<V, T> asyncSupport = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
+        AsyncSupport<V, T> asyncSupport = cache.getAsyncSupport(point, operation);
 
         String fallbackMethodName = operation.getFallback().fallbackMethod();
         FallbackMethodCandidates candidates = !"".equals(fallbackMethodName)

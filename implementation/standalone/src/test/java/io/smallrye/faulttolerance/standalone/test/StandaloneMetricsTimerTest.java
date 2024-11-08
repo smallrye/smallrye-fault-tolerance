@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
 import io.smallrye.faulttolerance.standalone.Configuration;
@@ -67,11 +67,12 @@ public class StandaloneMetricsTimerTest {
 
     @Test
     public void test() throws Exception {
-        Callable<CompletionStage<String>> guarded = FaultTolerance.createAsyncCallable(this::action)
+        Callable<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withThreadOffload(true)
                 .withTimeout().duration(1, ChronoUnit.MINUTES).done()
                 .withFallback().handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         CompletableFuture<String> future = guarded.call().toCompletableFuture();
 

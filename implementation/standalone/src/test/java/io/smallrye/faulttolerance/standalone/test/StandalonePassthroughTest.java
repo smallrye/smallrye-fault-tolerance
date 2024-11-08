@@ -8,22 +8,21 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandalonePassthroughTest {
     @Test
     public void passthroughValue() throws Exception {
-        FaultTolerance<String> guard = FaultTolerance.<String> create().build();
+        TypedGuard<String> guard = TypedGuard.create(String.class).build();
 
         assertThat(guard.call(this::returnValue)).isEqualTo("value");
         assertThat(guard.get(this::returnValue)).isEqualTo("value");
-        assertThatCode(() -> guard.run(this::returnValue)).doesNotThrowAnyException();
     }
 
     @Test
     public void passthroughRuntimeException() {
-        FaultTolerance<Object> guard = FaultTolerance.create().build();
+        TypedGuard<Object> guard = TypedGuard.create(Object.class).build();
 
         assertThatCode(() -> guard.call(this::throwRuntimeException))
                 .isExactlyInstanceOf(RuntimeException.class)
@@ -32,15 +31,11 @@ public class StandalonePassthroughTest {
         assertThatCode(() -> guard.get(this::throwRuntimeException))
                 .isExactlyInstanceOf(RuntimeException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
-
-        assertThatCode(() -> guard.run(this::throwRuntimeException))
-                .isExactlyInstanceOf(RuntimeException.class)
-                .hasCauseExactlyInstanceOf(TestException.class);
     }
 
     @Test
     public void passthroughException() {
-        FaultTolerance<Object> guard = FaultTolerance.create().build();
+        TypedGuard<Object> guard = TypedGuard.create(Object.class).build();
 
         assertThatCode(() -> guard.call(this::throwException))
                 .isExactlyInstanceOf(TestException.class);
@@ -48,14 +43,16 @@ public class StandalonePassthroughTest {
 
     @Test
     public void callablePassthroughValue() throws Exception {
-        Callable<String> guard = FaultTolerance.createCallable(this::returnValue).build();
+        Callable<String> guard = TypedGuard.create(String.class).build()
+                .adaptCallable(this::returnValue);
 
         assertThat(guard.call()).isEqualTo("value");
     }
 
     @Test
     public void callablePassthroughRuntimeException() {
-        Callable<String> guard = FaultTolerance.createCallable(this::throwRuntimeException).build();
+        Callable<String> guard = TypedGuard.create(String.class).build()
+                .adaptCallable(this::throwRuntimeException);
 
         assertThatCode(guard::call)
                 .isExactlyInstanceOf(RuntimeException.class)
@@ -64,7 +61,8 @@ public class StandalonePassthroughTest {
 
     @Test
     public void callablePassthroughException() {
-        Callable<String> guard = FaultTolerance.createCallable(this::throwException).build();
+        Callable<String> guard = TypedGuard.create(String.class).build()
+                .adaptCallable(this::throwException);
 
         assertThatCode(guard::call)
                 .isExactlyInstanceOf(TestException.class);
@@ -72,32 +70,18 @@ public class StandalonePassthroughTest {
 
     @Test
     public void supplierPassthroughValue() {
-        Supplier<String> guard = FaultTolerance.createSupplier(this::returnValue).build();
+        Supplier<String> guard = TypedGuard.create(String.class).build()
+                .adaptSupplier(this::returnValue);
 
         assertThat(guard.get()).isEqualTo("value");
     }
 
     @Test
     public void supplierPassthroughRuntimeException() {
-        Supplier<String> guard = FaultTolerance.createSupplier(this::throwRuntimeException).build();
+        Supplier<String> guard = TypedGuard.create(String.class).build()
+                .adaptSupplier(this::throwRuntimeException);
 
         assertThatCode(guard::get)
-                .isExactlyInstanceOf(RuntimeException.class)
-                .hasCauseExactlyInstanceOf(TestException.class);
-    }
-
-    @Test
-    public void runnablePassthroughValue() {
-        Runnable guard = FaultTolerance.createRunnable(this::returnValue).build();
-
-        assertThatCode(guard::run).doesNotThrowAnyException();
-    }
-
-    @Test
-    public void runnablePassthroughRuntimeException() {
-        Runnable guard = FaultTolerance.createRunnable(this::throwRuntimeException).build();
-
-        assertThatCode(guard::run)
                 .isExactlyInstanceOf(RuntimeException.class)
                 .hasCauseExactlyInstanceOf(TestException.class);
     }

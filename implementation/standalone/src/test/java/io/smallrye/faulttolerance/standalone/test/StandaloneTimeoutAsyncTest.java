@@ -13,16 +13,17 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 
 public class StandaloneTimeoutAsyncTest {
     @Test
     public void asyncTimeout() throws Exception {
-        Callable<CompletionStage<String>> guarded = FaultTolerance.createAsyncCallable(this::action)
+        Callable<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withTimeout().duration(1, ChronoUnit.SECONDS).done()
                 .withFallback().applyOn(TimeoutException.class).handler(this::fallback).done()
                 .withThreadOffload(true) // async timeout doesn't interrupt the running thread
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         long time = timed(() -> {
             assertThat(guarded.call())

@@ -53,7 +53,6 @@ import io.smallrye.faulttolerance.core.retry.ThreadSleepDelay;
 import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
-import io.smallrye.faulttolerance.core.util.DirectExecutor;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
 import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
@@ -67,6 +66,7 @@ import io.smallrye.faulttolerance.core.util.SetOfThrowables;
 //
 // in synchronous scenario, V = T
 // in asynchronous scenario, T is an async type that eventually produces V
+@Deprecated(forRemoval = true)
 public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
     private final FaultToleranceStrategy<V> strategy;
     private final AsyncSupport<V, T> asyncSupport;
@@ -385,10 +385,10 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
             FaultToleranceStrategy<V> result = invocation();
 
             // thread offload is always enabled
-            Executor executor = offloadToAnotherThread
-                    ? (offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor())
-                    : DirectExecutor.INSTANCE;
-            result = new ThreadOffload<>(result, executor);
+            if (offloadToAnotherThread) {
+                Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
+                result = new ThreadOffload<>(result, executor);
+            }
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new Bulkhead<>(result, description,

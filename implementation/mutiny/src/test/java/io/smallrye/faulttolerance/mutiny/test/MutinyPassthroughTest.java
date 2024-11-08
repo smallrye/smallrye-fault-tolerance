@@ -9,15 +9,14 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
-import io.smallrye.faulttolerance.mutiny.api.MutinyFaultTolerance;
 import io.smallrye.mutiny.Uni;
 
 public class MutinyPassthroughTest {
     @Test
     public void passthroughCompletedSuccessfully() throws Exception {
-        FaultTolerance<Uni<String>> guard = MutinyFaultTolerance.<String> create().build();
+        TypedGuard<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING).build();
 
         assertThat(guard.call(this::completeSuccessfully).subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -26,7 +25,7 @@ public class MutinyPassthroughTest {
 
     @Test
     public void passthroughCompletedExceptionally() throws Exception {
-        FaultTolerance<Uni<String>> guard = MutinyFaultTolerance.<String> create().build();
+        TypedGuard<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING).build();
 
         assertThat(guard.call(this::completeExceptionally).subscribeAsCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
@@ -36,7 +35,7 @@ public class MutinyPassthroughTest {
 
     @Test
     public void passthroughThrownException() throws Exception {
-        FaultTolerance<Uni<String>> guard = MutinyFaultTolerance.<String> create().build();
+        TypedGuard<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING).build();
 
         assertThat(guard.call(this::throwException).subscribeAsCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
@@ -46,7 +45,9 @@ public class MutinyPassthroughTest {
 
     @Test
     public void callablePassthroughCompletedSuccessfully() throws Exception {
-        Callable<Uni<String>> guard = MutinyFaultTolerance.createCallable(this::completeSuccessfully).build();
+        Callable<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING)
+                .build()
+                .adaptCallable(this::completeSuccessfully);
 
         assertThat(guard.call().subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -55,7 +56,9 @@ public class MutinyPassthroughTest {
 
     @Test
     public void callablePassthroughCompletedExceptionally() throws Exception {
-        Callable<Uni<String>> guard = MutinyFaultTolerance.createCallable(this::completeExceptionally).build();
+        Callable<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING)
+                .build()
+                .adaptCallable(this::completeExceptionally);
 
         assertThat(guard.call().subscribeAsCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
@@ -65,7 +68,9 @@ public class MutinyPassthroughTest {
 
     @Test
     public void callablePassthroughThrownException() throws Exception {
-        Callable<Uni<String>> guard = MutinyFaultTolerance.createCallable(this::throwException).build();
+        Callable<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING)
+                .build()
+                .adaptCallable(this::throwException);
 
         assertThat(guard.call().subscribeAsCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
@@ -75,7 +80,9 @@ public class MutinyPassthroughTest {
 
     @Test
     public void supplierPassthroughCompletedSuccessfully() {
-        Supplier<Uni<String>> guard = MutinyFaultTolerance.createSupplier(this::completeSuccessfully).build();
+        Supplier<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING)
+                .build()
+                .adaptSupplier(this::completeSuccessfully);
 
         assertThat(guard.get().subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -84,7 +91,9 @@ public class MutinyPassthroughTest {
 
     @Test
     public void supplierPassthroughCompletedExceptionally() {
-        Supplier<Uni<String>> guard = MutinyFaultTolerance.createSupplier(this::completeExceptionally).build();
+        Supplier<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING)
+                .build()
+                .adaptSupplier(this::completeExceptionally);
 
         assertThat(guard.get().subscribeAsCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
@@ -94,7 +103,9 @@ public class MutinyPassthroughTest {
 
     @Test
     public void supplierPassthroughThrownException() {
-        Supplier<Uni<String>> guard = MutinyFaultTolerance.createSupplier(this::throwRuntimeException).build();
+        Supplier<Uni<String>> guard = TypedGuard.create(Types.UNI_STRING)
+                .build()
+                .adaptSupplier(this::throwRuntimeException);
 
         assertThat(guard.get().subscribeAsCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)

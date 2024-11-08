@@ -10,8 +10,8 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
-    public boolean isAsynchronous() {
-        return operation.isAsynchronous();
+    public boolean mayBeAsynchronous() {
+        return operation.mayBeAsynchronous();
     }
 
     @Override

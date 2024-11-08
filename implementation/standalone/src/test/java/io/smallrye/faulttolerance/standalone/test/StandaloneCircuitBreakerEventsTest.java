@@ -11,8 +11,9 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneCircuitBreakerEventsTest {
@@ -20,7 +21,7 @@ public class StandaloneCircuitBreakerEventsTest {
 
     @BeforeEach
     public void setUp() {
-        FaultTolerance.circuitBreakerMaintenance().resetAll();
+        CircuitBreakerMaintenance.get().resetAll();
     }
 
     @Test
@@ -30,7 +31,7 @@ public class StandaloneCircuitBreakerEventsTest {
         AtomicInteger preventedCounter = new AtomicInteger();
         AtomicReference<CircuitBreakerState> changedState = new AtomicReference<>();
 
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withCircuitBreaker()
                 .requestVolumeThreshold(4)
                 .onSuccess(successCounter::incrementAndGet)
@@ -39,7 +40,8 @@ public class StandaloneCircuitBreakerEventsTest {
                 .onStateChange(changedState::set)
                 .done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         actionShouldFail = false;
         for (int i = 0; i < 2; i++) {

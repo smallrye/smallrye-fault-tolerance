@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 
 public class StandaloneTimeoutAsyncEventsTest {
     private volatile boolean shouldSleep;
@@ -22,7 +22,7 @@ public class StandaloneTimeoutAsyncEventsTest {
         AtomicInteger timeoutCounter = new AtomicInteger();
         AtomicInteger finishedCounter = new AtomicInteger();
 
-        Callable<CompletionStage<String>> guarded = FaultTolerance.createAsyncCallable(this::action)
+        Callable<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withTimeout()
                 .duration(1, ChronoUnit.SECONDS)
                 .onTimeout(timeoutCounter::incrementAndGet)
@@ -30,7 +30,8 @@ public class StandaloneTimeoutAsyncEventsTest {
                 .done()
                 .withFallback().applyOn(TimeoutException.class).handler(this::fallback).done()
                 .withThreadOffload(true) // async timeout doesn't interrupt the running thread
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         shouldSleep = true;
         assertThat(guarded.call())

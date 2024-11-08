@@ -7,7 +7,7 @@ import java.util.concurrent.Callable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 import io.smallrye.faulttolerance.util.WithSystemProperty;
@@ -26,10 +26,11 @@ public class CdiSkipFaultToleranceTest {
 
     @Test
     public void skipFaultTolerance() throws Exception {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withRetry().maxRetries(3).done()
                 .withFallback().handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         assertThat(guarded.call()).isEqualTo("fallback");
         assertThat(counter).isEqualTo(1); // 1 initial invocation, no retries

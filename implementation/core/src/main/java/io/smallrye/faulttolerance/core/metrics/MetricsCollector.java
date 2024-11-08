@@ -20,7 +20,7 @@ import io.smallrye.faulttolerance.core.timeout.TimeoutEvents;
 public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     private final FaultToleranceStrategy<V> delegate;
     private final MetricsRecorder metrics;
-    private final boolean isAsync;
+    private final boolean mayBeAsync;
     private final boolean hasBulkhead;
     private final boolean hasCircuitBreaker;
     private final boolean hasRateLimit;
@@ -48,7 +48,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     public MetricsCollector(FaultToleranceStrategy<V> delegate, MetricsRecorder metrics, MeteredOperation operation) {
         this.delegate = delegate;
         this.metrics = metrics;
-        this.isAsync = operation.isAsynchronous();
+        this.mayBeAsync = operation.mayBeAsynchronous();
         this.hasBulkhead = operation.hasBulkhead();
         this.hasCircuitBreaker = operation.hasCircuitBreaker();
         this.hasRateLimit = operation.hasRateLimit();
@@ -73,7 +73,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
 
         if (hasBulkhead) {
             metrics.registerBulkheadExecutionsRunning(runningExecutions::get);
-            if (isAsync) {
+            if (mayBeAsync) {
                 metrics.registerBulkheadExecutionsWaiting(waitingExecutions::get);
             }
         }
@@ -204,7 +204,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
                 metrics.updateBulkheadRunningDuration(System.nanoTime() - runningStart.get());
             });
 
-            if (isAsync) {
+            if (mayBeAsync) {
                 AtomicLong waitingStart = new AtomicLong();
                 ctx.registerEventHandler(BulkheadEvents.StartedWaiting.class, ignored -> {
                     waitingExecutions.incrementAndGet();

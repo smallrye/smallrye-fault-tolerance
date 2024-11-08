@@ -10,12 +10,15 @@ import jakarta.inject.Singleton;
 import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
+import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 
 @Singleton
 public class StrategyCache {
     private final Map<InterceptionPoint, FaultToleranceStrategy<?>> strategies = new ConcurrentHashMap<>();
     private final Map<InterceptionPoint, FallbackMethodCandidates> fallbackMethods = new ConcurrentHashMap<>();
     private final Map<InterceptionPoint, BeforeRetryMethod> beforeRetryMethods = new ConcurrentHashMap<>();
+    private final Map<InterceptionPoint, AsyncSupport<?, ?>> asyncSupports = new ConcurrentHashMap<>();
 
     private final SpecCompatibility specCompatibility;
 
@@ -37,5 +40,10 @@ public class StrategyCache {
 
     public BeforeRetryMethod getBeforeRetryMethod(InterceptionPoint point, FaultToleranceOperation operation) {
         return beforeRetryMethods.computeIfAbsent(point, ignored -> BeforeRetryMethod.create(operation));
+    }
+
+    public <V, AT> AsyncSupport<V, AT> getAsyncSupport(InterceptionPoint point, FaultToleranceOperation operation) {
+        return (AsyncSupport<V, AT>) asyncSupports.computeIfAbsent(point,
+                ignored -> AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType()));
     }
 }

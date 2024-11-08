@@ -13,7 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class StandaloneBulkheadEventsTest {
@@ -36,7 +36,7 @@ public class StandaloneBulkheadEventsTest {
         AtomicInteger rejectedCounter = new AtomicInteger();
         AtomicInteger finishedCounter = new AtomicInteger();
 
-        FaultTolerance<String> guarded = FaultTolerance.<String> create()
+        TypedGuard<String> guarded = TypedGuard.create(String.class)
                 .withBulkhead()
                 .limit(5)
                 .onAccepted(acceptedCounter::incrementAndGet)

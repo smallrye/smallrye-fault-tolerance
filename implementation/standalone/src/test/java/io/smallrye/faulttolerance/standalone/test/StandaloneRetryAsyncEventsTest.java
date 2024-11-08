@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneRetryAsyncEventsTest {
@@ -23,7 +23,7 @@ public class StandaloneRetryAsyncEventsTest {
         AtomicInteger successCounter = new AtomicInteger();
         AtomicInteger failureCounter = new AtomicInteger();
 
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRetry()
                 .maxRetries(3)
                 .onRetry(retryCounter::incrementAndGet)
@@ -31,7 +31,8 @@ public class StandaloneRetryAsyncEventsTest {
                 .onFailure(failureCounter::incrementAndGet)
                 .done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         failTimes = 10;
         assertThat(guarded.get())

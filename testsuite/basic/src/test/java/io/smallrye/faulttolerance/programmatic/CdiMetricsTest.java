@@ -9,7 +9,7 @@ import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
@@ -21,11 +21,12 @@ public class CdiMetricsTest {
 
     @Test
     public void test(@RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) throws Exception {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withDescription(NAME)
                 .withFallback().handler(this::fallback).done()
                 .withRetry().maxRetries(3).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         assertThat(guarded.call()).isEqualTo("fallback");
 

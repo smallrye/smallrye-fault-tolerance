@@ -23,6 +23,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
@@ -44,6 +45,7 @@ public class FaultToleranceMethods {
         result.method = createMethodDescriptor(method);
 
         result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, annotationsPresentDirectly);
+        result.applyGuard = getAnnotation(ApplyGuard.class, method, annotationsPresentDirectly);
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, annotationsPresentDirectly);
         result.asynchronousNonBlocking = getAnnotation(AsynchronousNonBlocking.class, method, annotationsPresentDirectly);
@@ -104,6 +106,7 @@ public class FaultToleranceMethods {
         result.method = createMethodDescriptor(method);
 
         result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, beanClass, annotationsPresentDirectly);
+        result.applyGuard = getAnnotation(ApplyGuard.class, method, beanClass, annotationsPresentDirectly);
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, beanClass, annotationsPresentDirectly);
         result.asynchronousNonBlocking = getAnnotation(AsynchronousNonBlocking.class, method, beanClass,

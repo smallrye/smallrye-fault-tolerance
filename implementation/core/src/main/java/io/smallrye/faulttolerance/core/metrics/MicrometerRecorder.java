@@ -117,7 +117,7 @@ public class MicrometerRecorder implements MetricsRecorder {
             registry.counter(BULKHEAD_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_REJECTED));
 
             registry.timer(BULKHEAD_RUNNING_DURATION, methodTagSingleton);
-            if (operation.isAsynchronous()) {
+            if (operation.mayBeAsynchronous()) {
                 registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton);
             }
         }

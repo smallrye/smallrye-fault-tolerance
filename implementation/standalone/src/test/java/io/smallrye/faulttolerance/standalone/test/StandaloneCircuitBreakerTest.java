@@ -9,21 +9,23 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneCircuitBreakerTest {
     @BeforeEach
     public void setUp() {
-        FaultTolerance.circuitBreakerMaintenance().resetAll();
+        CircuitBreakerMaintenance.get().resetAll();
     }
 
     @Test
     public void circuitBreaker() throws Exception {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withCircuitBreaker().requestVolumeThreshold(4).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
@@ -34,10 +36,11 @@ public class StandaloneCircuitBreakerTest {
 
     @Test
     public void circuitBreakerWithSkipOn() {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withCircuitBreaker().requestVolumeThreshold(4).skipOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
@@ -48,10 +51,11 @@ public class StandaloneCircuitBreakerTest {
 
     @Test
     public void circuitBreakerWithFailOn() {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withCircuitBreaker().requestVolumeThreshold(4).failOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
@@ -62,10 +66,11 @@ public class StandaloneCircuitBreakerTest {
 
     @Test
     public void circuitBreakerWithWhen() {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withCircuitBreaker().requestVolumeThreshold(4).when(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof CircuitBreakerOpenException).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThatCode(guarded::call).isExactlyInstanceOf(TestException.class);
