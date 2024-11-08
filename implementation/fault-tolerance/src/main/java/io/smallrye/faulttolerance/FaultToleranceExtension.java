@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -42,10 +43,12 @@ import jakarta.enterprise.inject.spi.AnnotatedConstructor;
 import jakarta.enterprise.inject.spi.AnnotatedField;
 import jakarta.enterprise.inject.spi.AnnotatedMethod;
 import jakarta.enterprise.inject.spi.AnnotatedType;
+import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.BeforeBeanDiscovery;
 import jakarta.enterprise.inject.spi.Extension;
 import jakarta.enterprise.inject.spi.ProcessAnnotatedType;
+import jakarta.enterprise.inject.spi.ProcessBean;
 import jakarta.enterprise.inject.spi.ProcessManagedBean;
 import jakarta.enterprise.util.AnnotationLiteral;
 
@@ -58,15 +61,19 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.Identifier;
 import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
+import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.api.RetryWhen;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
@@ -91,6 +98,8 @@ public class FaultToleranceExtension implements Extension {
     private final ConcurrentMap<String, FaultToleranceOperation> faultToleranceOperations = new ConcurrentHashMap<>();
 
     private final ConcurrentMap<String, Set<String>> existingCircuitBreakerNames = new ConcurrentHashMap<>();
+
+    private final ConcurrentMap<String, Set<String>> existingGuards = new ConcurrentHashMap<>();
 
     private final Set<MetricsIntegration> metricsIntegrations;
 
@@ -140,6 +149,7 @@ public class FaultToleranceExtension implements Extension {
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
+        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyGuard.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(
                 bm.createAnnotatedType(AsynchronousNonBlocking.class)));
@@ -170,10 +180,10 @@ public class FaultToleranceExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(RequestContextIntegration.class),
                 RequestContextIntegration.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(SpecCompatibility.class), SpecCompatibility.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(CdiFaultToleranceSpi.EagerDependencies.class),
-                CdiFaultToleranceSpi.EagerDependencies.class.getName());
-        bbd.addAnnotatedType(bm.createAnnotatedType(CdiFaultToleranceSpi.LazyDependencies.class),
-                CdiFaultToleranceSpi.LazyDependencies.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(CdiSpi.EagerDependencies.class),
+                CdiSpi.EagerDependencies.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(CdiSpi.LazyDependencies.class),
+                CdiSpi.LazyDependencies.class.getName());
 
         if (metricsIntegrations.size() > 1) {
             bbd.addAnnotatedType(bm.createAnnotatedType(CompoundMetricsProvider.class),
@@ -294,6 +304,23 @@ public class FaultToleranceExtension implements Extension {
         }
     }
 
+    void processBean(@Observes ProcessBean<?> pb) {
+        Bean<?> bean = pb.getBean();
+        boolean isGuard = bean.getTypes().contains(Guard.class)
+                || bean.getTypes().contains(TypedGuard.class)
+                || bean.getTypes().stream().anyMatch(it -> it instanceof ParameterizedType
+                        && ((ParameterizedType) it).getRawType().equals(TypedGuard.class));
+        if (isGuard) {
+            for (Annotation ann : bean.getQualifiers()) {
+                if (ann instanceof Identifier) {
+                    existingGuards
+                            .computeIfAbsent(((Identifier) ann).value(), ignored -> new HashSet<>())
+                            .add(bean.toString());
+                }
+            }
+        }
+    }
+
     void validate(@Observes AfterDeploymentValidation event) {
         for (Map.Entry<String, Set<String>> entry : existingCircuitBreakerNames.entrySet()) {
             if (entry.getValue().size() > 1) {
@@ -301,6 +328,16 @@ public class FaultToleranceExtension implements Extension {
                         entry.getKey(), entry.getValue()));
             }
         }
+        // don't clear the `existingCircuitBreakerNames`, they're used later
+        // by `CircuitBreakerMaintenance` (see `getExistingCircuitBreakerNames()`)
+
+        for (Map.Entry<String, Set<String>> entry : existingGuards.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                event.addDeploymentProblem(LOG.multipleGuardsWithTheSameIdentifier(
+                        entry.getKey(), entry.getValue()));
+            }
+        }
+        existingGuards.clear();
     }
 
     private static String getCacheKey(Class<?> beanClass, Method method) {

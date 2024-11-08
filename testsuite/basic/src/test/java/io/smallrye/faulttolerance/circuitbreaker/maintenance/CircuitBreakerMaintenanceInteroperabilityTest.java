@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.CircuitBreakerState;
-import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 import io.smallrye.faulttolerance.util.WithSystemProperty;
 
@@ -33,14 +32,14 @@ public class CircuitBreakerMaintenanceInteroperabilityTest {
 
     @BeforeEach
     public void reset() {
-        FaultTolerance.circuitBreakerMaintenance().resetAll();
+        CircuitBreakerMaintenance.get().resetAll();
 
         helloService.toString(); // force bean instantiation
     }
 
     @Test
     public void test() {
-        CircuitBreakerMaintenance cbm = FaultTolerance.circuitBreakerMaintenance();
+        CircuitBreakerMaintenance cbm = CircuitBreakerMaintenance.get();
 
         assertThat(cb.currentState("hello")).isEqualTo(CircuitBreakerState.CLOSED);
         assertThat(cb.currentState("another-hello")).isEqualTo(CircuitBreakerState.CLOSED);

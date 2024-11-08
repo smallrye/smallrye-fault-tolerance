@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
-import io.smallrye.faulttolerance.mutiny.api.MutinyFaultTolerance;
 import io.smallrye.mutiny.Uni;
 
 public class MutinyRetryTest {
@@ -23,10 +23,11 @@ public class MutinyRetryTest {
 
     @Test
     public void retry() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withRetry().maxRetries(3).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         assertThat(guarded.get().subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -36,10 +37,11 @@ public class MutinyRetryTest {
 
     @Test
     public void retryWithAbortOn() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withRetry().maxRetries(3).abortOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         assertThat(guarded.get().subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -49,10 +51,11 @@ public class MutinyRetryTest {
 
     @Test
     public void retryWithRetryOn() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withRetry().maxRetries(3).retryOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         assertThat(guarded.get().subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -62,10 +65,11 @@ public class MutinyRetryTest {
 
     @Test
     public void retryWithWhen() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withRetry().maxRetries(3).whenException(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof TestException).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         assertThat(guarded.get().subscribeAsCompletionStage())
                 .succeedsWithin(10, TimeUnit.SECONDS)

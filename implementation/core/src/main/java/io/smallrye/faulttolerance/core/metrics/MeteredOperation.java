@@ -1,7 +1,7 @@
 package io.smallrye.faulttolerance.core.metrics;
 
 public interface MeteredOperation {
-    boolean isAsynchronous();
+    boolean mayBeAsynchronous();
 
     boolean hasBulkhead();
 

@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 
 public class StandaloneTimeoutEventsTest {
     private boolean shouldSleep;
@@ -19,14 +19,15 @@ public class StandaloneTimeoutEventsTest {
         AtomicInteger timeoutCounter = new AtomicInteger();
         AtomicInteger finishedCounter = new AtomicInteger();
 
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withTimeout()
                 .duration(1000, ChronoUnit.MILLIS)
                 .onTimeout(timeoutCounter::incrementAndGet)
                 .onFinished(finishedCounter::incrementAndGet)
                 .done()
                 .withFallback().applyOn(TimeoutException.class).handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         shouldSleep = true;
         assertThat(guarded.call()).isEqualTo("fallback");

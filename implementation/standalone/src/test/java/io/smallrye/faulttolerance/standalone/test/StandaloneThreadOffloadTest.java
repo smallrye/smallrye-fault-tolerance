@@ -14,13 +14,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class StandaloneThreadOffloadTest {
     @Test
     public void integratedExecutor() throws Exception {
-        FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String> createAsync()
+        TypedGuard<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withThreadOffload(true)
                 .build();
 
@@ -48,7 +48,7 @@ public class StandaloneThreadOffloadTest {
         ExecutorService executor = Executors.newCachedThreadPool(runnable -> new Thread(runnable,
                 prefix + "_" + counter.incrementAndGet()));
 
-        FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String> createAsync()
+        TypedGuard<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withThreadOffload(true)
                 .withThreadOffloadExecutor(executor)
                 .build();

@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
-import io.smallrye.faulttolerance.mutiny.api.MutinyFaultTolerance;
 import io.smallrye.mutiny.Uni;
 
 public class MutinyResubscriptionTest {
@@ -25,9 +25,10 @@ public class MutinyResubscriptionTest {
     public void doubleRetry() {
         // this test verifies resubscription, which is triggered via retry
 
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withRetry().maxRetries(3).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         Uni<String> hello = guarded.get()
                 .onFailure().retry().atMost(2)

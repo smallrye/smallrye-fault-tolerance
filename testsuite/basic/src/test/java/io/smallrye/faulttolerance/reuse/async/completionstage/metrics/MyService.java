@@ -6,16 +6,16 @@ import java.util.concurrent.CompletionStage;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.ApplyGuard;
 
 @ApplicationScoped
 public class MyService {
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     public CompletionStage<String> first() {
         return failedFuture(new IllegalArgumentException());
     }
 
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     public CompletionStage<String> second() {
         return failedFuture(new IllegalStateException());
     }

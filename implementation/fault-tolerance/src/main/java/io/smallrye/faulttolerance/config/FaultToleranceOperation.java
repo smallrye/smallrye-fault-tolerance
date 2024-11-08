@@ -38,6 +38,7 @@ import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
+import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
@@ -59,6 +60,7 @@ public class FaultToleranceOperation {
     public static FaultToleranceOperation create(FaultToleranceMethod method) {
         return new FaultToleranceOperation(method.beanClass, method.method,
                 ApplyFaultToleranceConfigImpl.create(method),
+                ApplyGuardConfigImpl.create(method),
                 AsynchronousConfigImpl.create(method),
                 AsynchronousNonBlockingConfigImpl.create(method),
                 BlockingConfigImpl.create(method),
@@ -84,6 +86,7 @@ public class FaultToleranceOperation {
     private final MethodDescriptor methodDescriptor;
 
     private final ApplyFaultToleranceConfig applyFaultTolerance;
+    private final ApplyGuardConfig applyGuard;
 
     private final AsynchronousConfig asynchronous;
     private final AsynchronousNonBlockingConfig asynchronousNonBlocking;
@@ -111,6 +114,7 @@ public class FaultToleranceOperation {
     private FaultToleranceOperation(Class<?> beanClass,
             MethodDescriptor methodDescriptor,
             ApplyFaultToleranceConfig applyFaultTolerance,
+            ApplyGuardConfig applyGuard,
             AsynchronousConfig asynchronous,
             AsynchronousNonBlockingConfig asynchronousNonBlocking,
             BlockingConfig blocking,
@@ -134,6 +138,7 @@ public class FaultToleranceOperation {
         this.methodDescriptor = methodDescriptor;
 
         this.applyFaultTolerance = applyFaultTolerance;
+        this.applyGuard = applyGuard;
 
         this.asynchronous = asynchronous;
         this.asynchronousNonBlocking = asynchronousNonBlocking;
@@ -211,6 +216,14 @@ public class FaultToleranceOperation {
 
     public ApplyFaultTolerance getApplyFaultTolerance() {
         return applyFaultTolerance;
+    }
+
+    public boolean hasApplyGuard() {
+        return applyGuard != null;
+    }
+
+    public ApplyGuard getApplyGuard() {
+        return applyGuard;
     }
 
     public boolean hasAsynchronous() {
@@ -430,6 +443,9 @@ public class FaultToleranceOperation {
         if (applyFaultTolerance != null) {
             applyFaultTolerance.validate();
         }
+        if (applyGuard != null) {
+            applyGuard.validate();
+        }
 
         if (asynchronous != null) {
             asynchronous.validate();
@@ -463,10 +479,18 @@ public class FaultToleranceOperation {
             timeout.validate();
         }
 
+        validateApplyGuard();
         validateFallback();
         validateRetryBackoff();
         validateRetryWhen();
         validateBeforeRetry();
+    }
+
+    private void validateApplyGuard() {
+        if (applyFaultTolerance != null && applyGuard != null) {
+            throw new FaultToleranceDefinitionException(
+                    "Both @ApplyFaultTolerance and @ApplyGuard present on " + methodDescriptor);
+        }
     }
 
     private void validateFallback() {
@@ -574,6 +598,9 @@ public class FaultToleranceOperation {
     public void materialize() {
         if (applyFaultTolerance != null) {
             applyFaultTolerance.materialize();
+        }
+        if (applyGuard != null) {
+            applyGuard.materialize();
         }
 
         if (asynchronous != null) {

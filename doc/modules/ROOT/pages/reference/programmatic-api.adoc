@@ -33,14 +33,24 @@ The API is brought in transitively.
 
 == Usage
 
-The entrypoint to the programmatic API is the `FaultTolerance` interface.
+The entrypoints to the programmatic API are the `Guard` and `TypedGuard` interfaces.
 
-This interface represents a configured set of fault tolerance strategies.
+These interfaces represent a configured set of fault tolerance strategies.
 Their configuration, order of application and behavior in general corresponds to the declarative API, so if you know that, you'll feel right at home.
 If not, the javadoc has all the information you need (though it often points to the annotation-based API for more information).
 
-To create an instance of `FaultTolerance`, you can use the `create` and `createAsync` static methods.
-They return a builder which has to be used to add and configure all the fault tolerance strategies that should apply.
+The interfaces are very similar, there are only 2 differences:
+
+. `Guard` requires specifying the return type of the guarded operation for each `call()` or `get()` (or `adapt*`) method call.
+  `TypedGuard`, on the other hand, requires specifying the return type once, when creating an instance using `create()`.
+  Therefore, `Guard` may be used for guarding many different types, while `TypedGuard` may only be used to guard single type.
+. `TypedGuard` allows defining a fallback.
+  `Guard` does not.
+
+In the following text, we'll only talk about `Guard`, but it also applies to `TypedGuard` without a change (except of the differences mentioned above).
+
+To create an instance of `Guard`, you can use the `create` static method.
+It returns a builder which has to be used to add and configure all the fault tolerance strategies that should apply.
 There is no external configuration, so all configuration properties have to be set explicitly, using the builder methods.
 If you don't set a configuration property, it will default to the same value the annotation-based API uses.
 
@@ -57,7 +67,7 @@ Everything else will be ignored.
 Note that this is somewhat different to the declarative, annotation-based API, where only fallback is retained and the `@Asynchronous` strategy is skipped as well.
 Since this significantly changes execution semantics, the programmatic API will apply thread offload even if fault tolerance is disabled.
 
-Similarly to the declarative API, implementations of the programmatic API also read this property only once, when the `FaultTolerance` API is first used.
+Similarly to the declarative API, implementations of the programmatic API also read this property only once, when the `Guard` API is first used.
 It is _not_ read again later.
 ****
 
@@ -66,28 +76,19 @@ Let's take a look at a simple example:
 [source,java]
 ----
 public class MyService {
-    private static final FaultTolerance<String> guarded = FaultTolerance.<String>create() // <1>
-        .withFallback().handler(() -> "fallback").done() // <2>
-        .build(); // <3>
+    private static final Guard GUARD = Guard.create()
+        .withRetry().maxRetries(3).done()
+        .build();
 
     public String hello() throws Exception {
-        return guarded.call(() -> externalService.hello()); // <4>
+        return GUARD.call(() -> externalService.hello(), String.class); // <1>
     }
 }
 ----
 
-<1> The `create` invocation typically has to include an explicit type argument (`<String>`).
-    The `FaultTolerance` interface has a type parameter which should be set to the return type of the guarded actions.
-    This is required to be able to guarantee that a fallback value is of the same type.
-<2> The fallback handler may be a simple supplier of the fallback value, or a function that takes the exception and transforms it to the fallback value.
-    Here, we use the simpler option.
-    Note that we don't set any other configuration options.
-    This means that the default set of exceptions is used to determine when fallback should apply.
-<3> The `build` method returns a `FaultTolerance<String>` instance, which can later be used to guard arbitrary `String`-returning actions.
-<4> Here, we call `externalService.hello()` and guard the call with the previously configured set of fault tolerance strategies.
-    (In this case, just fallback.)
-    The `call` method uses the `Callable` type to represent the called action.
-    Similar methods exist that accept a `Supplier` (`get`) or `Runnable` (`run`).
+<1> Here, we call `externalService.hello()` and guard the call with the previously configured set of fault tolerance strategies.
+    The `call` method used here takes the `Callable` type, which represent the guarded action.
+    The `get` method works just like `call`, but accepts a `Supplier`.
 
 The previous example shows how to apply fault tolerance to synchronous actions.
 {smallrye-fault-tolerance} naturally also supports guarding asynchronous actions, using the `CompletionStage` type.
@@ -96,110 +97,102 @@ Unlike the declarative API, the programmatic API doesn't support asynchronous ac
 [source,java]
 ----
 public class MyService {
-    private static final FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String>createAsync() // <1>
-        .withBulkhead().done() // <2>
-        .withThreadOffload(true) // <3>
+    private static final Guard GUARD = Guard.create()
+        .withBulkhead().done()
+        .withThreadOffload(true) // <1>
         .build();
 
     public CompletionStage<String> hello() throws Exception {
-        return guarded.call(() -> externalService.hello()); // <4>
+        return GUARD.call(() -> externalService.hello(),
+                new TypeLiteral<CompletionStage<String>>() {}); // <2>
     }
 }
 ----
 
-<1> The `createAsync` method takes a type parameter of `String` and returns a builder for fault tolerance of type `CompletionStage<String>`.
-<2> Here, we add a bulkhead.
-    Since we don't configure any property, default values are used.
-    That is, at most 10 concurrent executions are permitted, and 10 more executions may be waiting in a queue.
-<3> And here, we add a thread offload.
-    This is only possible for asynchronous actions, and corresponds to the `@Asynchronous` annotation from {microprofile-fault-tolerance}.
-<4> Note that here, unlike the previous example, the `externalService.hello()` method is assumed to return `CompletionStage<String>`.
+<1> The thread offload here only applies to asynchronous actions.
+    If you use the same `GUARD` to guard a synchronous action, no thread offload will apply.
+<2> Note that here, we use the `TypeLiteral` class (from CDI) to specify the type of the guarded action.
 
 Asynchronous actions may be blocking or non-blocking.
 In the example above, we assume the `externalService.hello()` call is blocking, so we set thread offload to `true`.
 {smallrye-fault-tolerance} will automatically move the actual execution of the action to another thread.
 
-If we didn't configure `withThreadOffload`, however, the execution would continue on the original thread.
+If we didn't configure `withThreadOffload`, however, the execution of an asynchronous action would continue on the original thread.
 This is often desired for non-blocking actions, which are very common in modern reactive architectures.
 
 Also note that in this example, we configured multiple fault tolerance strategies: bulkhead and thread offload.
-When that happens, the fault tolerance strategies are ordered according to the MicroProfile Fault Tolerance specification, just like in the declarative API.
+When that happens, the fault tolerance strategies are ordered according to the {microprofile-fault-tolerance} specification, just like in the declarative API.
 Order of all the `with*` method invocations doesn’t matter.
-
-=== Synchronous vs. Asynchronous
-
-What's the difference between `FaultTolerance.<CompletionStage<String>>create()` and `FaultTolerance.<String>createAsync()`?
-Both may be used to guard an action that returns `CompletionStage<String>`, correct?
-
-Well, yes and no.
-
-The synchronous variant (created using `create()`) will only guard the synchronous part of the action -- the part that ends by returning the `CompletionStage` instance.
-It will _not_ guard the asynchronous behavior.
-
-For example, if an action returns a `CompletionStage` object, synchronous fault tolerance will consider that action successfully finished.
-If that `CompletionStage` later completes with an exception, synchronous fault tolerance will never know.
-What's more, the fact that this action has already "finished" means that the action will also leave the bulkhead, so concurrency limiting will not work properly.
-
-The asynchronous variant (created using `createAsync()`), on the other hand, will not treat the action as finished until the `CompletionStage` actually completes.
-That is, the asynchronous action will only leave the bulkhead when it's complete, so concurrency limiting works as expected.
-And if the `CompletionStage` completes exceptionally, asynchronous fault tolerance will treat that as a failure and react accordingly.
-
-To summarize, if you need to guard asynchronous actions, blocking or non-blocking, always use `createAsync`.
 
 === Single-Action Usage
 
-The `FaultTolerance` API is general and permits guarding multiple different actions using the same set of fault tolerance strategies.
-Often, that isn't necessary and we need to guard just a single action, altough possibly several times.
+The `Guard` API is general and permits guarding multiple different actions using the same set of fault tolerance strategies.
+Often, we need to guard just a single action, although possibly several times.
 
-For such use case, the `FaultTolerance` API provides shortcuts that work with the `Callable<T>`, `Supplier<T>` and `Runnable` types.
-
-First off, a `FaultTolerance<T>` instance may be adapted to a `Callable<T>`, `Supplier<T>` or `Runnable` using the `adapt*` methods.
-For example:
+For such use case, the `Guard` instance may be adapted to a `Callable<T>` or `Supplier<T>` using the `adapt*` methods:
 
 [source,java]
 ----
 public class MyService {
-    private static final FaultTolerance<String> guard = FaultTolerance.<String>create()
+    private static final Callable<String> guard = Guard.create()
         .withTimeout().duration(5, ChronoUnit.SECONDS).done()
-        .build(); // <1>
+        .build() // <1>
+        .adaptCallable(() -> externalService.hello(), String.class); // <2>
 
     public String hello() throws Exception {
-        Callable<String> callable = guard.adaptCallable(() -> externalService.hello()); // <2>
-
         return callable.call(); // <3>
     }
 
 }
 ----
 
-<1> Create a `FaultTolerance<String>` object that can guard arbitrary `String`-returning actions.
-<2> Adapt the general `FaultTolerance` instance to a `Callable` that guards the `externalService.hello()` invocation.
-    Similar methods exist that accept and return a `Supplier` (`adaptSupplier`) and `Runnable` (`adaptRunnable`).
+<1> Create a `Guard` object that can guard arbitrary actions.
+<2> Adapt the general `Guard` instance to a `Callable` that guards the `externalService.hello()` invocation.
+    Similar method exists that accepts and returns a `Supplier`: `adaptSupplier`.
 <3> You can do whatever you wish with the adapted `Callable`.
     Here, we just call it once, which isn't very interesting, but it could possibly be called multiple times, passed to other methods etc.
 
-This style of usage still creates a `FaultTolerance` instance first.
-If that is not necessary, you can create a `Callable`, `Supplier` or `Runnable` directly:
+=== Synchronous vs. Asynchronous
+
+The `Guard` and `TypedGuard` interfaces both decide whether the guarded action is synchronous or asynchronous based on the action type.
+This is given to `Guard` when calling or adapting the action, and to `TypedGuard` when creating it.
+
+If the type is asynchronous (such as `CompletionStage`), the asynchronous behavior will also be guarded; the action is only considered complete when the `CompletionStage` actually completes.
+If the type is not asynchronous, only the synchronous behavior will be guarded; the action is considered complete when the method returns.
+
+==== Mutiny Support
+
+It is enough to include the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny`, as described in xref:reference/asynchronous.adoc#async-types[Additional Asynchronous Types].
+With this library present, both `Guard` and `TypedGuard` will recognize `Uni` as an asynchronous type and guard it properly.
+Guarding a `Multi` is not supported.
+
+For example:
 
 [source,java]
 ----
 public class MyService {
-    private static final Callable<String> guard = FaultTolerance.createCallable(() -> externalService.hello()) // <1>
+    private final Supplier<Uni<String>> GUARD = TypedGuard.create(
+            new TypeLiteral<Uni<String>>() {})
         .withTimeout().duration(5, ChronoUnit.SECONDS).done()
-        .build();
+        .withFallback().handler(() -> Uni.createFrom().item("fallback")).done()
+        .build()
+        .adaptSupplier(() -> externalService.hello()); // <1>
 
-    public String hello() throws Exception {
-        return guard.call(); // <2>
+    public Uni<String> hello() {
+        return guard.get();
     }
 }
 ----
 
-<1> The `createCallable` method returns a fault tolerance builder that provides the same configuration options, but in the end, returns a `Callable`.
-    In this case, a `Callable<String>`.
-    These methods typically don't require an explicit type argument, because it can be inferred from the type of action passed in.
-    Similar methods exist that return a builder which, in the end, returns a `Supplier` (`createSupplier`) or `Runnable` (`createRunnable`).
-<2> Here, we don't have to do anything special, just call the existing `Callable`.
-    Again, it could possibly be called multiple times, passed to other methods etc.
+<1> The call to `externalService.hello()` is supposed to return `Uni<String>`.
+
+Note that the `Uni` type is lazy, so the action itself won't execute until the guarded `Uni` is subscribed to.
+
+.Quarkus
+****
+In Quarkus, the Mutiny support library is present by default.
+You can guard `Uni`-returning actions out of the box.
+****
 
 === Stateful Fault Tolerance Strategies
 
@@ -208,17 +201,15 @@ That is, they hold some state required for their correct functioning, such as th
 If you use these strategies, you have to consider their lifecycle.
 
 The {smallrye-fault-tolerance} programmatic API makes such reasoning pretty straightforward.
-Each `FaultTolerance` object has its own instance of each fault tolerance strategy, including the stateful strategies.
-If you use a single `FaultTolerance` object for guarding multiple different actions, all those actions will be guarded by the same bulkhead, circuit breaker and/or rate limit.
-If, on the other hand, you use different `FaultTolerance` objects for guarding different actions, each action will be guarded by its own bulkhead, circuit breaker and/or rate limit.
+Each `Guard` object has its own instance of each fault tolerance strategy, including the stateful strategies.
+If you use a single `Guard` object for guarding multiple different actions, all those actions will be guarded by the same bulkhead, circuit breaker and/or rate limit.
+If, on the other hand, you use different `Guard` objects for guarding different actions, each action will be guarded by its own bulkhead, circuit breaker and/or rate limit.
 
-If you use the `adapt*` methods, the resulting `Callable`, `Supplier` or `Runnable` objects will guard the underlying action using the original `FaultTolerance` instance, so stateful strategies will be shared.
-
-If you use the `create*` methods that directly return `Callable`, `Supplier` or `Runnable`, each such creation will have its own `FaultTolerance` instance under the hood, so stateful strategies will _not_ be shared.
+If you call the `adapt*` methods on the same `Guard` multiple times, the resulting `Callable` or `Supplier` objects will guard the underlying action using the original `Guard` instance, so stateful strategies will be shared.
 
 === Circuit Breaker Maintenance
 
-The `CircuitBreakerMaintenance` API, accessed through `FaultTolerance.circuitBreakerMaintenance()` or by injection in the CDI implementation, can be used to manipulate all named circuit breakers.
+The `CircuitBreakerMaintenance` API, accessed through `CircuitBreakerMaintenance.get()` or by injection in the CDI implementation, can be used to manipulate all named circuit breakers.
 A circuit breaker is given a name by calling `withCircuitBreaker().name("\...")` on the fault tolerance builder, or using the `@CircuitBreakerName` annotation in the declarative API.
 
 Additionally, `CircuitBreakerMaintenance.resetAll()` will also reset all unnamed circuit breakers declared using the `@CicruitBreaker` annotation.
@@ -239,93 +230,14 @@ For example:
 
 [source,java]
 ----
-private static final FaultTolerance<String> guard = FaultTolerance.<String>create()
+private static final Guard GUARD = Guard.create()
     .withTimeout().duration(5, ChronoUnit.SECONDS).onTimeout(() -> ...).done() // <1>
     .build();
 ----
 
-<1> The `onTimeout` method takes a `Runnable` that will later be executed whenever an invocation guarded by `guard` times out.
+<1> The `onTimeout` method takes a `Runnable` that will later be executed whenever an invocation guarded by `GUARD` times out.
 
 All event listeners registered like this must run quickly and must not throw exceptions.
-
-=== Summary of `FaultTolerance` Methods
-
-There's a number of static `create*` methods on the `FaultTolerance` interface.
-Which one do you want to call depends on the result type of the builder and whether the guarded actions are synchronous or asynchronous.
-
-|===
-| The builder result type | Synchronous actions | Asynchronous actions
-
-| `FaultTolerance`
-| `create()` -> `FaultTolerance<T>`
-| `createAsync()` -> `FaultTolerance<CompletionStage<T>>`
-
-| `Callable`
-| `createCallable(Callable<T>)` -> `Callable<T>`
-| `createAsyncCallable(Callable<CompletionStage<T>>)` -> `Callable<CompletionStage<T>>`
-
-| `Supplier`
-| `createSupplier(Supplier<T>)` -> `Supplier<T>`
-| `createAsyncSupplier(Supplier<CompletionStage<T>>)` -> `Supplier<CompletionStage<T>>`
-
-| `Runnable`
-| `createRunnable(Runnable)` -> `Runnable`
-| `createAsyncRunnable(Runnable)` -> `Runnable`
-|===
-
-When you have an instance of `FaultTolerance`, there's also a number of instance methods that either execute an action, or adapt an unguarded action to a guarded one.
-Which one do you want to call depends on the type used to represent the action.
-
-|===
-| The action type | Execute | Adapt
-
-| `Callable<T>`
-| `call(Callable<T>)` -> `T`
-| `adaptCallable(Callable<T>)` -> `Callable<T>`
-
-| `Supplier<T>`
-| `get(Supplier<T>)` -> `T`
-| `adaptSupplier(Supplier<T>)` -> `Supplier<T>`
-
-| `Runnable`
-| `run(Runnable)` -> `void`
-| `adaptRunnable(Runnable)` -> `Runnable`
-|===
-
-== Mutiny Support
-
-In addition to the `FaultTolerance` interface, which provides support for guarding synchronous actions and asynchronous actions using `CompletionStage`, there's a special programmatic API entrypoint for asynchronous actions using the Mutiny library.
-It is enough to include the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny`, as described in xref:reference/asynchronous.adoc#async-types[Additional Asynchronous Types].
-
-This entrypoint is called `MutinyFaultTolerance` and it includes static factory methods for creating a `Callable<Uni<T>>`, `Supplier<Uni<T>` and `FaultTolerance<Uni<T>>`.
-Guarding a `Multi` is not supported.
-
-These factory methods return the common fault tolerance builder, which is supposed to be used just like the builder used when guarding an async action of type `CompletionStage<T>`.
-For example:
-
-[source,java]
-----
-public class MyService {
-    private final Supplier<Uni<String>> guard = MutinyFaultTolerance.createSupplier(() -> externalService.hello()) // <1>
-        .withTimeout().duration(5, ChronoUnit.SECONDS).done()
-        .withFallback().handler(() -> Uni.createFrom().item("fallback")).done()
-        .build();
-
-    public Uni<String> hello() {
-        return guard.get();
-    }
-}
-----
-
-<1> The call to `externalService.hello()` is supposed to return `Uni<String>`.
-
-Note that the `Uni` type is lazy, so the action itself won't execute until the guarded `Uni` is subscribed to.
-
-.Quarkus
-****
-In Quarkus, the Mutiny support library is present by default.
-You can use `MutinyFaultTolerance` out of the box.
-****
 
 == Configuration
 
@@ -337,23 +249,152 @@ This may change in the future, though possibly only in the CDI implementation.
 The programmatic API is integrated with metrics.
 All metrics, as described xref:reference/metrics.adoc[in the Metrics reference guide] and the linked guides, are supported.
 The only difference is the value of the `method` tag.
-With the programmatic API, the `method` tag will be set to the _description_ of the guarded operation, provided on the `FaultTolerance` builder.
+With the programmatic API, the `method` tag will be set to the _description_ of the guarded operation, provided on the `Guard` builder.
 
 [source,java]
 ----
-private static final FaultTolerance<String> guarded = FaultTolerance.<String>create()
+private static final Guard GUARD = Guard.create()
     .withDescription("hello") // <1>
-    .withFallback().handler(() -> "fallback").done()
+    .withRetry().maxRetries(3).done()
     .build();
 ----
 
 <1> A description of `hello` is set, it will be used as a value of the `method` tag in all metrics.
 
-It is possible to create multiple `FaultTolerance` objects with the same description.
-In this case, it won't be possible to distinguish the different `FaultTolerance` objects in metrics; their values will be aggregated.
+It is possible to create multiple `Guard` objects with the same description.
+In this case, it won't be possible to distinguish the different `Guard` objects in metrics; their values will be aggregated.
 
 If no description is provided, a random UUID is used.
 
 == Integration Concerns
 
 Integration concerns, which are particularly interesting for users of the standalone implementation, are xref:integration/programmatic-api.adoc[described] in the integration section.
+
+[[migration_from_faulttolerance]]
+== Migration from `FaultTolerance`
+
+The 1st version of the programmatic API had the `FaultTolerance` interface.
+This is deprecated and scheduled for removal in {smallrye-fault-tolerance} 7.0.
+The replacement are the `Guard` and `TypedGuard` types.
+
+When migrating, one first has to decide which type to use as a replacement.
+The `TypedGuard` is much closer to the `FaultTolerance` type, so that is the easiest way to migrate.
+There are some differences still:
+
+- the `create()` static method now takes a parameter that expresses the guarded action type, either as a `Class` or as a `TypeLiteral`;
+- there are no `cast()` and `castAsync()` methods, because `TypedGuard` only guards actions of a single type;
+- there is no support for guarding or adapting ``Runnable``s, only ``Callable``s and ``Supplier``s are supported.
+  As a replacement for `Runnable`, a `Supplier<Void>` (or `Supplier<CompletionStage<Void>>` etc.) can be used.
+
+For example, these usages of `FaultTolerance`:
+
+[source,java]
+----
+static final FaultTolerance<String> FT1 = FaultTolerance.<String>create()
+    .withDescription("ft1")
+    .withRetry().maxRetries(3).done()
+    .withFallback().handler(() -> "fallback").done()
+    .build();
+
+static final FaultTolerance<CompletionStage<String>> FT2 = FaultTolerance.<String>createAsync()
+    .withDescription("ft2")
+    .withBulkhead().limit(5).queueSize(100).done()
+    .withTimeout().duration(3, ChronoUnit.SECONDS).done()
+    .build();
+----
+
+can be rewritten to:
+
+[source,java]
+----
+static final TypedGuard<String> GUARD1 = TypedGuard.create(String.class)
+        .withDescription("ft1")
+        .withRetry().maxRetries(3).done()
+        .withFallback().handler(() -> "fallback").done()
+        .build();
+
+static final TypedGuard<CompletionStage<String>> GUARD2 = TypedGuard.create(
+                new TypeLiteral<CompletionStage<String>>() {})
+        .withDescription("ft2")
+        .withBulkhead().limit(5).queueSize(100).done()
+        .withTimeout().duration(3, ChronoUnit.SECONDS).done()
+        .build();
+----
+
+After creating a `TypedGuard`, there's no change in how it's used.
+The methods `call()`, `get()`, `adaptCallable()` and `adaptSupplier()` have the same signatures as before.
+
+`TypedGuard` is the only possible replacement if you need fallback.
+If you don't need fallback, and especially if you need to guard actions of multiple types, `Guard` is a better choice.
+
+The differences are:
+
+- `Guard` has no type parameter (is not generic) and does not allow defining fallback;
+- there are no `cast()` and `castAsync()` methods, because they are no longer needed;
+- there is no support for guarding or adapting ``Runnable``s, only ``Callable``s and ``Supplier``s are supported.
+  As a replacement for `Runnable`, a `Supplier<Void>` (or `Supplier<CompletionStage<Void>>` etc.) can be used.
+
+For example, these usages of `FaultTolerance`:
+
+[source,java]
+----
+static final FaultTolerance<String> FT1 = FaultTolerance.<String>create()
+    .withDescription("ft1")
+    .withRetry().maxRetries(3).done()
+    .withCircuitBreaker().done()
+    .build();
+
+static final FaultTolerance<CompletionStage<String>> FT2 = FaultTolerance.<String>createAsync()
+    .withDescription("ft2")
+    .withBulkhead().limit(5).queueSize(100).done()
+    .withTimeout().duration(3, ChronoUnit.SECONDS).done()
+    .build();
+----
+
+can be rewritten to:
+
+[source,java]
+----
+static final Guard GUARD1 = Guard.create()
+        .withDescription("ft1")
+        .withRetry().maxRetries(3).done()
+        .withCircuitBreaker().done()
+        .build();
+
+static final Guard GUARD2 = Guard.create()
+        .withDescription("ft2")
+        .withBulkhead().limit(5).queueSize(100).done()
+        .withTimeout().duration(3, ChronoUnit.SECONDS).done()
+        .build();
+----
+
+Now, as mentioned above, `Guard` is used slightly differently than `FaultTolerance`.
+The methods `call()`, `get()`, `adaptCallable()` and `adaptSupplier()` take an extra parameter that expresses the type of the guarded action, again either as a `Class` or as a `TypeLiteral`.
+
+For example, these usages of `FaultTolerance`:
+
+[source,java]
+----
+String result1 = FT1.call(() -> externalService.hello());
+CompletionStage<String> result2 = FT2.get(() -> externalService.helloAsync());
+
+Callable<String> callable = FT1.adaptCallable(
+        () -> externalService.hello());
+Supplier<CompletionStage<String>> supplier = FT2.adaptSupplier(
+        () -> externalService.helloAsync());
+----
+
+can be rewritten to:
+
+[source,java]
+----
+String result1 = GUARD1.call(() -> externalService.hello(), String.class);
+CompletionStage<String> result2 = GUARD2.get(() -> externalService.helloAsync(),
+        new TypeLiteral<CompletionStage<String>>() {});
+
+Callable<String> callable = GUARD1.adaptCallable(
+        () -> externalService.hello(), String.class);
+Supplier<CompletionStage<String>> supplier = GUARD2.adaptSupplier(
+        () -> externalService.helloAsync(),
+        new TypeLiteral<CompletionStage<String>>() {});
+----

@@ -16,8 +16,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.RateLimitException;
+import io.smallrye.faulttolerance.api.TypedGuard;
 
 public class StandaloneRateLimitAsyncTest {
     private ExecutorService executor;
@@ -35,7 +35,7 @@ public class StandaloneRateLimitAsyncTest {
 
     @Test
     public void asyncBulkhead() throws Exception {
-        FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String> createAsync()
+        TypedGuard<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRateLimit().limit(5).window(1, ChronoUnit.MINUTES).done()
                 .withFallback().handler(this::fallback).applyOn(RateLimitException.class).done()
                 .withThreadOffload(true)

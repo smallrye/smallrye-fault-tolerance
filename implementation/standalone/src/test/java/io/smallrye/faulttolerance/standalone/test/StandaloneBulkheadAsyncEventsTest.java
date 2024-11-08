@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class StandaloneBulkheadAsyncEventsTest {
@@ -21,7 +21,7 @@ public class StandaloneBulkheadAsyncEventsTest {
         AtomicInteger rejectedCounter = new AtomicInteger();
         AtomicInteger finishedCounter = new AtomicInteger();
 
-        FaultTolerance<CompletionStage<String>> guarded = FaultTolerance.<String> createAsync()
+        TypedGuard<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withBulkhead()
                 .limit(5)
                 .queueSize(5)

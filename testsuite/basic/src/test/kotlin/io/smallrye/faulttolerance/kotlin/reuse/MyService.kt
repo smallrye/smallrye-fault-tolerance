@@ -1,9 +1,8 @@
 package io.smallrye.faulttolerance.kotlin.reuse
 
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance
-import java.lang.IllegalArgumentException
-import java.util.concurrent.atomic.AtomicInteger
+import io.smallrye.faulttolerance.api.ApplyGuard
 import jakarta.enterprise.context.ApplicationScoped
+import java.util.concurrent.atomic.AtomicInteger
 
 @ApplicationScoped
 open class MyService {
@@ -11,7 +10,7 @@ open class MyService {
         val COUNTER = AtomicInteger(0)
     }
 
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     open fun hello(): String {
         COUNTER.incrementAndGet()
         throw IllegalArgumentException()

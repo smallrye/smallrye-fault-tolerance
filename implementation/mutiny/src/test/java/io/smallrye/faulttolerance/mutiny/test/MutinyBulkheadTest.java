@@ -7,15 +7,14 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.party.Party;
-import io.smallrye.faulttolerance.mutiny.api.MutinyFaultTolerance;
 import io.smallrye.mutiny.Uni;
 
 public class MutinyBulkheadTest {
     @Test
     public void bulkhead() throws Exception {
-        FaultTolerance<Uni<String>> guarded = MutinyFaultTolerance.<String> create()
+        TypedGuard<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withBulkhead().limit(5).queueSize(5).done()
                 .withFallback().handler(this::fallback).applyOn(BulkheadException.class).done()
                 .withThreadOffload(true)

@@ -6,10 +6,10 @@ The declarative, annotation-based API of {microprofile-fault-tolerance} doesn't 
 In a single class, the configuration may be shared across all methods by putting the annotations on the class instead of individual methods, but even then, _stateful_ fault tolerance strategies are not shared.
 Each method has its own bulkhead, circuit breaker and/or rate limit, which is often not what you want.
 
-The xref:reference/programmatic-api.adoc[programmatic API] of {smallrye-fault-tolerance} allows using a single `FaultTolerance` object to guard multiple disparate actions, which allows reuse and state sharing.
-It is possible to use a programmatically constructed `FaultTolerance` object declaratively, using the `@ApplyFaultTolerance` annotation.
+The xref:reference/programmatic-api.adoc[programmatic API] of {smallrye-fault-tolerance} allows using a single `Guard` or `TypedGuard` object to guard multiple disparate actions, which allows reuse and state sharing.
+It is possible to use a programmatically constructed `Guard` or `TypedGuard` object declaratively, using the `@ApplyGuard` annotation.
 
-To be able to do that, we need a bean of type `FaultTolerance` with the `@Identifier` qualifier:
+To be able to do that, we need a bean of type `Guard` with the `@Identifier` qualifier:
 
 [source,java]
 ----
@@ -17,46 +17,58 @@ To be able to do that, we need a bean of type `FaultTolerance` with the `@Identi
 public class PreconfiguredFaultTolerance {
     @Produces
     @Identifier("my-fault-tolerance")
-    public static final FaultTolerance<String> FT = FaultTolerance.<String>create()
+    public static final Guard GUARD = Guard.create()
             .withRetry().maxRetries(2).done()
-            .withFallback().handler(() -> "fallback").done()
+            .withTimeout().done()
             .build();
 }
 ----
 
-See the xref:reference/programmatic-api.adoc[programmatic API] documentation for more information about creating the `FaultTolerance` instance.
+See the xref:reference/programmatic-api.adoc[programmatic API] documentation for more information about creating the `Guard` or `TypedGuard` instance.
 
 It is customary to create the bean by declaring a `static` producer field, just like in the previous example.
 
-Once we have that, we can apply `my-fault-tolerance` to synchronous methods that return `String`:
+Once we have that, we can apply `my-fault-tolerance` to any method:
 
 [source,java]
 ----
 @ApplicationScoped
 public class MyService {
-    @ApplyFaultTolerance("my-fault-tolerance")
+    @ApplyGuard("my-fault-tolerance")
     public String doSomething() {
+        ...
+    }
+
+    @ApplyGuard("my-fault-tolerance")
+    public CompletionStage<Integer> doSomethingElse() {
         ...
     }
 }
 ----
 
-It is also possible to create a bean of type `FaultTolerance<Object>` and apply it to synchronous methods that return different types.
-Note that this effectively precludes defining a useful fallback, because fallback can only be defined when the value type is known.
+Note that it is not possible to define a fallback on `Guard`, because fallback is tied to the action type.
 
-It is also possible to define a bean of type `FaultTolerance<CompletionStage<T>>` and apply it to asynchronous methods that return `CompletionStage<T>`.
-Likewise, it is possible to do this for xref:reference/asynchronous.adoc#async-types[additional asynchronous types].
-
-Note that you can't define a synchronous `FaultTolerance<T>` object and apply it to any asynchronous method.
-Similarly, you can't define an asynchronous `FaultTolerance<CompletionStage<T>>` and apply it to a synchronous method or an asynchronous method with different asynchronous type.
-This limitation will be lifted in the future.
+It is also possible to create a bean of type `TypedGuard<>` and apply it to methods that return the type `TypedGuard` was created with.
+Note that `TypedGuard` allows defining a fallback, because it can only be used to guard methods with a single return type.
 
 == Metrics
 
-Methods annotated `@ApplyFaultTolerance` gather metrics similarly to methods annotated with {microprofile-fault-tolerance} annotations.
+Methods annotated `@ApplyGuard` gather metrics similarly to methods annotated with {microprofile-fault-tolerance} annotations.
 That is, each method gets its own metrics, with the `method` tag being `<fully qualified class name>.<method name>`.
 
 At the same time, state is still shared.
-All methods annotated `@ApplyFaultTolerance` share the same bulkhead, circuit breaker and/or rate limit.
+All methods annotated `@ApplyGuard` share the same bulkhead, circuit breaker and/or rate limit.
 
-If the `FaultTolerance` object used for `@ApplyFaultTolerance` is also used xref:reference/programmatic-api.adoc[programmatically], that usage is coalesced in metrics under the description as the `method` tag.
+If the `Guard` or `TypedGuard` object used for `@ApplyGuard` is also used xref:reference/programmatic-api.adoc[programmatically], that usage is coalesced in metrics under the description as the `method` tag.
+
+[[migration_from_applyfaulttolerance]]
+== Migration from `@ApplyFaultTolerance`
+
+The 1st version of the programmatic API had the `@ApplyFaultTolerance` annotation.
+That annotation is deprecated and scheduled for removal in {smallrye-fault-tolerance} 7.0.
+
+To migrate, replace `@ApplyFaultTolerance` with `@ApplyGuard` and change the `FaultTolerance<>` producers to produce `Guard` or `TypedGuard<>`.
+See xref:reference/programmatic-api.adoc#migration_from_faulttolerance[the programmatic API migration guide] for more details about that.
+
+Note that it is not possible to define both `Guard` and `TypedGuard<>` with the same identifier; that leads to a deployment problem.
+Therefore, for each producer of `FaultTolerance<>`, you have to decide whether the replacement should be `Guard` or `TypedGuard<>`.

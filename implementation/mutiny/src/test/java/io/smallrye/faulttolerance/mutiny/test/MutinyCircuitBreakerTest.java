@@ -10,23 +10,24 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
-import io.smallrye.faulttolerance.mutiny.api.MutinyFaultTolerance;
 import io.smallrye.mutiny.Uni;
 
 public class MutinyCircuitBreakerTest {
     @BeforeEach
     public void setUp() {
-        FaultTolerance.circuitBreakerMaintenance().resetAll();
+        CircuitBreakerMaintenance.get().resetAll();
     }
 
     @Test
     public void circuitBreaker() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get().subscribeAsCompletionStage())
@@ -42,10 +43,11 @@ public class MutinyCircuitBreakerTest {
 
     @Test
     public void circuitBreakerWithSkipOn() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).skipOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get().subscribeAsCompletionStage())
@@ -62,10 +64,11 @@ public class MutinyCircuitBreakerTest {
 
     @Test
     public void circuitBreakerWithFailOn() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).failOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get().subscribeAsCompletionStage())
@@ -82,10 +85,11 @@ public class MutinyCircuitBreakerTest {
 
     @Test
     public void circuitBreakerWithWhen() {
-        Supplier<Uni<String>> guarded = MutinyFaultTolerance.createSupplier(this::action)
+        Supplier<Uni<String>> guarded = TypedGuard.create(Types.UNI_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).when(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof CircuitBreakerOpenException).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get().subscribeAsCompletionStage())

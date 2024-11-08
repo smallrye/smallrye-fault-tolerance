@@ -4,7 +4,7 @@ import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 
 final class BasicMeteredOperationImpl implements MeteredOperation {
     private final String name;
-    private final boolean isAsynchronous;
+    private final boolean mayBeAsynchronous;
     private final boolean hasBulkhead;
     private final boolean hasCircuitBreaker;
     private final boolean hasFallback;
@@ -12,10 +12,10 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     private final boolean hasRetry;
     private final boolean hasTimeout;
 
-    BasicMeteredOperationImpl(String name, boolean isAsynchronous, boolean hasBulkhead, boolean hasCircuitBreaker,
+    BasicMeteredOperationImpl(String name, boolean mayBeAsynchronous, boolean hasBulkhead, boolean hasCircuitBreaker,
             boolean hasFallback, boolean hasRateLimit, boolean hasRetry, boolean hasTimeout) {
         this.name = name;
-        this.isAsynchronous = isAsynchronous;
+        this.mayBeAsynchronous = mayBeAsynchronous;
         this.hasBulkhead = hasBulkhead;
         this.hasCircuitBreaker = hasCircuitBreaker;
         this.hasFallback = hasFallback;
@@ -25,8 +25,8 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
-    public boolean isAsynchronous() {
-        return isAsynchronous;
+    public boolean mayBeAsynchronous() {
+        return mayBeAsynchronous;
     }
 
     @Override

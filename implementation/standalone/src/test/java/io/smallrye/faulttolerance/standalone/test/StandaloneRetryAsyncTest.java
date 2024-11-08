@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -14,7 +13,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneRetryAsyncTest {
@@ -27,10 +26,11 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetry() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRetry().maxRetries(3).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::actionFail);
 
         assertThat(guarded.get())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -40,10 +40,11 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetryWithAbortOn() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRetry().maxRetries(3).abortOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::actionFail);
 
         assertThat(guarded.get())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -53,10 +54,11 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetryWithRetryOn() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRetry().maxRetries(3).retryOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(TestException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::actionFail);
 
         assertThat(guarded.get())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -66,10 +68,11 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetryWithWhenException() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionFail)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRetry().maxRetries(3).whenException(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof TestException).done()
-                .build();
+                .build()
+                .adaptSupplier(this::actionFail);
 
         assertThat(guarded.get())
                 .succeedsWithin(10, TimeUnit.SECONDS)
@@ -79,31 +82,16 @@ public class StandaloneRetryAsyncTest {
 
     @Test
     public void asyncRetryWithWhenResult() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::actionReturnNull)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withRetry().maxRetries(3).whenResult(Objects::isNull).done()
                 .withFallback().handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptSupplier(this::actionReturnNull);
 
         assertThat(guarded.get())
                 .succeedsWithin(10, TimeUnit.SECONDS)
                 .isEqualTo("fallback");
         assertThat(counter).hasValue(4); // 1 initial invocation + 3 retries
-    }
-
-    @Test
-    public void synchronousFlow() {
-        // this is usually a mistake, because it only guards the synchronous execution
-        // only testing it here to verify that indeed asynchronous fault tolerance doesn't apply
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createSupplier(this::actionFail)
-                .withRetry().maxRetries(3).abortOn(TestException.class).done()
-                .withFallback().handler(this::fallback).done()
-                .build();
-
-        assertThat(guarded.get())
-                .failsWithin(10, TimeUnit.SECONDS)
-                .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
-                .withCauseExactlyInstanceOf(TestException.class);
-        assertThat(counter).hasValue(1); // 1 initial invocation
     }
 
     public CompletionStage<String> actionFail() {

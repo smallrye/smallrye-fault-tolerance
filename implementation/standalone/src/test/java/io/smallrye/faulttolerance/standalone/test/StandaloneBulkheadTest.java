@@ -11,7 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.party.Party;
 
 public class StandaloneBulkheadTest {
@@ -30,7 +30,7 @@ public class StandaloneBulkheadTest {
 
     @Test
     public void bulkhead() throws Exception {
-        FaultTolerance<String> guarded = FaultTolerance.<String> create()
+        TypedGuard<String> guarded = TypedGuard.create(String.class)
                 .withBulkhead().limit(5).done()
                 .withFallback().handler(this::fallback).applyOn(BulkheadException.class).done()
                 .build();

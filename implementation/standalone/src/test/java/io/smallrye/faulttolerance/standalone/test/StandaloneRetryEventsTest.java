@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneRetryEventsTest {
@@ -19,7 +19,7 @@ public class StandaloneRetryEventsTest {
         AtomicInteger successCounter = new AtomicInteger();
         AtomicInteger failureCounter = new AtomicInteger();
 
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withRetry()
                 .maxRetries(3)
                 .onRetry(retryCounter::incrementAndGet)
@@ -27,7 +27,8 @@ public class StandaloneRetryEventsTest {
                 .onFailure(failureCounter::incrementAndGet)
                 .done()
                 .withFallback().applyOn(TestException.class).handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         failTimes = 10;
         assertThat(guarded.call()).isEqualTo("fallback");

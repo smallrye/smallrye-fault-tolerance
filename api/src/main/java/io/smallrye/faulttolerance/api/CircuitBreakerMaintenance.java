@@ -20,19 +20,27 @@ import java.util.function.Consumer;
 import io.smallrye.common.annotation.Experimental;
 
 /**
- * Allows reading and observing current state of circuit breakers and reseting them to the initial (closed) state.
+ * Allows reading and observing current state of circuit breakers and resetting them to the initial (closed) state.
  * To access a specific circuit breaker, it must be given a name using {@link CircuitBreakerName @CircuitBreakerName}
- * or {@link FaultTolerance.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
+ * or {@link Guard.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
  */
 @Experimental("first attempt at providing maintenance access to circuit breakers")
 public interface CircuitBreakerMaintenance {
+    /**
+     * Returns a {@link CircuitBreakerMaintenance} instance that provides maintenance access to existing
+     * circuit breakers.
+     */
+    static CircuitBreakerMaintenance get() {
+        return SpiAccess.get().circuitBreakerMaintenance();
+    }
+
     /**
      * Returns current state of the circuit breaker with given {@code name}.
      * Note that there's no guarantee that the circuit breaker will stay in that state for any time,
      * so this method is only useful for monitoring.
      * <p>
      * It is an error to use a {@code name} that wasn't registered using {@link CircuitBreakerName @CircuitBreakerName}
-     * or {@link FaultTolerance.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
+     * or {@link Guard.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
      */
     CircuitBreakerState currentState(String name);
 
@@ -41,7 +49,7 @@ public interface CircuitBreakerMaintenance {
      * changes state.
      * <p>
      * It is an error to use a {@code name} that wasn't registered using {@link CircuitBreakerName @CircuitBreakerName}
-     * or {@link FaultTolerance.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
+     * or {@link Guard.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
      * <p>
      * The callback must be fast and non-blocking and must not throw an exception.
      */
@@ -54,7 +62,7 @@ public interface CircuitBreakerMaintenance {
      * and perhaps emergency maintenance tasks.
      * <p>
      * It is an error to use a {@code name} that wasn't registered using {@link CircuitBreakerName @CircuitBreakerName}
-     * or {@link FaultTolerance.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
+     * or {@link Guard.Builder.CircuitBreakerBuilder#name(String) withCircuitBreaker().name("...")}.
      */
     void reset(String name);
 

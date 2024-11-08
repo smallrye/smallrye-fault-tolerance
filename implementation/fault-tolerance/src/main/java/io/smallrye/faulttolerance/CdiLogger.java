@@ -47,4 +47,7 @@ interface CdiLogger extends BasicLogger {
     DefinitionException beforeRetryAnnotationWithoutRetry(MethodDescriptor method);
 
     DefinitionException beforeRetryAnnotationWithoutRetry(Class<?> clazz);
+
+    @Message(id = 8, value = "Multiple Guard/TypedGuard beans have the same identifier '%s': %s")
+    DefinitionException multipleGuardsWithTheSameIdentifier(String identifier, Set<String> beans);
 }

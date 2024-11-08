@@ -13,21 +13,23 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
 public class StandaloneCircuitBreakerAsyncTest {
     @BeforeEach
     public void setUp() {
-        FaultTolerance.circuitBreakerMaintenance().resetAll();
+        CircuitBreakerMaintenance.get().resetAll();
     }
 
     @Test
     public void asyncCircuitBreaker() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get())
@@ -43,10 +45,11 @@ public class StandaloneCircuitBreakerAsyncTest {
 
     @Test
     public void asyncCircuitBreakerWithSkipOn() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).skipOn(TestException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get())
@@ -63,10 +66,11 @@ public class StandaloneCircuitBreakerAsyncTest {
 
     @Test
     public void asyncCircuitBreakerWithFailOn() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).failOn(RuntimeException.class).done()
                 .withFallback().handler(this::fallback).applyOn(CircuitBreakerOpenException.class).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get())
@@ -83,10 +87,11 @@ public class StandaloneCircuitBreakerAsyncTest {
 
     @Test
     public void asyncCircuitBreakerWithWhen() {
-        Supplier<CompletionStage<String>> guarded = FaultTolerance.createAsyncSupplier(this::action)
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withCircuitBreaker().requestVolumeThreshold(4).when(e -> e instanceof RuntimeException).done()
                 .withFallback().handler(this::fallback).when(e -> e instanceof CircuitBreakerOpenException).done()
-                .build();
+                .build()
+                .adaptSupplier(this::action);
 
         for (int i = 0; i < 4; i++) {
             assertThat(guarded.get())

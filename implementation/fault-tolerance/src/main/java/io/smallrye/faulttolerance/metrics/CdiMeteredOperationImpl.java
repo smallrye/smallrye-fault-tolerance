@@ -18,7 +18,7 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
-    public boolean isAsynchronous() {
+    public boolean mayBeAsynchronous() {
         return specCompatibility.isOperationTrulyOrPseudoAsynchronous(operation);
     }
 

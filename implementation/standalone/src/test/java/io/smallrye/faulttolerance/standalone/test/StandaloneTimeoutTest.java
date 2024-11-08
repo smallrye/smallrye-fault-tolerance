@@ -10,15 +10,16 @@ import java.util.concurrent.Callable;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 
 public class StandaloneTimeoutTest {
     @Test
     public void timeout() throws Exception {
-        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+        Callable<String> guarded = TypedGuard.create(String.class)
                 .withTimeout().duration(1000, ChronoUnit.MILLIS).done()
                 .withFallback().applyOn(TimeoutException.class).handler(this::fallback).done()
-                .build();
+                .build()
+                .adaptCallable(this::action);
 
         long time = timed(() -> {
             assertThat(guarded.call()).isEqualTo("fallback");

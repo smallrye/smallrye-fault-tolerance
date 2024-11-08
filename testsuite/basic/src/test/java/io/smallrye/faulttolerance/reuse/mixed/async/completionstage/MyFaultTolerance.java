@@ -1,19 +1,16 @@
 package io.smallrye.faulttolerance.reuse.mixed.async.completionstage;
 
-import java.util.concurrent.CompletionStage;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 
 import io.smallrye.common.annotation.Identifier;
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.Guard;
 
 @ApplicationScoped
 public class MyFaultTolerance {
-    // can't define fallback, that's intrinsically typed
     @Produces
     @Identifier("my-fault-tolerance")
-    public static final FaultTolerance<CompletionStage<Object>> FT = FaultTolerance.createAsync()
+    public static final Guard GUARD = Guard.create()
             .withRetry().maxRetries(5).done()
             .build();
 }
