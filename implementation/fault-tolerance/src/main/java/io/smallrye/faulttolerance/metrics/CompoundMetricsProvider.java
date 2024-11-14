@@ -9,7 +9,7 @@ import java.util.function.LongSupplier;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Alternative;
-import jakarta.enterprise.inject.spi.CDI;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -32,15 +32,15 @@ public class CompoundMetricsProvider implements MetricsProvider {
 
     @Inject
     CompoundMetricsProvider(
+            Instance<MetricsProvider> lookup,
             @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled) {
-        CDI<Object> cdi = CDI.current();
         List<Class<? extends MetricsProvider>> allProviders = List.of(MicroProfileMetricsProvider.class,
                 OpenTelemetryProvider.class, MicrometerProvider.class);
 
         List<MetricsProvider> providers = new ArrayList<>();
         for (Class<? extends MetricsProvider> clazz : allProviders) {
             try {
-                providers.add(cdi.select(clazz).get());
+                providers.add(lookup.select(clazz).get());
             } catch (Exception ignored) {
                 // either the bean does not exist, or some of its dependencies does not exist
             }
