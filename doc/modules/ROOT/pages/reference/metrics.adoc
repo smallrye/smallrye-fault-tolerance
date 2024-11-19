@@ -89,3 +89,19 @@ It is possible to completely disable fault tolerance metrics using MicroProfile 
 ----
 MP_Fault_Tolerance_Metrics_Enabled=false
 ----
+
+It is also possible to disable individual metric providers:
+
+[source,properties]
+----
+# to disable MP Metrics
+smallrye.faulttolerance.mpmetrics.disabled=true
+
+# to disable OpenTelemetry Metrics
+smallrye.faulttolerance.opentelemetry.disabled=true
+
+# to disable Micrometer
+smallrye.faulttolerance.micrometer.disabled=true
+----
+
+This applies when only one metric provider is present as well as when multiple metric providers are present.

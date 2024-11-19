@@ -22,7 +22,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class OpenTelemetryProvider implements MetricsProvider {
-    private final boolean metricsEnabled;
+    private final boolean enabled;
 
     private final Meter meter;
 
@@ -32,25 +32,28 @@ public class OpenTelemetryProvider implements MetricsProvider {
     OpenTelemetryProvider(
             // lazy for `CompoundMetricsProvider`
             Provider<Meter> meter,
-            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.OPENTELEMETRY_DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
             ExecutorHolder executorHolder) {
-        this.metricsEnabled = metricsEnabled;
+        this.enabled = metricsEnabled && !openTelemetryDisabled;
         this.meter = meter.get();
 
-        Timer timer = executorHolder.getTimer();
-        Attributes attributes = Attributes.of(AttributeKey.stringKey("id"), "" + timer.getId());
-        this.meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
-                .buildWithCallback(m -> m.record(timer.countScheduledTasks(), attributes));
+        if (enabled) {
+            Timer timer = executorHolder.getTimer();
+            Attributes attributes = Attributes.of(AttributeKey.stringKey("id"), "" + timer.getId());
+            this.meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
+                    .buildWithCallback(m -> m.record(timer.countScheduledTasks(), attributes));
+        }
     }
 
     @Override
     public boolean isEnabled() {
-        return metricsEnabled;
+        return enabled;
     }
 
     @Override
     public MetricsRecorder create(MeteredOperation operation) {
-        if (metricsEnabled) {
+        if (enabled) {
             return cache.computeIfAbsent(operation.cacheKey(),
                     ignored -> new OpenTelemetryRecorder(meter, operation));
         } else {
