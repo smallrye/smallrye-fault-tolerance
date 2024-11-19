@@ -22,7 +22,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicrometerProvider implements MetricsProvider {
-    private final boolean metricsEnabled;
+    private final boolean enabled;
 
     private final MeterRegistry registry;
 
@@ -32,24 +32,27 @@ public class MicrometerProvider implements MetricsProvider {
     MicrometerProvider(
             // lazy for `CompoundMetricsProvider`
             Provider<MeterRegistry> registry,
-            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.MICROMETER_DISABLED, defaultValue = "false") boolean micrometerDisabled,
             ExecutorHolder executorHolder) {
-        this.metricsEnabled = metricsEnabled;
+        this.enabled = metricsEnabled && !micrometerDisabled;
         this.registry = registry.get();
 
-        Timer timer = executorHolder.getTimer();
-        this.registry.gauge(MetricsConstants.TIMER_SCHEDULED, Collections.singletonList(Tag.of("id", "" + timer.getId())),
-                timer, Timer::countScheduledTasks);
+        if (enabled) {
+            Timer timer = executorHolder.getTimer();
+            this.registry.gauge(MetricsConstants.TIMER_SCHEDULED, Collections.singletonList(Tag.of("id", "" + timer.getId())),
+                    timer, Timer::countScheduledTasks);
+        }
     }
 
     @Override
     public boolean isEnabled() {
-        return metricsEnabled;
+        return enabled;
     }
 
     @Override
     public MetricsRecorder create(MeteredOperation operation) {
-        if (metricsEnabled) {
+        if (enabled) {
             return cache.computeIfAbsent(operation.cacheKey(),
                     ignored -> new MicrometerRecorder(registry, operation));
         } else {
