@@ -24,7 +24,7 @@ import io.smallrye.faulttolerance.core.metrics.MetricsRecorder;
 @Alternative
 @Priority(1)
 public class CompoundMetricsProvider implements MetricsProvider {
-    private final boolean metricsEnabled;
+    private final boolean enabled;
 
     private final MetricsProvider[] providers;
 
@@ -33,30 +33,45 @@ public class CompoundMetricsProvider implements MetricsProvider {
     @Inject
     CompoundMetricsProvider(
             Instance<MetricsProvider> lookup,
-            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled) {
-        List<Class<? extends MetricsProvider>> allProviders = List.of(MicroProfileMetricsProvider.class,
-                OpenTelemetryProvider.class, MicrometerProvider.class);
+            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.MPMETRICS_DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
+            @ConfigProperty(name = Constants.OPENTELEMETRY_DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
+            @ConfigProperty(name = Constants.MICROMETER_DISABLED, defaultValue = "false") boolean micrometerDisabled) {
 
         List<MetricsProvider> providers = new ArrayList<>();
-        for (Class<? extends MetricsProvider> clazz : allProviders) {
+        if (!mpMetricsDisabled) {
             try {
-                providers.add(lookup.select(clazz).get());
+                providers.add(lookup.select(MicroProfileMetricsProvider.class).get());
             } catch (Exception ignored) {
                 // either the bean does not exist, or some of its dependencies does not exist
             }
         }
-        this.metricsEnabled = providers.isEmpty() ? false : metricsEnabled;
+        if (!openTelemetryDisabled) {
+            try {
+                providers.add(lookup.select(OpenTelemetryProvider.class).get());
+            } catch (Exception ignored) {
+                // either the bean does not exist, or some of its dependencies does not exist
+            }
+        }
+        if (!micrometerDisabled) {
+            try {
+                providers.add(lookup.select(MicrometerProvider.class).get());
+            } catch (Exception ignored) {
+                // either the bean does not exist, or some of its dependencies does not exist
+            }
+        }
+        this.enabled = providers.isEmpty() ? false : metricsEnabled;
         this.providers = providers.toArray(new MetricsProvider[0]);
     }
 
     @Override
     public boolean isEnabled() {
-        return metricsEnabled;
+        return enabled;
     }
 
     @Override
     public MetricsRecorder create(MeteredOperation operation) {
-        if (metricsEnabled) {
+        if (enabled) {
             return cache.computeIfAbsent(operation.cacheKey(), ignored -> {
                 if (providers.length == 1) {
                     return providers[0].create(operation);
