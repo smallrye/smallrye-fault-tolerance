@@ -24,7 +24,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicroProfileMetricsProvider implements MetricsProvider {
-    private final boolean metricsEnabled;
+    private final boolean enabled;
 
     private final MetricRegistry registry;
 
@@ -34,27 +34,30 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
     MicroProfileMetricsProvider(
             // lazy for `CompoundMetricsProvider`
             @RegistryType(type = MetricRegistry.Type.BASE) Provider<MetricRegistry> registry,
-            @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled", defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
+            @ConfigProperty(name = Constants.MPMETRICS_DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
             ExecutorHolder executorHolder) {
-        this.metricsEnabled = metricsEnabled;
+        this.enabled = metricsEnabled && !mpMetricsDisabled;
         this.registry = registry.get();
 
-        Metadata metadata = Metadata.builder()
-                .withName(MetricsConstants.TIMER_SCHEDULED)
-                .withUnit(MetricUnits.NONE)
-                .build();
-        Timer timer = executorHolder.getTimer();
-        this.registry.gauge(metadata, timer, Timer::countScheduledTasks, new Tag("id", "" + timer.getId()));
+        if (enabled) {
+            Metadata metadata = Metadata.builder()
+                    .withName(MetricsConstants.TIMER_SCHEDULED)
+                    .withUnit(MetricUnits.NONE)
+                    .build();
+            Timer timer = executorHolder.getTimer();
+            this.registry.gauge(metadata, timer, Timer::countScheduledTasks, new Tag("id", "" + timer.getId()));
+        }
     }
 
     @Override
     public boolean isEnabled() {
-        return metricsEnabled;
+        return enabled;
     }
 
     @Override
     public MetricsRecorder create(MeteredOperation operation) {
-        if (metricsEnabled) {
+        if (enabled) {
             return cache.computeIfAbsent(operation.cacheKey(),
                     ignored -> new MicroProfileMetricsRecorder(registry, operation));
         } else {
