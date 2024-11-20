@@ -21,6 +21,7 @@ import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.RateLimitType;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
 import io.smallrye.faulttolerance.core.async.SyncAsyncSplit;
@@ -28,10 +29,11 @@ import io.smallrye.faulttolerance.core.async.ThreadOffload;
 import io.smallrye.faulttolerance.core.bulkhead.Bulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
+import io.smallrye.faulttolerance.core.fallback.Fallback;
+import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.metrics.DelegatingMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
-import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -81,10 +83,11 @@ public class GuardImpl implements Guard {
         this.eventHandlers = eventHandlers;
     }
 
-    public <V, T> T guard(Callable<T> action, Type valueType, MeteredOperationName meteredOperationName) throws Exception {
+    public <V, T> T guard(Callable<T> action, Type valueType, Consumer<FaultToleranceContext<?>> contextModifier)
+            throws Exception {
         AsyncSupport<V, T> asyncSupport = GuardCommon.asyncSupport(valueType);
         return GuardCommon.guard(action, (FaultToleranceStrategy<V>) strategy, asyncSupport, eventHandlers,
-                meteredOperationName);
+                contextModifier);
     }
 
     @Override
@@ -218,10 +221,8 @@ public class GuardImpl implements Guard {
             FaultToleranceStrategy<V> result = invocation();
 
             // thread offload is always enabled
-            if (offloadToAnotherThread) {
-                Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
-                result = new SyncAsyncSplit<>(new ThreadOffload<>(result, executor), result);
-            }
+            Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
+            result = new SyncAsyncSplit<>(new ThreadOffload<>(result, executor, offloadToAnotherThread), result);
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new Bulkhead<>(result, description,
@@ -275,7 +276,8 @@ public class GuardImpl implements Guard {
                         retryBuilder.beforeRetry != null ? ctx -> retryBuilder.beforeRetry.accept(ctx.failure) : null);
             }
 
-            // no fallback here
+            // fallback is always enabled
+            result = new Fallback<>(result, description, FallbackFunction.ignore(), ExceptionDecision.IGNORE);
 
             MetricsProvider metricsProvider = lazyDependencies.metricsProvider();
             if (metricsProvider.isEnabled()) {

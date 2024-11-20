@@ -7,7 +7,7 @@ import io.smallrye.faulttolerance.core.Completer;
 import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.Future;
 
-public final class ThreadOffloadFallbackFunction<T> implements Function<FailureContext, Future<T>> {
+public final class ThreadOffloadFallbackFunction<T> implements FallbackFunction<T> {
     private final Function<FailureContext, Future<T>> delegate;
     private final Executor executor;
 

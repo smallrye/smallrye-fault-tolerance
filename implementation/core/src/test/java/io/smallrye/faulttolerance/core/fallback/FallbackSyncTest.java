@@ -5,11 +5,8 @@ import static io.smallrye.faulttolerance.core.util.TestThread.runOnTestThread;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.function.Function;
-
 import org.junit.jupiter.api.Test;
 
-import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
@@ -117,7 +114,7 @@ public class FallbackSyncTest {
     public void waitingOnParty_interruptedInFallback() throws InterruptedException {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
         Party party = Party.create(1);
-        Function<FailureContext, Future<String>> fallbackFunction = ctx -> {
+        FallbackFunction<String> fallbackFunction = ctx -> {
             try {
                 party.participant().attend();
                 return Future.of("fallback");
@@ -160,7 +157,7 @@ public class FallbackSyncTest {
     @Test
     public void selfInterruptedInFallback_value() throws Exception {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
-        Function<FailureContext, Future<String>> fallbackFunction = ctx -> {
+        FallbackFunction<String> fallbackFunction = ctx -> {
             Thread.currentThread().interrupt();
             return Future.of("fallback");
         };
@@ -173,7 +170,7 @@ public class FallbackSyncTest {
     @Test
     public void selfInterruptedInFallback_exception() {
         TestInvocation<String> invocation = TestInvocation.of(TestException::doThrow);
-        Function<FailureContext, Future<String>> fallbackFunction = ctx -> {
+        FallbackFunction<String> fallbackFunction = ctx -> {
             Thread.currentThread().interrupt();
             throw new RuntimeException();
         };

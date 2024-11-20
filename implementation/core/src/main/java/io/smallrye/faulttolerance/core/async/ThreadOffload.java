@@ -17,14 +17,25 @@ import io.smallrye.faulttolerance.core.Future;
 public class ThreadOffload<V> implements FaultToleranceStrategy<V> {
     private final FaultToleranceStrategy<V> delegate;
     private final Executor executor;
+    private final ThreadOffloadEnabled defaultEnabled;
 
     public ThreadOffload(FaultToleranceStrategy<V> delegate, Executor executor) {
+        this(delegate, executor, true);
+    }
+
+    public ThreadOffload(FaultToleranceStrategy<V> delegate, Executor executor, boolean defaultEnabled) {
         this.delegate = delegate;
         this.executor = checkNotNull(executor, "Executor must be set");
+        this.defaultEnabled = new ThreadOffloadEnabled(defaultEnabled);
     }
 
     @Override
     public Future<V> apply(FaultToleranceContext<V> ctx) {
+        // required for `@ApplyGuard`
+        if (!ctx.get(ThreadOffloadEnabled.class, defaultEnabled).value) {
+            return delegate.apply(ctx);
+        }
+
         LOG.trace("ThreadOffload started");
         try {
             Executor executor = ctx.get(Executor.class, this.executor);

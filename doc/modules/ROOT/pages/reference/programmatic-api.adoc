@@ -266,6 +266,17 @@ In this case, it won't be possible to distinguish the different `Guard` objects 
 
 If no description is provided, a random UUID is used.
 
+== Differences to the Specification
+
+`Guard` and `TypedGuard` have the following differences to standard MicroProfile Fault Tolerance:
+
+* asynchronous actions of type `java.util.concurrent.Future` are not supported;
+* the fallback, circuit breaker and retry strategies always inspect the cause chain of exceptions, following the behavior of SmallRye Fault Tolerance in the non-compatible mode.
+
+== Kotlin `suspend` Functions
+
+The `Guard` and `TypedGuard` APIs do not support Kotlin `suspend` functions at the moment.
+
 == Integration Concerns
 
 Integration concerns, which are particularly interesting for users of the standalone implementation, are xref:integration/programmatic-api.adoc[described] in the integration section.

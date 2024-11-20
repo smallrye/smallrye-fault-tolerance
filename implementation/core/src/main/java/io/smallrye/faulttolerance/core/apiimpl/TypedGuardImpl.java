@@ -20,7 +20,7 @@ import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.api.TypedGuard;
-import io.smallrye.faulttolerance.core.FailureContext;
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
@@ -30,11 +30,11 @@ import io.smallrye.faulttolerance.core.bulkhead.Bulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
+import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.ConstantInvoker;
 import io.smallrye.faulttolerance.core.metrics.DelegatingMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
-import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -91,8 +91,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
         this.eventHandlers = eventHandlers;
     }
 
-    public T guard(Callable<T> action, MeteredOperationName meteredOperationName) throws Exception {
-        return GuardCommon.guard(action, strategy, asyncSupport, eventHandlers, meteredOperationName);
+    public T guard(Callable<T> action, Consumer<FaultToleranceContext<?>> contextModifier) throws Exception {
+        return GuardCommon.guard(action, strategy, asyncSupport, eventHandlers, contextModifier);
     }
 
     @Override
@@ -223,10 +223,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             FaultToleranceStrategy<V> result = invocation();
 
             // thread offload is always enabled
-            if (offloadToAnotherThread) {
-                Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
-                result = new SyncAsyncSplit<>(new ThreadOffload<>(result, executor), result);
-            }
+            Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
+            result = new SyncAsyncSplit<>(new ThreadOffload<>(result, executor, offloadToAnotherThread), result);
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new Bulkhead<>(result, description,
@@ -281,8 +279,9 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             }
 
             // fallback is always enabled
+            FallbackFunction<V> fallbackFunction = FallbackFunction.ignore();
+            ExceptionDecision exceptionDecision = ExceptionDecision.IGNORE;
             if (fallbackBuilder != null) {
-                Function<FailureContext, Future<V>> fallbackFunction;
                 if (asyncSupport != null) {
                     fallbackFunction = ctx -> {
                         try {
@@ -298,10 +297,10 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
                     };
                 }
 
-                result = new Fallback<>(result, description, fallbackFunction,
-                        createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
-                                fallbackBuilder.whenPredicate));
+                exceptionDecision = createExceptionDecision(fallbackBuilder.skipOn, fallbackBuilder.applyOn,
+                        fallbackBuilder.whenPredicate);
             }
+            result = new Fallback<>(result, description, fallbackFunction, exceptionDecision);
 
             MetricsProvider metricsProvider = lazyDependencies.metricsProvider();
             if (metricsProvider.isEnabled()) {

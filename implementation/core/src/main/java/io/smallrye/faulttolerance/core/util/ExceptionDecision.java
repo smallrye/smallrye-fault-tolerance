@@ -5,4 +5,8 @@ public interface ExceptionDecision {
 
     ExceptionDecision ALWAYS_EXPECTED = ignored -> true;
     ExceptionDecision ALWAYS_FAILURE = ignored -> false;
+
+    ExceptionDecision IGNORE = ignored -> {
+        throw new UnsupportedOperationException();
+    };
 }

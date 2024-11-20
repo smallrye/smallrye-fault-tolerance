@@ -12,7 +12,7 @@ import jakarta.interceptor.InterceptorBinding;
 import io.smallrye.common.annotation.Experimental;
 
 /**
- * A special interceptor binding annotation to apply preconfigured fault tolerance.
+ * An interceptor binding annotation to apply preconfigured fault tolerance.
  * If {@code @ApplyGuard("<identifier>")} is present on a business method,
  * then a bean of type {@link Guard} or {@link TypedGuard} with qualifier
  * {@link io.smallrye.common.annotation.Identifier @Identifier("&lt;identifier>")}
@@ -30,12 +30,28 @@ import io.smallrye.common.annotation.Experimental;
  * the one on the method takes precedence.
  * <p>
  * When {@code @ApplyGuard} applies to a business method, all other fault tolerance
- * annotations that would otherwise also apply to that method are ignored.
+ * annotations that would also apply to that method are ignored, except:
+ *
+ * <ul>
+ * <li>{@link org.eclipse.microprofile.faulttolerance.Fallback @Fallback}</li>
+ * <li>{@link org.eclipse.microprofile.faulttolerance.Asynchronous @Asynchronous}</li>
+ * <li>{@link AsynchronousNonBlocking @AsynchronousNonBlocking}</li>
+ * </ul>
+ *
+ * If {@code @Fallback} is present, it is used both by {@code Guard} and {@code TypedGuard}
+ * and it overrides the possible fallback configuration of {@code TypedGuard}. Further,
+ * the thread offload configuration of {@code Guard} or {@code TypedGuard} is ignored
+ * if the annotated method is asynchronous as determined from the method signature
+ * and possible annotations ({@code @Asynchronous} and {@code @AsynchronousNonBlocking}).
+ * The thread offload configuration of {@code Guard} or {@code TypedGuard} is only honored
+ * when the method cannot be determined to be asynchronous, but it still declares
+ * an asynchronous return type.
  * <p>
  * A single preconfigured fault tolerance can be applied to multiple methods.
- * If the preconfigured fault tolerance is of type {@code TypedGuard}, then all methods
- * must have the same return type. If the preconfigured fault tolerance is of type {@code Guard},
- * no such requirement applies; note that in this case, there is no way to define a fallback.
+ * If the preconfigured fault tolerance is a {@code TypedGuard}, then all methods
+ * must have the same return type, which must be equal to the type the {@code TypedGuard}
+ * was created with. If the preconfigured fault tolerance is of type {@code Guard},
+ * no such requirement applies.
  * <p>
  * Note that this annotation has the same differences to standard MicroProfile Fault Tolerance
  * as {@code Guard} / {@code TypedGuard}:

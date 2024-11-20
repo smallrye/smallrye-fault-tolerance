@@ -21,7 +21,6 @@ import io.smallrye.faulttolerance.api.CircuitBreakerState;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.RateLimitType;
-import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
@@ -31,6 +30,7 @@ import io.smallrye.faulttolerance.core.bulkhead.Bulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
+import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.ConstantInvoker;
@@ -364,7 +364,7 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
 
             // fallback is always enabled
             if (fallbackBuilder != null) {
-                Function<FailureContext, Future<T>> fallbackFunction = ctx -> {
+                FallbackFunction<T> fallbackFunction = ctx -> {
                     return Future.from(() -> fallbackBuilder.handler.apply(ctx.failure));
                 };
                 result = new Fallback<>(result, description, fallbackFunction,
@@ -449,7 +449,7 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
                     throw new FaultToleranceException("Unknown async type: " + asyncType);
                 }
 
-                Function<FailureContext, Future<V>> fallbackFunction = ctx -> {
+                FallbackFunction<V> fallbackFunction = ctx -> {
                     try {
                         return asyncSupport.toFuture(ConstantInvoker.of(
                                 fallbackBuilder.handler.apply(ctx.failure)));
