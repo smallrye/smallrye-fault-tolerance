@@ -3,8 +3,6 @@ package io.smallrye.faulttolerance.core.fallback;
 import static io.smallrye.faulttolerance.core.fallback.FallbackLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
-import java.util.function.Function;
-
 import io.smallrye.faulttolerance.core.Completer;
 import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceContext;
@@ -16,11 +14,11 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
     private final FaultToleranceStrategy<V> delegate;
     private final String description;
 
-    private final Function<FailureContext, Future<V>> fallback;
+    private final FallbackFunction<V> fallback;
     private final ExceptionDecision exceptionDecision;
 
     public Fallback(FaultToleranceStrategy<V> delegate, String description,
-            Function<FailureContext, Future<V>> fallback, ExceptionDecision exceptionDecision) {
+            FallbackFunction<V> fallback, ExceptionDecision exceptionDecision) {
         this.delegate = checkNotNull(delegate, "Fallback delegate must be set");
         this.description = checkNotNull(description, "Fallback description must be set");
         this.fallback = checkNotNull(fallback, "Fallback function must be set");
@@ -29,6 +27,14 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
 
     @Override
     public Future<V> apply(FaultToleranceContext<V> ctx) {
+        FallbackFunction<V> fallback = ctx.get(FallbackFunction.class, this.fallback);
+        ExceptionDecision exceptionDecision = ctx.get(ExceptionDecision.class, this.exceptionDecision);
+
+        // required for `@ApplyGuard`
+        if (fallback == FallbackFunction.IGNORE || exceptionDecision == ExceptionDecision.IGNORE) {
+            return delegate.apply(ctx);
+        }
+
         LOG.trace("Fallback started");
         try {
             ctx.fireEvent(FallbackEvents.Defined.INSTANCE);

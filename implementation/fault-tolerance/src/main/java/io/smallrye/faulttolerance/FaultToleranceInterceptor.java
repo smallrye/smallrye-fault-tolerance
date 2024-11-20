@@ -27,7 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -67,11 +66,13 @@ import io.smallrye.faulttolerance.core.apiimpl.TypedGuardImpl;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
 import io.smallrye.faulttolerance.core.async.ThreadOffload;
+import io.smallrye.faulttolerance.core.async.ThreadOffloadEnabled;
 import io.smallrye.faulttolerance.core.bulkhead.Bulkhead;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreaker;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.fallback.Fallback;
+import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.ThreadOffloadFallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
@@ -195,7 +196,7 @@ public class FaultToleranceInterceptor {
         if (operation.hasApplyFaultTolerance()) {
             return applyFaultToleranceFlow(operation, interceptionContext);
         } else if (operation.hasApplyGuard()) {
-            return applyGuardFlow(operation, interceptionContext);
+            return applyGuardFlow(operation, interceptionContext, point);
         } else if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
             return asyncFlow(operation, interceptionContext, point);
         } else if (specCompatibility.isOperationPseudoAsynchronous(operation)) {
@@ -255,7 +256,8 @@ public class FaultToleranceInterceptor {
     //
     // in synchronous scenario, V = T
     // in asynchronous scenario, T is an async type that eventually produces V
-    private <V, T> T applyGuardFlow(FaultToleranceOperation operation, InvocationContext interceptionContext) throws Exception {
+    private <V, T> T applyGuardFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
+            InterceptionPoint point) throws Exception {
         String identifier = operation.getApplyGuard().value();
         Instance<Guard> guardInstance = configuredGuard.select(Identifier.Literal.of(identifier));
         Instance<TypedGuard<T>> typedGuardInstance = (Instance) configuredTypedGuard.select(Identifier.Literal.of(identifier));
@@ -265,7 +267,39 @@ public class FaultToleranceInterceptor {
                     + " with qualifier @" + Identifier.class.getName() + "(\"" + identifier + "\")");
         }
 
+        FallbackFunction<V> fallbackFunction;
+        ExceptionDecision exceptionDecision;
+        if (operation.hasFallback()) {
+            fallbackFunction = cache.getFallbackFunction(point,
+                    () -> prepareFallbackFunction(point, operation));
+            exceptionDecision = cache.getFallbackExceptionDecision(point,
+                    () -> createExceptionDecision(operation.getFallback().skipOn(), operation.getFallback().applyOn()));
+        } else {
+            fallbackFunction = null;
+            exceptionDecision = null;
+        }
+        Boolean threadOffload;
+        if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
+            threadOffload = operation.isThreadOffloadRequired();
+        } else {
+            threadOffload = null;
+        }
         MeteredOperationName meteredOperationName = new MeteredOperationName(operation.getName());
+
+        Consumer<FaultToleranceContext<?>> contextModifier = ctx -> {
+            ctx.set(InvocationContext.class, interceptionContext);
+
+            if (fallbackFunction != null) {
+                ctx.set(FallbackFunction.class, fallbackFunction);
+            }
+            if (exceptionDecision != null) {
+                ctx.set(ExceptionDecision.class, exceptionDecision);
+            }
+            if (threadOffload != null) {
+                ctx.set(ThreadOffloadEnabled.class, new ThreadOffloadEnabled(threadOffload));
+            }
+            ctx.set(MeteredOperationName.class, meteredOperationName);
+        };
 
         if (guardInstance.isResolvable()) {
             Guard guard = guardInstance.get();
@@ -275,8 +309,7 @@ public class FaultToleranceInterceptor {
             }
             GuardImpl guardImpl = ((LazyGuard) guard).instance();
 
-            return guardImpl.guard(() -> (T) interceptionContext.proceed(),
-                    operation.getReturnType(), meteredOperationName);
+            return guardImpl.guard(() -> (T) interceptionContext.proceed(), operation.getReturnType(), contextModifier);
         } else /* typedGuardInstance.isResolvable() */ {
             TypedGuard<T> guard = typedGuardInstance.get();
             if (!(guard instanceof LazyTypedGuard)) {
@@ -285,9 +318,7 @@ public class FaultToleranceInterceptor {
             }
             TypedGuardImpl<V, T> guardImpl = ((LazyTypedGuard<V, T>) guard).instance();
 
-            return guardImpl.guard(() -> {
-                return (T) interceptionContext.proceed();
-            }, meteredOperationName);
+            return guardImpl.guard(() -> (T) interceptionContext.proceed(), contextModifier);
         }
     }
 
@@ -551,7 +582,7 @@ public class FaultToleranceInterceptor {
     //
     // in synchronous scenario, V = T
     // in asynchronous scenario, T is an async type that eventually produces V
-    private <V, T> Function<FailureContext, Future<V>> prepareFallbackFunction(
+    private <V, T> FallbackFunction<V> prepareFallbackFunction(
             InterceptionPoint point, FaultToleranceOperation operation) {
         AsyncSupport<V, T> asyncSupport = cache.getAsyncSupport(point, operation);
 
@@ -560,7 +591,7 @@ public class FaultToleranceInterceptor {
                 ? cache.getFallbackMethodCandidates(point, operation)
                 : null;
 
-        Function<FailureContext, Future<V>> fallbackFunction;
+        FallbackFunction<V> fallbackFunction;
 
         if (candidates != null) {
             fallbackFunction = ctx -> {

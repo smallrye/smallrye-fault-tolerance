@@ -9,7 +9,7 @@ Each method has its own bulkhead, circuit breaker and/or rate limit, which is of
 The xref:reference/programmatic-api.adoc[programmatic API] of {smallrye-fault-tolerance} allows using a single `Guard` or `TypedGuard` object to guard multiple disparate actions, which allows reuse and state sharing.
 It is possible to use a programmatically constructed `Guard` or `TypedGuard` object declaratively, using the `@ApplyGuard` annotation.
 
-To be able to do that, we need a bean of type `Guard` with the `@Identifier` qualifier:
+To be able to do that, we need a bean of type `Guard` (or `TypedGuard`) with the `@Identifier` qualifier:
 
 [source,java]
 ----
@@ -46,10 +46,40 @@ public class MyService {
 }
 ----
 
-Note that it is not possible to define a fallback on `Guard`, because fallback is tied to the action type.
+== Defining Fallback
 
-It is also possible to create a bean of type `TypedGuard<>` and apply it to methods that return the type `TypedGuard` was created with.
-Note that `TypedGuard` allows defining a fallback, because it can only be used to guard methods with a single return type.
+Note that it is not possible to define a fallback on `Guard`, because fallback is tied to the action type.
+It is possible to define a fallback on `TypedGuard`, because it can only be used to guard methods with a single return type, equal to the type the `TypedGuard` was created with.
+
+However, the `@ApplyGuard` annotation pays attention to the `@Fallback` annotation.
+If `@Fallback` is defined, it is used both by `Guard` and `TypedGuard` instances, and it overrides the possible fallback defined on the `TypedGuard`.
+
+== Defining Thread Offload
+
+Both `Guard` and `TypedGuard` allow enabling or disabling thread offload.
+This is ignored by `@ApplyGuard` if the annotated method is asynchronous as determined from the method signature and possible annotations (`@Asynchronous` and `@AsynchronousNonBlocking`).
+See xref:reference/asynchronous.adoc[] for more information about how that determination works.
+
+The thread offload configuration of `Guard` or `TypedGuard` is only honored when the method cannot be determined to be asynchronous, but it still declares an asynchronous return type.
+
+.Compatible Mode
+****
+In the compatible mode, methods are determined to be asynchronous when they are annotated `@Asynchronous` or `@AsynchronousNonBlocking` and they declare an asynchronous return type.
+For such methods, the `Guard` / `TypedGuard` thread offload configuration does not apply.
+
+For methods that declare an asynchronous return type but are not annotated with `@Asynchronous` or `@AsynchronousNonBlocking`, the configuration on `Guard` / `TypedGuard` is honored.
+****
+
+.Non-compatible Mode
+****
+In the non-compatible mode, methods are determined to be asynchronous whenever they declare an asynchronous return type.
+The `@Asynchronous` and `@AsynchronousNonBlocking` only affect whether the invocation of that method is offloaded to an extra thread.
+If none of these annotations is present, no thread offload happens.
+
+In other words, in non-compatible mode, the `Guard` / `TypedGuard` thread offload configuration never applies.
+
+See xref:reference/non-compat.adoc[] for more information about the non-compatible mode.
+****
 
 == Metrics
 
@@ -60,6 +90,17 @@ At the same time, state is still shared.
 All methods annotated `@ApplyGuard` share the same bulkhead, circuit breaker and/or rate limit.
 
 If the `Guard` or `TypedGuard` object used for `@ApplyGuard` is also used xref:reference/programmatic-api.adoc[programmatically], that usage is coalesced in metrics under the description as the `method` tag.
+
+== Differences to the Specification
+
+`@ApplyGuard` has the same differences to standard MicroProfile Fault Tolerance as `Guard` / `TypedGuard`:
+
+* asynchronous actions of type `java.util.concurrent.Future` are not supported;
+* the fallback, circuit breaker and retry strategies always inspect the cause chain of exceptions, following the behavior of SmallRye Fault Tolerance in the non-compatible mode.
+
+== Kotlin `suspend` Functions
+
+The `@ApplyGuard` API does not support Kotlin `suspend` functions at the moment.
 
 [[migration_from_applyfaulttolerance]]
 == Migration from `@ApplyFaultTolerance`
