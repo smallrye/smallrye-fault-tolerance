@@ -187,22 +187,22 @@ public class FaultToleranceInterceptor {
     }
 
     @AroundInvoke
-    public Object intercept(InvocationContext interceptionContext) throws Throwable {
-        Method method = interceptionContext.getMethod();
+    public Object intercept(InvocationContext invocationContext) throws Throwable {
+        Method method = invocationContext.getMethod();
         Class<?> beanClass = interceptedBean != null ? interceptedBean.getBeanClass() : method.getDeclaringClass();
-        InterceptionPoint point = new InterceptionPoint(beanClass, interceptionContext.getMethod());
+        InterceptionPoint point = new InterceptionPoint(beanClass, invocationContext.getMethod());
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
         if (operation.hasApplyFaultTolerance()) {
-            return applyFaultToleranceFlow(operation, interceptionContext);
+            return applyFaultToleranceFlow(operation, invocationContext);
         } else if (operation.hasApplyGuard()) {
-            return applyGuardFlow(operation, interceptionContext, point);
+            return applyGuardFlow(operation, invocationContext, point);
         } else if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
-            return asyncFlow(operation, interceptionContext, point);
+            return asyncFlow(operation, invocationContext, point);
         } else if (specCompatibility.isOperationPseudoAsynchronous(operation)) {
-            return futureFlow(operation, interceptionContext, point);
+            return futureFlow(operation, invocationContext, point);
         } else {
-            return syncFlow(operation, interceptionContext, point);
+            return syncFlow(operation, invocationContext, point);
         }
     }
 
@@ -211,7 +211,7 @@ public class FaultToleranceInterceptor {
     //
     // in synchronous scenario, V = T
     // in asynchronous scenario, T is an async type that eventually produces V
-    private <V, T> T applyFaultToleranceFlow(FaultToleranceOperation operation, InvocationContext interceptionContext)
+    private <V, T> T applyFaultToleranceFlow(FaultToleranceOperation operation, InvocationContext invocationContext)
             throws Exception {
         String identifier = operation.getApplyFaultTolerance().value();
         Instance<FaultTolerance<?>> instance = configuredFaultTolerance.select(Identifier.Literal.of(identifier));
@@ -233,7 +233,7 @@ public class FaultToleranceInterceptor {
         AsyncSupport<?, ?> fromConfigured = asyncType == null ? null : AsyncSupportRegistry.get(new Class[0], asyncType);
 
         if (forOperation == null && fromConfigured == null) {
-            return (T) lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
+            return (T) lazyFaultTolerance.call(invocationContext::proceed, meteredOperationName);
         } else if (forOperation == null) {
             throw new FaultToleranceException("Configured fault tolerance '" + identifier
                     + "' expects the operation to " + fromConfigured.mustDescription()
@@ -247,7 +247,7 @@ public class FaultToleranceInterceptor {
                     + "' expects the operation to " + fromConfigured.mustDescription()
                     + ", but it " + forOperation.doesDescription() + ": " + operation);
         } else {
-            return (T) lazyFaultTolerance.call(interceptionContext::proceed, meteredOperationName);
+            return (T) lazyFaultTolerance.call(invocationContext::proceed, meteredOperationName);
         }
     }
 
@@ -256,7 +256,7 @@ public class FaultToleranceInterceptor {
     //
     // in synchronous scenario, V = T
     // in asynchronous scenario, T is an async type that eventually produces V
-    private <V, T> T applyGuardFlow(FaultToleranceOperation operation, InvocationContext interceptionContext,
+    private <V, T> T applyGuardFlow(FaultToleranceOperation operation, InvocationContext invocationContext,
             InterceptionPoint point) throws Exception {
         String identifier = operation.getApplyGuard().value();
         Instance<Guard> guardInstance = configuredGuard.select(Identifier.Literal.of(identifier));
@@ -287,7 +287,7 @@ public class FaultToleranceInterceptor {
         MeteredOperationName meteredOperationName = new MeteredOperationName(operation.getName());
 
         Consumer<FaultToleranceContext<?>> contextModifier = ctx -> {
-            ctx.set(InvocationContext.class, interceptionContext);
+            ctx.set(InvocationContext.class, invocationContext);
 
             if (fallbackFunction != null) {
                 ctx.set(FallbackFunction.class, fallbackFunction);
@@ -309,7 +309,7 @@ public class FaultToleranceInterceptor {
             }
             GuardImpl guardImpl = ((LazyGuard) guard).instance();
 
-            return guardImpl.guard(() -> (T) interceptionContext.proceed(), operation.getReturnType(), contextModifier);
+            return guardImpl.guard(() -> (T) invocationContext.proceed(), operation.getReturnType(), contextModifier);
         } else /* typedGuardInstance.isResolvable() */ {
             TypedGuard<T> guard = typedGuardInstance.get();
             if (!(guard instanceof LazyTypedGuard)) {
@@ -318,7 +318,7 @@ public class FaultToleranceInterceptor {
             }
             TypedGuardImpl<V, T> guardImpl = ((LazyTypedGuard<V, T>) guard).instance();
 
-            return guardImpl.guard(() -> (T) interceptionContext.proceed(), contextModifier);
+            return guardImpl.guard(() -> (T) invocationContext.proceed(), contextModifier);
         }
     }
 

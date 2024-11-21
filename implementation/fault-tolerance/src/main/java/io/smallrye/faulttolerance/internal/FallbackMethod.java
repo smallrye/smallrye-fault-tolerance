@@ -32,16 +32,16 @@ public final class FallbackMethod {
     // ---
 
     public <T> Invoker<T> createInvoker(FailureContext ctx) throws ReflectiveOperationException {
-        InvocationContext interceptionContext = ctx.context.get(InvocationContext.class);
-        Object[] arguments = interceptionContext.getParameters();
+        InvocationContext invocationContext = ctx.context.get(InvocationContext.class);
+        Object[] arguments = invocationContext.getParameters();
         if (arguments == null) {
             arguments = EMPTY_ARRAY;
         }
         arguments = adjustArguments(arguments, ctx.failure);
 
         return method.isDefault()
-                ? new SpecialMethodInvoker<>(method, interceptionContext.getTarget(), arguments)
-                : new NormalMethodInvoker<>(method, interceptionContext.getTarget(), arguments);
+                ? new SpecialMethodInvoker<>(method, invocationContext.getTarget(), arguments)
+                : new NormalMethodInvoker<>(method, invocationContext.getTarget(), arguments);
     }
 
     private Object[] adjustArguments(Object[] arguments, Throwable exception) {
