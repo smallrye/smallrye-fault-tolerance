@@ -60,7 +60,6 @@ final class GuardCommon {
 
         Invoker<T> invoker = new CallableInvoker<>(action);
         FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> asyncSupport.toFuture(invoker), true);
-        ctx.set(AsyncSupport.class, asyncSupport);
         if (contextModifier != null) {
             contextModifier.accept(ctx);
         }
