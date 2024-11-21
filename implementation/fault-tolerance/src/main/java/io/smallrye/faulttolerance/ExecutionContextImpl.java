@@ -22,22 +22,22 @@ import jakarta.interceptor.InvocationContext;
 import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 
 final class ExecutionContextImpl implements ExecutionContext {
-    private final InvocationContext interceptionContext;
+    private final InvocationContext invocationContext;
     private final Throwable failure;
 
-    ExecutionContextImpl(InvocationContext interceptionContext, Throwable failure) {
-        this.interceptionContext = interceptionContext;
+    ExecutionContextImpl(InvocationContext invocationContext, Throwable failure) {
+        this.invocationContext = invocationContext;
         this.failure = failure;
     }
 
     @Override
     public Method getMethod() {
-        return interceptionContext.getMethod();
+        return invocationContext.getMethod();
     }
 
     @Override
     public Object[] getParameters() {
-        return interceptionContext.getParameters();
+        return invocationContext.getParameters();
     }
 
     @Override
