@@ -34,13 +34,13 @@ public class MixedReuseAsyncBothThreadOffloadTest {
         assertThat(MyService.CURRENT_THREAD_HELLO_NONBLOCKING).hasValue(currentThread);
 
         // not truly async per `SpecCompatibility`, so thread offload happens per the `Guard` config
-        assertThat(service.theAnswer().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswer().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.CURRENT_THREAD_THEANSWER).doesNotHaveValue(currentThread);
 
-        assertThat(service.theAnswerBlocking().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswerBlocking().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.CURRENT_THREAD_THEANSWER_BLOCKING).doesNotHaveValue(currentThread);
 
-        assertThat(service.theAnswerNonBlocking().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswerNonBlocking().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.CURRENT_THREAD_THEANSWER_NONBLOCKING).hasValue(currentThread);
     }
 
@@ -60,13 +60,13 @@ public class MixedReuseAsyncBothThreadOffloadTest {
         assertThat(MyService.CURRENT_THREAD_HELLO_NONBLOCKING).hasValue(currentThread);
 
         // truly async per `SpecCompatibility` and non-blocking by absence of annotation, no thread offload
-        assertThat(service.theAnswer().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswer().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.CURRENT_THREAD_THEANSWER).hasValue(currentThread);
 
-        assertThat(service.theAnswerBlocking().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswerBlocking().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.CURRENT_THREAD_THEANSWER_BLOCKING).doesNotHaveValue(currentThread);
 
-        assertThat(service.theAnswerNonBlocking().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswerNonBlocking().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.CURRENT_THREAD_THEANSWER_NONBLOCKING).hasValue(currentThread);
     }
 }

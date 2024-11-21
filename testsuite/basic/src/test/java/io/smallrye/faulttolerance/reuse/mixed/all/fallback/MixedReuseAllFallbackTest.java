@@ -20,7 +20,7 @@ public class MixedReuseAllFallbackTest {
         assertThat(service.theAnswer().toCompletableFuture().get()).isEqualTo(42);
         assertThat(MyService.INT_COUNTER).hasValue(3);
 
-        assertThat(service.badNumber().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(13L);
+        assertThat(service.badNumber().subscribeAsCompletionStage().get()).isEqualTo(13L);
         assertThat(MyService.LONG_COUNTER).hasValue(3);
     }
 }

@@ -26,13 +26,13 @@ public class MixedReuseAllMetricsTest {
         service.resetSecondCounter();
         assertThat(service.second().toCompletableFuture().get()).isEqualTo(42);
         // 3
-        assertThatCode(service.third().subscribeAsCompletionStage().toCompletableFuture()::get)
+        assertThatCode(service.third().subscribeAsCompletionStage()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(IllegalArgumentException.class);
-        assertThatCode(service.third().subscribeAsCompletionStage().toCompletableFuture()::get)
+        assertThatCode(service.third().subscribeAsCompletionStage()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(IllegalArgumentException.class);
-        assertThatCode(service.third().subscribeAsCompletionStage().toCompletableFuture()::get)
+        assertThatCode(service.third().subscribeAsCompletionStage()::get)
                 .isExactlyInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(IllegalArgumentException.class);
 
