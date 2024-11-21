@@ -17,7 +17,7 @@ public class MixedReuseAsyncBothFallbackTest {
         assertThat(service.hello().toCompletableFuture().get()).isEqualTo("hello");
         assertThat(MyService.STRING_COUNTER).hasValue(3);
 
-        assertThat(service.theAnswer().subscribeAsCompletionStage().toCompletableFuture().get()).isEqualTo(42);
+        assertThat(service.theAnswer().subscribeAsCompletionStage().get()).isEqualTo(42);
         assertThat(MyService.INT_COUNTER).hasValue(3);
     }
 }
