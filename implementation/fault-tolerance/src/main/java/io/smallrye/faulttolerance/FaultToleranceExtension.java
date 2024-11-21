@@ -101,6 +101,8 @@ public class FaultToleranceExtension implements Extension {
 
     private final ConcurrentMap<String, Set<String>> existingGuards = new ConcurrentHashMap<>();
 
+    private final Set<String> expectedGuards = ConcurrentHashMap.newKeySet();
+
     private final Set<MetricsIntegration> metricsIntegrations;
 
     private static boolean isPresent(String className) {
@@ -248,6 +250,10 @@ public class FaultToleranceExtension implements Extension {
                             .add(annotatedMethod.getJavaMember().toGenericString());
                 }
 
+                if (operation.hasApplyGuard()) {
+                    expectedGuards.add(operation.getApplyGuard().value());
+                }
+
                 for (Class<? extends Annotation> backoffAnnotation : BACKOFF_ANNOTATIONS) {
                     if (annotatedMethod.isAnnotationPresent(backoffAnnotation)
                             && !annotatedMethod.isAnnotationPresent(Retry.class)) {
@@ -337,7 +343,13 @@ public class FaultToleranceExtension implements Extension {
                         entry.getKey(), entry.getValue()));
             }
         }
+        for (String expectedGuard : expectedGuards) {
+            if (!existingGuards.containsKey(expectedGuard)) {
+                event.addDeploymentProblem(LOG.expectedGuardDoesNotExist(expectedGuard));
+            }
+        }
         existingGuards.clear();
+        expectedGuards.clear();
     }
 
     private static String getCacheKey(Class<?> beanClass, Method method) {

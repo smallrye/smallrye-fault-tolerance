@@ -50,4 +50,7 @@ interface CdiLogger extends BasicLogger {
 
     @Message(id = 8, value = "Multiple Guard/TypedGuard beans have the same identifier '%s': %s")
     DefinitionException multipleGuardsWithTheSameIdentifier(String identifier, Set<String> beans);
+
+    @Message(id = 9, value = "Guard/TypedGuard with identifier '%s' expected, but does not exist")
+    DefinitionException expectedGuardDoesNotExist(String identifier);
 }
