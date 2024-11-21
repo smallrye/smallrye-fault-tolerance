@@ -74,7 +74,7 @@ class CoroutineSupport<T> : AsyncSupport<T, Any?> {
 
         val future = invoker.proceed()
 
-        if (future.isComplete) {
+        if (future.isComplete || future.isCancelled) {
             return future.awaitBlocking()
         }
 
