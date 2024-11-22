@@ -48,7 +48,7 @@ public class RateLimitAsyncTest {
     public void fixed_singleThreaded() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.FIXED, stopwatch);
 
@@ -90,7 +90,7 @@ public class RateLimitAsyncTest {
     public void fixed_multiThreaded() {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.FIXED, stopwatch);
 
@@ -153,7 +153,7 @@ public class RateLimitAsyncTest {
     public void fixed_multiThreaded_withMinSpacing() {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 10, RateLimitType.FIXED, stopwatch);
 
@@ -223,7 +223,7 @@ public class RateLimitAsyncTest {
     public void rolling_singleThreaded() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.ROLLING, stopwatch);
 
@@ -263,7 +263,7 @@ public class RateLimitAsyncTest {
     public void rolling_multiThreaded() {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.ROLLING, stopwatch);
 
@@ -333,7 +333,7 @@ public class RateLimitAsyncTest {
     public void rolling_multiThreaded_withMinSpacing() {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 10, RateLimitType.ROLLING, stopwatch);
 
@@ -403,7 +403,7 @@ public class RateLimitAsyncTest {
     public void smooth_singleThreaded() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.SMOOTH, stopwatch);
 
@@ -442,7 +442,7 @@ public class RateLimitAsyncTest {
     public void smooth_multiThreaded() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 2, 100, 0, RateLimitType.SMOOTH, stopwatch);
 
@@ -508,7 +508,7 @@ public class RateLimitAsyncTest {
     public void smooth_multiThreaded_withMinSpacing() throws Throwable {
         AtomicInteger counter = new AtomicInteger();
         TestInvocation<String> invocation = TestInvocation.of(() -> "" + counter.incrementAndGet());
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         RateLimit<String> rateLimit = new RateLimit<>(execution, "test invocation",
                 1000, 100, 10, RateLimitType.SMOOTH, stopwatch);
 

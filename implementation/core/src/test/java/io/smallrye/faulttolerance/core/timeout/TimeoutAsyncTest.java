@@ -44,7 +44,7 @@ public class TimeoutAsyncTest {
     @Test
     public void negativeTimeout() {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         assertThatThrownBy(() -> new Timeout<>(execution, "test invocation", -1, timer))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
@@ -52,7 +52,7 @@ public class TimeoutAsyncTest {
     @Test
     public void zeroTimeout() {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         assertThatThrownBy(() -> new Timeout<>(execution, "test invocation", 0, timer))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
@@ -60,7 +60,7 @@ public class TimeoutAsyncTest {
     @Test
     public void immediatelyReturning_value() throws Throwable {
         TestInvocation<String> invocation = TestInvocation.of(() -> "foobar");
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<String> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<String> result = timeout.apply(async(null));
         assertThat(result.awaitBlocking()).isEqualTo("foobar");
@@ -70,7 +70,7 @@ public class TimeoutAsyncTest {
     @Test
     public void immediatelyReturning_exception() {
         TestInvocation<Void> invocation = TestInvocation.of(TestException::doThrow);
-        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<Void> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<Void> result = timeout.apply(async(null));
         assertThatThrownBy(result::awaitBlocking).isExactlyInstanceOf(TestException.class);
@@ -85,7 +85,7 @@ public class TimeoutAsyncTest {
             delayBarrier.await();
             return "foobar";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<String> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<String> result = timeout.apply(async(null));
         delayBarrier.open();
@@ -101,7 +101,7 @@ public class TimeoutAsyncTest {
             delayBarrier.await();
             return "foobar";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<String> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<String> result = timeout.apply(async(null));
         timerElapsedBarrier.open();
@@ -121,7 +121,7 @@ public class TimeoutAsyncTest {
             delayBarrier.await();
             return "foobar";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<String> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<String> result = timeout.apply(async(null));
         timerElapsedBarrier.open();
@@ -141,7 +141,7 @@ public class TimeoutAsyncTest {
             party.participant().attend();
             return "foobar";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<String> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<String> result = timeout.apply(async(null));
         party.organizer().waitForAll();
@@ -158,7 +158,7 @@ public class TimeoutAsyncTest {
             delayBarrier.await();
             throw new TestException();
         });
-        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<Void> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<Void> result = timeout.apply(async(null));
         delayBarrier.open();
@@ -174,7 +174,7 @@ public class TimeoutAsyncTest {
             delayBarrier.await();
             throw new TestException();
         });
-        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<Void> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<Void> result = timeout.apply(async(null));
         timerElapsedBarrier.open();
@@ -194,7 +194,7 @@ public class TimeoutAsyncTest {
             delayBarrier.await();
             throw new TestException();
         });
-        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<Void> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<Void> result = timeout.apply(async(null));
         timerElapsedBarrier.open();
@@ -214,7 +214,7 @@ public class TimeoutAsyncTest {
             party.participant().attend();
             throw new TestException();
         });
-        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<Void> execution = new ThreadOffload<>(invocation, executor, true);
         Timeout<Void> timeout = new Timeout<>(execution, "test invocation", 1000, timer);
         Future<Void> result = timeout.apply(async(null));
         party.organizer().waitForAll();

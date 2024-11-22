@@ -43,7 +43,7 @@ public class RetryAsyncTest {
             invocationCount.incrementAndGet();
             return "shouldNotRetryOnSuccess";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldNotRetryOnSuccess",
                 ResultDecision.ALWAYS_EXPECTED, ExceptionDecision.ALWAYS_FAILURE, 3, 1000L,
                 SyncDelay.NONE, AsyncDelay.NONE, new TestStopwatch(), null);
@@ -60,7 +60,7 @@ public class RetryAsyncTest {
             invocationCount.incrementAndGet();
             return "shouldRetryOnSuccessThatMatches";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldNotRetryOnSuccess",
                 ResultDecision.ALWAYS_FAILURE, ExceptionDecision.ALWAYS_FAILURE, 3, 1000L,
                 SyncDelay.NONE, AsyncDelay.NONE, new TestStopwatch(), null);
@@ -79,7 +79,7 @@ public class RetryAsyncTest {
             invocationCount.incrementAndGet();
             throw error;
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldPropagateAbortOnError",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
@@ -99,7 +99,7 @@ public class RetryAsyncTest {
             invocationCount.incrementAndGet();
             throw error;
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldPropagateAbortOnErrorInCSCreation",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.ALL, SetOfThrowables.create(RuntimeException.class), false),
@@ -123,7 +123,7 @@ public class RetryAsyncTest {
                 return "shouldRetryOnce";
             }
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldRetryOnce",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
@@ -147,7 +147,7 @@ public class RetryAsyncTest {
                 return "shouldRetryOnceOnCsFailure";
             }
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldRetryOnceOnCsFailure",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
@@ -171,7 +171,7 @@ public class RetryAsyncTest {
                 return "shouldRetryMaxTimesAndSucceed";
             }
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldRetryMaxTimesAndSucceed",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),
@@ -191,7 +191,7 @@ public class RetryAsyncTest {
             invocationCount.incrementAndGet();
             throw error;
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Retry<String> retry = new Retry<>(execution, "shouldRetryMaxTimesAndSucceed",
                 ResultDecision.ALWAYS_EXPECTED,
                 new SetBasedExceptionDecision(SetOfThrowables.create(RuntimeException.class), SetOfThrowables.EMPTY, false),

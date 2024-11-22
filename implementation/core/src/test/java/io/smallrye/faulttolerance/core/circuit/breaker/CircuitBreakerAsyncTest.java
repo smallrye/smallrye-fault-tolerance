@@ -43,7 +43,7 @@ public class CircuitBreakerAsyncTest {
 
     @Test
     public void test1() throws Throwable {
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor, true);
         CircuitBreaker<String> cb = new CircuitBreaker<>(execution, "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch, new TestTimer());
@@ -100,7 +100,7 @@ public class CircuitBreakerAsyncTest {
 
     @Test
     public void test2() throws Throwable {
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor, true);
         CircuitBreaker<String> cb = new CircuitBreaker<>(execution, "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch, new TestTimer());
@@ -136,7 +136,7 @@ public class CircuitBreakerAsyncTest {
     @Test
     public void test3() throws Throwable {
         TestTimer timer = new TestTimer();
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor, true);
         CircuitBreaker<String> cb = new CircuitBreaker<>(execution, "test invocation",
                 new SetBasedExceptionDecision(testException, SetOfThrowables.EMPTY, false),
                 1000, 4, 0.5, 2, stopwatch, timer);
