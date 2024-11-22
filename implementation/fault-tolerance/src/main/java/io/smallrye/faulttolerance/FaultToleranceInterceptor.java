@@ -58,6 +58,7 @@ import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
+import io.smallrye.faulttolerance.core.apiimpl.AsyncInvocation;
 import io.smallrye.faulttolerance.core.apiimpl.GuardImpl;
 import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
 import io.smallrye.faulttolerance.core.apiimpl.LazyGuard;
@@ -269,6 +270,17 @@ public class FaultToleranceInterceptor {
                     + " with qualifier @" + Identifier.class.getName() + "(\"" + identifier + "\")");
         }
 
+        // AsyncInvocation
+        AsyncSupport<V, T> asyncSupport = cache.getAsyncSupport(point, operation);
+        AsyncInvocation<V, T> asyncInvocation;
+        if (asyncSupport != null) {
+            asyncInvocation = new AsyncInvocation<>(asyncSupport, new InterceptionInvoker<>(invocationContext),
+                    invocationContext.getParameters());
+        } else {
+            asyncInvocation = null;
+        }
+
+        // context modifier
         FallbackFunction<V> fallbackFunction;
         ExceptionDecision exceptionDecision;
         if (operation.hasFallback()) {
@@ -303,6 +315,7 @@ public class FaultToleranceInterceptor {
             ctx.set(MeteredOperationName.class, meteredOperationName);
         };
 
+        // invocation itself
         if (guardInstance.isResolvable()) {
             Guard guard = guardInstance.get();
             if (!(guard instanceof LazyGuard)) {
@@ -311,7 +324,7 @@ public class FaultToleranceInterceptor {
             }
             GuardImpl guardImpl = ((LazyGuard) guard).instance();
 
-            return guardImpl.guard(() -> (T) invocationContext.proceed(), operation.getReturnType(), contextModifier);
+            return guardImpl.guard(() -> (T) invocationContext.proceed(), asyncInvocation, contextModifier);
         } else /* typedGuardInstance.isResolvable() */ {
             TypedGuard<T> guard = typedGuardInstance.get();
             if (!(guard instanceof LazyTypedGuard)) {
@@ -320,7 +333,7 @@ public class FaultToleranceInterceptor {
             }
             TypedGuardImpl<V, T> guardImpl = ((LazyTypedGuard<V, T>) guard).instance();
 
-            return guardImpl.guard(() -> (T) invocationContext.proceed(), contextModifier);
+            return guardImpl.guard(() -> (T) invocationContext.proceed(), asyncInvocation, contextModifier);
         }
     }
 

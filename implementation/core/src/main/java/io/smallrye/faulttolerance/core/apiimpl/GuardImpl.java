@@ -83,27 +83,20 @@ public class GuardImpl implements Guard {
         this.eventHandlers = eventHandlers;
     }
 
-    public <V, T> T guard(Callable<T> action, Type valueType, Consumer<FaultToleranceContext<?>> contextModifier)
-            throws Exception {
-        AsyncSupport<V, T> asyncSupport = GuardCommon.asyncSupport(valueType);
-        return GuardCommon.guard(action, (FaultToleranceStrategy<V>) strategy, asyncSupport, eventHandlers,
-                contextModifier);
-    }
-
     @Override
     public <T> T call(Callable<T> action, Class<T> type) throws Exception {
-        return guard(action, type, null);
+        return guard(action, type);
     }
 
     @Override
     public <T> T call(Callable<T> action, TypeLiteral<T> type) throws Exception {
-        return guard(action, type.getType(), null);
+        return guard(action, type.getType());
     }
 
     @Override
     public <T> T get(Supplier<T> action, Class<T> type) {
         try {
-            return guard(action::get, type, null);
+            return guard(action::get, type);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
@@ -112,10 +105,25 @@ public class GuardImpl implements Guard {
     @Override
     public <T> T get(Supplier<T> action, TypeLiteral<T> type) {
         try {
-            return guard(action::get, type.getType(), null);
+            return guard(action::get, type.getType());
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
+    }
+
+    private <V, T> T guard(Callable<T> action, Type valueType) throws Exception {
+        FaultToleranceStrategy<V> castStrategy = (FaultToleranceStrategy<V>) strategy;
+
+        AsyncSupport<V, T> asyncSupport = GuardCommon.asyncSupport(valueType);
+        AsyncInvocation<V, T> asyncInvocation = GuardCommon.asyncInvocation(action, asyncSupport);
+        return GuardCommon.guard(action, castStrategy, asyncInvocation, eventHandlers, null);
+    }
+
+    public <V, T> T guard(Callable<T> action, AsyncInvocation<V, T> asyncInvocation,
+            Consumer<FaultToleranceContext<?>> contextModifier) throws Exception {
+        FaultToleranceStrategy<V> castStrategy = (FaultToleranceStrategy<V>) strategy;
+
+        return GuardCommon.guard(action, castStrategy, asyncInvocation, eventHandlers, contextModifier);
     }
 
     public static class BuilderImpl implements Builder {

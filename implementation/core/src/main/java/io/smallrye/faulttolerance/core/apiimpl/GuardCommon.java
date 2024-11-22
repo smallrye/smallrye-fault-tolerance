@@ -40,9 +40,18 @@ final class GuardCommon {
     //
     // in synchronous scenario, V = T
     // in asynchronous scenario, T is an async type that eventually produces V
-    static <V, T> T guard(Callable<T> action, FaultToleranceStrategy<V> strategy, AsyncSupport<V, T> asyncSupport,
+    static <V, T> AsyncInvocation<V, T> asyncInvocation(Callable<T> action, AsyncSupport<V, T> asyncSupport) {
+        return asyncSupport != null ? new AsyncInvocation<>(asyncSupport, new CallableInvoker<>(action), null) : null;
+    }
+
+    // V = value type, e.g. String
+    // T = result type, e.g. String or CompletionStage<String> or Uni<String>
+    //
+    // in synchronous scenario, V = T
+    // in asynchronous scenario, T is an async type that eventually produces V
+    static <V, T> T guard(Callable<T> action, FaultToleranceStrategy<V> strategy, AsyncInvocation<V, T> asyncInvocation,
             EventHandlers eventHandlers, Consumer<FaultToleranceContext<?>> contextModifier) throws Exception {
-        if (asyncSupport == null) {
+        if (asyncInvocation == null) {
             FaultToleranceContext<T> ctx = new FaultToleranceContext<>(() -> Future.from(action), false);
             if (contextModifier != null) {
                 contextModifier.accept(ctx);
@@ -58,13 +67,14 @@ final class GuardCommon {
             }
         }
 
-        Invoker<T> invoker = new CallableInvoker<>(action);
-        FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> asyncSupport.toFuture(invoker), true);
+        AsyncSupport<V, T> asyncSupport = asyncInvocation.asyncSupport;
+        Invoker<T> toFutureInvoker = asyncInvocation.toFutureInvoker;
+        FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> asyncSupport.toFuture(toFutureInvoker), true);
         if (contextModifier != null) {
             contextModifier.accept(ctx);
         }
         eventHandlers.register(ctx);
-        Invoker<Future<V>> wrapper = new StrategyInvoker<>(null, strategy, ctx);
-        return asyncSupport.fromFuture(wrapper);
+        Invoker<Future<V>> fromFutureInvoker = new StrategyInvoker<>(asyncInvocation.arguments, strategy, ctx);
+        return asyncSupport.fromFuture(fromFutureInvoker);
     }
 }

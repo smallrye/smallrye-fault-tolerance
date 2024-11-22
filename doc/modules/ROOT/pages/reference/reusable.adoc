@@ -100,7 +100,45 @@ If the `Guard` or `TypedGuard` object used for `@ApplyGuard` is also used xref:r
 
 == Kotlin `suspend` Functions
 
-The `@ApplyGuard` API does not support Kotlin `suspend` functions at the moment.
+Even though the programmatic API of `Guard` and `TypedGuard` does not support Kotlin `suspend` functions, the declarative API of `@ApplyGuard` does.
+When the guard is a `Guard`, no restrictions apply.
+
+When the guard is a `TypedGuard`, however, its type must be a synchronous return type of the `suspend` function.
+For example, when the `suspend` function is declared to return a `String` asynchronously:
+
+[source,kotlin]
+----
+@ApplyGuard("my-fault-tolerance")
+@Fallback(fallbackMethod = "fallback")
+suspend fun hello(): String {
+    delay(100)
+    throw IllegalArgumentException()
+}
+----
+
+The `TypedGuard` must be declared to guard actions of type `String`:
+
+[source,kotlin]
+----
+@Produces
+@Identifier("my-fault-tolerance")
+val GUARD = TypedGuard.create(String::class.java)
+    .withRetry().maxRetries(2).done()
+    .withFallback().handler(Supplier { "fallback" }).done()
+    .build()
+----
+
+This means that a possible fallback declared on the `TypedGuard` must be synchronous; it cannot be a `suspend` lambda.
+
+The `@Fallback` method, if declared, must have a matching signature and so must be a `suspend` function:
+
+[source,kotlin]
+----
+suspend fun fallback(): String {
+    delay(100)
+    return "fallback"
+}
+----
 
 [[migration_from_applyfaulttolerance]]
 == Migration from `@ApplyFaultTolerance`

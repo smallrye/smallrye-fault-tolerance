@@ -1,6 +1,7 @@
 package io.smallrye.faulttolerance.kotlin.reuse.metrics
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest
+import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.microprofile.metrics.MetricRegistry
 import org.eclipse.microprofile.metrics.Tag
@@ -12,7 +13,7 @@ import org.junit.jupiter.api.Test
 @AddBeanClasses(MyFaultTolerance::class)
 class ReuseKotlinMetricsTest {
     @Test
-    fun test(service: MyService, @RegistryType(type = MetricRegistry.Type.BASE) metrics: MetricRegistry) {
+    fun test(service: MyService, @RegistryType(type = MetricRegistry.Type.BASE) metrics: MetricRegistry) = runBlocking<Unit> {
         assertThat(service.first()).isEqualTo("fallback")
         assertThat(service.second()).isEqualTo("fallback")
         assertThat(service.second()).isEqualTo("fallback")
