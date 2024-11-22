@@ -409,8 +409,8 @@ public class FaultToleranceInterceptor {
             result = new RequestScopeActivator<>(result, requestContextController);
         }
 
-        if (specCompatibility.isOperationTrulyAsynchronous(operation) && operation.isThreadOffloadRequired()) {
-            result = new ThreadOffload<>(result, asyncExecutor);
+        if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
+            result = new ThreadOffload<>(result, asyncExecutor, operation.isThreadOffloadRequired());
         }
 
         if (operation.hasBulkhead()) {
@@ -477,8 +477,8 @@ public class FaultToleranceInterceptor {
             result = new MetricsCollector<>(result, metricsProvider.create(meteredOperation), meteredOperation);
         }
 
-        if (specCompatibility.isOperationTrulyAsynchronous(operation) && !operation.isThreadOffloadRequired()) {
-            result = new RememberEventLoop<>(result, eventLoop);
+        if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
+            result = new RememberEventLoop<>(result, eventLoop, operation.isThreadOffloadRequired());
         }
 
         return result;

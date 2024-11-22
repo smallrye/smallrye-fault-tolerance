@@ -230,7 +230,9 @@ public class GuardImpl implements Guard {
 
             // thread offload is always enabled
             Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
-            result = new SyncAsyncSplit<>(new ThreadOffload<>(result, executor, offloadToAnotherThread), result);
+            result = new SyncAsyncSplit<>(
+                    new ThreadOffload<>(result, executor, offloadToAnotherThread),
+                    result);
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new Bulkhead<>(result, description,
@@ -294,9 +296,9 @@ public class GuardImpl implements Guard {
             }
 
             // thread offload is always enabled
-            if (!offloadToAnotherThread) {
-                result = new SyncAsyncSplit<>(new RememberEventLoop<>(result, lazyDependencies.eventLoop()), result);
-            }
+            result = new SyncAsyncSplit<>(
+                    new RememberEventLoop<>(result, lazyDependencies.eventLoop(), offloadToAnotherThread),
+                    result);
 
             return result;
         }
