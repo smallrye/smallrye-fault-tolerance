@@ -91,22 +91,28 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
         this.eventHandlers = eventHandlers;
     }
 
-    public T guard(Callable<T> action, Consumer<FaultToleranceContext<?>> contextModifier) throws Exception {
-        return GuardCommon.guard(action, strategy, asyncSupport, eventHandlers, contextModifier);
-    }
-
     @Override
     public T call(Callable<T> action) throws Exception {
-        return guard(action, null);
+        return guard(action);
     }
 
     @Override
     public T get(Supplier<T> action) {
         try {
-            return guard(action::get, null);
+            return guard(action::get);
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
+    }
+
+    private T guard(Callable<T> action) throws Exception {
+        AsyncInvocation<V, T> asyncInvocation = GuardCommon.asyncInvocation(action, asyncSupport);
+        return GuardCommon.guard(action, strategy, asyncInvocation, eventHandlers, null);
+    }
+
+    public T guard(Callable<T> action, AsyncInvocation<V, T> asyncInvocation,
+            Consumer<FaultToleranceContext<?>> contextModifier) throws Exception {
+        return GuardCommon.guard(action, strategy, asyncInvocation, eventHandlers, contextModifier);
     }
 
     public static class BuilderImpl<V, T> implements TypedGuard.Builder<T> {

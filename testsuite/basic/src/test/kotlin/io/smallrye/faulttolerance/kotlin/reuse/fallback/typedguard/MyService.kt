@@ -13,10 +13,10 @@ open class MyService {
 
     @ApplyGuard("my-fault-tolerance")
     @Fallback(fallbackMethod = "fallback")
-    open fun hello(): String {
+    open suspend fun hello(): String {
         COUNTER.incrementAndGet()
         throw IllegalArgumentException()
     }
 
-    private fun fallback() = "better fallback"
+    private suspend fun fallback() = "better fallback"
 }

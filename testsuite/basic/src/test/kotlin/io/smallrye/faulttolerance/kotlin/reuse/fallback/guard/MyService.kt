@@ -2,6 +2,7 @@ package io.smallrye.faulttolerance.kotlin.reuse.fallback.guard
 
 import io.smallrye.faulttolerance.api.ApplyGuard
 import jakarta.enterprise.context.ApplicationScoped
+import kotlinx.coroutines.delay
 import org.eclipse.microprofile.faulttolerance.Fallback
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -13,10 +14,14 @@ open class MyService {
 
     @ApplyGuard("my-fault-tolerance")
     @Fallback(fallbackMethod = "fallback")
-    open fun hello(): String {
+    open suspend fun hello(): String {
         COUNTER.incrementAndGet()
+        delay(100)
         throw IllegalArgumentException()
     }
 
-    private fun fallback() = "better fallback"
+    private suspend fun fallback(): String {
+        delay(100)
+        return "better fallback"
+    }
 }

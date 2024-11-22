@@ -2,6 +2,7 @@ package io.smallrye.faulttolerance.kotlin.reuse
 
 import io.smallrye.faulttolerance.api.ApplyGuard
 import jakarta.enterprise.context.ApplicationScoped
+import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicInteger
 
 @ApplicationScoped
@@ -11,8 +12,9 @@ open class MyService {
     }
 
     @ApplyGuard("my-fault-tolerance")
-    open fun hello(): String {
+    open suspend fun hello(): String {
         COUNTER.incrementAndGet()
+        delay(100)
         throw IllegalArgumentException()
     }
 }
