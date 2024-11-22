@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public final class FaultToleranceContext<V> implements Supplier<Future<V>> {
+public final class FaultToleranceContext<V> {
     private final Supplier<Future<V>> delegate;
     private final boolean isAsync;
 
@@ -16,8 +16,7 @@ public final class FaultToleranceContext<V> implements Supplier<Future<V>> {
         this.isAsync = isAsync;
     }
 
-    @Override
-    public Future<V> get() {
+    public Future<V> call() {
         return delegate.get();
     }
 

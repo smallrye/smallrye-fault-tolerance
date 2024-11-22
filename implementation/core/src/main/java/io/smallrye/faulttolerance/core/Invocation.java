@@ -26,7 +26,7 @@ public final class Invocation<V> implements FaultToleranceStrategy<V> {
     public Future<V> apply(FaultToleranceContext<V> ctx) {
         LOG.trace("Guarded method invocation started");
         try {
-            return ctx.get();
+            return ctx.call();
         } catch (Exception e) {
             return Future.ofError(e);
         } finally {
