@@ -385,10 +385,8 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
             FaultToleranceStrategy<V> result = invocation();
 
             // thread offload is always enabled
-            if (offloadToAnotherThread) {
-                Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
-                result = new ThreadOffload<>(result, executor);
-            }
+            Executor executor = offloadExecutor != null ? offloadExecutor : lazyDependencies.asyncExecutor();
+            result = new ThreadOffload<>(result, executor, offloadToAnotherThread);
 
             if (lazyDependencies.ftEnabled() && bulkheadBuilder != null) {
                 result = new Bulkhead<>(result, description,
@@ -470,9 +468,7 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
             }
 
             // thread offload is always enabled
-            if (!offloadToAnotherThread) {
-                result = new RememberEventLoop<>(result, lazyDependencies.eventLoop());
-            }
+            result = new RememberEventLoop<>(result, lazyDependencies.eventLoop(), offloadToAnotherThread);
 
             return result;
         }

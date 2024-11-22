@@ -12,14 +12,21 @@ import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 public class RememberEventLoop<V> implements FaultToleranceStrategy<V> {
     private final FaultToleranceStrategy<V> delegate;
     private final EventLoop eventLoop;
+    private final ThreadOffloadEnabled defaultEnabled;
 
-    public RememberEventLoop(FaultToleranceStrategy<V> delegate, EventLoop eventLoop) {
+    public RememberEventLoop(FaultToleranceStrategy<V> delegate, EventLoop eventLoop, boolean defaultEnabled) {
         this.delegate = delegate;
         this.eventLoop = eventLoop;
+        this.defaultEnabled = new ThreadOffloadEnabled(defaultEnabled);
     }
 
     @Override
     public Future<V> apply(FaultToleranceContext<V> ctx) {
+        // required for `@ApplyGuard`
+        if (ctx.get(ThreadOffloadEnabled.class, defaultEnabled).value) {
+            return delegate.apply(ctx);
+        }
+
         LOG.trace("RememberEventLoopExecutor started");
         try {
             if (eventLoop.isEventLoopThread()) {
