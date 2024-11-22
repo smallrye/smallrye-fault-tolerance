@@ -19,10 +19,6 @@ public class ThreadOffload<V> implements FaultToleranceStrategy<V> {
     private final Executor executor;
     private final ThreadOffloadEnabled defaultEnabled;
 
-    public ThreadOffload(FaultToleranceStrategy<V> delegate, Executor executor) {
-        this(delegate, executor, true);
-    }
-
     public ThreadOffload(FaultToleranceStrategy<V> delegate, Executor executor, boolean defaultEnabled) {
         this.delegate = delegate;
         this.executor = checkNotNull(executor, "Executor must be set");

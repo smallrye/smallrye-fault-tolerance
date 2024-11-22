@@ -43,7 +43,7 @@ public class BulkheadAsyncTest {
     @Test
     public void shouldLetOneIn() throws Throwable {
         TestInvocation<String> invocation = TestInvocation.of(() -> "shouldLetSingleThrough");
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldLetSingleThrough", 2, 2, false);
 
@@ -54,7 +54,7 @@ public class BulkheadAsyncTest {
     @Test
     public void shouldLetMaxIn() throws Throwable { // max threads + max queue
         TestInvocation<String> invocation = TestInvocation.of(() -> "shouldLetMaxThrough");
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldLetSingleThrough", 2, 3, false);
 
@@ -75,7 +75,7 @@ public class BulkheadAsyncTest {
             delayBarrier.await();
             return "shouldRejectMaxPlus1";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldRejectMaxPlus1", 2, 3, false);
 
@@ -106,7 +106,7 @@ public class BulkheadAsyncTest {
             letOneInSemaphore.acquire();
             return "shouldLetMaxPlus1After1Left";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldLetMaxPlus1After1Left", 2, 3, false);
 
@@ -140,7 +140,7 @@ public class BulkheadAsyncTest {
             letOneInSemaphore.acquire();
             throw error;
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldLetMaxPlus1After1Failed", 2, 3, false);
 
@@ -174,7 +174,7 @@ public class BulkheadAsyncTest {
             letOneInSemaphore.acquire();
             throw error;
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldLetMaxPlus1After1Failed", 2, 3, false);
 
@@ -204,7 +204,7 @@ public class BulkheadAsyncTest {
             party.participant().attend();
             return "shouldNotStartNextIfCSInProgress";
         });
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation, executor, true);
         Bulkhead<String> bulkhead = new Bulkhead<>(execution,
                 "shouldNotStartNextIfCSInProgress", 1, 1, false);
 

@@ -67,7 +67,7 @@ public class RealWorldAsyncTimeoutTest {
     public void shouldReturnValue() throws Throwable {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor, true);
         FaultToleranceStrategy<String> timeout = new Timeout<>(execution,
                 "completion stage timeout", TIMEOUT, timer);
 
@@ -86,7 +86,7 @@ public class RealWorldAsyncTimeoutTest {
     public void shouldThrowException() {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor, true);
         Timeout<String> timeout = new Timeout<>(execution, "completion stage timeout", TIMEOUT, timer);
 
         assertThatThrownBy(timeout.apply(async(() -> {
@@ -104,7 +104,7 @@ public class RealWorldAsyncTimeoutTest {
     public void shouldTimeOut() {
         RunningStopwatch runningStopwatch = stopwatch.start();
 
-        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor);
+        ThreadOffload<String> execution = new ThreadOffload<>(invocation(), executor, true);
         Timeout<String> timeout = new Timeout<>(execution,
                 "completion stage timeout", SLEEP_TIME, timer);
 
