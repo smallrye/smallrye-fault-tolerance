@@ -262,8 +262,8 @@ public class FaultToleranceInterceptor {
         String identifier = operation.getApplyGuard().value();
         Instance<Guard> guardInstance = configuredGuard.select(Identifier.Literal.of(identifier));
         Instance<TypedGuard<T>> typedGuardInstance = (Instance) configuredTypedGuard.select(Identifier.Literal.of(identifier));
-        // at least one of them should be resolvable, otherwise a deployment problem has occurred
-        // the check here is redundant, but we keep it just in case
+        // at least one of them should be resolvable, but it's possible to override the identifier
+        // using MP Config, so we better check again
         if (!guardInstance.isResolvable() && !typedGuardInstance.isResolvable()) {
             throw new FaultToleranceException("Can't resolve a bean of type " + Guard.class.getName()
                     + " or " + TypedGuard.class.getName()
