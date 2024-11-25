@@ -15,6 +15,7 @@ import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import io.smallrye.faulttolerance.Enablement;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -33,10 +34,10 @@ public class CompoundMetricsProvider implements MetricsProvider {
     @Inject
     CompoundMetricsProvider(
             Instance<MetricsProvider> lookup,
-            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
-            @ConfigProperty(name = Constants.MPMETRICS_DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
-            @ConfigProperty(name = Constants.OPENTELEMETRY_DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
-            @ConfigProperty(name = Constants.MICROMETER_DISABLED, defaultValue = "false") boolean micrometerDisabled) {
+            Enablement enablement,
+            @ConfigProperty(name = MicroProfileMetricsProvider.DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
+            @ConfigProperty(name = OpenTelemetryProvider.DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
+            @ConfigProperty(name = MicrometerProvider.DISABLED, defaultValue = "false") boolean micrometerDisabled) {
 
         List<MetricsProvider> providers = new ArrayList<>();
         if (!mpMetricsDisabled) {
@@ -60,7 +61,7 @@ public class CompoundMetricsProvider implements MetricsProvider {
                 // either the bean does not exist, or some of its dependencies does not exist
             }
         }
-        this.enabled = providers.isEmpty() ? false : metricsEnabled;
+        this.enabled = providers.isEmpty() ? false : enablement.metrics();
         this.providers = providers.toArray(new MetricsProvider[0]);
     }
 

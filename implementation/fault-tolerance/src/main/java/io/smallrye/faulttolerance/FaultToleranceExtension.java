@@ -182,6 +182,7 @@ public class FaultToleranceExtension implements Extension {
         bbd.addAnnotatedType(bm.createAnnotatedType(RequestContextIntegration.class),
                 RequestContextIntegration.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(SpecCompatibility.class), SpecCompatibility.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(Enablement.class), Enablement.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CdiSpi.EagerDependencies.class),
                 CdiSpi.EagerDependencies.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(CdiSpi.LazyDependencies.class),

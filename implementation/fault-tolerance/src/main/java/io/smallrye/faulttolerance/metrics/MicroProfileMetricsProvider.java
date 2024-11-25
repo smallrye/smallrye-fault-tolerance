@@ -14,7 +14,9 @@ import org.eclipse.microprofile.metrics.MetricUnits;
 import org.eclipse.microprofile.metrics.Tag;
 import org.eclipse.microprofile.metrics.annotation.RegistryType;
 
+import io.smallrye.faulttolerance.Enablement;
 import io.smallrye.faulttolerance.ExecutorHolder;
+import io.smallrye.faulttolerance.config.ConfigPrefix;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -24,6 +26,8 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicroProfileMetricsProvider implements MetricsProvider {
+    static final String DISABLED = ConfigPrefix.VALUE + "mpmetrics.disabled";
+
     private final boolean enabled;
 
     private final MetricRegistry registry;
@@ -34,10 +38,10 @@ public class MicroProfileMetricsProvider implements MetricsProvider {
     MicroProfileMetricsProvider(
             // lazy for `CompoundMetricsProvider`
             @RegistryType(type = MetricRegistry.Type.BASE) Provider<MetricRegistry> registry,
-            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
-            @ConfigProperty(name = Constants.MPMETRICS_DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
+            Enablement enablement,
+            @ConfigProperty(name = DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
             ExecutorHolder executorHolder) {
-        this.enabled = metricsEnabled && !mpMetricsDisabled;
+        this.enabled = enablement.metrics() && !mpMetricsDisabled;
         this.registry = registry.get();
 
         if (enabled) {

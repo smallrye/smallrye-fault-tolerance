@@ -114,6 +114,9 @@ For example:
 
 [source,properties]
 ----
+smallrye.faulttolerance."com.example.MyService/hello".retry.max-retries=5 <1>
+
+# alternatively, a specification-defined property can be used
 com.example.MyService/hello/Retry/maxRetries=5 <1>
 ----
 <1> Even though the `@Retry` annotation says that `maxRetries` should be 10, this configuration takes precedence.

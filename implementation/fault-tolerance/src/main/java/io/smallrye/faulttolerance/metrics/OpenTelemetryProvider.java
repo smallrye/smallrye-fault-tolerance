@@ -12,7 +12,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
+import io.smallrye.faulttolerance.Enablement;
 import io.smallrye.faulttolerance.ExecutorHolder;
+import io.smallrye.faulttolerance.config.ConfigPrefix;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -22,6 +24,8 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class OpenTelemetryProvider implements MetricsProvider {
+    static final String DISABLED = ConfigPrefix.VALUE + "opentelemetry.disabled";
+
     private final boolean enabled;
 
     private final Meter meter;
@@ -32,10 +36,10 @@ public class OpenTelemetryProvider implements MetricsProvider {
     OpenTelemetryProvider(
             // lazy for `CompoundMetricsProvider`
             Provider<Meter> meter,
-            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
-            @ConfigProperty(name = Constants.OPENTELEMETRY_DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
+            Enablement enablement,
+            @ConfigProperty(name = DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
             ExecutorHolder executorHolder) {
-        this.enabled = metricsEnabled && !openTelemetryDisabled;
+        this.enabled = enablement.metrics() && !openTelemetryDisabled;
         this.meter = meter.get();
 
         if (enabled) {
