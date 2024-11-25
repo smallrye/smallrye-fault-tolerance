@@ -58,10 +58,10 @@ If you don't set a configuration property, it will default to the same value the
 ****
 There's one exception to the "no external configuration" rule.
 
-The CDI implementation looks for the well-known `MP_Fault_Tolerance_NonFallback_Enabled` configuration property in MicroProfile Config.
-The standalone implementation looks for a system property with the same name, or obtains the value from custom configuration (as xref:integration/programmatic-api.adoc[described] in the integration section).
+The CDI implementation looks for the `smallrye.faulttolerance.enabled` / `MP_Fault_Tolerance_NonFallback_Enabled` configuration properties in MicroProfile Config.
+The standalone implementation looks for system properties with the same name, or obtains the value from custom configuration (as xref:integration/programmatic-api.adoc[described] in the integration section).
 
-If such property exists and is set to `false`, only the fallback and thread offload fault tolerance strategies will be applied.
+If at least one of these properties exists and is set to `false`, only the fallback and thread offload fault tolerance strategies will be applied.
 Everything else will be ignored.
 
 Note that this is somewhat different to the declarative, annotation-based API, where only fallback is retained and the `@Asynchronous` strategy is skipped as well.
@@ -241,7 +241,7 @@ All event listeners registered like this must run quickly and must not throw exc
 
 == Configuration
 
-As mentioned above, with the single exception of `MP_Fault_Tolerance_NonFallback_Enabled`, there is no support for external configuration of fault tolerance strategies.
+As mentioned above, except of `smallrye.faulttolerance.enabled` / `MP_Fault_Tolerance_NonFallback_Enabled`, there is no support for external configuration of fault tolerance strategies.
 This may change in the future, though possibly only in the CDI implementation.
 
 == Metrics

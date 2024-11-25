@@ -6,7 +6,7 @@ import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
 import io.smallrye.faulttolerance.autoconfig.Config;
 
-@AutoConfig
+@AutoConfig(newConfigAllowed = false)
 public interface ApplyFaultToleranceConfig extends ApplyFaultTolerance, Config {
     @Override
     default void validate() {

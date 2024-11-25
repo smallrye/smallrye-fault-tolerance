@@ -4,7 +4,7 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
 import io.smallrye.faulttolerance.autoconfig.Config;
 
-@AutoConfig
+@AutoConfig(newConfigAllowed = false)
 public interface BlockingConfig extends Blocking, Config {
     @Override
     default void validate() {

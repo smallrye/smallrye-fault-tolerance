@@ -8,8 +8,6 @@ import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
 import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.Guard;
@@ -40,8 +38,7 @@ public class CdiSpi implements Spi {
     @Singleton
     public static class LazyDependencies implements BuilderLazyDependencies {
         @Inject
-        @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled", defaultValue = "true")
-        boolean ftEnabled;
+        Enablement enablement;
 
         @Inject
         ExecutorHolder executorHolder;
@@ -51,7 +48,7 @@ public class CdiSpi implements Spi {
 
         @Override
         public boolean ftEnabled() {
-            return ftEnabled;
+            return enablement.ft();
         }
 
         @Override

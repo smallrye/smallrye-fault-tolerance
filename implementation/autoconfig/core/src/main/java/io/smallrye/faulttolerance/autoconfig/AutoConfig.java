@@ -21,7 +21,16 @@ import java.lang.annotation.Target;
 public @interface AutoConfig {
     /**
      * Whether the annotation values can be overridden by MP Config.
+     * <p>
      * Usually {@code true}, but there may be annotations for which that is not desirable.
      */
     boolean configurable() default true;
+
+    /**
+     * Whether the annotation values can be overridden by SmallRye Fault Tolerance-specific MP Config
+     * properties, in addition to the specification-defined MP Config properties.
+     * <p>
+     * Usually {@code true}, but there may be annotations for which that is not desirable.
+     */
+    boolean newConfigAllowed() default true;
 }

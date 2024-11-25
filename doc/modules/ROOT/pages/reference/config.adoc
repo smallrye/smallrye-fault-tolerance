@@ -31,6 +31,9 @@ To change the `maxRetries` property using MicroProfile Config, set:
 
 [source,properties]
 ----
+smallrye.faulttolerance."com.example.MyService/hello".retry.max-retries=5
+
+# alternatively, a specification-defined property can be used
 com.example.MyService/hello/Retry/maxRetries=5
 ----
 
@@ -58,6 +61,9 @@ The MicroProfile Config configuration property doesn't include the method name i
 
 [source,properties]
 ----
+smallrye.faulttolerance."com.example.MyService".retry.max-retries=5
+
+# alternatively, a specification-defined property can be used
 com.example.MyService/Retry/maxRetries=5
 ----
 
@@ -76,6 +82,9 @@ For example:
 
 [source,properties]
 ----
+smallrye.faulttolerance.global.retry.max-retries=5
+
+# alternatively, a specification-defined property can be used
 Retry/maxRetries=5
 ----
 
@@ -109,6 +118,11 @@ The following configuration:
 
 [source,properties]
 ----
+smallrye.faulttolerance.global.retry.max-retries=30
+smallrye.faulttolerance."com.example.MyService".retry.max-retries=15
+smallrye.faulttolerance."com.example.MyService/complexHello".retry.max-retries=20
+
+# alternatively, specification-defined properties can be used
 Retry/maxRetries=30
 com.example.MyService/Retry/maxRetries=15
 com.example.MyService/complexHello/Retry/maxRetries=20
@@ -126,6 +140,9 @@ It is possible to disable certain fault tolerance annotation on some method, if 
 
 [source,properties]
 ----
+smallrye.faulttolerance."com.example.MyService/hello".retry.enabled=false
+
+# alternatively, a specification-defined property can be used
 com.example.MyService/hello/Retry/enabled=false
 ----
 
@@ -133,6 +150,9 @@ Or on some class, if the annotation is present on the class:
 
 [source,properties]
 ----
+smallrye.faulttolerance."com.example.MyService".retry.enabled=5
+
+# alternatively, a specification-defined property can be used
 com.example.MyService/Retry/enabled=false
 ----
 
@@ -140,6 +160,9 @@ Or globally:
 
 [source,properties]
 ----
+smallrye.faulttolerance.global.retry.enabled=5
+
+# alternatively, a specification-defined property can be used
 Retry/enabled=false
 ----
 
@@ -147,11 +170,36 @@ It is also possible to disable all fault tolerance completely:
 
 [source,properties]
 ----
+smallrye.faulttolerance.enabled=false
+
+# alternatively, a specification-defined property can be used
 MP_Fault_Tolerance_NonFallback_Enabled=false
 ----
 
 This will leave only fallbacks enabled, all other annotations will be disabled.
 
+== {smallrye-fault-tolerance} Configuration Properties
+
+As demonstrated in the examples above, {smallrye-fault-tolerance} provides its own configuration properties, in addition to the specification-defined properties.
+The specification-defined properties can of course be used, but the {smallrye-fault-tolerance} configuration properties have higher priority.
+
+The mapping is relatively straightforward:
+
+- `<classname>/<methodname>/<annotation>/<member>` moves to `smallrye.faulttolerance."<classname>/<methodname>".<annotation>.<member>`
+- `<classname>/<annotation>/<member>` moves to `smallrye.faulttolerance."<classname>".<annotation>.<member>`
+- `<annotation>/<member>` moves to `smallrye.faulttolerance.global.<annotation>.<member>`
+
+All the `<annotation>` and `<member>` parts are changed from camel case  (`BeforeRetry`, `methodName`) to kebab case (`before-retry`, `method-name`).
+Two annotation members are special cased to improve consistency:
+
+- `Retry/durationUnit` moves to `retry.max-duration-unit`, because the value property is called `maxDuration` (`max-duration`)
+- `Retry/jitterDelayUnit` moves to `retry.jitter-unit`, because the value property is called `jitter`
+
+Further:
+
+- `MP_Fault_Tolerance_NonFallback_Enabled` moves to `smallrye.faulttolerance.enabled`
+- `MP_Fault_Tolerance_Metrics_Enabled` moves to `smallrye.faulttolerance.metrics.enabled`
+
 == Links
 
-This is described in detail in the {microprofile-fault-tolerance-url}#configuration[{microprofile-fault-tolerance} specification].
+Configuration is described in detail in the {microprofile-fault-tolerance-url}#configuration[{microprofile-fault-tolerance} specification].

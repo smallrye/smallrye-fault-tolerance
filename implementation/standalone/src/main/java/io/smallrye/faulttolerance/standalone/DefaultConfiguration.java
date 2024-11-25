@@ -5,8 +5,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 final class DefaultConfiguration implements Configuration {
-    private final boolean enabled = !"false".equals(System.getProperty("MP_Fault_Tolerance_NonFallback_Enabled"));
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final boolean enabled;
+    private final ExecutorService executor;
+
+    DefaultConfiguration() {
+        enabled = !"false".equals(System.getProperty("smallrye.faulttolerance.enabled",
+                System.getProperty("MP_Fault_Tolerance_NonFallback_Enabled")));
+        executor = Executors.newCachedThreadPool();
+    }
 
     @Override
     public boolean enabled() {

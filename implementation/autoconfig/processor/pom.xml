@@ -21,6 +21,11 @@
             <groupId>com.squareup</groupId>
             <artifactId>javapoet</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config-common</artifactId>
+            <version>${version.smallrye-config}</version>
+        </dependency>
     </dependencies>
 
     <build>

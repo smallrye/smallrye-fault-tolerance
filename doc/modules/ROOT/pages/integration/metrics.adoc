@@ -68,6 +68,6 @@ This bean is used to emit the actual metrics.
 
 === Noop
 
-If the "noop" provider is used, metrics are completely disabled and the `MP_Fault_Tolerance_Metrics_Enabled` configuration property is ignored at runtime.
+If the "noop" provider is used, metrics are completely disabled.
 
 No metrics API and implementation is required in this case.

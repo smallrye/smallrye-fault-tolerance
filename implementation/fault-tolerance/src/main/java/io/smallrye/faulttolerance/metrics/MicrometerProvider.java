@@ -12,7 +12,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import io.smallrye.faulttolerance.Enablement;
 import io.smallrye.faulttolerance.ExecutorHolder;
+import io.smallrye.faulttolerance.config.ConfigPrefix;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -22,6 +24,8 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicrometerProvider implements MetricsProvider {
+    static final String DISABLED = ConfigPrefix.VALUE + "micrometer.disabled";
+
     private final boolean enabled;
 
     private final MeterRegistry registry;
@@ -32,10 +36,10 @@ public class MicrometerProvider implements MetricsProvider {
     MicrometerProvider(
             // lazy for `CompoundMetricsProvider`
             Provider<MeterRegistry> registry,
-            @ConfigProperty(name = Constants.METRICS_ENABLED, defaultValue = "true") boolean metricsEnabled,
-            @ConfigProperty(name = Constants.MICROMETER_DISABLED, defaultValue = "false") boolean micrometerDisabled,
+            Enablement enablement,
+            @ConfigProperty(name = DISABLED, defaultValue = "false") boolean micrometerDisabled,
             ExecutorHolder executorHolder) {
-        this.enabled = metricsEnabled && !micrometerDisabled;
+        this.enabled = enablement.metrics() && !micrometerDisabled;
         this.registry = registry.get();
 
         if (enabled) {
