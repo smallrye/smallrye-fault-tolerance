@@ -29,10 +29,7 @@ interface CdiLogger extends BasicLogger {
 
     DefinitionException backoffAnnotationWithoutRetry(String backoffAnnotation, Class<?> clazz);
 
-    @Message(id = 4, value = "Both @Blocking and @NonBlocking present on '%s'")
-    DefinitionException bothBlockingNonBlockingPresent(MethodDescriptor method);
-
-    DefinitionException bothBlockingNonBlockingPresent(Class<?> clazz);
+    //@Message(id = 4, value = "Both @Blocking and @NonBlocking present on '%s'")
 
     @Message(id = 5, value = "Both @Asynchronous and @AsynchronousNonBlocking present on '%s'")
     DefinitionException bothAsyncAndAsyncNonBlockingPresent(MethodDescriptor method);

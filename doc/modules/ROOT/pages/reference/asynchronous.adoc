@@ -77,8 +77,7 @@ Use `@Asynchronous` to mark blocking methods for thread offload.
 If you can't use the non-compatible mode, use `@AsynchronousNonBlocking` or `@Asynchronous` to mark all asynchronous methods.
 
 IMPORTANT: In previous releases, {smallrye-fault-tolerance} recommended to use the `@Blocking` and `@NonBlocking` annotations.
-Using these annotations *for fault tolerance purposes* is now deprecated.
-They are still supported, but at some point, {smallrye-fault-tolerance} will stop recognizing them.
+Using these annotations *for fault tolerance purposes* is no longer supported, starting with {smallrye-fault-tolerance} 7.0.0.
 
 We also recommend avoiding `@Asynchronous` methods that return `Future`, because the only way to obtain the future value is blocking.
 

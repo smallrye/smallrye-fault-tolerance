@@ -25,8 +25,6 @@ import org.eclipse.microprofile.faulttolerance.Asynchronous;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
-import io.smallrye.common.annotation.Blocking;
-import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
@@ -59,8 +57,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
 
     private final AsynchronousConfig asynchronous;
     private final AsynchronousNonBlockingConfig asynchronousNonBlocking;
-    private final BlockingConfig blocking;
-    private final NonBlockingConfig nonBlocking;
 
     private final CircuitBreakerNameConfig circuitBreakerName;
     private final FallbackConfig fallback;
@@ -84,8 +80,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
 
         this.asynchronous = AsynchronousConfigImpl.create(method);
         this.asynchronousNonBlocking = AsynchronousNonBlockingConfigImpl.create(method);
-        this.blocking = BlockingConfigImpl.create(method);
-        this.nonBlocking = NonBlockingConfigImpl.create(method);
 
         this.circuitBreakerName = CircuitBreakerNameConfigImpl.create(method);
         this.fallback = FallbackConfigImpl.create(method);
@@ -183,68 +177,18 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         return asynchronousNonBlocking;
     }
 
-    public boolean hasBlocking() {
-        return blocking != null;
-    }
-
-    public Blocking getBlocking() {
-        return blocking;
-    }
-
-    public boolean hasNonBlocking() {
-        return nonBlocking != null;
-    }
-
-    public NonBlocking getNonBlocking() {
-        return nonBlocking;
-    }
-
     // if the guarded method doesn't return CompletionStage, this is meaningless
     public boolean isThreadOffloadRequired() {
-        if (blocking == null && nonBlocking == null) {
-            if (asynchronousNonBlocking != null && asynchronousNonBlocking.isOnMethod()) {
-                return false;
-            }
-            if (asynchronous != null && asynchronous.isOnMethod()) {
-                return true;
-            }
-
-            if (asynchronousNonBlocking != null) {
-                return false;
-            }
-            if (asynchronous != null) {
-                return true;
-            }
-
-            // in spec compatible mode, one of the conditions above always holds
-            // in spec non-compatible mode, we can just always return `false`
-            // because `isThreadOffloadRequired` is never called when the return type
-            // isn't `CompletionStage`
-            return false;
-        }
-
-        // the code below is meant to be deleted when support for `@Blocking` and `@NonBlocking` is removed
-
-        if (blocking != null && blocking.isOnMethod()) {
-            return true;
-        }
-        if (nonBlocking != null && nonBlocking.isOnMethod()) {
-            return false;
-        }
         if (asynchronousNonBlocking != null && asynchronousNonBlocking.isOnMethod()) {
             return false;
         }
-
-        if (blocking != null) {
+        if (asynchronous != null && asynchronous.isOnMethod()) {
             return true;
         }
-        if (nonBlocking != null) {
-            return false;
-        }
+
         if (asynchronousNonBlocking != null) {
             return false;
         }
-
         if (asynchronous != null) {
             return true;
         }
@@ -327,12 +271,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         }
         if (asynchronousNonBlocking != null) {
             asynchronousNonBlocking.validate();
-        }
-        if (blocking != null) {
-            blocking.validate();
-        }
-        if (nonBlocking != null) {
-            nonBlocking.validate();
         }
 
         if (circuitBreakerName != null) {
@@ -430,12 +368,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         }
         if (asynchronousNonBlocking != null) {
             asynchronousNonBlocking.materialize();
-        }
-        if (blocking != null) {
-            blocking.materialize();
-        }
-        if (nonBlocking != null) {
-            nonBlocking.materialize();
         }
 
         if (circuitBreakerName != null) {
