@@ -30,8 +30,7 @@ public class SpecCompatibility {
         boolean supported = AsyncSupportRegistry.isKnown(operation.getParameterTypes(), operation.getReturnType());
 
         if (compatible) {
-            boolean hasAnnotation = operation.hasAsynchronous() || operation.hasAsynchronousNonBlocking()
-                    || operation.hasBlocking() || operation.hasNonBlocking();
+            boolean hasAnnotation = operation.hasAsynchronous() || operation.hasAsynchronousNonBlocking();
             return supported && hasAnnotation;
         } else {
             return supported;

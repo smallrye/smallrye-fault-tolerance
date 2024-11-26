@@ -16,20 +16,6 @@ public class RxjavaTest {
     }
 
     @Test
-    public void nonblocking(HelloService service) {
-        Single<String> hello = service.helloNonblocking();
-        assertThat(hello.blockingGet()).isEqualTo("hello");
-        assertThat(HelloService.COUNTER).hasValue(4);
-    }
-
-    @Test
-    public void blocking(HelloService service) {
-        Single<String> hello = service.helloBlocking();
-        assertThat(hello.blockingGet()).isEqualTo("hello");
-        assertThat(HelloService.COUNTER).hasValue(4);
-    }
-
-    @Test
     public void asynchronous(HelloService service) {
         Single<String> hello = service.helloAsynchronous();
         assertThat(hello.blockingGet()).isEqualTo("hello");
@@ -39,20 +25,6 @@ public class RxjavaTest {
     @Test
     public void asynchronousNonBlocking(HelloService service) {
         Single<String> hello = service.helloAsynchronousNonBlocking();
-        assertThat(hello.blockingGet()).isEqualTo("hello");
-        assertThat(HelloService.COUNTER).hasValue(4);
-    }
-
-    @Test
-    public void asynchronousNonblockingCombined(HelloService service) {
-        Single<String> hello = service.helloAsynchronousNonblockingCombined();
-        assertThat(hello.blockingGet()).isEqualTo("hello");
-        assertThat(HelloService.COUNTER).hasValue(4);
-    }
-
-    @Test
-    public void asynchronousBlockingCombined(HelloService service) {
-        Single<String> hello = service.helloAsynchronousBlockingCombined();
         assertThat(hello.blockingGet()).isEqualTo("hello");
         assertThat(HelloService.COUNTER).hasValue(4);
     }

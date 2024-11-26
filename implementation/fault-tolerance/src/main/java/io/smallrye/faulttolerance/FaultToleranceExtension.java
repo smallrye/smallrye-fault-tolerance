@@ -58,9 +58,7 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
-import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.Identifier;
-import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
@@ -145,7 +143,7 @@ public class FaultToleranceExtension implements Extension {
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOG.activated(getImplementationVersion().orElse("unknown"));
 
-        // certain SmallRye annotations (@CircuitBreakerName, @[Non]Blocking, @*Backoff, @RetryWhen, @BeforeRetry)
+        // certain SmallRye annotations (@CircuitBreakerName, @*Backoff, @RetryWhen, @BeforeRetry)
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
@@ -298,16 +296,6 @@ public class FaultToleranceExtension implements Extension {
                 if (annotatedType.isAnnotationPresent(Asynchronous.class)
                         && annotatedType.isAnnotationPresent(AsynchronousNonBlocking.class)) {
                     event.addDefinitionError(LOG.bothAsyncAndAsyncNonBlockingPresent(annotatedType.getJavaClass()));
-                }
-
-                if (annotatedMethod.isAnnotationPresent(Blocking.class)
-                        && annotatedMethod.isAnnotationPresent(NonBlocking.class)) {
-                    event.addDefinitionError(LOG.bothBlockingNonBlockingPresent(method.method));
-                }
-
-                if (annotatedType.isAnnotationPresent(Blocking.class)
-                        && annotatedType.isAnnotationPresent(NonBlocking.class)) {
-                    event.addDefinitionError(LOG.bothBlockingNonBlockingPresent(annotatedType.getJavaClass()));
                 }
             }
         }

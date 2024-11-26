@@ -18,8 +18,6 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
-import io.smallrye.common.annotation.Blocking;
-import io.smallrye.common.annotation.NonBlocking;
 import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
@@ -47,8 +45,6 @@ public class FaultToleranceMethods {
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, annotationsPresentDirectly);
         result.asynchronousNonBlocking = getAnnotation(AsynchronousNonBlocking.class, method, annotationsPresentDirectly);
-        result.blocking = getAnnotation(Blocking.class, method, annotationsPresentDirectly);
-        result.nonBlocking = getAnnotation(NonBlocking.class, method, annotationsPresentDirectly);
 
         result.bulkhead = getAnnotation(Bulkhead.class, method, annotationsPresentDirectly);
         result.circuitBreaker = getAnnotation(CircuitBreaker.class, method, annotationsPresentDirectly);
@@ -105,8 +101,6 @@ public class FaultToleranceMethods {
         result.asynchronous = getAnnotation(Asynchronous.class, method, beanClass, annotationsPresentDirectly);
         result.asynchronousNonBlocking = getAnnotation(AsynchronousNonBlocking.class, method, beanClass,
                 annotationsPresentDirectly);
-        result.blocking = getAnnotation(Blocking.class, method, beanClass, annotationsPresentDirectly);
-        result.nonBlocking = getAnnotation(NonBlocking.class, method, beanClass, annotationsPresentDirectly);
 
         result.bulkhead = getAnnotation(Bulkhead.class, method, beanClass, annotationsPresentDirectly);
         result.circuitBreaker = getAnnotation(CircuitBreaker.class, method, beanClass, annotationsPresentDirectly);
