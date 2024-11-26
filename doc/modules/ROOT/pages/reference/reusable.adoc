@@ -233,7 +233,7 @@ suspend fun fallback(): String {
 == Migration from `@ApplyFaultTolerance`
 
 The 1st version of the programmatic API had the `@ApplyFaultTolerance` annotation.
-That annotation is deprecated and scheduled for removal in {smallrye-fault-tolerance} 7.0.
+That annotation was removed in {smallrye-fault-tolerance} 7.0.
 
 To migrate, replace `@ApplyFaultTolerance` with `@ApplyGuard` and change the `FaultTolerance<>` producers to produce `Guard` or `TypedGuard<>`.
 See xref:reference/programmatic-api.adoc#migration_from_faulttolerance[the programmatic API migration guide] for more details about that.

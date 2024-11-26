@@ -2,21 +2,18 @@ package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Type;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
 
 import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 import io.smallrye.faulttolerance.api.CircuitBreakerMaintenance;
-import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.Spi;
 import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.apiimpl.BasicCircuitBreakerMaintenanceImpl;
 import io.smallrye.faulttolerance.apiimpl.BuilderEagerDependencies;
 import io.smallrye.faulttolerance.apiimpl.BuilderLazyDependencies;
-import io.smallrye.faulttolerance.apiimpl.FaultToleranceImpl;
 import io.smallrye.faulttolerance.apiimpl.GuardImpl;
 import io.smallrye.faulttolerance.apiimpl.TypedGuardImpl;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
@@ -107,18 +104,6 @@ public class CdiSpi implements Spi {
     @Override
     public <T> TypedGuard.Builder<T> newTypedGuardBuilder(Type type) {
         return new TypedGuardImpl.BuilderImpl<>(eagerDependencies(), this::lazyDependencies, type);
-    }
-
-    @Override
-    @Deprecated(forRemoval = true)
-    public <T, R> FaultTolerance.Builder<T, R> newBuilder(Function<FaultTolerance<T>, R> finisher) {
-        return new FaultToleranceImpl.BuilderImpl<>(eagerDependencies(), this::lazyDependencies, null, finisher);
-    }
-
-    @Override
-    @Deprecated(forRemoval = true)
-    public <T, R> FaultTolerance.Builder<T, R> newAsyncBuilder(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher) {
-        return new FaultToleranceImpl.BuilderImpl<>(eagerDependencies(), this::lazyDependencies, asyncType, finisher);
     }
 
     @Override

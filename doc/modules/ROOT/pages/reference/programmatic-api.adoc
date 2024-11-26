@@ -286,7 +286,7 @@ Integration concerns, which are particularly interesting for users of the standa
 == Migration from `FaultTolerance`
 
 The 1st version of the programmatic API had the `FaultTolerance` interface.
-This is deprecated and scheduled for removal in {smallrye-fault-tolerance} 7.0.
+That interface was removed in {smallrye-fault-tolerance} 7.0.
 The replacement are the `Guard` and `TypedGuard` types.
 
 When migrating, one first has to decide which type to use as a replacement.
