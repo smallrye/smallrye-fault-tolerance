@@ -18,7 +18,6 @@ import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
@@ -40,7 +39,6 @@ public class FaultToleranceMethods {
         result.beanClass = beanClass;
         result.method = createMethodDescriptor(method);
 
-        result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, annotationsPresentDirectly);
         result.applyGuard = getAnnotation(ApplyGuard.class, method, annotationsPresentDirectly);
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, annotationsPresentDirectly);
@@ -95,7 +93,6 @@ public class FaultToleranceMethods {
         result.beanClass = beanClass;
         result.method = createMethodDescriptor(method);
 
-        result.applyFaultTolerance = getAnnotation(ApplyFaultTolerance.class, method, beanClass, annotationsPresentDirectly);
         result.applyGuard = getAnnotation(ApplyGuard.class, method, beanClass, annotationsPresentDirectly);
 
         result.asynchronous = getAnnotation(Asynchronous.class, method, beanClass, annotationsPresentDirectly);

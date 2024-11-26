@@ -27,7 +27,6 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefiniti
 
 import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
@@ -52,7 +51,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
     private final Class<?> beanClass;
     private final MethodDescriptor methodDescriptor;
 
-    private final ApplyFaultToleranceConfig applyFaultTolerance;
     private final ApplyGuardConfig applyGuard;
 
     private final AsynchronousConfig asynchronous;
@@ -75,7 +73,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         this.beanClass = method.beanClass;
         this.methodDescriptor = method.method;
 
-        this.applyFaultTolerance = ApplyFaultToleranceConfigImpl.create(method);
         this.applyGuard = ApplyGuardConfigImpl.create(method);
 
         this.asynchronous = AsynchronousConfigImpl.create(method);
@@ -143,14 +140,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
 
     public Class<?> getReturnType() {
         return methodDescriptor.returnType;
-    }
-
-    public boolean hasApplyFaultTolerance() {
-        return applyFaultTolerance != null;
-    }
-
-    public ApplyFaultTolerance getApplyFaultTolerance() {
-        return applyFaultTolerance;
     }
 
     public boolean hasApplyGuard() {
@@ -259,9 +248,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
     public void validate() {
         super.validate();
 
-        if (applyFaultTolerance != null) {
-            applyFaultTolerance.validate();
-        }
         if (applyGuard != null) {
             applyGuard.validate();
         }
@@ -280,17 +266,9 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
             fallback.validate();
         }
 
-        validateApplyGuard();
         validateFallback();
         validateRetryWhen();
         validateBeforeRetry();
-    }
-
-    private void validateApplyGuard() {
-        if (applyFaultTolerance != null && applyGuard != null) {
-            throw new FaultToleranceDefinitionException(
-                    "Both @ApplyFaultTolerance and @ApplyGuard present on " + description);
-        }
     }
 
     private void validateFallback() {
@@ -356,9 +334,6 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
     public void materialize() {
         super.materialize();
 
-        if (applyFaultTolerance != null) {
-            applyFaultTolerance.materialize();
-        }
         if (applyGuard != null) {
             applyGuard.materialize();
         }

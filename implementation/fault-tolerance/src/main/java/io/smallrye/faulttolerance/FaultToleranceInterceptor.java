@@ -48,13 +48,11 @@ import io.smallrye.common.annotation.Identifier;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.BeforeRetryHandler;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
-import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.NeverOnResult;
 import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.apiimpl.AsyncInvocation;
 import io.smallrye.faulttolerance.apiimpl.GuardImpl;
-import io.smallrye.faulttolerance.apiimpl.LazyFaultTolerance;
 import io.smallrye.faulttolerance.apiimpl.LazyGuard;
 import io.smallrye.faulttolerance.apiimpl.LazyTypedGuard;
 import io.smallrye.faulttolerance.apiimpl.TypedGuardImpl;
@@ -75,7 +73,6 @@ import io.smallrye.faulttolerance.core.fallback.Fallback;
 import io.smallrye.faulttolerance.core.fallback.FallbackFunction;
 import io.smallrye.faulttolerance.core.fallback.ThreadOffloadFallbackFunction;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
-import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 import io.smallrye.faulttolerance.core.invocation.ConstantInvoker;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
@@ -148,8 +145,6 @@ public class FaultToleranceInterceptor {
 
     private final SpecCompatibility specCompatibility;
 
-    private final Instance<FaultTolerance<?>> configuredFaultTolerance;
-
     private final Instance<Guard> configuredGuard;
 
     private final Instance<TypedGuard<?>> configuredTypedGuard;
@@ -166,7 +161,6 @@ public class FaultToleranceInterceptor {
             RequestContextIntegration requestContextIntegration,
             CircuitBreakerMaintenanceImpl cbMaintenance,
             SpecCompatibility specCompatibility,
-            @Any Instance<FaultTolerance<?>> configuredFaultTolerance,
             @Any Instance<Guard> configuredGuard,
             @Any Instance<TypedGuard<?>> configuredTypedGuard) {
         this.interceptedBean = interceptedBean;
@@ -181,7 +175,6 @@ public class FaultToleranceInterceptor {
         requestContextController = requestContextIntegration.get();
         this.cbMaintenance = cbMaintenance;
         this.specCompatibility = specCompatibility;
-        this.configuredFaultTolerance = configuredFaultTolerance;
         this.configuredGuard = configuredGuard;
         this.configuredTypedGuard = configuredTypedGuard;
     }
@@ -193,9 +186,7 @@ public class FaultToleranceInterceptor {
         InterceptionPoint point = new InterceptionPoint(beanClass, invocationContext.getMethod());
         FaultToleranceOperation operation = operationProvider.get(beanClass, method);
 
-        if (operation.hasApplyFaultTolerance()) {
-            return applyFaultToleranceFlow(operation, invocationContext);
-        } else if (operation.hasApplyGuard()) {
+        if (operation.hasApplyGuard()) {
             return applyGuardFlow(operation, invocationContext, point);
         } else if (specCompatibility.isOperationTrulyAsynchronous(operation)) {
             return asyncFlow(operation, invocationContext, point);
@@ -203,51 +194,6 @@ public class FaultToleranceInterceptor {
             return futureFlow(operation, invocationContext, point);
         } else {
             return syncFlow(operation, invocationContext, point);
-        }
-    }
-
-    // V = value type, e.g. String
-    // T = result type, e.g. String or CompletionStage<String> or Uni<String>
-    //
-    // in synchronous scenario, V = T
-    // in asynchronous scenario, T is an async type that eventually produces V
-    private <V, T> T applyFaultToleranceFlow(FaultToleranceOperation operation, InvocationContext invocationContext)
-            throws Exception {
-        String identifier = operation.getApplyFaultTolerance().value();
-        Instance<FaultTolerance<?>> instance = configuredFaultTolerance.select(Identifier.Literal.of(identifier));
-        if (!instance.isResolvable()) {
-            throw new FaultToleranceException("Can't resolve a bean of type " + FaultTolerance.class.getName()
-                    + " with qualifier @" + Identifier.class.getName() + "(\"" + identifier + "\")");
-        }
-        FaultTolerance<Object> faultTolerance = (FaultTolerance<Object>) instance.get();
-        if (!(faultTolerance instanceof LazyFaultTolerance)) {
-            throw new FaultToleranceException("Configured fault tolerance '" + identifier
-                    + "' is not created by the FaultTolerance API, this is not supported");
-        }
-        LazyFaultTolerance<Object> lazyFaultTolerance = (LazyFaultTolerance<Object>) faultTolerance;
-
-        Class<?> asyncType = lazyFaultTolerance.internalGetAsyncType();
-        MeteredOperationName meteredOperationName = new MeteredOperationName(operation.getName());
-
-        AsyncSupport<?, ?> forOperation = AsyncSupportRegistry.get(operation.getParameterTypes(), operation.getReturnType());
-        AsyncSupport<?, ?> fromConfigured = asyncType == null ? null : AsyncSupportRegistry.get(new Class[0], asyncType);
-
-        if (forOperation == null && fromConfigured == null) {
-            return (T) lazyFaultTolerance.call(invocationContext::proceed, meteredOperationName);
-        } else if (forOperation == null) {
-            throw new FaultToleranceException("Configured fault tolerance '" + identifier
-                    + "' expects the operation to " + fromConfigured.mustDescription()
-                    + ", but the operation is synchronous: " + operation);
-        } else if (fromConfigured == null) {
-            throw new FaultToleranceException("Configured fault tolerance '" + identifier
-                    + "' expects the operation to be synchronous, but it "
-                    + forOperation.doesDescription() + ": " + operation);
-        } else if (!forOperation.getClass().equals(fromConfigured.getClass())) {
-            throw new FaultToleranceException("Configured fault tolerance '" + identifier
-                    + "' expects the operation to " + fromConfigured.mustDescription()
-                    + ", but it " + forOperation.doesDescription() + ": " + operation);
-        } else {
-            return (T) lazyFaultTolerance.call(invocationContext::proceed, meteredOperationName);
         }
     }
 

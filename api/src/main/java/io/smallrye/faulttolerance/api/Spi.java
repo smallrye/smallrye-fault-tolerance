@@ -1,7 +1,6 @@
 package io.smallrye.faulttolerance.api;
 
 import java.lang.reflect.Type;
-import java.util.function.Function;
 
 import io.smallrye.common.annotation.Experimental;
 
@@ -18,12 +17,6 @@ public interface Spi {
     Guard.Builder newGuardBuilder();
 
     <T> TypedGuard.Builder<T> newTypedGuardBuilder(Type valueType);
-
-    @Deprecated(forRemoval = true)
-    <T, R> FaultTolerance.Builder<T, R> newBuilder(Function<FaultTolerance<T>, R> finisher);
-
-    @Deprecated(forRemoval = true)
-    <T, R> FaultTolerance.Builder<T, R> newAsyncBuilder(Class<?> asyncType, Function<FaultTolerance<T>, R> finisher);
 
     CircuitBreakerMaintenance circuitBreakerMaintenance();
 }

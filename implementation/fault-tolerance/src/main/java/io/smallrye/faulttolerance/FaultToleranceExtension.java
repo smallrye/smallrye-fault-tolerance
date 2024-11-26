@@ -59,7 +59,6 @@ import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 
 import io.smallrye.common.annotation.Identifier;
-import io.smallrye.faulttolerance.api.ApplyFaultTolerance;
 import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
@@ -146,7 +145,6 @@ public class FaultToleranceExtension implements Extension {
         // certain SmallRye annotations (@CircuitBreakerName, @*Backoff, @RetryWhen, @BeforeRetry)
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
-        bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyFaultTolerance.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyGuard.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(Asynchronous.class)));
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(
