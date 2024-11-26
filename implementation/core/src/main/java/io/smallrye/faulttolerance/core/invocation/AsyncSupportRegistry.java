@@ -1,7 +1,5 @@
 package io.smallrye.faulttolerance.core.invocation;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,17 +11,11 @@ public class AsyncSupportRegistry {
 
     static {
         List<AsyncSupport<?, ?>> list = new ArrayList<>();
-        Iterable<AsyncSupport> instances = System.getSecurityManager() != null
-                ? AccessController.doPrivileged((PrivilegedAction<Iterable<AsyncSupport>>) AsyncSupportRegistry::load)
-                : load();
+        Iterable<AsyncSupport> instances = ServiceLoader.load(AsyncSupport.class, AsyncSupport.class.getClassLoader());
         for (AsyncSupport<?, ?> instance : instances) {
             list.add(instance);
         }
         registry = Collections.unmodifiableList(list);
-    }
-
-    private static ServiceLoader<AsyncSupport> load() {
-        return ServiceLoader.load(AsyncSupport.class, AsyncSupport.class.getClassLoader());
     }
 
     public static boolean isKnown(Class<?>[] parameterTypes, Class<?> returnType) {

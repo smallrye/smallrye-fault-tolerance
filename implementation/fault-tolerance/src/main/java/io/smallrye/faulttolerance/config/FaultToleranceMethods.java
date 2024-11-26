@@ -3,7 +3,6 @@ package io.smallrye.faulttolerance.config;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -18,7 +17,6 @@ import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.common.annotation.NonBlocking;
@@ -68,11 +66,7 @@ public class FaultToleranceMethods {
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 
-        try {
-            searchForMethods(result, beanClass, method.getJavaMember());
-        } catch (PrivilegedActionException e) {
-            throw new FaultToleranceDefinitionException(e);
-        }
+        searchForMethods(result, beanClass, method.getJavaMember());
 
         return result;
     }
@@ -130,11 +124,7 @@ public class FaultToleranceMethods {
 
         result.annotationsPresentDirectly = annotationsPresentDirectly;
 
-        try {
-            searchForMethods(result, beanClass, method);
-        } catch (PrivilegedActionException e) {
-            throw new FaultToleranceDefinitionException(e);
-        }
+        searchForMethods(result, beanClass, method);
 
         return result;
     }
@@ -170,8 +160,7 @@ public class FaultToleranceMethods {
 
     // ---
 
-    private static void searchForMethods(FaultToleranceMethod result, Class<?> beanClass, Method method)
-            throws PrivilegedActionException {
+    private static void searchForMethods(FaultToleranceMethod result, Class<?> beanClass, Method method) {
         if (result.fallback != null) {
             FallbackConfig fallbackConfig = FallbackConfigImpl.create(result);
             if (fallbackConfig != null) {
@@ -181,11 +170,11 @@ public class FaultToleranceMethods {
                     Type[] parameterTypes = method.getGenericParameterTypes();
                     Type returnType = method.getGenericReturnType();
                     result.fallbackMethod = createMethodDescriptorIfNotNull(
-                            SecurityActions.findFallbackMethod(beanClass, declaringClass, fallbackMethod,
+                            FaultToleranceMethodSearch.findFallbackMethod(beanClass, declaringClass, fallbackMethod,
                                     parameterTypes, returnType));
                     result.fallbackMethodsWithExceptionParameter = createMethodDescriptorsIfNotEmpty(
-                            SecurityActions.findFallbackMethodsWithExceptionParameter(beanClass, declaringClass, fallbackMethod,
-                                    parameterTypes, returnType));
+                            FaultToleranceMethodSearch.findFallbackMethodsWithExceptionParameter(beanClass, declaringClass,
+                                    fallbackMethod, parameterTypes, returnType));
                 }
             }
         }
@@ -196,7 +185,8 @@ public class FaultToleranceMethods {
                 String beforeRetryMethod = beforeRetryConfig.methodName();
                 if (!"".equals(beforeRetryMethod)) {
                     result.beforeRetryMethod = createMethodDescriptorIfNotNull(
-                            SecurityActions.findBeforeRetryMethod(beanClass, method.getDeclaringClass(), beforeRetryMethod));
+                            FaultToleranceMethodSearch.findBeforeRetryMethod(beanClass, method.getDeclaringClass(),
+                                    beforeRetryMethod));
                 }
             }
         }

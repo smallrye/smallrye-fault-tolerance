@@ -23,8 +23,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -372,23 +370,18 @@ public class FaultToleranceExtension implements Extension {
     }
 
     private static Optional<String> getImplementationVersion() {
-        return AccessController.doPrivileged(new PrivilegedAction<Optional<String>>() {
-            @Override
-            public Optional<String> run() {
-                Properties properties = new Properties();
-                try {
-                    InputStream resource = this.getClass().getClassLoader()
-                            .getResourceAsStream("smallrye-fault-tolerance.properties");
-                    if (resource != null) {
-                        properties.load(resource);
-                        return Optional.ofNullable(properties.getProperty("version"));
-                    }
-                } catch (IOException e) {
-                    LOG.debug("Unable to detect SmallRye Fault Tolerance version");
-                }
-                return Optional.empty();
+        Properties properties = new Properties();
+        try {
+            InputStream resource = FaultToleranceExtension.class.getClassLoader()
+                    .getResourceAsStream("smallrye-fault-tolerance.properties");
+            if (resource != null) {
+                properties.load(resource);
+                return Optional.ofNullable(properties.getProperty("version"));
             }
-        });
+        } catch (IOException e) {
+            LOG.debug("Unable to detect SmallRye Fault Tolerance version");
+        }
+        return Optional.empty();
     }
 
     public static class FTInterceptorBindingAnnotatedType<T extends Annotation> implements AnnotatedType<T> {

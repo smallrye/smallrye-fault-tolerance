@@ -15,6 +15,7 @@
  */
 package io.smallrye.faulttolerance.config;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,11 @@ import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
  * Fault tolerance operation metadata. Used only for declarative fault tolerance.
  */
 public class FaultToleranceOperation extends BasicFaultToleranceOperation {
+    private static <T extends AccessibleObject> T makeAccessible(T accessibleObject) {
+        accessibleObject.setAccessible(true);
+        return accessibleObject;
+    }
+
     private final Class<?> beanClass;
     private final MethodDescriptor methodDescriptor;
 
@@ -90,7 +96,7 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
 
         if (method.fallbackMethod != null) {
             try {
-                this.fallbackMethod = SecurityActions.setAccessible(method.fallbackMethod.reflect());
+                this.fallbackMethod = makeAccessible(method.fallbackMethod.reflect());
             } catch (NoSuchMethodException e) {
                 throw new FaultToleranceDefinitionException(e);
             }
@@ -102,7 +108,7 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
             List<Method> result = new ArrayList<>();
             for (MethodDescriptor m : method.fallbackMethodsWithExceptionParameter) {
                 try {
-                    result.add(SecurityActions.setAccessible(m.reflect()));
+                    result.add(makeAccessible(m.reflect()));
                 } catch (NoSuchMethodException e) {
                     throw new FaultToleranceDefinitionException(e);
                 }
@@ -114,7 +120,7 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
 
         if (method.beforeRetryMethod != null) {
             try {
-                this.beforeRetryMethod = SecurityActions.setAccessible(method.beforeRetryMethod.reflect());
+                this.beforeRetryMethod = makeAccessible(method.beforeRetryMethod.reflect());
             } catch (NoSuchMethodException e) {
                 throw new FaultToleranceDefinitionException(e);
             }
