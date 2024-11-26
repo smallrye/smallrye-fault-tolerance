@@ -82,7 +82,7 @@ The fault tolerance strategies present in {microprofile-fault-tolerance}, togeth
 
 {smallrye-fault-tolerance} adds some more fault tolerance strategies and annotations:
 
-* `@ApplyFaultTolerance`: apply a programmatically-defined guard
+* `@ApplyGuard`: apply a programmatically-defined guard
 * `@AsynchronousNonBlocking`: apply asynchronous fault tolerance without offloading method execution to another thread
 * `@RateLimit`: limit rate of method invocations
 
