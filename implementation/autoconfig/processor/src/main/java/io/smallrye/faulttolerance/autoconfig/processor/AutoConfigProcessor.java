@@ -27,14 +27,14 @@ import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.tools.Diagnostic;
 
-import com.squareup.javapoet.ArrayTypeName;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.ArrayTypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 
 import io.smallrye.config.common.utils.StringUtil;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
@@ -42,7 +42,7 @@ import io.smallrye.faulttolerance.autoconfig.ConfigConstants;
 import io.smallrye.faulttolerance.autoconfig.ConfigDeclarativeOnly;
 
 @SupportedAnnotationTypes("io.smallrye.faulttolerance.autoconfig.AutoConfig")
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
+@SupportedSourceVersion(SourceVersion.RELEASE_17)
 public class AutoConfigProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -186,8 +186,7 @@ public class AutoConfigProcessor extends AbstractProcessor {
                                         .build())
                         .addStatement("this.description = method.method.toString()")
                         .addStatement(
-                                "this.configKey = onMethod ? method.method.declaringClass.getName() + \"/\" + method.method.name : method.method.declaringClass.getName()",
-                                annotationType)
+                                "this.configKey = onMethod ? method.method.declaringClass.getName() + \"/\" + method.method.name : method.method.declaringClass.getName()")
                         .addStatement("this.instance = method.$1L", firstToLowerCase(
                                 annotationDeclaration.getSimpleName().toString()))
                         .build())

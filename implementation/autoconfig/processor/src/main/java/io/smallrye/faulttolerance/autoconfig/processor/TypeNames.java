@@ -4,15 +4,16 @@ import java.lang.annotation.Annotation;
 import java.util.HashMap;
 import java.util.function.Supplier;
 
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.WildcardTypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.WildcardTypeName;
 
 final class TypeNames {
+    static final TypeName OBJECT = ClassName.get(Object.class);
     static final TypeName ANNOTATION = ClassName.get(Annotation.class);
     static final TypeName CLASS = ParameterizedTypeName.get(
-            ClassName.get(Class.class), WildcardTypeName.subtypeOf(TypeName.OBJECT));
+            ClassName.get(Class.class), WildcardTypeName.subtypeOf(OBJECT));
     static final TypeName CLASS_OF_ANNOTATION = ParameterizedTypeName.get(
             ClassName.get(Class.class), WildcardTypeName.subtypeOf(ANNOTATION));
     static final TypeName STRING = ClassName.get(String.class);

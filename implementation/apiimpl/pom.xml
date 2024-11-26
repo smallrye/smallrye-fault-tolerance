@@ -30,6 +30,14 @@
             <artifactId>smallrye-fault-tolerance-autoconfig-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging-processor</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.smallrye</groupId>
             <artifactId>smallrye-fault-tolerance-autoconfig-processor</artifactId>
             <scope>provided</scope>
