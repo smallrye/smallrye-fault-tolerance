@@ -16,13 +16,10 @@
 package io.smallrye.faulttolerance;
 
 import java.lang.reflect.Method;
-import java.security.PrivilegedActionException;
 
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.faulttolerance.config.FaultToleranceMethods;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
@@ -69,14 +66,10 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
 
     protected boolean isMethodDeclaredInHierarchy(Class<?> beanClass, Method method) {
         while (beanClass != null) {
-            try {
-                for (Method declaredMethod : SecurityActions.getDeclaredMethods(beanClass)) {
-                    if (declaredMethod.equals(method)) {
-                        return true;
-                    }
+            for (Method declaredMethod : beanClass.getDeclaredMethods()) {
+                if (declaredMethod.equals(method)) {
+                    return true;
                 }
-            } catch (PrivilegedActionException e) {
-                throw new FaultToleranceDefinitionException(e);
             }
             beanClass = beanClass.getSuperclass();
         }

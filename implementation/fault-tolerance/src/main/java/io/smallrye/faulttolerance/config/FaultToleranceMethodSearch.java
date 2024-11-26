@@ -15,7 +15,6 @@
  */
 package io.smallrye.faulttolerance.config;
 
-import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -23,10 +22,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,22 +31,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-final class SecurityActions {
-    private SecurityActions() {
-    }
-
-    static <T extends AccessibleObject> T setAccessible(T accessibleObject) {
-        if (System.getSecurityManager() == null) {
-            accessibleObject.setAccessible(true);
-            return accessibleObject;
-        } else {
-            return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
-                accessibleObject.setAccessible(true);
-                return accessibleObject;
-            });
-        }
-    }
-
+final class FaultToleranceMethodSearch {
     /**
      * Finds a fallback method for given guarded method. If the guarded method is present on given {@code beanClass}
      * and is actually declared by given {@code declaringClass} and has given {@code parameterTypes} and {@code returnType},
@@ -67,17 +47,8 @@ final class SecurityActions {
      * @return the fallback method or {@code null} if none exists
      */
     static Method findFallbackMethod(Class<?> beanClass, Class<?> declaringClass,
-            String name, Type[] parameterTypes, Type returnType) throws PrivilegedActionException {
-
-        Set<Method> result;
-        if (System.getSecurityManager() == null) {
-            result = findMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
-        } else {
-            result = AccessController.doPrivileged((PrivilegedExceptionAction<Set<Method>>) () -> {
-                return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
-            });
-        }
-
+            String name, Type[] parameterTypes, Type returnType) {
+        Set<Method> result = findMethod(beanClass, declaringClass, name, parameterTypes, returnType, false);
         return result.isEmpty() ? null : result.iterator().next();
     }
 
@@ -98,13 +69,8 @@ final class SecurityActions {
      * @return the fallback methods or an empty set if none exists
      */
     static Set<Method> findFallbackMethodsWithExceptionParameter(Class<?> beanClass, Class<?> declaringClass,
-            String name, Type[] parameterTypes, Type returnType) throws PrivilegedActionException {
-        if (System.getSecurityManager() == null) {
-            return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
-        }
-        return AccessController.doPrivileged((PrivilegedExceptionAction<Set<Method>>) () -> {
-            return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
-        });
+            String name, Type[] parameterTypes, Type returnType) {
+        return findMethod(beanClass, declaringClass, name, parameterTypes, returnType, true);
     }
 
     /**
@@ -118,17 +84,8 @@ final class SecurityActions {
      * @param name name of the before retry method
      * @return the before retry method or {@code null} if none exists
      */
-    static Method findBeforeRetryMethod(Class<?> beanClass, Class<?> declaringClass, String name)
-            throws PrivilegedActionException {
-        Set<Method> result;
-        if (System.getSecurityManager() == null) {
-            result = findMethod(beanClass, declaringClass, name, new Type[0], void.class, false);
-        } else {
-            result = AccessController.doPrivileged((PrivilegedExceptionAction<Set<Method>>) () -> {
-                return findMethod(beanClass, declaringClass, name, new Type[0], void.class, false);
-            });
-        }
-
+    static Method findBeforeRetryMethod(Class<?> beanClass, Class<?> declaringClass, String name) {
+        Set<Method> result = findMethod(beanClass, declaringClass, name, new Type[0], void.class, false);
         return result.isEmpty() ? null : result.iterator().next();
     }
 
