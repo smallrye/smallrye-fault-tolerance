@@ -53,4 +53,7 @@ interface CdiLogger extends BasicLogger {
 
     @Message(id = 9, value = "Guard/TypedGuard with identifier '%s' expected, but does not exist")
     DefinitionException expectedGuardDoesNotExist(String identifier);
+
+    @Message(id = 10, value = "Guard/TypedGuard with identifier 'global' is not allowed: %s")
+    DefinitionException guardWithIdentifierGlobal(String bean);
 }
