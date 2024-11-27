@@ -12,7 +12,7 @@ import io.smallrye.faulttolerance.util.WithSystemProperty;
 
 @FaultToleranceBasicTest
 @WithSystemProperty(key = "smallrye.faulttolerance.global.retry.max-retries", value = "7")
-@WithSystemProperty(key = "smallrye.faulttolerance.\"io.smallrye.faulttolerance.config.better.BeanWithRetry\".retry.max-retries", value = "5")
+@WithSystemProperty(key = "smallrye.faulttolerance.\"io.smallrye.faulttolerance.config.better.ConfigPropertyBean\".retry.max-retries", value = "5")
 public class ConfigPropertyGlobalVsClassTest {
     @Inject
     private ConfigPropertyBean bean;
