@@ -320,9 +320,11 @@ public class FaultToleranceExtension implements Extension {
         if (isGuard) {
             for (Annotation ann : bean.getQualifiers()) {
                 if (ann instanceof Identifier) {
-                    existingGuards
-                            .computeIfAbsent(((Identifier) ann).value(), ignored -> new HashSet<>())
-                            .add(bean.toString());
+                    String id = ((Identifier) ann).value();
+                    existingGuards.computeIfAbsent(id, ignored -> new HashSet<>()).add(bean.toString());
+                    if ("global".equals(id)) {
+                        pb.addDefinitionError(LOG.guardWithIdentifierGlobal(bean.toString()));
+                    }
                 }
             }
         }
