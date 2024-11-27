@@ -6,7 +6,7 @@ For introduction, see xref:howto/bulkhead.adoc[How to Limit Concurrency].
 
 If a guarded method is called by too many callers concurrently, the excess attempts will fail with `BulkheadException`.
 
-If the gaurded method is `@Asynchronous` or `@AsynchronousNonBlocking`, excess attempts are first put into a queue.
+If the guarded method is `@Asynchronous` or `@AsynchronousNonBlocking`, excess attempts are first put into a queue.
 The queued attempts are executed later.
 When the queue becomes full, excess attempts are rejected with `BulkheadException`.
 
