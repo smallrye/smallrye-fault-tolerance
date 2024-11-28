@@ -22,7 +22,7 @@ public class SpecCompatibility {
     }
 
     public static SpecCompatibility createFromConfig() {
-        Boolean value = ConfigProvider.getConfig().getOptionalValue(PROPERTY, boolean.class).orElse(true);
+        boolean value = ConfigProvider.getConfig().getOptionalValue(PROPERTY, boolean.class).orElse(true);
         return new SpecCompatibility(value);
     }
 
