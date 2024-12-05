@@ -22,12 +22,12 @@ It also provides a programmatic API to build reusable guards:
 [source,java]
 ----
 public class MyService {
-    private static final FaultTolerance<String> guard = FaultTolerance.<String>create()
+    private static final TypedGuard<String> GUARD = TypedGuard.create(String.class)
         .withFallback().handler(() -> "fallback").done() // <1>
         .build();
 
     public String hello() throws Exception {
-        return guard.call(() -> externalService.hello()); // <2>
+        return GUARD.call(() -> externalService.hello()); // <2>
     }
 }
 ----
