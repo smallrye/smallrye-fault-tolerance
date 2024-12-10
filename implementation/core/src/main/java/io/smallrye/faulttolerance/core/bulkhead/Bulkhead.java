@@ -67,20 +67,32 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
     }
 
     private Future<V> applySync(FaultToleranceContext<V> ctx) {
-        if (workSemaphore.tryAcquire()) {
-            LOG.trace("Semaphore acquired, accepting task into bulkhead");
-            ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
-            ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
-            try {
-                return delegate.apply(ctx);
-            } finally {
-                workSemaphore.release();
-                LOG.trace("Semaphore released, task leaving bulkhead");
-                ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
+        if (capacitySemaphore.tryAcquire()) {
+            LOG.trace("Capacity semaphore acquired, accepting task into bulkhead");
+            if (workSemaphore.tryAcquire()) {
+                LOG.trace("Work semaphore acquired, running task");
+                ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
+                ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
+                try {
+                    return delegate.apply(ctx);
+                } finally {
+                    workSemaphore.release();
+                    LOG.trace("Work semaphore released, task finished");
+                    capacitySemaphore.release();
+                    LOG.trace("Capacity semaphore released, task leaving bulkhead");
+                    ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
+                }
+            } else {
+                capacitySemaphore.release();
+
+                LOG.debugOrTrace(description + " invocation prevented by bulkhead",
+                        "Work semaphore not acquired, rejecting task from bulkhead");
+                ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
+                return Future.ofError(new BulkheadException(description + " rejected from bulkhead"));
             }
         } else {
             LOG.debugOrTrace(description + " invocation prevented by bulkhead",
-                    "Semaphore not acquired, rejecting task from bulkhead");
+                    "Capacity semaphore not acquired, rejecting task from bulkhead");
             ctx.fireEvent(BulkheadEvents.DecisionMade.REJECTED);
             return Future.ofError(new BulkheadException(description + " rejected from bulkhead"));
         }
