@@ -5,7 +5,7 @@ import static io.smallrye.faulttolerance.core.timeout.TimeoutLogger.LOG;
 import static io.smallrye.faulttolerance.core.util.Preconditions.check;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Executor;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 
@@ -39,26 +39,21 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
             ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
             // must extract `FutureTimeoutNotification` early, because if retries are present,
-            // a different `FutureTimeoutNotification` may be present in the `InvocationContext`
+            // a different `FutureTimeoutNotification` may be present in the `FaultToleranceContext`
             // by the time the timeout callback is invoked
             FutureTimeoutNotification notification = ctx.remove(FutureTimeoutNotification.class);
 
-            AtomicBoolean completedWithTimeout = new AtomicBoolean(false);
-            Runnable onTimeout = () -> {
-                if (completedWithTimeout.compareAndSet(false, true)) {
-                    LOG.debugf("%s invocation timed out (%d ms)", description, timeoutInMillis);
-                    ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
-                    TimeoutException timeout = new TimeoutException(description + " timed out");
-                    if (notification != null) {
-                        notification.accept(timeout);
-                    }
-                    result.completeWithError(timeout);
-                }
-            };
-
             Thread executingThread = ctx.isSync() ? Thread.currentThread() : null;
-            TimeoutExecution execution = new TimeoutExecution(executingThread, timeoutInMillis, onTimeout);
-            TimerTask task = timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
+            TimeoutExecution execution = new TimeoutExecution(executingThread, () -> {
+                LOG.debugf("%s invocation timed out (%d ms)", description, timeoutInMillis);
+                ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
+                TimeoutException timeout = new TimeoutException(description + " timed out");
+                if (notification != null) {
+                    notification.accept(timeout);
+                }
+                result.completeWithError(timeout);
+            });
+            TimerTask task = timer.schedule(timeoutInMillis, execution::timeoutAndInterrupt, ctx.get(Executor.class));
 
             Future<V> originalResult;
             try {
@@ -81,7 +76,7 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
                 }
 
                 if (execution.hasTimedOut()) {
-                    onTimeout.run();
+                    // the "on timeout" callback is called by `execution::timeoutAndInterrupt` above
                 } else if (error == null) {
                     ctx.fireEvent(TimeoutEvents.Finished.NORMALLY);
                     result.complete(value);
