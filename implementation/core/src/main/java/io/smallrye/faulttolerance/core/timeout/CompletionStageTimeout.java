@@ -5,7 +5,7 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Executor;
 
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.InvocationContext;
@@ -33,17 +33,12 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
 
         ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
-        AtomicBoolean completedWithTimeout = new AtomicBoolean(false);
-        Runnable onTimeout = () -> {
-            if (completedWithTimeout.compareAndSet(false, true)) {
-                LOG.debugf("%s invocation timed out (%d ms)", description, timeoutInMillis);
-                ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
-                result.completeExceptionally(timeoutException(description));
-            }
-        };
-
-        TimeoutExecution execution = new TimeoutExecution(null, timeoutInMillis, onTimeout);
-        TimerTask task = timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
+        TimeoutExecution execution = new TimeoutExecution(null, () -> {
+            LOG.debugf("%s invocation timed out (%d ms)", description, timeoutInMillis);
+            ctx.fireEvent(TimeoutEvents.Finished.TIMED_OUT);
+            result.completeExceptionally(timeoutException(description));
+        });
+        TimerTask task = timer.schedule(timeoutInMillis, execution::timeoutAndInterrupt, ctx.get(Executor.class));
 
         CompletionStage<V> originalResult;
         try {
@@ -60,7 +55,7 @@ public class CompletionStageTimeout<V> extends Timeout<CompletionStage<V>> {
             execution.finish(task::cancel);
 
             if (execution.hasTimedOut()) {
-                onTimeout.run();
+                // the "on timeout" callback is called by `execution::timeoutAndInterrupt` above
             } else if (exception != null) {
                 ctx.fireEvent(TimeoutEvents.Finished.NORMALLY);
                 result.completeExceptionally(exception);

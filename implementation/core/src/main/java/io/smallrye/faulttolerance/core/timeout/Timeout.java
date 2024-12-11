@@ -42,12 +42,12 @@ public class Timeout<V> implements FaultToleranceStrategy<V> {
         AsyncTimeoutNotification notification = ctx.get(AsyncTimeoutNotification.class);
         ctx.remove(AsyncTimeoutNotification.class);
 
-        TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), timeoutInMillis, () -> {
+        TimeoutExecution execution = new TimeoutExecution(Thread.currentThread(), () -> {
             if (notification != null) {
                 notification.accept(timeoutException(description));
             }
         });
-        TimerTask task = timer.schedule(execution.timeoutInMillis(), execution::timeoutAndInterrupt);
+        TimerTask task = timer.schedule(timeoutInMillis, execution::timeoutAndInterrupt);
         ctx.fireEvent(TimeoutEvents.Started.INSTANCE);
 
         V result = null;

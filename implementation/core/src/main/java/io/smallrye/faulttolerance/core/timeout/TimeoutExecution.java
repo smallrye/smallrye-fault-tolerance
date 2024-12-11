@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core.timeout;
 
+import java.lang.invoke.ConstantBootstraps;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
@@ -8,14 +9,8 @@ final class TimeoutExecution {
     private static final int STATE_FINISHED = 1;
     private static final int STATE_TIMED_OUT = 2;
 
-    private static final VarHandle STATE;
-    static {
-        try {
-            STATE = MethodHandles.lookup().findVarHandle(TimeoutExecution.class, "state", int.class);
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
+    private static final VarHandle STATE = ConstantBootstraps.fieldVarHandle(MethodHandles.lookup(),
+            "state", VarHandle.class, TimeoutExecution.class, int.class);
 
     private volatile int state;
 
@@ -24,21 +19,10 @@ final class TimeoutExecution {
     // can be null, if no action shall be performed upon timeout
     private final Runnable timeoutAction;
 
-    private final long timeoutInMillis;
-
-    TimeoutExecution(Thread executingThread, long timeoutInMillis) {
-        this(executingThread, timeoutInMillis, null);
-    }
-
-    TimeoutExecution(Thread executingThread, long timeoutInMillis, Runnable timeoutAction) {
+    TimeoutExecution(Thread executingThread, Runnable timeoutAction) {
         this.state = STATE_RUNNING;
         this.executingThread = executingThread;
-        this.timeoutInMillis = timeoutInMillis;
         this.timeoutAction = timeoutAction;
-    }
-
-    long timeoutInMillis() {
-        return timeoutInMillis;
     }
 
     boolean isRunning() {
