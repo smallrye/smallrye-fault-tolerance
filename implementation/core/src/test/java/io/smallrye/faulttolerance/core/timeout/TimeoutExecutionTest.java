@@ -9,20 +9,17 @@ import org.junit.jupiter.api.Test;
 
 public class TimeoutExecutionTest {
     private TimeoutExecution execution;
+    private AtomicBoolean timedOut;
 
     @BeforeEach
     public void setUp() {
-        execution = new TimeoutExecution(Thread.currentThread(), 1000L);
+        execution = new TimeoutExecution(Thread.currentThread(), () -> timedOut.set(true));
+        timedOut = new AtomicBoolean(false);
     }
 
     @Test
     public void initialState() {
         assertThat(execution.isRunning()).isTrue();
-    }
-
-    @Test
-    public void timeoutValue() {
-        assertThat(execution.timeoutInMillis()).isEqualTo(1000L);
     }
 
     @Test
@@ -38,6 +35,7 @@ public class TimeoutExecutionTest {
         execution.timeoutAndInterrupt();
         assertThat(execution.hasTimedOut()).isTrue();
         assertThat(Thread.interrupted()).isTrue(); // clear the current thread interruption status
+        assertThat(timedOut).isTrue();
     }
 
     @Test
@@ -49,6 +47,7 @@ public class TimeoutExecutionTest {
         assertThat(execution.hasTimedOut()).isFalse();
         assertThat(flag).isTrue();
         assertThat(Thread.currentThread().isInterrupted()).isFalse();
+        assertThat(timedOut).isFalse();
     }
 
     @Test
@@ -60,5 +59,6 @@ public class TimeoutExecutionTest {
         assertThat(execution.hasTimedOut()).isTrue();
         assertThat(flag).isFalse();
         assertThat(Thread.interrupted()).isTrue(); // clear the current thread interruption status
+        assertThat(timedOut).isTrue();
     }
 }
