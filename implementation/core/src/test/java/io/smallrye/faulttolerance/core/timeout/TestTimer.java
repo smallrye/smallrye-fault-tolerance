@@ -70,8 +70,8 @@ public final class TestTimer implements Timer {
 
     @Override
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
-        // not used in `Timeout` / `CompletionStageTimeout`
-        throw new UnsupportedOperationException();
+        // in the test, the `executor` is always `null`
+        return schedule(delayInMillis, task);
     }
 
     @Override
