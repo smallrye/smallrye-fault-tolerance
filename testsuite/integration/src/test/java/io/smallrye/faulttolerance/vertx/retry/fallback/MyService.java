@@ -13,22 +13,24 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
-import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
+import io.smallrye.faulttolerance.vertx.ContextDescription;
+import io.smallrye.faulttolerance.vertx.VertxContext;
 
 @ApplicationScoped
 public class MyService {
-    static final Queue<String> invocationThreads = new ConcurrentLinkedQueue<>();
+    static final Queue<ContextDescription> currentContexts = new ConcurrentLinkedQueue<>();
 
-    @NonBlocking
-    @Retry(maxRetries = 10, delay = 5, delayUnit = ChronoUnit.MILLIS)
+    @AsynchronousNonBlocking
+    @Retry(maxRetries = 10, delay = 5, delayUnit = ChronoUnit.MILLIS, jitter = 0)
     @Fallback(fallbackMethod = "fallback")
     public CompletionStage<String> hello() {
-        invocationThreads.add(Thread.currentThread().getName());
+        currentContexts.add(VertxContext.current().describe());
         return failedFuture(new Exception());
     }
 
     public CompletionStage<String> fallback() {
-        invocationThreads.add(Thread.currentThread().getName());
-        return completedFuture("Hello fallback!");
+        currentContexts.add(VertxContext.current().describe());
+        return completedFuture("Hello!");
     }
 }
