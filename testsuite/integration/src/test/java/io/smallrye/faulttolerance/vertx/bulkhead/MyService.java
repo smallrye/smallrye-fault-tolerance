@@ -9,21 +9,22 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 
-import io.smallrye.common.annotation.NonBlocking;
-import io.vertx.core.Vertx;
+import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
+import io.smallrye.faulttolerance.vertx.ContextDescription;
+import io.smallrye.faulttolerance.vertx.VertxContext;
 
 @ApplicationScoped
 public class MyService {
-    static final Queue<String> invocationThreads = new ConcurrentLinkedQueue<>();
+    static final Queue<ContextDescription> currentContexts = new ConcurrentLinkedQueue<>();
 
-    @NonBlocking
+    @AsynchronousNonBlocking
     @Bulkhead(value = 3, waitingTaskQueue = 3)
     public CompletionStage<String> hello() {
-        invocationThreads.add(Thread.currentThread().getName());
+        currentContexts.add(VertxContext.current().describe());
 
         CompletableFuture<String> result = new CompletableFuture<>();
-        Vertx.currentContext().owner().setTimer(1000, ignored -> {
-            invocationThreads.add(Thread.currentThread().getName());
+        VertxContext.current().setTimer(1000, () -> {
+            currentContexts.add(VertxContext.current().describe());
 
             result.complete("Hello!");
         });
