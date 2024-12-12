@@ -10,12 +10,7 @@ final class NoEventLoop implements EventLoop {
     }
 
     @Override
-    public boolean isEventLoopThread() {
-        return false;
-    }
-
-    @Override
     public Executor executor() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 }

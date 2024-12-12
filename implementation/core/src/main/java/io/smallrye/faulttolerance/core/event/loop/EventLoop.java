@@ -10,15 +10,8 @@ import java.util.concurrent.Executor;
  */
 public interface EventLoop {
     /**
-     * Returns whether current thread is an event loop thread.
-     * <p>
-     * When this method returns {@code false}, calling {@link #executor()}
-     * doesn't make sense and throws {@link UnsupportedOperationException}.
-     */
-    boolean isEventLoopThread();
-
-    /**
      * Returns an {@link Executor} that runs tasks on the current thread's event loop.
+     * If the current thread is not an event loop thread, returns {@code null}.
      * <p>
      * Pay attention to when you call this method. If you want to <em>later</em> use an executor
      * for current thread's event loop, possibly even from a different thread, call this method
