@@ -29,8 +29,9 @@ public class RememberEventLoop<V> implements FaultToleranceStrategy<V> {
 
         LOG.trace("RememberEventLoopExecutor started");
         try {
-            if (eventLoop.isEventLoopThread()) {
-                ctx.set(Executor.class, eventLoop.executor());
+            Executor executor = eventLoop.executor();
+            if (executor != null) {
+                ctx.set(Executor.class, executor);
             }
 
             return delegate.apply(ctx);

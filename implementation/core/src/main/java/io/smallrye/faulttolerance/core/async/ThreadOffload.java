@@ -28,7 +28,8 @@ public class ThreadOffload<V> implements FaultToleranceStrategy<V> {
     @Override
     public Future<V> apply(FaultToleranceContext<V> ctx) {
         // required for `@ApplyGuard`
-        if (!ctx.get(ThreadOffloadEnabled.class, defaultEnabled).value) {
+        boolean hasRememberedExecutor = ctx.has(Executor.class);
+        if (!hasRememberedExecutor && !ctx.get(ThreadOffloadEnabled.class, defaultEnabled).value) {
             return delegate.apply(ctx);
         }
 
@@ -37,13 +38,31 @@ public class ThreadOffload<V> implements FaultToleranceStrategy<V> {
             Executor executor = ctx.get(Executor.class, this.executor);
 
             Completer<V> result = Completer.create();
-            executor.execute(() -> {
-                try {
-                    delegate.apply(ctx).thenComplete(result);
-                } catch (Exception e) {
-                    result.completeWithError(e);
-                }
-            });
+            if (hasRememberedExecutor) {
+                executor.execute(() -> {
+                    try {
+                        delegate.apply(ctx).then((value, error) -> {
+                            executor.execute(() -> {
+                                if (error == null) {
+                                    result.complete(value);
+                                } else {
+                                    result.completeWithError(error);
+                                }
+                            });
+                        });
+                    } catch (Exception e) {
+                        result.completeWithError(e);
+                    }
+                });
+            } else {
+                executor.execute(() -> {
+                    try {
+                        delegate.apply(ctx).thenComplete(result);
+                    } catch (Exception e) {
+                        result.completeWithError(e);
+                    }
+                });
+            }
             return result.future();
         } finally {
             LOG.trace("ThreadOffload finished");
