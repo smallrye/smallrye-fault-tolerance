@@ -8,19 +8,11 @@ import io.vertx.core.Vertx;
 
 public final class VertxEventLoop implements EventLoop {
     @Override
-    public boolean isEventLoopThread() {
-        return Context.isOnEventLoopThread();
-    }
-
-    private void checkEventLoopThread() {
-        if (!isEventLoopThread()) {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    @Override
     public Executor executor() {
-        checkEventLoopThread();
-        return new VertxExecutor(Vertx.currentContext());
+        if (Context.isOnVertxThread()) {
+            // all Vert.x threads are "event loops", even worker threads
+            return new VertxExecutor(Vertx.currentContext(), Context.isOnWorkerThread());
+        }
+        return null;
     }
 }

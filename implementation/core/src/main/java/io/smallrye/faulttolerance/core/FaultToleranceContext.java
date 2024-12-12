@@ -48,6 +48,10 @@ public final class FaultToleranceContext<V> {
         return clazz.cast(data.remove(clazz));
     }
 
+    public boolean has(Class<?> clazz) {
+        return data.containsKey(clazz);
+    }
+
     public <T> T get(Class<T> clazz) {
         return clazz.cast(data.get(clazz));
     }
