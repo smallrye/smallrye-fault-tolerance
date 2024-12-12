@@ -4,28 +4,29 @@ import java.util.concurrent.Executor;
 
 import io.smallrye.faulttolerance.core.util.RunnableWrapper;
 import io.vertx.core.Context;
-import io.vertx.core.Vertx;
 
 final class VertxExecutor implements Executor {
     private final Context vertxContext;
+    private final boolean offloadToWorkerThread;
 
-    VertxExecutor(Context vertxContext) {
+    VertxExecutor(Context vertxContext, boolean offloadToWorkerThread) {
         this.vertxContext = vertxContext;
+        this.offloadToWorkerThread = offloadToWorkerThread;
     }
 
     @Override
     public void execute(Runnable runnable) {
-        // fast path: if we're on the correct event loop thread already,
-        // we can run the task directly
-        if (Vertx.currentContext() == vertxContext) {
-            runnable.run();
-            return;
-        }
-
         Runnable wrappedRunnable = RunnableWrapper.INSTANCE.wrap(runnable);
 
-        vertxContext.runOnContext(ignored -> {
-            wrappedRunnable.run();
-        });
+        if (vertxContext.isEventLoopContext() && offloadToWorkerThread) {
+            vertxContext.executeBlocking(() -> {
+                wrappedRunnable.run();
+                return null;
+            });
+        } else {
+            vertxContext.runOnContext(ignored -> {
+                wrappedRunnable.run();
+            });
+        }
     }
 }

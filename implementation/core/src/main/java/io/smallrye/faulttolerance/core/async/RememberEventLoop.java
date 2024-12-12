@@ -30,8 +30,9 @@ public class RememberEventLoop<V> implements FaultToleranceStrategy<CompletionSt
     }
 
     private CompletionStage<V> doApply(InvocationContext<CompletionStage<V>> ctx) throws Exception {
-        if (eventLoop.isEventLoopThread()) {
-            ctx.set(Executor.class, eventLoop.executor());
+        Executor executor = eventLoop.executor();
+        if (executor != null) {
+            ctx.set(Executor.class, executor);
         }
 
         return delegate.apply(ctx);
