@@ -20,5 +20,13 @@ public interface BulkheadConfig extends Bulkhead, Config {
             throw new FaultToleranceDefinitionException(INVALID_BULKHEAD_ON + method()
                     + ": waitingTaskQueue shouldn't be lower than 1");
         }
+
+        try {
+            Math.addExact(value(), waitingTaskQueue());
+        } catch (ArithmeticException e) {
+            throw new FaultToleranceDefinitionException(INVALID_BULKHEAD_ON + method()
+                    + ": bulkhead capacity overflow, " + value() + " + " + waitingTaskQueue()
+                    + " = " + (value() + waitingTaskQueue()));
+        }
     }
 }
