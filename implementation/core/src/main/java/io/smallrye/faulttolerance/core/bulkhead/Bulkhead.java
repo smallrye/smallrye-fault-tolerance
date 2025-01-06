@@ -43,7 +43,7 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
         this.delegate = delegate;
         this.description = description;
         this.queue = new ConcurrentLinkedDeque<>();
-        this.capacitySemaphore = new Semaphore(size + queueSize, true);
+        this.capacitySemaphore = new Semaphore(Math.addExact(size, queueSize), true);
         this.workSemaphore = new Semaphore(size, true);
         this.syncQueueing = syncQueueing;
     }

@@ -411,6 +411,13 @@ public class GuardImpl implements Guard {
 
             @Override
             public Builder done() {
+                try {
+                    Math.addExact(limit, queueSize);
+                } catch (ArithmeticException e) {
+                    throw new IllegalStateException("Bulkhead capacity overflow, " + limit + " + " + queueSize
+                            + " = " + (limit + queueSize));
+                }
+
                 parent.bulkheadBuilder = this;
                 return parent;
             }

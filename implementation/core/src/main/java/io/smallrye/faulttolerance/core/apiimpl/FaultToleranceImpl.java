@@ -585,6 +585,13 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
 
             @Override
             public Builder<T, R> done() {
+                try {
+                    Math.addExact(limit, queueSize);
+                } catch (ArithmeticException e) {
+                    throw new IllegalStateException("Bulkhead capacity overflow, " + limit + " + " + queueSize
+                            + " = " + (limit + queueSize));
+                }
+
                 parent.bulkheadBuilder = this;
                 return parent;
             }
