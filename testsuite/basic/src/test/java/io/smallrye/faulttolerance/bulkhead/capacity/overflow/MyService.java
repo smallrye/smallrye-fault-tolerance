@@ -1,13 +1,13 @@
 package io.smallrye.faulttolerance.bulkhead.capacity.overflow;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import org.eclipse.microprofile.faulttolerance.Asynchronous;
-import org.eclipse.microprofile.faulttolerance.Bulkhead;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import jakarta.enterprise.context.ApplicationScoped;
+
+import org.eclipse.microprofile.faulttolerance.Asynchronous;
+import org.eclipse.microprofile.faulttolerance.Bulkhead;
 
 @ApplicationScoped
 public class MyService {
