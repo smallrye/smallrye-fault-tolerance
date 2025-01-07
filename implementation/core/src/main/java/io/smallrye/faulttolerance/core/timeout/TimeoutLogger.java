@@ -2,6 +2,8 @@ package io.smallrye.faulttolerance.core.timeout;
 
 import static org.jboss.logging.annotations.Message.NONE;
 
+import java.lang.invoke.MethodHandles;
+
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
@@ -12,7 +14,8 @@ import org.jboss.logging.annotations.Transform;
 
 @MessageLogger(projectCode = "SRFTL", length = 5)
 interface TimeoutLogger extends BasicLogger {
-    TimeoutLogger LOG = Logger.getMessageLogger(TimeoutLogger.class, TimeoutLogger.class.getPackage().getName());
+    TimeoutLogger LOG = Logger.getMessageLogger(MethodHandles.lookup(), TimeoutLogger.class,
+            TimeoutLogger.class.getPackage().getName());
 
     @Message(id = NONE, value = "AsyncTimeoutTask %s created")
     @LogMessage(level = Logger.Level.TRACE)

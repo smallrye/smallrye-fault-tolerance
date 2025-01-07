@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Set;
 
 import jakarta.enterprise.inject.spi.DefinitionException;
@@ -14,7 +15,7 @@ import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
 
 @MessageLogger(projectCode = "SRFTL", length = 5)
 interface CdiLogger extends BasicLogger {
-    CdiLogger LOG = Logger.getMessageLogger(CdiLogger.class, CdiLogger.class.getPackage().getName());
+    CdiLogger LOG = Logger.getMessageLogger(MethodHandles.lookup(), CdiLogger.class, CdiLogger.class.getPackage().getName());
 
     @Message(id = 1, value = "MicroProfile: Fault Tolerance activated (SmallRye Fault Tolerance version: %s)")
     @LogMessage

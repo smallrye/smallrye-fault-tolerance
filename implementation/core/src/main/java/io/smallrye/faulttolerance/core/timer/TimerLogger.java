@@ -2,6 +2,8 @@ package io.smallrye.faulttolerance.core.timer;
 
 import static org.jboss.logging.annotations.Message.NONE;
 
+import java.lang.invoke.MethodHandles;
+
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -12,7 +14,8 @@ import org.jboss.logging.annotations.Transform;
 
 @MessageLogger(projectCode = "SRFTL", length = 5)
 interface TimerLogger extends BasicLogger {
-    TimerLogger LOG = Logger.getMessageLogger(TimerLogger.class, TimerLogger.class.getPackage().getName());
+    TimerLogger LOG = Logger.getMessageLogger(MethodHandles.lookup(), TimerLogger.class,
+            TimerLogger.class.getPackage().getName());
 
     @Message(id = NONE, value = "Timer %s created")
     @LogMessage(level = Logger.Level.TRACE)
