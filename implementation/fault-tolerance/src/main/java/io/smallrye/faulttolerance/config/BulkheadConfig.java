@@ -12,9 +12,9 @@ public interface BulkheadConfig extends Bulkhead, Config {
     default void validate() {
         final String INVALID_BULKHEAD_ON = "Invalid @Bulkhead on ";
 
-        if (value() < 0) {
+        if (value() < 1) {
             throw new FaultToleranceDefinitionException(INVALID_BULKHEAD_ON + method()
-                    + ": value shouldn't be lower than 0");
+                    + ": value shouldn't be lower than 1");
         }
         if (waitingTaskQueue() < 1) {
             throw new FaultToleranceDefinitionException(INVALID_BULKHEAD_ON + method()

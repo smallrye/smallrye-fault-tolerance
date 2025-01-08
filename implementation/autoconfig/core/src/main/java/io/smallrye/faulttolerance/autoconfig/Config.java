@@ -18,7 +18,7 @@ public interface Config {
 
     MethodDescriptor method();
 
-    // defined by Annotation, so for convenience, we expose it here too
+    // defined by `Annotation`, so for convenience, we expose it here too
     Class<? extends Annotation> annotationType();
 
     /**
