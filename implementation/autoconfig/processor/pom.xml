@@ -25,6 +25,12 @@
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config-common</artifactId>
             <version>${version.smallrye-config}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

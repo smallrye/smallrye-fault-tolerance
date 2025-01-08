@@ -9,14 +9,12 @@ import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
-import io.smallrye.faulttolerance.autoconfig.Config;
+import io.smallrye.faulttolerance.autoconfig.ConfigDeclarativeOnly;
 
 @AutoConfig
-public interface FallbackConfig extends Fallback, Config {
+public interface FallbackConfig extends Fallback, ConfigDeclarativeOnly {
     @Override
     default void validate() {
-        final String INVALID_FALLBACK_ON = "Invalid @Fallback on ";
-
         Method guardedMethod;
         try {
             guardedMethod = method().reflect();
@@ -25,8 +23,7 @@ public interface FallbackConfig extends Fallback, Config {
         }
 
         if (!"".equals(fallbackMethod()) && !DEFAULT.class.equals(value())) {
-            throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
-                    + ": fallback handler class and fallback method can't be specified both at the same time");
+            throw fail("fallback handler class and fallback method can't be specified both at the same time");
         }
 
         if (!Fallback.DEFAULT.class.equals(value())) {
@@ -48,8 +45,7 @@ public interface FallbackConfig extends Fallback, Config {
             }
 
             if (!boxedReturnType.equals(fallbackType)) {
-                throw new FaultToleranceDefinitionException(INVALID_FALLBACK_ON + method()
-                        + ": fallback handler's type " + fallbackType + " is not the same as method's return type");
+                throw fail("fallback handler's type " + fallbackType + " is not the same as method's return type");
             }
         }
     }

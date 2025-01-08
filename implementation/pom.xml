@@ -37,6 +37,7 @@
         <module>vertx</module>
 
         <module>autoconfig</module>
+        <module>apiimpl</module>
         <module>fault-tolerance</module>
         <module>context-propagation</module>
         <module>tracing-propagation</module>

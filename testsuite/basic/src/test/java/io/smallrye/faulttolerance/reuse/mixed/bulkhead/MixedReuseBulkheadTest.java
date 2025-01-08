@@ -18,24 +18,31 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 public class MixedReuseBulkheadTest {
     @Test
     public void test(MyService service) throws ExecutionException, InterruptedException {
+        Barrier threadStart = Barrier.interruptible();
         Barrier barrier1 = Barrier.interruptible();
         Barrier barrier2 = Barrier.interruptible();
         Barrier barrier3 = Barrier.interruptible();
+        Barrier barrier4 = Barrier.interruptible();
+        Barrier barrier5 = Barrier.interruptible();
 
         // accepted
         new Thread(() -> {
+            threadStart.open();
             try {
                 service.hello(barrier1);
             } catch (InterruptedException e) {
                 throw sneakyThrow(e);
             }
         }).start();
+        threadStart.await();
         service.theAnswer(barrier2);
         service.badNumber(barrier3).subscribeAsCompletionStage();
 
+        Thread.sleep(500);
+
         // queued
-        service.theAnswer(Barrier.interruptible());
-        service.badNumber(Barrier.interruptible()).subscribeAsCompletionStage();
+        service.theAnswer(barrier4);
+        service.badNumber(barrier5).subscribeAsCompletionStage();
 
         // rejected
         assertThatThrownBy(() -> service.hello(Barrier.interruptible())).isExactlyInstanceOf(BulkheadException.class);
@@ -49,5 +56,7 @@ public class MixedReuseBulkheadTest {
         barrier1.open();
         barrier2.open();
         barrier3.open();
+        barrier4.open();
+        barrier5.open();
     }
 }

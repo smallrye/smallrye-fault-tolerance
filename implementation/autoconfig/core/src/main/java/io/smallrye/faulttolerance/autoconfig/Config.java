@@ -2,6 +2,8 @@ package io.smallrye.faulttolerance.autoconfig;
 
 import java.lang.annotation.Annotation;
 
+import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
+
 public interface Config {
     /**
      * Defines <i>local</i> validation, that is, validation of the single annotation
@@ -14,24 +16,27 @@ public interface Config {
 
     // ---
 
-    Class<?> beanClass();
-
-    MethodDescriptor method();
-
-    // defined by `Annotation`, so for convenience, we expose it here too
-    Class<? extends Annotation> annotationType();
-
     /**
-     * Returns whether the annotation is present on method or not
-     * (in which case, it is present on the class). This is useful
-     * when two annotations conflict, in which case the one on method
-     * has priority over the one on class.
+     * Returns the type of the annotation that this {@code Config} wraps.
      */
-    boolean isOnMethod();
+    Class<? extends Annotation> annotationType();
 
     /**
      * Ensures this configuration is loaded. Subsequent method invocations on this instance
      * are guaranteed to not touch MP Config.
      */
     void materialize();
+
+    /**
+     * Returns a new {@link FaultToleranceDefinitionException} for
+     * this {@linkplain #annotationType() annotation type} with given {@code reason}.
+     */
+    FaultToleranceDefinitionException fail(String reason);
+
+    /**
+     * Returns a new {@link FaultToleranceDefinitionException} for
+     * this {@linkplain #annotationType() annotation type} and its {@code member}
+     * with given {@code reason}.
+     */
+    FaultToleranceDefinitionException fail(String member, String reason);
 }

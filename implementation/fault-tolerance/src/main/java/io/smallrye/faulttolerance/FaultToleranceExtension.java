@@ -239,7 +239,7 @@ public class FaultToleranceExtension implements Extension {
         for (AnnotatedMethod<?> annotatedMethod : annotatedType.getMethods()) {
             FaultToleranceMethod method = FaultToleranceMethods.create(annotatedType.getJavaClass(), annotatedMethod);
             if (method.isLegitimate()) {
-                FaultToleranceOperation operation = FaultToleranceOperation.create(method);
+                FaultToleranceOperation operation = new FaultToleranceOperation(method);
                 operation.validate();
                 LOG.debugf("Found %s", operation);
                 faultToleranceOperations.put(getCacheKey(annotatedType.getJavaClass(), annotatedMethod.getJavaMember()),

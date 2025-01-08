@@ -7,7 +7,7 @@ import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.smallrye.faulttolerance.config.ConfigPrefix;
+import io.smallrye.faulttolerance.autoconfig.ConfigConstants;
 
 @Singleton
 public class Enablement {
@@ -16,9 +16,9 @@ public class Enablement {
 
     @Inject
     Enablement(
-            @ConfigProperty(name = ConfigPrefix.VALUE + "enabled") Optional<Boolean> newFtEnabled,
+            @ConfigProperty(name = ConfigConstants.PREFIX + "enabled") Optional<Boolean> newFtEnabled,
             @ConfigProperty(name = "MP_Fault_Tolerance_NonFallback_Enabled") Optional<Boolean> oldFtEnabled,
-            @ConfigProperty(name = ConfigPrefix.VALUE + "metrics.enabled") Optional<Boolean> newMetricsEnabled,
+            @ConfigProperty(name = ConfigConstants.PREFIX + "metrics.enabled") Optional<Boolean> newMetricsEnabled,
             @ConfigProperty(name = "MP_Fault_Tolerance_Metrics_Enabled") Optional<Boolean> oldMetricsEnabled) {
         ftEnabled = newFtEnabled.orElse(oldFtEnabled.orElse(true));
         metricsEnabled = newMetricsEnabled.orElse(oldMetricsEnabled.orElse(true));

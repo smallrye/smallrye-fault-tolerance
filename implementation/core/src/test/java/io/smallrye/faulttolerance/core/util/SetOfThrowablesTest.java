@@ -2,8 +2,6 @@ package io.smallrye.faulttolerance.core.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 
 public class SetOfThrowablesTest {
@@ -49,7 +47,7 @@ public class SetOfThrowablesTest {
 
     @Test
     public void twoElements_throwableAndException() {
-        SetOfThrowables set = SetOfThrowables.create(Arrays.asList(Throwable.class, Exception.class));
+        SetOfThrowables set = SetOfThrowables.create(Throwable.class, Exception.class);
 
         assertThat(set.includes(Throwable.class)).isTrue();
         assertThat(set.includes(Exception.class)).isTrue();
@@ -59,7 +57,7 @@ public class SetOfThrowablesTest {
 
     @Test
     public void twoElements_exceptionAndError() {
-        SetOfThrowables set = SetOfThrowables.create(Arrays.asList(Exception.class, Error.class));
+        SetOfThrowables set = SetOfThrowables.create(Exception.class, Error.class);
 
         assertThat(set.includes(Throwable.class)).isFalse();
         assertThat(set.includes(Exception.class)).isTrue();
@@ -69,7 +67,7 @@ public class SetOfThrowablesTest {
 
     @Test
     public void twoElements_runtimeExceptionAndError() {
-        SetOfThrowables set = SetOfThrowables.create(Arrays.asList(RuntimeException.class, Error.class));
+        SetOfThrowables set = SetOfThrowables.create(RuntimeException.class, Error.class);
 
         assertThat(set.includes(Throwable.class)).isFalse();
         assertThat(set.includes(Exception.class)).isFalse();

@@ -14,7 +14,7 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
 import io.smallrye.faulttolerance.Enablement;
 import io.smallrye.faulttolerance.ExecutorHolder;
-import io.smallrye.faulttolerance.config.ConfigPrefix;
+import io.smallrye.faulttolerance.autoconfig.ConfigConstants;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -24,7 +24,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class OpenTelemetryProvider implements MetricsProvider {
-    static final String DISABLED = ConfigPrefix.VALUE + "opentelemetry.disabled";
+    static final String DISABLED = ConfigConstants.PREFIX + "opentelemetry.disabled";
 
     private final boolean enabled;
 

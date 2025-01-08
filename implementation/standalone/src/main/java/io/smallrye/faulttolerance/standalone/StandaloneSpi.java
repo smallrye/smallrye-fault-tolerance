@@ -8,10 +8,10 @@ import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.Spi;
 import io.smallrye.faulttolerance.api.TypedGuard;
-import io.smallrye.faulttolerance.core.apiimpl.BuilderLazyDependencies;
-import io.smallrye.faulttolerance.core.apiimpl.FaultToleranceImpl;
-import io.smallrye.faulttolerance.core.apiimpl.GuardImpl;
-import io.smallrye.faulttolerance.core.apiimpl.TypedGuardImpl;
+import io.smallrye.faulttolerance.apiimpl.BuilderLazyDependencies;
+import io.smallrye.faulttolerance.apiimpl.FaultToleranceImpl;
+import io.smallrye.faulttolerance.apiimpl.GuardImpl;
+import io.smallrye.faulttolerance.apiimpl.TypedGuardImpl;
 
 public class StandaloneSpi implements Spi {
     static class EagerDependenciesHolder {

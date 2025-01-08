@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.standalone;
 
 import java.util.concurrent.ExecutorService;
 
-import io.smallrye.faulttolerance.core.apiimpl.BuilderLazyDependencies;
+import io.smallrye.faulttolerance.apiimpl.BuilderLazyDependencies;
 import io.smallrye.faulttolerance.core.event.loop.EventLoop;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.timer.ThreadTimer;

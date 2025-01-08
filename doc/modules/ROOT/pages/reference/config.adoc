@@ -160,7 +160,7 @@ Or globally:
 
 [source,properties]
 ----
-smallrye.faulttolerance.global.retry.enabled=5
+smallrye.faulttolerance.global.retry.enabled=false
 
 # alternatively, a specification-defined property can be used
 Retry/enabled=false

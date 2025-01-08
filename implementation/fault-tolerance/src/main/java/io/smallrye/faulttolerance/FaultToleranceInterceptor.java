@@ -22,7 +22,6 @@ import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -53,17 +52,17 @@ import io.smallrye.faulttolerance.api.FaultTolerance;
 import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.NeverOnResult;
 import io.smallrye.faulttolerance.api.TypedGuard;
+import io.smallrye.faulttolerance.apiimpl.AsyncInvocation;
+import io.smallrye.faulttolerance.apiimpl.GuardImpl;
+import io.smallrye.faulttolerance.apiimpl.LazyFaultTolerance;
+import io.smallrye.faulttolerance.apiimpl.LazyGuard;
+import io.smallrye.faulttolerance.apiimpl.LazyTypedGuard;
+import io.smallrye.faulttolerance.apiimpl.TypedGuardImpl;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FailureContext;
 import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
-import io.smallrye.faulttolerance.core.apiimpl.AsyncInvocation;
-import io.smallrye.faulttolerance.core.apiimpl.GuardImpl;
-import io.smallrye.faulttolerance.core.apiimpl.LazyFaultTolerance;
-import io.smallrye.faulttolerance.core.apiimpl.LazyGuard;
-import io.smallrye.faulttolerance.core.apiimpl.LazyTypedGuard;
-import io.smallrye.faulttolerance.core.apiimpl.TypedGuardImpl;
 import io.smallrye.faulttolerance.core.async.FutureExecution;
 import io.smallrye.faulttolerance.core.async.RememberEventLoop;
 import io.smallrye.faulttolerance.core.async.ThreadOffload;
@@ -322,7 +321,7 @@ public class FaultToleranceInterceptor {
                 throw new FaultToleranceException("Configured Guard '" + identifier
                         + "' is not created by the Guard API, this is not supported");
             }
-            GuardImpl guardImpl = ((LazyGuard) guard).instance();
+            GuardImpl guardImpl = ((LazyGuard) guard).instance(identifier);
 
             return guardImpl.guard(() -> (T) invocationContext.proceed(), asyncInvocation, contextModifier);
         } else /* typedGuardInstance.isResolvable() */ {
@@ -331,7 +330,7 @@ public class FaultToleranceInterceptor {
                 throw new FaultToleranceException("Configured TypedGuard '" + identifier
                         + "' is not created by the TypedGuard API, this is not supported");
             }
-            TypedGuardImpl<V, T> guardImpl = ((LazyTypedGuard<V, T>) guard).instance();
+            TypedGuardImpl<V, T> guardImpl = ((LazyTypedGuard<V, T>) guard).instance(identifier);
 
             return guardImpl.guard(() -> (T) invocationContext.proceed(), asyncInvocation, contextModifier);
         }
@@ -725,6 +724,6 @@ public class FaultToleranceInterceptor {
         if (throwableClasses == null || throwableClasses.length == 0) {
             return SetOfThrowables.EMPTY;
         }
-        return SetOfThrowables.create(Arrays.asList(throwableClasses));
+        return SetOfThrowables.create(throwableClasses);
     }
 }
