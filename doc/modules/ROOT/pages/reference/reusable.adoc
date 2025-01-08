@@ -81,6 +81,95 @@ In other words, in non-compatible mode, the `Guard` / `TypedGuard` thread offloa
 See xref:reference/non-compat.adoc[] for more information about the non-compatible mode.
 ****
 
+== Configuration
+
+Even though the programmatic API of `Guard` and `TypedGuard` does not support configuration, the declarative API of `@ApplyGuard` does.
+
+The configuration closely resembles xref:reference/config.adoc[the configuration of the declarative API], where instead of the `<classname>` or `<classname>/<methodname>`, you use the identifier that's used in the `@Identifier` qualifier and in the `@ApplyGuard` annotation.
+
+CAUTION: When configuring the `Guard` or `TypedGuard` using the following configuration properties, it is recommended to never use the `[Typed]Guard` programmatically.
+The reason is that configuration is applied on the first invocation, and if that invocation is programmatic, the configuration key is unknown.
+
+For example, let's assume the following preconfigured `Guard` object:
+
+[source,java]
+----
+@ApplicationScoped
+public class PreconfiguredFaultTolerance {
+    @Produces
+    @Identifier("my-fault-tolerance")
+    public static final Guard GUARD = Guard.create()
+            .withRetry().maxRetries(2).done()
+            .withTimeout().done()
+            .build();
+}
+----
+
+This `Guard` supports retry and timeout; any attempt to configure other strategies will be ignored.
+
+To reconfigure the number of maximum retries, the following configuration properties may be used:
+
+[source,properties]
+----
+smallrye.faulttolerance."my-fault-tolerance".retry.max-retries=5
+
+# alternatively, a specification-defined property can be used
+my-fault-tolerance/Retry/maxRetries=5
+----
+
+Global configuration that applies to all usages of retry is also respected by `@ApplyGuard`:
+
+[source,properties]
+----
+smallrye.faulttolerance.global.retry.max-retries=5
+
+# alternatively, a specification-defined property can be used
+Retry/maxRetries=5
+----
+
+Note that the configuration keys follow the configuration of the declarative API, even if the methods in the programmatic API builders are named differently.
+For example, to set the rate limit in the programmatic API, the `RateLimitBuilder` uses a method called `limit()`, while the corresponding annotation member of `@RateLimit` is named `value()`.
+The configuration key in both cases is `rate-limit.value` (or `RateLimit/value`).
+
+=== Disabling Fault Tolerance
+
+Configuration properties for disabling individual strategies also work:
+
+[source,properties]
+----
+smallrye.faulttolerance."my-fault-tolerance".retry.enabled=false
+
+# alternatively, a specification-defined property can be used
+my-fault-tolerance/Retry/enabled=false
+----
+
+Or globally:
+
+[source,properties]
+----
+smallrye.faulttolerance.global.retry.enabled=false
+
+# alternatively, a specification-defined property can be used
+Retry/enabled=false
+----
+
+=== Supported Strategies
+
+The following fault tolerance strategies, when defined on a `Guard` (or `TypedGuard`) and used through `@ApplyGuard`, may be configured:
+
+* bulkhead (except of `BulkheadBuilder.enableSynchronousQueueing()`)
+* circuit breaker
+* rate limit
+* retry, including exponential backoff and Fibonacci backoff
+* timeout
+
+In the programmatic API, the following strategies are not built declaratively, and so their configuration is ignored:
+
+* fallback
+* circuit breaker name (cannot be configured in the declarative API either)
+* certain parts of retry: custom backoff, before retry action and retry predicates
+* thread offload
+
 == Metrics
 
 Methods annotated `@ApplyGuard` gather metrics similarly to methods annotated with {microprofile-fault-tolerance} annotations.
@@ -89,7 +178,7 @@ That is, each method gets its own metrics, with the `method` tag being `<fully q
 At the same time, state is still shared.
 All methods annotated `@ApplyGuard` share the same bulkhead, circuit breaker and/or rate limit.
 
-If the `Guard` or `TypedGuard` object used for `@ApplyGuard` is also used xref:reference/programmatic-api.adoc[programmatically], that usage is coalesced in metrics under the description as the `method` tag.
+If the `Guard` or `TypedGuard` object used for `@ApplyGuard` is also used xref:reference/programmatic-api.adoc[programmatically], that usage is coalesced in metrics (where the `method` tag is set to the description).
 
 == Differences to the Specification
 

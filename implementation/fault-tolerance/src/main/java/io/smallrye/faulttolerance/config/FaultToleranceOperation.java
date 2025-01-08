@@ -15,22 +15,13 @@
  */
 package io.smallrye.faulttolerance.config;
 
-import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
-import org.eclipse.microprofile.faulttolerance.Bulkhead;
-import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
 import org.eclipse.microprofile.faulttolerance.Fallback;
-import org.eclipse.microprofile.faulttolerance.Retry;
-import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.common.annotation.Blocking;
@@ -43,45 +34,17 @@ import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
-import io.smallrye.faulttolerance.api.ExponentialBackoff;
-import io.smallrye.faulttolerance.api.FibonacciBackoff;
-import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.api.RetryWhen;
 import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
+import io.smallrye.faulttolerance.basicconfig.BasicFaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
 
 /**
- * Fault tolerance operation metadata.
+ * Fault tolerance operation metadata. Used only for declarative fault tolerance.
  */
-public class FaultToleranceOperation {
-
-    public static FaultToleranceOperation create(FaultToleranceMethod method) {
-        return new FaultToleranceOperation(method.beanClass, method.method,
-                ApplyFaultToleranceConfigImpl.create(method),
-                ApplyGuardConfigImpl.create(method),
-                AsynchronousConfigImpl.create(method),
-                AsynchronousNonBlockingConfigImpl.create(method),
-                BlockingConfigImpl.create(method),
-                NonBlockingConfigImpl.create(method),
-                BulkheadConfigImpl.create(method),
-                CircuitBreakerConfigImpl.create(method),
-                CircuitBreakerNameConfigImpl.create(method),
-                FallbackConfigImpl.create(method),
-                RateLimitConfigImpl.create(method),
-                RetryConfigImpl.create(method),
-                TimeoutConfigImpl.create(method),
-                ExponentialBackoffConfigImpl.create(method),
-                FibonacciBackoffConfigImpl.create(method),
-                CustomBackoffConfigImpl.create(method),
-                RetryWhenConfigImpl.create(method),
-                BeforeRetryConfigImpl.create(method),
-                method.fallbackMethod,
-                method.fallbackMethodsWithExceptionParameter,
-                method.beforeRetryMethod);
-    }
-
+public class FaultToleranceOperation extends BasicFaultToleranceOperation {
     private final Class<?> beanClass;
     private final MethodDescriptor methodDescriptor;
 
@@ -93,16 +56,9 @@ public class FaultToleranceOperation {
     private final BlockingConfig blocking;
     private final NonBlockingConfig nonBlocking;
 
-    private final BulkheadConfig bulkhead;
-    private final CircuitBreakerConfig circuitBreaker;
     private final CircuitBreakerNameConfig circuitBreakerName;
     private final FallbackConfig fallback;
-    private final RateLimitConfig rateLimit;
-    private final RetryConfig retry;
-    private final TimeoutConfig timeout;
 
-    private final ExponentialBackoffConfig exponentialBackoff;
-    private final FibonacciBackoffConfig fibonacciBackoff;
     private final CustomBackoffConfig customBackoff;
     private final RetryWhenConfig retryWhen;
     private final BeforeRetryConfig beforeRetry;
@@ -111,57 +67,30 @@ public class FaultToleranceOperation {
     private final List<Method> fallbackMethodsWithExceptionParameter;
     private final Method beforeRetryMethod;
 
-    private FaultToleranceOperation(Class<?> beanClass,
-            MethodDescriptor methodDescriptor,
-            ApplyFaultToleranceConfig applyFaultTolerance,
-            ApplyGuardConfig applyGuard,
-            AsynchronousConfig asynchronous,
-            AsynchronousNonBlockingConfig asynchronousNonBlocking,
-            BlockingConfig blocking,
-            NonBlockingConfig nonBlocking,
-            BulkheadConfig bulkhead,
-            CircuitBreakerConfig circuitBreaker,
-            CircuitBreakerNameConfig circuitBreakerName,
-            FallbackConfig fallback,
-            RateLimitConfig rateLimit,
-            RetryConfig retry,
-            TimeoutConfig timeout,
-            ExponentialBackoffConfig exponentialBackoff,
-            FibonacciBackoffConfig fibonacciBackoff,
-            CustomBackoffConfig customBackoff,
-            RetryWhenConfig retryWhen,
-            BeforeRetryConfig beforeRetry,
-            MethodDescriptor fallbackMethod,
-            List<MethodDescriptor> fallbackMethodsWithExceptionParameter,
-            MethodDescriptor beforeRetryMethod) {
-        this.beanClass = beanClass;
-        this.methodDescriptor = methodDescriptor;
+    public FaultToleranceOperation(FaultToleranceMethod method) {
+        super(method);
 
-        this.applyFaultTolerance = applyFaultTolerance;
-        this.applyGuard = applyGuard;
+        this.beanClass = method.beanClass;
+        this.methodDescriptor = method.method;
 
-        this.asynchronous = asynchronous;
-        this.asynchronousNonBlocking = asynchronousNonBlocking;
-        this.blocking = blocking;
-        this.nonBlocking = nonBlocking;
+        this.applyFaultTolerance = ApplyFaultToleranceConfigImpl.create(method);
+        this.applyGuard = ApplyGuardConfigImpl.create(method);
 
-        this.bulkhead = bulkhead;
-        this.circuitBreaker = circuitBreaker;
-        this.circuitBreakerName = circuitBreakerName;
-        this.fallback = fallback;
-        this.rateLimit = rateLimit;
-        this.retry = retry;
-        this.timeout = timeout;
+        this.asynchronous = AsynchronousConfigImpl.create(method);
+        this.asynchronousNonBlocking = AsynchronousNonBlockingConfigImpl.create(method);
+        this.blocking = BlockingConfigImpl.create(method);
+        this.nonBlocking = NonBlockingConfigImpl.create(method);
 
-        this.exponentialBackoff = exponentialBackoff;
-        this.fibonacciBackoff = fibonacciBackoff;
-        this.customBackoff = customBackoff;
-        this.retryWhen = retryWhen;
-        this.beforeRetry = beforeRetry;
+        this.circuitBreakerName = CircuitBreakerNameConfigImpl.create(method);
+        this.fallback = FallbackConfigImpl.create(method);
 
-        if (fallbackMethod != null) {
+        this.customBackoff = CustomBackoffConfigImpl.create(method);
+        this.retryWhen = RetryWhenConfigImpl.create(method);
+        this.beforeRetry = BeforeRetryConfigImpl.create(method);
+
+        if (method.fallbackMethod != null) {
             try {
-                this.fallbackMethod = SecurityActions.setAccessible(fallbackMethod.reflect());
+                this.fallbackMethod = SecurityActions.setAccessible(method.fallbackMethod.reflect());
             } catch (NoSuchMethodException e) {
                 throw new FaultToleranceDefinitionException(e);
             }
@@ -169,9 +98,9 @@ public class FaultToleranceOperation {
             this.fallbackMethod = null;
         }
 
-        if (fallbackMethodsWithExceptionParameter != null) {
+        if (method.fallbackMethodsWithExceptionParameter != null) {
             List<Method> result = new ArrayList<>();
-            for (MethodDescriptor m : fallbackMethodsWithExceptionParameter) {
+            for (MethodDescriptor m : method.fallbackMethodsWithExceptionParameter) {
                 try {
                     result.add(SecurityActions.setAccessible(m.reflect()));
                 } catch (NoSuchMethodException e) {
@@ -183,9 +112,9 @@ public class FaultToleranceOperation {
             this.fallbackMethodsWithExceptionParameter = null;
         }
 
-        if (beforeRetryMethod != null) {
+        if (method.beforeRetryMethod != null) {
             try {
-                this.beforeRetryMethod = SecurityActions.setAccessible(beforeRetryMethod.reflect());
+                this.beforeRetryMethod = SecurityActions.setAccessible(method.beforeRetryMethod.reflect());
             } catch (NoSuchMethodException e) {
                 throw new FaultToleranceDefinitionException(e);
             }
@@ -193,6 +122,12 @@ public class FaultToleranceOperation {
             this.beforeRetryMethod = null;
         }
     }
+
+    public String getName() {
+        return beanClass.getCanonicalName() + "." + methodDescriptor.name;
+    }
+
+    // ---
 
     public Class<?> getBeanClass() {
         return beanClass;
@@ -315,22 +250,6 @@ public class FaultToleranceOperation {
         return false;
     }
 
-    public boolean hasBulkhead() {
-        return bulkhead != null;
-    }
-
-    public Bulkhead getBulkhead() {
-        return bulkhead;
-    }
-
-    public boolean hasCircuitBreaker() {
-        return circuitBreaker != null;
-    }
-
-    public CircuitBreaker getCircuitBreaker() {
-        return circuitBreaker;
-    }
-
     public boolean hasCircuitBreakerName() {
         return circuitBreakerName != null;
     }
@@ -345,46 +264,6 @@ public class FaultToleranceOperation {
 
     public Fallback getFallback() {
         return fallback;
-    }
-
-    public boolean hasRateLimit() {
-        return rateLimit != null;
-    }
-
-    public RateLimit getRateLimit() {
-        return rateLimit;
-    }
-
-    public boolean hasRetry() {
-        return retry != null;
-    }
-
-    public Retry getRetry() {
-        return retry;
-    }
-
-    public boolean hasTimeout() {
-        return timeout != null;
-    }
-
-    public Timeout getTimeout() {
-        return timeout;
-    }
-
-    public boolean hasExponentialBackoff() {
-        return exponentialBackoff != null;
-    }
-
-    public ExponentialBackoff getExponentialBackoff() {
-        return exponentialBackoff;
-    }
-
-    public boolean hasFibonacciBackoff() {
-        return fibonacciBackoff != null;
-    }
-
-    public FibonacciBackoff getFibonacciBackoff() {
-        return fibonacciBackoff;
     }
 
     public boolean hasCustomBackoff() {
@@ -423,23 +302,13 @@ public class FaultToleranceOperation {
         return beforeRetryMethod;
     }
 
-    public String getName() {
-        return beanClass.getCanonicalName() + "." + methodDescriptor.name;
-    }
-
-    public boolean isValid() {
-        try {
-            validate();
-            return true;
-        } catch (FaultToleranceDefinitionException e) {
-            return false;
-        }
-    }
-
     /**
      * Throws {@link FaultToleranceDefinitionException} if validation fails.
      */
+    @Override
     public void validate() {
+        super.validate();
+
         if (applyFaultTolerance != null) {
             applyFaultTolerance.validate();
         }
@@ -460,28 +329,15 @@ public class FaultToleranceOperation {
             nonBlocking.validate();
         }
 
-        if (bulkhead != null) {
-            bulkhead.validate();
-        }
-        if (circuitBreaker != null) {
-            circuitBreaker.validate();
+        if (circuitBreakerName != null) {
+            circuitBreakerName.validate();
         }
         if (fallback != null) {
             fallback.validate();
         }
-        if (rateLimit != null) {
-            rateLimit.validate();
-        }
-        if (retry != null) {
-            retry.validate();
-        }
-        if (timeout != null) {
-            timeout.validate();
-        }
 
         validateApplyGuard();
         validateFallback();
-        validateRetryBackoff();
         validateRetryWhen();
         validateBeforeRetry();
     }
@@ -489,7 +345,7 @@ public class FaultToleranceOperation {
     private void validateApplyGuard() {
         if (applyFaultTolerance != null && applyGuard != null) {
             throw new FaultToleranceDefinitionException(
-                    "Both @ApplyFaultTolerance and @ApplyGuard present on " + methodDescriptor);
+                    "Both @ApplyFaultTolerance and @ApplyGuard present on " + description);
         }
     }
 
@@ -502,52 +358,16 @@ public class FaultToleranceOperation {
             FallbackMethodCandidates candidates = FallbackMethodCandidates.create(this,
                     SpecCompatibility.createFromConfig().allowFallbackMethodExceptionParameter());
             if (candidates.isEmpty()) {
-                throw new FaultToleranceDefinitionException("Invalid @Fallback on " + methodDescriptor
-                        + ": can't find fallback method '" + fallback.fallbackMethod()
+                throw fallback.fail("can't find fallback method '" + fallback.fallbackMethod()
                         + "' with matching parameter types and return type");
             }
         }
     }
 
-    private void validateRetryBackoff() {
-        Set<Class<? extends Annotation>> backoffAnnotations = new HashSet<>();
-
-        for (Config cfg : Arrays.asList(exponentialBackoff, fibonacciBackoff, customBackoff)) {
-            if (cfg != null) {
-                cfg.validate();
-                if (retry == null) {
-                    throw new FaultToleranceDefinitionException("Invalid @" + cfg.annotationType().getSimpleName()
-                            + " on " + methodDescriptor + ": missing @Retry");
-                }
-                backoffAnnotations.add(cfg.annotationType());
-            }
-        }
-
-        if (backoffAnnotations.size() > 1) {
-            throw new FaultToleranceDefinitionException("More than one backoff defined for " + methodDescriptor
-                    + ": " + backoffAnnotations);
-        }
-
-        if (retry != null) {
-            long retryMaxDuration = timeInMillis(retry.maxDuration(), retry.durationUnit());
-            if (retryMaxDuration > 0) {
-                if (exponentialBackoff != null) {
-                    long maxDelay = timeInMillis(exponentialBackoff.maxDelay(), exponentialBackoff.maxDelayUnit());
-                    if (retryMaxDuration <= maxDelay) {
-                        throw new FaultToleranceDefinitionException("Invalid @ExponentialBackoff on " + methodDescriptor
-                                + ": @Retry.maxDuration should be greater than maxDelay");
-                    }
-                }
-
-                if (fibonacciBackoff != null) {
-                    long maxDelay = timeInMillis(fibonacciBackoff.maxDelay(), fibonacciBackoff.maxDelayUnit());
-                    if (retryMaxDuration <= maxDelay) {
-                        throw new FaultToleranceDefinitionException("Invalid @FibonacciBackoff on " + methodDescriptor
-                                + ": @Retry.maxDuration should be greater than maxDelay");
-                    }
-                }
-            }
-        }
+    @Override
+    protected List<Config> getBackoffConfigs() {
+        // allows `null` elements, unlike `List.of()`
+        return Arrays.asList(exponentialBackoff, fibonacciBackoff, customBackoff);
     }
 
     private void validateRetryWhen() {
@@ -558,17 +378,15 @@ public class FaultToleranceOperation {
         retryWhen.validate();
 
         if (retry == null) {
-            throw new FaultToleranceDefinitionException("Invalid @RetryWhen on " + methodDescriptor + ": missing @Retry");
+            throw retryWhen.fail("missing @Retry");
         }
 
         if (retryWhen.exception() != AlwaysOnException.class) {
             if (retry.abortOn().length != 0) {
-                throw new FaultToleranceDefinitionException("Invalid @RetryWhen.exception on " + methodDescriptor
-                        + ": must not be combined with @Retry.abortOn");
+                throw retryWhen.fail("exception", "must not be combined with @Retry.abortOn");
             }
             if (retry.retryOn().length != 1 || retry.retryOn()[0] != Exception.class) {
-                throw new FaultToleranceDefinitionException("Invalid @RetryWhen.exception on " + methodDescriptor
-                        + ": must not be combined with @Retry.retryOn");
+                throw retryWhen.fail("exception", "must not be combined with @Retry.retryOn");
             }
         }
     }
@@ -581,21 +399,19 @@ public class FaultToleranceOperation {
         beforeRetry.validate();
 
         if (retry == null) {
-            throw new FaultToleranceDefinitionException("Invalid @BeforeRetry on " + methodDescriptor + ": missing @Retry");
+            throw beforeRetry.fail("missing @Retry");
         }
 
         if (!"".equals(beforeRetry.methodName()) && beforeRetryMethod == null) {
-            throw new FaultToleranceDefinitionException("Invalid @BeforeRetry on " + methodDescriptor
-                    + ": can't find before retry method '" + beforeRetry.methodName()
-                    + "' with no parameter and return type of 'void'");
+            throw beforeRetry.fail("methodName", "can't find before retry method '"
+                    + beforeRetry.methodName() + "' with no parameter and return type of 'void'");
         }
     }
 
-    /**
-     * Ensures all configuration of this fault tolerance operation is loaded. Subsequent method invocations
-     * on this instance are guaranteed to not touch MP Config.
-     */
+    @Override
     public void materialize() {
+        super.materialize();
+
         if (applyFaultTolerance != null) {
             applyFaultTolerance.materialize();
         }
@@ -616,34 +432,13 @@ public class FaultToleranceOperation {
             nonBlocking.materialize();
         }
 
-        if (bulkhead != null) {
-            bulkhead.materialize();
-        }
-        if (circuitBreaker != null) {
-            circuitBreaker.materialize();
-        }
         if (circuitBreakerName != null) {
             circuitBreakerName.materialize();
         }
         if (fallback != null) {
             fallback.materialize();
         }
-        if (rateLimit != null) {
-            rateLimit.materialize();
-        }
-        if (retry != null) {
-            retry.materialize();
-        }
-        if (timeout != null) {
-            timeout.materialize();
-        }
 
-        if (exponentialBackoff != null) {
-            exponentialBackoff.materialize();
-        }
-        if (fibonacciBackoff != null) {
-            fibonacciBackoff.materialize();
-        }
         if (customBackoff != null) {
             customBackoff.materialize();
         }
@@ -657,6 +452,6 @@ public class FaultToleranceOperation {
 
     @Override
     public String toString() {
-        return "FaultToleranceOperation[" + methodDescriptor + "]";
+        return "FaultToleranceOperation[" + description + "]";
     }
 }

@@ -3,15 +3,14 @@ package io.smallrye.faulttolerance.config;
 import java.util.StringJoiner;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
-import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceDefinitionException;
 
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
-import io.smallrye.faulttolerance.autoconfig.Config;
+import io.smallrye.faulttolerance.autoconfig.ConfigDeclarativeOnly;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupport;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 
 @AutoConfig
-public interface AsynchronousConfig extends Asynchronous, Config {
+public interface AsynchronousConfig extends Asynchronous, ConfigDeclarativeOnly {
     @Override
     default void validate() {
         Class<?>[] parameterTypes = method().parameterTypes;
@@ -24,7 +23,6 @@ public interface AsynchronousConfig extends Asynchronous, Config {
         for (AsyncSupport<?, ?> asyncSupport : AsyncSupportRegistry.allKnown()) {
             knownAsync.add(asyncSupport.mustDescription());
         }
-        throw new FaultToleranceDefinitionException("Invalid @Asynchronous on " + method()
-                + ": must return java.util.concurrent.Future or " + knownAsync);
+        throw fail("must return java.util.concurrent.Future or " + knownAsync);
     }
 }

@@ -16,7 +16,7 @@ import org.eclipse.microprofile.metrics.annotation.RegistryType;
 
 import io.smallrye.faulttolerance.Enablement;
 import io.smallrye.faulttolerance.ExecutorHolder;
-import io.smallrye.faulttolerance.config.ConfigPrefix;
+import io.smallrye.faulttolerance.autoconfig.ConfigConstants;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
@@ -26,7 +26,7 @@ import io.smallrye.faulttolerance.core.timer.Timer;
 
 @Singleton
 public class MicroProfileMetricsProvider implements MetricsProvider {
-    static final String DISABLED = ConfigPrefix.VALUE + "mpmetrics.disabled";
+    static final String DISABLED = ConfigConstants.PREFIX + "mpmetrics.disabled";
 
     private final boolean enabled;
 

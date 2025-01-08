@@ -6,13 +6,13 @@ import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.smallrye.faulttolerance.config.ConfigPrefix;
+import io.smallrye.faulttolerance.autoconfig.ConfigConstants;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.invocation.AsyncSupportRegistry;
 
 @Singleton
 public class SpecCompatibility {
-    private static final String PROPERTY = ConfigPrefix.VALUE + "mp-compatibility";
+    private static final String PROPERTY = ConfigConstants.PREFIX + "mp-compatibility";
 
     private final boolean compatible;
 

@@ -16,7 +16,9 @@ public class SetOfThrowables {
      * @return a singleton set of throwable classes
      */
     public static SetOfThrowables create(Class<? extends Throwable> clazz) {
-        return create(Collections.singletonList(clazz));
+        Set<Class<? extends Throwable>> set = new HashSet<>();
+        set.add(clazz);
+        return new SetOfThrowables(set);
     }
 
     /**
@@ -25,6 +27,20 @@ public class SetOfThrowables {
      * @param classes throwable classes to include in the set
      * @return a set of throwable classes
      */
+    @SafeVarargs
+    public static SetOfThrowables create(Class<? extends Throwable>... classes) {
+        Set<Class<? extends Throwable>> set = new HashSet<>();
+        Collections.addAll(set, classes);
+        return new SetOfThrowables(set);
+    }
+
+    /**
+     * Creates a set of throwable classes that can later be inspected using {@link #includes(Class)}.
+     *
+     * @param classes throwable classes to include in the set
+     * @return a set of throwable classes
+     */
+    @Deprecated(forRemoval = true)
     public static SetOfThrowables create(Collection<Class<? extends Throwable>> classes) {
         Set<Class<? extends Throwable>> set = new HashSet<>(classes);
         return new SetOfThrowables(set);

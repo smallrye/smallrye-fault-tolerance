@@ -52,7 +52,7 @@ public class DefaultFaultToleranceOperationProvider implements FaultToleranceOpe
         }
         if (operation == null) {
             // This is not a bean method - create metadata on the fly
-            operation = FaultToleranceOperation.create(FaultToleranceMethods.create(beanClass, method));
+            operation = new FaultToleranceOperation(FaultToleranceMethods.create(beanClass, method));
             operation.validate();
         }
         return operation;

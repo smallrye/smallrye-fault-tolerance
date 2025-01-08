@@ -2,6 +2,7 @@ package io.smallrye.faulttolerance.autoconfig.processor;
 
 import java.lang.annotation.Annotation;
 import java.util.HashMap;
+import java.util.function.Supplier;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -20,9 +21,17 @@ final class TypeNames {
     static final TypeName MP_CONFIG = ClassName.get("org.eclipse.microprofile.config", "Config");
     static final TypeName MP_CONFIG_PROVIDER = ClassName.get("org.eclipse.microprofile.config", "ConfigProvider");
 
-    static final TypeName CONFIG_UTIL = ClassName.get("io.smallrye.faulttolerance.config", "ConfigUtil");
+    static final TypeName FT_DEFINITION_EXCEPTION = ClassName.get("org.eclipse.microprofile.faulttolerance.exceptions",
+            "FaultToleranceDefinitionException");
+
     static final TypeName METHOD_DESCRIPTOR = ClassName.get("io.smallrye.faulttolerance.autoconfig",
             "MethodDescriptor");
     static final TypeName FAULT_TOLERANCE_METHOD = ClassName.get("io.smallrye.faulttolerance.autoconfig",
             "FaultToleranceMethod");
+
+    static final TypeName CONFIG_UTIL = ClassName.get("io.smallrye.faulttolerance.basicconfig", "ConfigUtil");
+
+    static TypeName supplierOf(TypeName type) {
+        return ParameterizedTypeName.get(ClassName.get(Supplier.class), type);
+    }
 }
