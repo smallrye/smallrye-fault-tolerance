@@ -1,13 +1,13 @@
 name: smallrye-fault-tolerance
 title: SmallRye Fault Tolerance
-version: main
+version: 6.7.3
 nav:
 - modules/ROOT/nav.adoc
 
 asciidoc:
   attributes:
     smallrye-fault-tolerance: SmallRye Fault Tolerance
-    smallrye-fault-tolerance-version: '6.7.2'
+    smallrye-fault-tolerance-version: '6.7.3'
 
     microprofile-fault-tolerance: MicroProfile Fault Tolerance
     microprofile-fault-tolerance-version: '4.1.1'
