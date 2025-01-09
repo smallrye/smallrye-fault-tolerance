@@ -20,14 +20,35 @@ public final class AsyncFallbackFunction<T> implements Function<FailureContext, 
 
     @Override
     public CompletionStage<T> apply(FailureContext ctx) {
+        boolean hasRememberedExecutor = ctx.invocationContext.has(Executor.class);
+        Executor executor = ctx.invocationContext.get(Executor.class, this.executor);
+
         CompletableFuture<T> result = new CompletableFuture<>();
-        executor.execute(() -> {
-            try {
-                propagateCompletion(delegate.apply(ctx), result);
-            } catch (Exception e) {
-                result.completeExceptionally(e);
-            }
-        });
+        if (hasRememberedExecutor) {
+            executor.execute(() -> {
+                try {
+                    delegate.apply(ctx).whenComplete((value, error) -> {
+                        executor.execute(() -> {
+                            if (error == null) {
+                                result.complete(value);
+                            } else {
+                                result.completeExceptionally(error);
+                            }
+                        });
+                    });
+                } catch (Exception e) {
+                    result.completeExceptionally(e);
+                }
+            });
+        } else {
+            executor.execute(() -> {
+                try {
+                    propagateCompletion(delegate.apply(ctx), result);
+                } catch (Exception e) {
+                    result.completeExceptionally(e);
+                }
+            });
+        }
         return result;
     }
 }
