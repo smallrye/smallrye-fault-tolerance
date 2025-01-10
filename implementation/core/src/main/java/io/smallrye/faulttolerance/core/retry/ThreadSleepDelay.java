@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.core.retry;
 
-import io.smallrye.faulttolerance.core.util.Preconditions;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 /**
  * Sync delay based on {@code Thread.sleep}.
@@ -9,7 +9,7 @@ public class ThreadSleepDelay implements SyncDelay {
     private final BackOff backOff;
 
     public ThreadSleepDelay(BackOff backOff) {
-        this.backOff = Preconditions.checkNotNull(backOff, "Back-off must be set");
+        this.backOff = checkNotNull(backOff, "Back-off must be set");
     }
 
     @Override

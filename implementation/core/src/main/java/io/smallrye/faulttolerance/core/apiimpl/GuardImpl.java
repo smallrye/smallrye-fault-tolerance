@@ -2,6 +2,8 @@ package io.smallrye.faulttolerance.core.apiimpl;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
+import static io.smallrye.faulttolerance.core.util.Preconditions.check;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.Type;
@@ -49,7 +51,6 @@ import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
-import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.PredicateBasedResultDecision;
 import io.smallrye.faulttolerance.core.util.ResultDecision;
@@ -147,7 +148,7 @@ public class GuardImpl implements Guard {
 
         @Override
         public Builder withDescription(String value) {
-            this.description = Preconditions.checkNotNull(value, "Description must be set");
+            this.description = checkNotNull(value, "Description must be set");
             return this;
         }
 
@@ -184,7 +185,7 @@ public class GuardImpl implements Guard {
 
         @Override
         public Builder withThreadOffloadExecutor(Executor executor) {
-            this.offloadExecutor = Preconditions.checkNotNull(executor, "Thread offload executor must be set");
+            this.offloadExecutor = checkNotNull(executor, "Thread offload executor must be set");
             return this;
         }
 
@@ -375,13 +376,13 @@ public class GuardImpl implements Guard {
 
             @Override
             public BulkheadBuilder limit(int value) {
-                this.limit = Preconditions.check(value, value >= 1, "Limit must be >= 1");
+                this.limit = check(value, value >= 1, "Limit must be >= 1");
                 return this;
             }
 
             @Override
             public BulkheadBuilder queueSize(int value) {
-                this.queueSize = Preconditions.check(value, value >= 1, "Queue size must be >= 1");
+                this.queueSize = check(value, value >= 1, "Queue size must be >= 1");
                 return this;
             }
 
@@ -393,19 +394,19 @@ public class GuardImpl implements Guard {
 
             @Override
             public BulkheadBuilder onAccepted(Runnable callback) {
-                this.onAccepted = Preconditions.checkNotNull(callback, "Accepted callback must be set");
+                this.onAccepted = checkNotNull(callback, "Accepted callback must be set");
                 return this;
             }
 
             @Override
             public BulkheadBuilder onRejected(Runnable callback) {
-                this.onRejected = Preconditions.checkNotNull(callback, "Rejected callback must be set");
+                this.onRejected = checkNotNull(callback, "Rejected callback must be set");
                 return this;
             }
 
             @Override
             public BulkheadBuilder onFinished(Runnable callback) {
-                this.onFinished = Preconditions.checkNotNull(callback, "Finished callback must be set");
+                this.onFinished = checkNotNull(callback, "Finished callback must be set");
                 return this;
             }
 
@@ -448,28 +449,38 @@ public class GuardImpl implements Guard {
 
             @Override
             public CircuitBreakerBuilder failOn(Collection<Class<? extends Throwable>> value) {
-                this.failOn = Preconditions.checkNotNull(value, "Exceptions considered failure must be set");
+                this.failOn = checkNotNull(value, "Exceptions considered failure must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder failOn(Class<? extends Throwable> value) {
+                return failOn(Set.of(checkNotNull(value, "Exception considered failure must be set")));
             }
 
             @Override
             public CircuitBreakerBuilder skipOn(Collection<Class<? extends Throwable>> value) {
-                this.skipOn = Preconditions.checkNotNull(value, "Exceptions considered success must be set");
+                this.skipOn = checkNotNull(value, "Exceptions considered success must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
+            public CircuitBreakerBuilder skipOn(Class<? extends Throwable> value) {
+                return skipOn(Set.of(checkNotNull(value, "Exception considered success must be set")));
+            }
+
+            @Override
             public CircuitBreakerBuilder when(Predicate<Throwable> value) {
-                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+                this.whenPredicate = checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder delay(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Delay must be >= 0");
-                Preconditions.checkNotNull(unit, "Delay unit must be set");
+                check(value, value >= 0, "Delay must be >= 0");
+                checkNotNull(unit, "Delay unit must be set");
 
                 this.delayInMillis = timeInMillis(value, unit);
                 return this;
@@ -477,49 +488,49 @@ public class GuardImpl implements Guard {
 
             @Override
             public CircuitBreakerBuilder requestVolumeThreshold(int value) {
-                this.requestVolumeThreshold = Preconditions.check(value, value >= 1, "Request volume threshold must be >= 1");
+                this.requestVolumeThreshold = check(value, value >= 1, "Request volume threshold must be >= 1");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder failureRatio(double value) {
-                this.failureRatio = Preconditions.check(value, value >= 0 && value <= 1, "Failure ratio must be >= 0 and <= 1");
+                this.failureRatio = check(value, value >= 0 && value <= 1, "Failure ratio must be >= 0 and <= 1");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder successThreshold(int value) {
-                this.successThreshold = Preconditions.check(value, value >= 1, "Success threshold must be >= 1");
+                this.successThreshold = check(value, value >= 1, "Success threshold must be >= 1");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder name(String value) {
-                this.name = Preconditions.checkNotNull(value, "Circuit breaker name must be set");
+                this.name = checkNotNull(value, "Circuit breaker name must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder onStateChange(Consumer<CircuitBreakerState> callback) {
-                this.onStateChange = Preconditions.checkNotNull(callback, "On state change callback must be set");
+                this.onStateChange = checkNotNull(callback, "On state change callback must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder onSuccess(Runnable callback) {
-                this.onSuccess = Preconditions.checkNotNull(callback, "On success callback must be set");
+                this.onSuccess = checkNotNull(callback, "On success callback must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder onFailure(Runnable callback) {
-                this.onFailure = Preconditions.checkNotNull(callback, "On failure callback must be set");
+                this.onFailure = checkNotNull(callback, "On failure callback must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder onPrevented(Runnable callback) {
-                this.onPrevented = Preconditions.checkNotNull(callback, "On prevented callback must be set");
+                this.onPrevented = checkNotNull(callback, "On prevented callback must be set");
                 return this;
             }
 
@@ -551,14 +562,14 @@ public class GuardImpl implements Guard {
 
             @Override
             public RateLimitBuilder limit(int value) {
-                this.maxInvocations = Preconditions.check(value, value >= 1, "Rate limit must be >= 1");
+                this.maxInvocations = check(value, value >= 1, "Rate limit must be >= 1");
                 return this;
             }
 
             @Override
             public RateLimitBuilder window(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 1, "Time window length must be >= 1");
-                Preconditions.checkNotNull(unit, "Time window length unit must be set");
+                check(value, value >= 1, "Time window length must be >= 1");
+                checkNotNull(unit, "Time window length unit must be set");
 
                 this.timeWindowInMillis = timeInMillis(value, unit);
                 return this;
@@ -566,8 +577,8 @@ public class GuardImpl implements Guard {
 
             @Override
             public RateLimitBuilder minSpacing(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Min spacing must be >= 0");
-                Preconditions.checkNotNull(unit, "Min spacing unit must be set");
+                check(value, value >= 0, "Min spacing must be >= 0");
+                checkNotNull(unit, "Min spacing unit must be set");
 
                 this.minSpacingInMillis = timeInMillis(value, unit);
                 return this;
@@ -575,19 +586,19 @@ public class GuardImpl implements Guard {
 
             @Override
             public RateLimitBuilder type(RateLimitType value) {
-                this.type = Preconditions.checkNotNull(value, "Time window type must be set");
+                this.type = checkNotNull(value, "Time window type must be set");
                 return this;
             }
 
             @Override
             public RateLimitBuilder onPermitted(Runnable callback) {
-                this.onPermitted = Preconditions.checkNotNull(callback, "Permitted callback must be set");
+                this.onPermitted = checkNotNull(callback, "Permitted callback must be set");
                 return this;
             }
 
             @Override
             public RateLimitBuilder onRejected(Runnable callback) {
-                this.onRejected = Preconditions.checkNotNull(callback, "Rejected callback must be set");
+                this.onRejected = checkNotNull(callback, "Rejected callback must be set");
                 return this;
             }
 
@@ -626,14 +637,14 @@ public class GuardImpl implements Guard {
 
             @Override
             public RetryBuilder maxRetries(int value) {
-                this.maxRetries = Preconditions.check(value, value >= -1, "Max retries must be >= -1");
+                this.maxRetries = check(value, value >= -1, "Max retries must be >= -1");
                 return this;
             }
 
             @Override
             public RetryBuilder delay(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Delay must be >= 0");
-                Preconditions.checkNotNull(unit, "Delay unit must be set");
+                check(value, value >= 0, "Delay must be >= 0");
+                checkNotNull(unit, "Delay unit must be set");
 
                 this.delayInMillis = timeInMillis(value, unit);
                 return this;
@@ -641,8 +652,8 @@ public class GuardImpl implements Guard {
 
             @Override
             public RetryBuilder maxDuration(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Max duration must be >= 0");
-                Preconditions.checkNotNull(unit, "Max duration unit must be set");
+                check(value, value >= 0, "Max duration must be >= 0");
+                checkNotNull(unit, "Max duration unit must be set");
 
                 this.maxDurationInMillis = timeInMillis(value, unit);
                 return this;
@@ -650,8 +661,8 @@ public class GuardImpl implements Guard {
 
             @Override
             public RetryBuilder jitter(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Jitter must be >= 0");
-                Preconditions.checkNotNull(unit, "Jitter unit must be set");
+                check(value, value >= 0, "Jitter must be >= 0");
+                checkNotNull(unit, "Jitter unit must be set");
 
                 this.jitterInMillis = timeInMillis(value, unit);
                 return this;
@@ -659,40 +670,50 @@ public class GuardImpl implements Guard {
 
             @Override
             public RetryBuilder retryOn(Collection<Class<? extends Throwable>> value) {
-                this.retryOn = Preconditions.checkNotNull(value, "Exceptions to retry on must be set");
+                this.retryOn = checkNotNull(value, "Exceptions to retry on must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
+            }
+
+            @Override
+            public RetryBuilder retryOn(Class<? extends Throwable> value) {
+                return retryOn(Set.of(checkNotNull(value, "Exception to retry on must be set")));
             }
 
             @Override
             public RetryBuilder abortOn(Collection<Class<? extends Throwable>> value) {
-                this.abortOn = Preconditions.checkNotNull(value, "Exceptions to abort retrying on must be set");
+                this.abortOn = checkNotNull(value, "Exceptions to abort retrying on must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
+            public RetryBuilder abortOn(Class<? extends Throwable> value) {
+                return abortOn(Set.of(checkNotNull(value, "Exception to abort retrying on must be set")));
+            }
+
+            @Override
             public RetryBuilder whenResult(Predicate<Object> value) {
-                this.whenResultPredicate = Preconditions.checkNotNull(value, "Result predicate must be set");
+                this.whenResultPredicate = checkNotNull(value, "Result predicate must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder whenException(Predicate<Throwable> value) {
-                this.whenExceptionPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+                this.whenExceptionPredicate = checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder beforeRetry(Runnable value) {
-                Preconditions.checkNotNull(value, "Before retry handler must be set");
+                checkNotNull(value, "Before retry handler must be set");
                 this.beforeRetry = ignored -> value.run();
                 return this;
             }
 
             @Override
             public RetryBuilder beforeRetry(Consumer<Throwable> value) {
-                this.beforeRetry = Preconditions.checkNotNull(value, "Before retry handler must be set");
+                this.beforeRetry = checkNotNull(value, "Before retry handler must be set");
                 return this;
             }
 
@@ -713,19 +734,19 @@ public class GuardImpl implements Guard {
 
             @Override
             public RetryBuilder onRetry(Runnable callback) {
-                this.onRetry = Preconditions.checkNotNull(callback, "Retry callback must be set");
+                this.onRetry = checkNotNull(callback, "Retry callback must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder onSuccess(Runnable callback) {
-                this.onSuccess = Preconditions.checkNotNull(callback, "Success callback must be set");
+                this.onSuccess = checkNotNull(callback, "Success callback must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder onFailure(Runnable callback) {
-                this.onFailure = Preconditions.checkNotNull(callback, "Failure callback must be set");
+                this.onFailure = checkNotNull(callback, "Failure callback must be set");
                 return this;
             }
 
@@ -765,14 +786,14 @@ public class GuardImpl implements Guard {
 
                 @Override
                 public ExponentialBackoffBuilder factor(int value) {
-                    this.factor = Preconditions.check(value, value >= 1, "Factor must be >= 1");
+                    this.factor = check(value, value >= 1, "Factor must be >= 1");
                     return this;
                 }
 
                 @Override
                 public ExponentialBackoffBuilder maxDelay(long value, ChronoUnit unit) {
-                    Preconditions.check(value, value >= 0, "Max delay must be >= 0");
-                    Preconditions.checkNotNull(unit, "Max delay unit must be set");
+                    check(value, value >= 0, "Max delay must be >= 0");
+                    checkNotNull(unit, "Max delay unit must be set");
 
                     this.maxDelayInMillis = timeInMillis(value, unit);
                     return this;
@@ -796,8 +817,8 @@ public class GuardImpl implements Guard {
 
                 @Override
                 public FibonacciBackoffBuilder maxDelay(long value, ChronoUnit unit) {
-                    Preconditions.check(value, value >= 0, "Max delay must be >= 0");
-                    Preconditions.checkNotNull(unit, "Max delay unit must be set");
+                    check(value, value >= 0, "Max delay must be >= 0");
+                    checkNotNull(unit, "Max delay unit must be set");
 
                     this.maxDelayInMillis = timeInMillis(value, unit);
                     return this;
@@ -821,13 +842,13 @@ public class GuardImpl implements Guard {
 
                 @Override
                 public CustomBackoffBuilder strategy(Supplier<CustomBackoffStrategy> value) {
-                    this.strategy = Preconditions.checkNotNull(value, "Custom backoff strategy must be set");
+                    this.strategy = checkNotNull(value, "Custom backoff strategy must be set");
                     return this;
                 }
 
                 @Override
                 public RetryBuilder done() {
-                    Preconditions.checkNotNull(strategy, "Custom backoff strategy must be set");
+                    checkNotNull(strategy, "Custom backoff strategy must be set");
 
                     parent.customBackoffBuilder = this;
                     return parent;
@@ -849,8 +870,8 @@ public class GuardImpl implements Guard {
 
             @Override
             public TimeoutBuilder duration(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Timeout duration must be >= 0");
-                Preconditions.checkNotNull(unit, "Timeout duration unit must be set");
+                check(value, value >= 0, "Timeout duration must be >= 0");
+                checkNotNull(unit, "Timeout duration unit must be set");
 
                 this.durationInMillis = timeInMillis(value, unit);
                 return this;
@@ -858,13 +879,13 @@ public class GuardImpl implements Guard {
 
             @Override
             public TimeoutBuilder onTimeout(Runnable callback) {
-                this.onTimeout = Preconditions.checkNotNull(callback, "Timeout callback must be set");
+                this.onTimeout = checkNotNull(callback, "Timeout callback must be set");
                 return this;
             }
 
             @Override
             public TimeoutBuilder onFinished(Runnable callback) {
-                this.onFinished = Preconditions.checkNotNull(callback, "Finished callback must be set");
+                this.onFinished = checkNotNull(callback, "Finished callback must be set");
                 return this;
             }
 

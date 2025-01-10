@@ -2,8 +2,6 @@ package io.smallrye.faulttolerance.api;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -261,17 +259,13 @@ public interface FaultTolerance<T> {
             CircuitBreakerBuilder<T, R> failOn(Collection<Class<? extends Throwable>> value);
 
             @Deprecated(forRemoval = true)
-            default CircuitBreakerBuilder<T, R> failOn(Class<? extends Throwable> value) {
-                return failOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            CircuitBreakerBuilder<T, R> failOn(Class<? extends Throwable> value);
 
             @Deprecated(forRemoval = true)
             CircuitBreakerBuilder<T, R> skipOn(Collection<Class<? extends Throwable>> value);
 
             @Deprecated(forRemoval = true)
-            default CircuitBreakerBuilder<T, R> skipOn(Class<? extends Throwable> value) {
-                return skipOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            CircuitBreakerBuilder<T, R> skipOn(Class<? extends Throwable> value);
 
             @Deprecated(forRemoval = true)
             CircuitBreakerBuilder<T, R> when(Predicate<Throwable> value);
@@ -325,17 +319,13 @@ public interface FaultTolerance<T> {
             FallbackBuilder<T, R> applyOn(Collection<Class<? extends Throwable>> value);
 
             @Deprecated(forRemoval = true)
-            default FallbackBuilder<T, R> applyOn(Class<? extends Throwable> value) {
-                return applyOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            FallbackBuilder<T, R> applyOn(Class<? extends Throwable> value);
 
             @Deprecated(forRemoval = true)
             FallbackBuilder<T, R> skipOn(Collection<Class<? extends Throwable>> value);
 
             @Deprecated(forRemoval = true)
-            default FallbackBuilder<T, R> skipOn(Class<? extends Throwable> value) {
-                return skipOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            FallbackBuilder<T, R> skipOn(Class<? extends Throwable> value);
 
             @Deprecated(forRemoval = true)
             FallbackBuilder<T, R> when(Predicate<Throwable> value);
@@ -398,17 +388,13 @@ public interface FaultTolerance<T> {
             RetryBuilder<T, R> retryOn(Collection<Class<? extends Throwable>> value);
 
             @Deprecated(forRemoval = true)
-            default RetryBuilder<T, R> retryOn(Class<? extends Throwable> value) {
-                return retryOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            RetryBuilder<T, R> retryOn(Class<? extends Throwable> value);
 
             @Deprecated(forRemoval = true)
             RetryBuilder<T, R> abortOn(Collection<Class<? extends Throwable>> value);
 
             @Deprecated(forRemoval = true)
-            default RetryBuilder<T, R> abortOn(Class<? extends Throwable> value) {
-                return abortOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            RetryBuilder<T, R> abortOn(Class<? extends Throwable> value);
 
             @Deprecated(forRemoval = true)
             RetryBuilder<T, R> whenResult(Predicate<Object> value);
