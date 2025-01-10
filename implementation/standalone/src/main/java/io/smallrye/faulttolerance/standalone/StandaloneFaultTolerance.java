@@ -1,6 +1,6 @@
 package io.smallrye.faulttolerance.standalone;
 
-import io.smallrye.faulttolerance.core.util.Preconditions;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 /**
  * Integration point for standalone usage of SmallRye Fault Tolerance. Allows custom configuration
@@ -30,7 +30,7 @@ public final class StandaloneFaultTolerance {
         if (StandaloneFaultTolerance.configuration != null) {
             throw new IllegalStateException("Configuration has already been finalized, cannot reconfigure");
         }
-        Preconditions.checkNotNull(configuration, "Configuration must be set");
+        checkNotNull(configuration, "Configuration must be set");
         StandaloneFaultTolerance.configuration = configuration;
     }
 

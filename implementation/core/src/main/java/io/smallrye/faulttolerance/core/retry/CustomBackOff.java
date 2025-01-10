@@ -1,14 +1,14 @@
 package io.smallrye.faulttolerance.core.retry;
 
-import java.util.function.ToLongFunction;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
-import io.smallrye.faulttolerance.core.util.Preconditions;
+import java.util.function.ToLongFunction;
 
 public class CustomBackOff implements BackOff {
     private final ToLongFunction<Throwable> strategy;
 
     public CustomBackOff(ToLongFunction<Throwable> strategy) {
-        this.strategy = Preconditions.checkNotNull(strategy, "Custom backoff strategy must be set");
+        this.strategy = checkNotNull(strategy, "Custom backoff strategy must be set");
     }
 
     @Override

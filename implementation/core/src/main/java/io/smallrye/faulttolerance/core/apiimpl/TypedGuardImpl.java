@@ -2,6 +2,8 @@ package io.smallrye.faulttolerance.core.apiimpl;
 
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
+import static io.smallrye.faulttolerance.core.util.Preconditions.check;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.reflect.Type;
@@ -50,7 +52,6 @@ import io.smallrye.faulttolerance.core.retry.TimerDelay;
 import io.smallrye.faulttolerance.core.stopwatch.SystemStopwatch;
 import io.smallrye.faulttolerance.core.timeout.Timeout;
 import io.smallrye.faulttolerance.core.util.ExceptionDecision;
-import io.smallrye.faulttolerance.core.util.Preconditions;
 import io.smallrye.faulttolerance.core.util.PredicateBasedExceptionDecision;
 import io.smallrye.faulttolerance.core.util.PredicateBasedResultDecision;
 import io.smallrye.faulttolerance.core.util.ResultDecision;
@@ -141,7 +142,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
         @Override
         public Builder<T> withDescription(String value) {
-            this.description = Preconditions.checkNotNull(value, "Description must be set");
+            this.description = checkNotNull(value, "Description must be set");
             return this;
         }
 
@@ -183,7 +184,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
         @Override
         public Builder<T> withThreadOffloadExecutor(Executor executor) {
-            this.offloadExecutor = Preconditions.checkNotNull(executor, "Thread offload executor must be set");
+            this.offloadExecutor = checkNotNull(executor, "Thread offload executor must be set");
             return this;
         }
 
@@ -396,13 +397,13 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public BulkheadBuilder<T> limit(int value) {
-                this.limit = Preconditions.check(value, value >= 1, "Limit must be >= 1");
+                this.limit = check(value, value >= 1, "Limit must be >= 1");
                 return this;
             }
 
             @Override
             public BulkheadBuilder<T> queueSize(int value) {
-                this.queueSize = Preconditions.check(value, value >= 1, "Queue size must be >= 1");
+                this.queueSize = check(value, value >= 1, "Queue size must be >= 1");
                 return this;
             }
 
@@ -414,19 +415,19 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public BulkheadBuilder<T> onAccepted(Runnable callback) {
-                this.onAccepted = Preconditions.checkNotNull(callback, "Accepted callback must be set");
+                this.onAccepted = checkNotNull(callback, "Accepted callback must be set");
                 return this;
             }
 
             @Override
             public BulkheadBuilder<T> onRejected(Runnable callback) {
-                this.onRejected = Preconditions.checkNotNull(callback, "Rejected callback must be set");
+                this.onRejected = checkNotNull(callback, "Rejected callback must be set");
                 return this;
             }
 
             @Override
             public BulkheadBuilder<T> onFinished(Runnable callback) {
-                this.onFinished = Preconditions.checkNotNull(callback, "Finished callback must be set");
+                this.onFinished = checkNotNull(callback, "Finished callback must be set");
                 return this;
             }
 
@@ -469,28 +470,38 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public CircuitBreakerBuilder<T> failOn(Collection<Class<? extends Throwable>> value) {
-                this.failOn = Preconditions.checkNotNull(value, "Exceptions considered failure must be set");
+                this.failOn = checkNotNull(value, "Exceptions considered failure must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
+            }
+
+            @Override
+            public CircuitBreakerBuilder<T> failOn(Class<? extends Throwable> value) {
+                return failOn(Set.of(checkNotNull(value, "Exception considered failure must be set")));
             }
 
             @Override
             public CircuitBreakerBuilder<T> skipOn(Collection<Class<? extends Throwable>> value) {
-                this.skipOn = Preconditions.checkNotNull(value, "Exceptions considered success must be set");
+                this.skipOn = checkNotNull(value, "Exceptions considered success must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
+            public CircuitBreakerBuilder<T> skipOn(Class<? extends Throwable> value) {
+                return skipOn(Set.of(checkNotNull(value, "Exception considered success must be set")));
+            }
+
+            @Override
             public CircuitBreakerBuilder<T> when(Predicate<Throwable> value) {
-                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+                this.whenPredicate = checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> delay(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Delay must be >= 0");
-                Preconditions.checkNotNull(unit, "Delay unit must be set");
+                check(value, value >= 0, "Delay must be >= 0");
+                checkNotNull(unit, "Delay unit must be set");
 
                 this.delayInMillis = timeInMillis(value, unit);
                 return this;
@@ -498,49 +509,49 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public CircuitBreakerBuilder<T> requestVolumeThreshold(int value) {
-                this.requestVolumeThreshold = Preconditions.check(value, value >= 1, "Request volume threshold must be >= 1");
+                this.requestVolumeThreshold = check(value, value >= 1, "Request volume threshold must be >= 1");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> failureRatio(double value) {
-                this.failureRatio = Preconditions.check(value, value >= 0 && value <= 1, "Failure ratio must be >= 0 and <= 1");
+                this.failureRatio = check(value, value >= 0 && value <= 1, "Failure ratio must be >= 0 and <= 1");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> successThreshold(int value) {
-                this.successThreshold = Preconditions.check(value, value >= 1, "Success threshold must be >= 1");
+                this.successThreshold = check(value, value >= 1, "Success threshold must be >= 1");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> name(String value) {
-                this.name = Preconditions.checkNotNull(value, "Circuit breaker name must be set");
+                this.name = checkNotNull(value, "Circuit breaker name must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> onStateChange(Consumer<CircuitBreakerState> callback) {
-                this.onStateChange = Preconditions.checkNotNull(callback, "On state change callback must be set");
+                this.onStateChange = checkNotNull(callback, "On state change callback must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> onSuccess(Runnable callback) {
-                this.onSuccess = Preconditions.checkNotNull(callback, "On success callback must be set");
+                this.onSuccess = checkNotNull(callback, "On success callback must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> onFailure(Runnable callback) {
-                this.onFailure = Preconditions.checkNotNull(callback, "On failure callback must be set");
+                this.onFailure = checkNotNull(callback, "On failure callback must be set");
                 return this;
             }
 
             @Override
             public CircuitBreakerBuilder<T> onPrevented(Runnable callback) {
-                this.onPrevented = Preconditions.checkNotNull(callback, "On prevented callback must be set");
+                this.onPrevented = checkNotNull(callback, "On prevented callback must be set");
                 return this;
             }
 
@@ -570,40 +581,50 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public FallbackBuilder<T> handler(Supplier<T> value) {
-                Preconditions.checkNotNull(value, "Fallback handler must be set");
+                checkNotNull(value, "Fallback handler must be set");
                 this.handler = ignored -> value.get();
                 return this;
             }
 
             @Override
             public FallbackBuilder<T> handler(Function<Throwable, T> value) {
-                this.handler = Preconditions.checkNotNull(value, "Fallback handler must be set");
+                this.handler = checkNotNull(value, "Fallback handler must be set");
                 return this;
             }
 
             @Override
             public FallbackBuilder<T> applyOn(Collection<Class<? extends Throwable>> value) {
-                this.applyOn = Preconditions.checkNotNull(value, "Exceptions to apply fallback on must be set");
+                this.applyOn = checkNotNull(value, "Exceptions to apply fallback on must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
+            }
+
+            @Override
+            public FallbackBuilder<T> applyOn(Class<? extends Throwable> value) {
+                return applyOn(Set.of(checkNotNull(value, "Exception to apply fallback on must be set")));
             }
 
             @Override
             public FallbackBuilder<T> skipOn(Collection<Class<? extends Throwable>> value) {
-                this.skipOn = Preconditions.checkNotNull(value, "Exceptions to skip fallback on must be set");
+                this.skipOn = checkNotNull(value, "Exceptions to skip fallback on must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
+            public FallbackBuilder<T> skipOn(Class<? extends Throwable> value) {
+                return skipOn(Set.of(checkNotNull(value, "Exception to skip fallback on must be set")));
+            }
+
+            @Override
             public FallbackBuilder<T> when(Predicate<Throwable> value) {
-                this.whenPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+                this.whenPredicate = checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
             @Override
             public Builder<T> done() {
-                Preconditions.checkNotNull(handler, "Fallback handler must be set");
+                checkNotNull(handler, "Fallback handler must be set");
 
                 if (whenPredicate != null && setBasedExceptionDecisionDefined) {
                     throw new IllegalStateException("The when() method may not be combined with applyOn() / skipOn()");
@@ -631,14 +652,14 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RateLimitBuilder<T> limit(int value) {
-                this.maxInvocations = Preconditions.check(value, value >= 1, "Rate limit must be >= 1");
+                this.maxInvocations = check(value, value >= 1, "Rate limit must be >= 1");
                 return this;
             }
 
             @Override
             public RateLimitBuilder<T> window(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 1, "Time window length must be >= 1");
-                Preconditions.checkNotNull(unit, "Time window length unit must be set");
+                check(value, value >= 1, "Time window length must be >= 1");
+                checkNotNull(unit, "Time window length unit must be set");
 
                 this.timeWindowInMillis = timeInMillis(value, unit);
                 return this;
@@ -646,8 +667,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RateLimitBuilder<T> minSpacing(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Min spacing must be >= 0");
-                Preconditions.checkNotNull(unit, "Min spacing unit must be set");
+                check(value, value >= 0, "Min spacing must be >= 0");
+                checkNotNull(unit, "Min spacing unit must be set");
 
                 this.minSpacingInMillis = timeInMillis(value, unit);
                 return this;
@@ -655,19 +676,19 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RateLimitBuilder<T> type(RateLimitType value) {
-                this.type = Preconditions.checkNotNull(value, "Time window type must be set");
+                this.type = checkNotNull(value, "Time window type must be set");
                 return this;
             }
 
             @Override
             public RateLimitBuilder<T> onPermitted(Runnable callback) {
-                this.onPermitted = Preconditions.checkNotNull(callback, "Permitted callback must be set");
+                this.onPermitted = checkNotNull(callback, "Permitted callback must be set");
                 return this;
             }
 
             @Override
             public RateLimitBuilder<T> onRejected(Runnable callback) {
-                this.onRejected = Preconditions.checkNotNull(callback, "Rejected callback must be set");
+                this.onRejected = checkNotNull(callback, "Rejected callback must be set");
                 return this;
             }
 
@@ -706,14 +727,14 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RetryBuilder<T> maxRetries(int value) {
-                this.maxRetries = Preconditions.check(value, value >= -1, "Max retries must be >= -1");
+                this.maxRetries = check(value, value >= -1, "Max retries must be >= -1");
                 return this;
             }
 
             @Override
             public RetryBuilder<T> delay(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Delay must be >= 0");
-                Preconditions.checkNotNull(unit, "Delay unit must be set");
+                check(value, value >= 0, "Delay must be >= 0");
+                checkNotNull(unit, "Delay unit must be set");
 
                 this.delayInMillis = timeInMillis(value, unit);
                 return this;
@@ -721,8 +742,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RetryBuilder<T> maxDuration(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Max duration must be >= 0");
-                Preconditions.checkNotNull(unit, "Max duration unit must be set");
+                check(value, value >= 0, "Max duration must be >= 0");
+                checkNotNull(unit, "Max duration unit must be set");
 
                 this.maxDurationInMillis = timeInMillis(value, unit);
                 return this;
@@ -730,8 +751,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RetryBuilder<T> jitter(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Jitter must be >= 0");
-                Preconditions.checkNotNull(unit, "Jitter unit must be set");
+                check(value, value >= 0, "Jitter must be >= 0");
+                checkNotNull(unit, "Jitter unit must be set");
 
                 this.jitterInMillis = timeInMillis(value, unit);
                 return this;
@@ -739,40 +760,50 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RetryBuilder<T> retryOn(Collection<Class<? extends Throwable>> value) {
-                this.retryOn = Preconditions.checkNotNull(value, "Exceptions to retry on must be set");
+                this.retryOn = checkNotNull(value, "Exceptions to retry on must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
+            }
+
+            @Override
+            public RetryBuilder<T> retryOn(Class<? extends Throwable> value) {
+                return retryOn(Set.of(checkNotNull(value, "Exception to retry on must be set")));
             }
 
             @Override
             public RetryBuilder<T> abortOn(Collection<Class<? extends Throwable>> value) {
-                this.abortOn = Preconditions.checkNotNull(value, "Exceptions to abort retrying on must be set");
+                this.abortOn = checkNotNull(value, "Exceptions to abort retrying on must be set");
                 this.setBasedExceptionDecisionDefined = true;
                 return this;
             }
 
             @Override
+            public RetryBuilder<T> abortOn(Class<? extends Throwable> value) {
+                return abortOn(Set.of(checkNotNull(value, "Exception to abort retrying on must be set")));
+            }
+
+            @Override
             public RetryBuilder<T> whenResult(Predicate<Object> value) {
-                this.whenResultPredicate = Preconditions.checkNotNull(value, "Result predicate must be set");
+                this.whenResultPredicate = checkNotNull(value, "Result predicate must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder<T> whenException(Predicate<Throwable> value) {
-                this.whenExceptionPredicate = Preconditions.checkNotNull(value, "Exception predicate must be set");
+                this.whenExceptionPredicate = checkNotNull(value, "Exception predicate must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder<T> beforeRetry(Runnable value) {
-                Preconditions.checkNotNull(value, "Before retry handler must be set");
+                checkNotNull(value, "Before retry handler must be set");
                 this.beforeRetry = ignored -> value.run();
                 return this;
             }
 
             @Override
             public RetryBuilder<T> beforeRetry(Consumer<Throwable> value) {
-                this.beforeRetry = Preconditions.checkNotNull(value, "Before retry handler must be set");
+                this.beforeRetry = checkNotNull(value, "Before retry handler must be set");
                 return this;
             }
 
@@ -793,19 +824,19 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public RetryBuilder<T> onRetry(Runnable callback) {
-                this.onRetry = Preconditions.checkNotNull(callback, "Retry callback must be set");
+                this.onRetry = checkNotNull(callback, "Retry callback must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder<T> onSuccess(Runnable callback) {
-                this.onSuccess = Preconditions.checkNotNull(callback, "Success callback must be set");
+                this.onSuccess = checkNotNull(callback, "Success callback must be set");
                 return this;
             }
 
             @Override
             public RetryBuilder<T> onFailure(Runnable callback) {
-                this.onFailure = Preconditions.checkNotNull(callback, "Failure callback must be set");
+                this.onFailure = checkNotNull(callback, "Failure callback must be set");
                 return this;
             }
 
@@ -845,14 +876,14 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
                 @Override
                 public ExponentialBackoffBuilder<T> factor(int value) {
-                    this.factor = Preconditions.check(value, value >= 1, "Factor must be >= 1");
+                    this.factor = check(value, value >= 1, "Factor must be >= 1");
                     return this;
                 }
 
                 @Override
                 public ExponentialBackoffBuilder<T> maxDelay(long value, ChronoUnit unit) {
-                    Preconditions.check(value, value >= 0, "Max delay must be >= 0");
-                    Preconditions.checkNotNull(unit, "Max delay unit must be set");
+                    check(value, value >= 0, "Max delay must be >= 0");
+                    checkNotNull(unit, "Max delay unit must be set");
 
                     this.maxDelayInMillis = timeInMillis(value, unit);
                     return this;
@@ -876,8 +907,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
                 @Override
                 public FibonacciBackoffBuilder<T> maxDelay(long value, ChronoUnit unit) {
-                    Preconditions.check(value, value >= 0, "Max delay must be >= 0");
-                    Preconditions.checkNotNull(unit, "Max delay unit must be set");
+                    check(value, value >= 0, "Max delay must be >= 0");
+                    checkNotNull(unit, "Max delay unit must be set");
 
                     this.maxDelayInMillis = timeInMillis(value, unit);
                     return this;
@@ -901,13 +932,13 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
                 @Override
                 public CustomBackoffBuilder<T> strategy(Supplier<CustomBackoffStrategy> value) {
-                    this.strategy = Preconditions.checkNotNull(value, "Custom backoff strategy must be set");
+                    this.strategy = checkNotNull(value, "Custom backoff strategy must be set");
                     return this;
                 }
 
                 @Override
                 public RetryBuilder<T> done() {
-                    Preconditions.checkNotNull(strategy, "Custom backoff strategy must be set");
+                    checkNotNull(strategy, "Custom backoff strategy must be set");
 
                     parent.customBackoffBuilder = this;
                     return parent;
@@ -929,8 +960,8 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public TimeoutBuilder<T> duration(long value, ChronoUnit unit) {
-                Preconditions.check(value, value >= 0, "Timeout duration must be >= 0");
-                Preconditions.checkNotNull(unit, "Timeout duration unit must be set");
+                check(value, value >= 0, "Timeout duration must be >= 0");
+                checkNotNull(unit, "Timeout duration unit must be set");
 
                 this.durationInMillis = timeInMillis(value, unit);
                 return this;
@@ -938,13 +969,13 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             @Override
             public TimeoutBuilder<T> onTimeout(Runnable callback) {
-                this.onTimeout = Preconditions.checkNotNull(callback, "Timeout callback must be set");
+                this.onTimeout = checkNotNull(callback, "Timeout callback must be set");
                 return this;
             }
 
             @Override
             public TimeoutBuilder<T> onFinished(Runnable callback) {
-                this.onFinished = Preconditions.checkNotNull(callback, "Finished callback must be set");
+                this.onFinished = checkNotNull(callback, "Finished callback must be set");
                 return this;
             }
 

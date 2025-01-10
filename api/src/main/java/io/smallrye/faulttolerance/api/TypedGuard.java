@@ -2,8 +2,6 @@ package io.smallrye.faulttolerance.api;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -340,14 +338,12 @@ public interface TypedGuard<T> {
             CircuitBreakerBuilder<T> failOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #failOn(Collection) failOn(Collections.singleton(value))}.
+             * Equivalent to {@link #failOn(Collection) failOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this circuit breaker builder
              */
-            default CircuitBreakerBuilder<T> failOn(Class<? extends Throwable> value) {
-                return failOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            CircuitBreakerBuilder<T> failOn(Class<? extends Throwable> value);
 
             /**
              * Sets the set of exception types considered success. Defaults to no exception (empty set).
@@ -359,14 +355,12 @@ public interface TypedGuard<T> {
             CircuitBreakerBuilder<T> skipOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #skipOn(Collection) skipOn(Collections.singleton(value))}.
+             * Equivalent to {@link #skipOn(Collection) skipOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this circuit breaker builder
              */
-            default CircuitBreakerBuilder<T> skipOn(Class<? extends Throwable> value) {
-                return skipOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            CircuitBreakerBuilder<T> skipOn(Class<? extends Throwable> value);
 
             /**
              * Sets a predicate to determine when an exception should be considered failure
@@ -524,14 +518,12 @@ public interface TypedGuard<T> {
             FallbackBuilder<T> applyOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #applyOn(Collection) applyOn(Collections.singleton(value))}.
+             * Equivalent to {@link #applyOn(Collection) applyOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this fallback builder
              */
-            default FallbackBuilder<T> applyOn(Class<? extends Throwable> value) {
-                return applyOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            FallbackBuilder<T> applyOn(Class<? extends Throwable> value);
 
             /**
              * Sets the set of exception types considered success. Defaults to no exception (empty set).
@@ -543,14 +535,12 @@ public interface TypedGuard<T> {
             FallbackBuilder<T> skipOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #skipOn(Collection) skipOn(Collections.singleton(value))}.
+             * Equivalent to {@link #skipOn(Collection) skipOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this fallback builder
              */
-            default FallbackBuilder<T> skipOn(Class<? extends Throwable> value) {
-                return skipOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            FallbackBuilder<T> skipOn(Class<? extends Throwable> value);
 
             /**
              * Sets a predicate to determine when an exception should be considered failure
@@ -714,14 +704,12 @@ public interface TypedGuard<T> {
             RetryBuilder<T> retryOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #retryOn(Collection) retryOn(Collections.singleton(value))}.
+             * Equivalent to {@link #retryOn(Collection) retryOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this retry builder
              */
-            default RetryBuilder<T> retryOn(Class<? extends Throwable> value) {
-                return retryOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            RetryBuilder<T> retryOn(Class<? extends Throwable> value);
 
             /**
              * Sets the set of exception types considered success. Defaults to no exception (empty set).
@@ -733,14 +721,12 @@ public interface TypedGuard<T> {
             RetryBuilder<T> abortOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #abortOn(Collection) abortOn(Collections.singleton(value))}.
+             * Equivalent to {@link #abortOn(Collection) abortOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this retry builder
              */
-            default RetryBuilder<T> abortOn(Class<? extends Throwable> value) {
-                return abortOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            RetryBuilder<T> abortOn(Class<? extends Throwable> value);
 
             /**
              * Sets a predicate to determine when a result should be considered failure and retry

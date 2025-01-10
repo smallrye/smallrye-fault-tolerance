@@ -12,7 +12,7 @@ public final class Preconditions {
         return value;
     }
 
-    public static <T> T check(T value, boolean test, String message) {
+    public static int check(int value, boolean test, String message) {
         if (!test) {
             throw new IllegalArgumentException(message + ", was " + value);
         }
@@ -26,7 +26,7 @@ public final class Preconditions {
         return value;
     }
 
-    public static int check(int value, boolean test, String message) {
+    public static double check(double value, boolean test, String message) {
         if (!test) {
             throw new IllegalArgumentException(message + ", was " + value);
         }

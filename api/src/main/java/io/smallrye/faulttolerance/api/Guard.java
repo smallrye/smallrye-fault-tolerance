@@ -2,8 +2,6 @@ package io.smallrye.faulttolerance.api;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -361,14 +359,12 @@ public interface Guard {
             CircuitBreakerBuilder failOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #failOn(Collection) failOn(Collections.singleton(value))}.
+             * Equivalent to {@link #failOn(Collection) failOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this circuit breaker builder
              */
-            default CircuitBreakerBuilder failOn(Class<? extends Throwable> value) {
-                return failOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            CircuitBreakerBuilder failOn(Class<? extends Throwable> value);
 
             /**
              * Sets the set of exception types considered success. Defaults to no exception (empty set).
@@ -380,14 +376,12 @@ public interface Guard {
             CircuitBreakerBuilder skipOn(Collection<Class<? extends Throwable>> value);
 
             /**
-             * Equivalent to {@link #skipOn(Collection) skipOn(Collections.singleton(value))}.
+             * Equivalent to {@link #skipOn(Collection) skipOn(Set.of(value))}.
              *
              * @param value an exception class, must not be {@code null}
              * @return this circuit breaker builder
              */
-            default CircuitBreakerBuilder skipOn(Class<? extends Throwable> value) {
-                return skipOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            CircuitBreakerBuilder skipOn(Class<? extends Throwable> value);
 
             /**
              * Sets a predicate to determine when an exception should be considered failure
@@ -653,9 +647,7 @@ public interface Guard {
              * @param value an exception class, must not be {@code null}
              * @return this retry builder
              */
-            default RetryBuilder retryOn(Class<? extends Throwable> value) {
-                return retryOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            RetryBuilder retryOn(Class<? extends Throwable> value);
 
             /**
              * Sets the set of exception types considered success. Defaults to no exception (empty set).
@@ -672,9 +664,7 @@ public interface Guard {
              * @param value an exception class, must not be {@code null}
              * @return this retry builder
              */
-            default RetryBuilder abortOn(Class<? extends Throwable> value) {
-                return abortOn(Collections.singleton(Objects.requireNonNull(value)));
-            }
+            RetryBuilder abortOn(Class<? extends Throwable> value);
 
             /**
              * Sets a predicate to determine when a result should be considered failure and retry

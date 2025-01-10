@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.core.invocation;
 
+import static io.smallrye.faulttolerance.core.util.Preconditions.check;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.invoke.MethodHandle;
@@ -8,16 +10,14 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.util.function.Function;
 
-import io.smallrye.faulttolerance.core.util.Preconditions;
-
 public class SpecialMethodInvoker<V> implements Invoker<V> {
     private final MethodHandle methodHandle;
     private final Object target;
     private final Object[] arguments;
 
     public SpecialMethodInvoker(Method method, Object target, Object[] arguments) throws ReflectiveOperationException {
-        Preconditions.checkNotNull(arguments, "Arguments array must be set");
-        Preconditions.check(arguments.length, arguments.length == method.getParameterCount(),
+        checkNotNull(arguments, "Arguments array must be set");
+        check(arguments.length, arguments.length == method.getParameterCount(),
                 "Argument array length must be " + method.getParameterCount());
 
         MethodType methodType = MethodType.methodType(method.getReturnType(), method.getParameterTypes());

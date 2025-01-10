@@ -1,9 +1,10 @@
 package io.smallrye.faulttolerance.core.retry;
 
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+
 import java.util.concurrent.Executor;
 
 import io.smallrye.faulttolerance.core.timer.Timer;
-import io.smallrye.faulttolerance.core.util.Preconditions;
 
 /**
  * Asynchronous delay based on {@link Timer}. Its default executor is the timer's {@link Executor}.
@@ -13,8 +14,8 @@ public class TimerDelay implements AsyncDelay {
     private final Timer timer;
 
     public TimerDelay(BackOff backOff, Timer timer) {
-        this.backOff = Preconditions.checkNotNull(backOff, "Back-off must be set");
-        this.timer = Preconditions.checkNotNull(timer, "Timer must be set");
+        this.backOff = checkNotNull(backOff, "Back-off must be set");
+        this.timer = checkNotNull(timer, "Timer must be set");
     }
 
     @Override

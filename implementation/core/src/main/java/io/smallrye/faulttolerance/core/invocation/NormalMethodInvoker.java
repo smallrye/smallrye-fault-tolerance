@@ -1,10 +1,11 @@
 package io.smallrye.faulttolerance.core.invocation;
 
+import static io.smallrye.faulttolerance.core.util.Preconditions.check;
+import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.function.Function;
-
-import io.smallrye.faulttolerance.core.util.Preconditions;
 
 public class NormalMethodInvoker<V> implements Invoker<V> {
     private final Method method;
@@ -12,8 +13,8 @@ public class NormalMethodInvoker<V> implements Invoker<V> {
     private final Object[] arguments;
 
     public NormalMethodInvoker(Method method, Object target, Object[] arguments) {
-        Preconditions.checkNotNull(arguments, "Arguments array must be set");
-        Preconditions.check(arguments.length, arguments.length == method.getParameterCount(),
+        checkNotNull(arguments, "Arguments array must be set");
+        check(arguments.length, arguments.length == method.getParameterCount(),
                 "Argument array length must be " + method.getParameterCount());
         this.method = method;
         this.target = target;
