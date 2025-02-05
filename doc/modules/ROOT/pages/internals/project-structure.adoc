@@ -4,7 +4,10 @@
   Treated as a public API.
 * `implementation/core`: Implementation of core fault tolerance strategies.
   Independent of the {microprofile-fault-tolerance} API or the {smallrye-fault-tolerance} API.
-   Treated as private API, no compatibility guaranteed.
+  Treated as private API, no compatibility guaranteed.
+* `implementation/apiimpl`: Implementation of the programmatic API.
+  Based on the `core` module.
+  Treated as private API, no compatibility guaranteed.
 * `implementation/fault-tolerance`: Implementation of the {microprofile-fault-tolerance} API and the {smallrye-fault-tolerance} API.
   Based on CDI and the `core` module.
   The configuration system is based on the `autoconfig` module.

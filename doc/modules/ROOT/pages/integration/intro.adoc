@@ -3,6 +3,7 @@
 {smallrye-fault-tolerance} comprises the following main artifacts:
 
 * `io.smallrye:smallrye-fault-tolerance-api`: public API for the features provided on top of {microprofile-fault-tolerance}, including a programmatic API;
+* `io.smallrye:smallrye-fault-tolerance-apiimpl`: implementation of the programmatic API;
 * `io.smallrye:smallrye-fault-tolerance-core`: core implementations of fault tolerance strategies;
 * `io.smallrye:smallrye-fault-tolerance`: CDI-based implementation of {microprofile-fault-tolerance} with {smallrye-fault-tolerance} extensions, including a programmatic API;
 * `io.smallrye:smallrye-fault-tolerance-autoconfig-core`: runtime part of the {smallrye-fault-tolerance} configuration system.
