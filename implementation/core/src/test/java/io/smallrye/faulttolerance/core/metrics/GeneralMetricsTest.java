@@ -41,6 +41,11 @@ public class GeneralMetricsTest {
 
     private static class MockMeteredOperation implements MeteredOperation {
         @Override
+        public boolean enabled() {
+            return true;
+        }
+
+        @Override
         public boolean mayBeAsynchronous() {
             return false;
         }

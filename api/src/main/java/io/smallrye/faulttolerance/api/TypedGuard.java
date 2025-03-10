@@ -136,7 +136,7 @@ public interface TypedGuard<T> {
          * <p>
          * The description may be an arbitrary string. Duplicates are permitted.
          * <p>
-         * If no description is set, a random UUID is used.
+         * If no description is set, no metrics are emitted and a random UUID is used for other purposes.
          *
          * @param value a description, must not be {@code null}
          * @return this fault tolerance builder

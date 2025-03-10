@@ -10,6 +10,12 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
+    public boolean enabled() {
+        // always enabled, because this class is only instantiated for intercepted methods
+        return true;
+    }
+
+    @Override
     public boolean mayBeAsynchronous() {
         return operation.mayBeAsynchronous();
     }

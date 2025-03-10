@@ -18,6 +18,12 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
+    public boolean enabled() {
+        // always enabled, because this only applies to intercepted methods
+        return true;
+    }
+
+    @Override
     public boolean mayBeAsynchronous() {
         return specCompatibility.isOperationTrulyOrPseudoAsynchronous(operation);
     }

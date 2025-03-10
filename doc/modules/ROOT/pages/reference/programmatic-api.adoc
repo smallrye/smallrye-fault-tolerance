@@ -264,7 +264,7 @@ private static final Guard GUARD = Guard.create()
 It is possible to create multiple `Guard` objects with the same description.
 In this case, it won't be possible to distinguish the different `Guard` objects in metrics; their values will be aggregated.
 
-If no description is provided, a random UUID is used.
+If no description is provided, metrics are not emitted.
 
 == Differences to the Specification
 
