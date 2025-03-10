@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -62,7 +63,9 @@ public class StandaloneMetricsTest {
     }
 
     @Test
-    public void test() throws Exception {
+    public void metricsWithDescription() throws Exception {
+        long oldCounters = metrics.getMeters().stream().filter(it -> it instanceof Counter).count();
+
         Callable<String> guarded = FaultTolerance.createCallable(this::action)
                 .withDescription(NAME)
                 .withFallback().handler(this::fallback).done()
@@ -70,6 +73,8 @@ public class StandaloneMetricsTest {
                 .build();
 
         assertThat(guarded.call()).isEqualTo("fallback");
+
+        assertThat(metrics.getMeters().stream().filter(it -> it instanceof Counter).count()).isGreaterThan(oldCounters);
 
         assertThat(metrics.counter(MetricsConstants.INVOCATIONS_TOTAL, List.of(
                 Tag.of("method", NAME),
@@ -85,6 +90,20 @@ public class StandaloneMetricsTest {
                 Tag.of("retried", "true"),
                 Tag.of("retryResult", "maxRetriesReached")))
                 .count()).isEqualTo(1.0);
+    }
+
+    @Test
+    public void noMetricsWithoutDescription() throws Exception {
+        long oldCounters = metrics.getMeters().stream().filter(it -> it instanceof Counter).count();
+
+        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+                .withFallback().handler(this::fallback).done()
+                .withRetry().maxRetries(3).done()
+                .build();
+
+        assertThat(guarded.call()).isEqualTo("fallback");
+
+        assertThat(metrics.getMeters().stream().filter(it -> it instanceof Counter).count()).isEqualTo(oldCounters);
     }
 
     public String action() throws TestException {
