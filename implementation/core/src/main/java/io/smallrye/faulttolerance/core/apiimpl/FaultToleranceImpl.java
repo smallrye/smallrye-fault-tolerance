@@ -138,6 +138,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
         private final Function<FaultTolerance<T>, R> finisher;
 
         private String description;
+        private boolean descriptionSet;
         private BulkheadBuilderImpl<T, R> bulkheadBuilder;
         private CircuitBreakerBuilderImpl<T, R> circuitBreakerBuilder;
         private FallbackBuilderImpl<T, R> fallbackBuilder;
@@ -156,11 +157,13 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
             this.finisher = finisher;
 
             this.description = UUID.randomUUID().toString();
+            this.descriptionSet = false;
         }
 
         @Override
         public Builder<T, R> withDescription(String value) {
             this.description = Preconditions.checkNotNull(value, "Description must be set");
+            this.descriptionSet = true;
             return this;
         }
 
@@ -324,7 +327,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 fallbackBuilder.whenPredicate));
             }
 
-            if (lazyDependencies.metricsProvider().isEnabled()) {
+            if (lazyDependencies.metricsProvider().isEnabled() && descriptionSet) {
                 MeteredOperation meteredOperation = buildMeteredOperation();
                 result = new MetricsCollector<>(result, lazyDependencies.metricsProvider().create(meteredOperation),
                         meteredOperation);
@@ -406,7 +409,7 @@ public final class FaultToleranceImpl<V, S, T> implements FaultTolerance<T> {
                                 fallbackBuilder.whenPredicate));
             }
 
-            if (lazyDependencies.metricsProvider().isEnabled()) {
+            if (lazyDependencies.metricsProvider().isEnabled() && descriptionSet) {
                 MeteredOperation meteredOperation = buildMeteredOperation();
                 result = new CompletionStageMetricsCollector<>(result,
                         lazyDependencies.metricsProvider().create(meteredOperation), meteredOperation);

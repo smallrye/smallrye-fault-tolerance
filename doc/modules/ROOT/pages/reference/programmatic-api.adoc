@@ -352,7 +352,7 @@ private static final FaultTolerance<String> guarded = FaultTolerance.<String>cre
 It is possible to create multiple `FaultTolerance` objects with the same description.
 In this case, it won't be possbile to distinguish the different `FaultTolerance` objects in metrics; their values will be aggregated.
 
-If no description is provided, a random UUID is used.
+If no description is provided, metrics are not emitted.
 
 == Integration Concerns
 

@@ -20,7 +20,9 @@ public class CdiMetricsTest {
     private static final String NAME = CdiMetricsTest.class.getName() + " programmatic usage";
 
     @Test
-    public void test(@RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) throws Exception {
+    public void metricsWithDescription(@RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) throws Exception {
+        int oldCounters = metrics.getCounters().size();
+
         Callable<String> guarded = FaultTolerance.createCallable(this::action)
                 .withDescription(NAME)
                 .withFallback().handler(this::fallback).done()
@@ -28,6 +30,8 @@ public class CdiMetricsTest {
                 .build();
 
         assertThat(guarded.call()).isEqualTo("fallback");
+
+        assertThat(metrics.getCounters().size()).isGreaterThan(oldCounters);
 
         assertThat(metrics.counter(MetricsConstants.INVOCATIONS_TOTAL,
                 new Tag("method", NAME),
@@ -43,6 +47,21 @@ public class CdiMetricsTest {
                 new Tag("retried", "true"),
                 new Tag("retryResult", "maxRetriesReached"))
                 .getCount()).isEqualTo(1);
+    }
+
+    @Test
+    public void noMetricsWithoutDescription(@RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics)
+            throws Exception {
+        int oldCounters = metrics.getCounters().size();
+
+        Callable<String> guarded = FaultTolerance.createCallable(this::action)
+                .withFallback().handler(this::fallback).done()
+                .withRetry().maxRetries(3).done()
+                .build();
+
+        assertThat(guarded.call()).isEqualTo("fallback");
+
+        assertThat(metrics.getCounters().size()).isEqualTo(oldCounters);
     }
 
     public String action() throws TestException {
