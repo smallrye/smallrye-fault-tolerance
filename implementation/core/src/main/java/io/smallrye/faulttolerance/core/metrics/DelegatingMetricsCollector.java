@@ -27,8 +27,13 @@ public class DelegatingMetricsCollector<V> implements FaultToleranceStrategy<V> 
         MeteredOperation operation = name != null
                 ? new DelegatingMeteredOperation(originalOperation, name.get())
                 : originalOperation;
-        MetricsCollector<V> delegate = cache.computeIfAbsent(operation,
-                ignored -> new MetricsCollector<>(this.delegate, provider.create(operation), operation));
+        FaultToleranceStrategy<V> delegate;
+        if (operation.enabled()) {
+            delegate = cache.computeIfAbsent(operation,
+                    ignored -> new MetricsCollector<>(this.delegate, provider.create(operation), operation));
+        } else {
+            delegate = this.delegate;
+        }
         return delegate.apply(ctx);
     }
 }

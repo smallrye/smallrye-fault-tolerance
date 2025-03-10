@@ -122,6 +122,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
         private final AsyncSupport<V, T> asyncSupport;
 
         private String description;
+        private boolean descriptionSet;
         private BulkheadBuilderImpl<V, T> bulkheadBuilder;
         private CircuitBreakerBuilderImpl<V, T> circuitBreakerBuilder;
         private FallbackBuilderImpl<V, T> fallbackBuilder;
@@ -138,11 +139,13 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             this.asyncSupport = GuardCommon.asyncSupport(valueType);
 
             this.description = UUID.randomUUID().toString();
+            this.descriptionSet = false;
         }
 
         @Override
         public Builder<T> withDescription(String value) {
             this.description = checkNotNull(value, "Description must be set");
+            this.descriptionSet = true;
             return this;
         }
 
@@ -335,7 +338,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
         }
 
         private MeteredOperation buildMeteredOperation() {
-            return new BasicMeteredOperationImpl(description, asyncSupport != null, bulkheadBuilder != null,
+            return new BasicMeteredOperationImpl(descriptionSet, description, asyncSupport != null, bulkheadBuilder != null,
                     circuitBreakerBuilder != null, false, rateLimitBuilder != null,
                     retryBuilder != null, timeoutBuilder != null);
         }

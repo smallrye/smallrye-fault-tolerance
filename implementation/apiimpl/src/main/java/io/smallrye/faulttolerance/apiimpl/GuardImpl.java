@@ -131,6 +131,7 @@ public class GuardImpl implements Guard {
         private final BuilderEagerDependencies eagerDependencies;
         private final Supplier<BuilderLazyDependencies> lazyDependencies;
         private String description;
+        private boolean descriptionSet;
         private BulkheadBuilderImpl bulkheadBuilder;
         private CircuitBreakerBuilderImpl circuitBreakerBuilder;
         private RateLimitBuilderImpl rateLimitBuilder;
@@ -144,11 +145,13 @@ public class GuardImpl implements Guard {
             this.lazyDependencies = lazyDependencies;
 
             this.description = UUID.randomUUID().toString();
+            this.descriptionSet = false;
         }
 
         @Override
         public Builder withDescription(String value) {
             this.description = checkNotNull(value, "Description must be set");
+            this.descriptionSet = true;
             return this;
         }
 
@@ -314,7 +317,7 @@ public class GuardImpl implements Guard {
         }
 
         private MeteredOperation buildMeteredOperation() {
-            return new BasicMeteredOperationImpl(description, true, bulkheadBuilder != null,
+            return new BasicMeteredOperationImpl(descriptionSet, description, true, bulkheadBuilder != null,
                     circuitBreakerBuilder != null, false, rateLimitBuilder != null,
                     retryBuilder != null, timeoutBuilder != null);
         }
