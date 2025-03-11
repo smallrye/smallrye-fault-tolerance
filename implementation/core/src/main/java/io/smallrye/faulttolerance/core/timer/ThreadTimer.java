@@ -51,6 +51,11 @@ public final class ThreadTimer implements Timer {
 
     private final AtomicBoolean running = new AtomicBoolean(true);
 
+    @Deprecated(forRemoval = true)
+    public static ThreadTimer create(Executor defaultExecutor) {
+        return new ThreadTimer(defaultExecutor);
+    }
+
     /**
      * Creates a timer with given {@code defaultExecutor}, unless a timer already exists,
      * in which case an exception is thrown.
