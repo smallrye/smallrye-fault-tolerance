@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -588,5 +589,243 @@ public class FutureTest {
         });
 
         assertThatCode(completer.future()::awaitBlocking).isExactlyInstanceOf(TestException.class);
+    }
+
+    // ---
+    // tests for `Future.loop()`
+
+    @Test
+    public void loop_zeroIterations() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 0, it -> {
+            counter.incrementAndGet();
+            return Future.ofError(new IllegalStateException());
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(0);
+        assertThat(counter).hasValue(0);
+    }
+
+    @Test
+    public void synchronousLoop_oneIteration_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1, it -> {
+            counter.incrementAndGet();
+            return Future.of(it + 1);
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(1);
+        assertThat(counter).hasValue(1);
+    }
+
+    @Test
+    public void synchronousLoop_oneIteration_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1, it -> {
+            counter.incrementAndGet();
+            return it < 0 ? Future.of(it + 1) : Future.ofError(new IllegalArgumentException());
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(1);
+    }
+
+    @Test
+    public void synchronousLoop_twoIterations_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 2, it -> {
+            counter.incrementAndGet();
+            return Future.of(it + 1);
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(2);
+        assertThat(counter).hasValue(2);
+    }
+
+    @Test
+    public void synchronousLoop_twoIterations_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 2, it -> {
+            counter.incrementAndGet();
+            return it < 1 ? Future.of(it + 1) : Future.ofError(new IllegalArgumentException());
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(2);
+    }
+
+    @Test
+    public void synchronousLoop_thousandIterations_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1_000, it -> {
+            counter.incrementAndGet();
+            return Future.of(it + 1);
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(1_000);
+        assertThat(counter).hasValue(1_000);
+    }
+
+    @Test
+    public void synchronousLoop_thousandIterations_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1_000, it -> {
+            counter.incrementAndGet();
+            return it < 999 ? Future.of(it + 1) : Future.ofError(new IllegalArgumentException());
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(1_000);
+    }
+
+    @Test
+    public void synchronousLoop_millionIterations_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1_000_000, it -> {
+            counter.incrementAndGet();
+            return Future.of(it + 1);
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(1_000_000);
+        assertThat(counter).hasValue(1_000_000);
+    }
+
+    @Test
+    public void synchronousLoop_millionIterations_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1_000_000, it -> {
+            counter.incrementAndGet();
+            return it < 999_999 ? Future.of(it + 1) : Future.ofError(new IllegalArgumentException());
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(1_000_000);
+    }
+
+    @Test
+    public void asynchronousLoop_oneIteration_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                completer.complete(it + 1);
+            });
+            return completer.future();
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(1);
+        assertThat(counter).hasValue(1);
+    }
+
+    @Test
+    public void asynchronousLoop_oneIteration_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                if (it < 0) {
+                    completer.complete(it + 1);
+                } else {
+                    completer.completeWithError(new IllegalArgumentException());
+                }
+            });
+            return completer.future();
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(1);
+    }
+
+    @Test
+    public void asynchronousLoop_twoIterations_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 2, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                completer.complete(it + 1);
+            });
+            return completer.future();
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(2);
+        assertThat(counter).hasValue(2);
+    }
+
+    @Test
+    public void asynchronousLoop_twoIterations_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 2, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                if (it < 1) {
+                    completer.complete(it + 1);
+                } else {
+                    completer.completeWithError(new IllegalArgumentException());
+                }
+            });
+            return completer.future();
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(2);
+    }
+
+    @Test
+    public void asynchronousLoop_thousandIterations_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1_000, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                completer.complete(it + 1);
+            });
+            return completer.future();
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(1_000);
+        assertThat(counter).hasValue(1_000);
+    }
+
+    @Test
+    public void asynchronousLoop_thousandIterations_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 1_000, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                if (it < 999) {
+                    completer.complete(it + 1);
+                } else {
+                    completer.completeWithError(new IllegalArgumentException());
+                }
+            });
+            return completer.future();
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(1_000);
+    }
+
+    @Test
+    public void asynchronousLoop_tenThousandsIterations_success() throws Throwable {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 10_000, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                completer.complete(it + 1);
+            });
+            return completer.future();
+        });
+        assertThat(loop.awaitBlocking()).isEqualTo(10_000);
+        assertThat(counter).hasValue(10_000);
+    }
+
+    @Test
+    public void asynchronousLoop_tenThousandsIterations_failure() {
+        AtomicInteger counter = new AtomicInteger();
+        Future<Integer> loop = Future.loop(0, it -> it < 10_000, it -> {
+            counter.incrementAndGet();
+            Completer<Integer> completer = Completer.create();
+            startThread(() -> {
+                if (it < 9_999) {
+                    completer.complete(it + 1);
+                } else {
+                    completer.completeWithError(new IllegalArgumentException());
+                }
+            });
+            return completer.future();
+        });
+        assertThatCode(loop::awaitBlocking).isExactlyInstanceOf(IllegalArgumentException.class);
+        assertThat(counter).hasValue(10_000);
     }
 }

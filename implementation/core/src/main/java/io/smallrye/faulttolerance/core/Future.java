@@ -2,6 +2,8 @@ package io.smallrye.faulttolerance.core;
 
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Represents a computation that may still be running, and allows obtaining
@@ -86,6 +88,36 @@ public interface Future<T> {
             completer.completeWithError(e);
         }
         return completer.future();
+    }
+
+    /**
+     * Asynchronous equivalent of the following code:
+     *
+     * <pre>
+     * static &lt;T&gt; T loop(T initialValue, Predicate&lt;T&gt; condition, Function&lt;T, T&gt; iteration) {
+     *     T value = initialValue;
+     *     while (condition.test(value)) {
+     *         value = iteration.apply(value);
+     *     }
+     *     return value;
+     * }
+     * </pre>
+     *
+     * If the {@code iteration} throws an exception, it is treated as if the iteration completed with the same error.
+     * <p>
+     * Guaranteed to run in bounded stack space.
+     *
+     * @param initialValue the value that will be passed to {@code condition} and (possibly) {@code iteration}
+     *        on the first iteration of the loop
+     * @param condition the predicate that is applied to every intermediate value, including the {@code initialValue},
+     *        until it returns {@code false} and looping stops
+     * @param iteration the loop iteration which produces a new {@link Future} based on the result of the previous iteration
+     * @return a {@link Future} that completes with the first value produced by a loop iteration such that
+     *         {@code condition.test(value) == false}, or with an error as soon as one iteration finishes with a failure
+     * @param <T> type of the values produced (and consumed) by the loop
+     */
+    static <T> Future<T> loop(T initialValue, Predicate<T> condition, Function<T, Future<T>> iteration) {
+        return FutureLoop.loop(initialValue, condition, iteration);
     }
 
     /**
