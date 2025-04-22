@@ -56,75 +56,84 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                     ? asyncDelayBetweenRetries.get()
                     : new SyncDelayAsAsync(syncDelayBetweenRetries.get());
             RunningStopwatch runningStopwatch = stopwatch.start();
-            return doRetry(ctx, 0, delay, runningStopwatch, null);
+            return retryLoop(ctx, runningStopwatch, delay);
         } finally {
             LOG.trace("Retry finished");
         }
     }
 
-    private Future<V> doRetry(FaultToleranceContext<V> ctx, int attempt,
-            AsyncDelay delay, RunningStopwatch stopwatch, Throwable lastFailure) {
-        if (attempt == 0) {
-            // do not sleep
-            return afterDelay(ctx, attempt, delay, stopwatch, lastFailure);
-        } else if (attempt <= maxRetries) {
-            if (stopwatch.elapsedTimeInMillis() >= maxTotalDurationInMillis) {
-                ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
-                if (lastFailure != null) {
-                    return Future.ofError(lastFailure);
-                } else {
-                    return Future.ofError(new FaultToleranceException(description + " reached max retry duration"));
+    private Future<V> retryLoop(FaultToleranceContext<V> ctx, RunningStopwatch stopwatch, AsyncDelay delay) {
+        Future<State<V>> future = Future.loop(State.initial(), State::shouldContinue, state -> {
+            if (state.attempt == 0) {
+                return retryLoopIteration(ctx, stopwatch, state);
+            } else if (state.attempt <= maxRetries) {
+                if (stopwatch.elapsedTimeInMillis() >= maxTotalDurationInMillis) {
+                    ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
+                    if (state.lastFailure != null) {
+                        return Future.ofError(state.lastFailure);
+                    } else {
+                        return Future.ofError(new FaultToleranceException(description + " reached max retry duration"));
+                    }
                 }
-            }
 
-            LOG.debugf("%s invocation failed, retrying (%d/%d)", description, attempt, maxRetries);
-            ctx.fireEvent(RetryEvents.Retried.INSTANCE);
+                LOG.debugf("%s invocation failed, retrying (%d/%d)", description, state.attempt, maxRetries);
+                ctx.fireEvent(RetryEvents.Retried.INSTANCE);
 
-            Completer<V> result = Completer.create();
+                Completer<State<V>> result = Completer.create();
 
-            try {
-                delay.after(lastFailure, () -> {
-                    afterDelay(ctx, attempt, delay, stopwatch, lastFailure).thenComplete(result);
-                }, ctx.get(Executor.class));
-            } catch (Exception e) {
-                if (ctx.isSync() && Thread.interrupted()) {
-                    result.completeWithError(new InterruptedException());
-                } else {
-                    result.completeWithError(e);
+                try {
+                    delay.after(state.lastFailure, () -> {
+                        retryLoopIteration(ctx, stopwatch, state).thenComplete(result);
+                    }, ctx.get(Executor.class));
+                } catch (Exception e) {
+                    if (ctx.isSync() && Thread.interrupted()) {
+                        result.completeWithError(new InterruptedException());
+                    } else {
+                        result.completeWithError(e);
+                    }
                 }
-            }
 
-            return result.future();
-        } else {
-            ctx.fireEvent(RetryEvents.Finished.MAX_RETRIES_REACHED);
-            if (lastFailure != null) {
-                return Future.ofError(lastFailure);
+                return result.future();
             } else {
-                return Future.ofError(new FaultToleranceException(description + " reached max retries"));
+                ctx.fireEvent(RetryEvents.Finished.MAX_RETRIES_REACHED);
+                if (state.lastFailure != null) {
+                    return Future.ofError(state.lastFailure);
+                } else {
+                    return Future.ofError(new FaultToleranceException(description + " reached max retries"));
+                }
             }
-        }
+        });
+
+        Completer<V> completer = Completer.create();
+        future.then((value, error) -> {
+            if (error == null) {
+                completer.complete(value.value);
+            } else {
+                completer.completeWithError(error);
+            }
+        });
+        return completer.future();
     }
 
-    private Future<V> afterDelay(FaultToleranceContext<V> ctx, int attempt,
-            AsyncDelay delay, RunningStopwatch stopwatch, Throwable lastFailure) {
+    private Future<State<V>> retryLoopIteration(FaultToleranceContext<V> ctx, RunningStopwatch stopwatch, State<V> state) {
         if (stopwatch.elapsedTimeInMillis() >= maxTotalDurationInMillis) {
             ctx.fireEvent(RetryEvents.Finished.MAX_DURATION_REACHED);
-            if (lastFailure != null) {
-                return Future.ofError(lastFailure);
+            if (state.lastFailure != null) {
+                return Future.ofError(state.lastFailure);
             } else {
                 return Future.ofError(new FaultToleranceException(description + " reached max retry duration"));
             }
         }
 
-        if (beforeRetry != null && attempt > 0) {
+        if (beforeRetry != null && state.attempt > 0) {
             try {
-                beforeRetry.accept(new FailureContext(lastFailure, ctx));
+                beforeRetry.accept(new FailureContext(state.lastFailure, ctx));
             } catch (Exception e) {
                 LOG.warn("Before retry action has thrown an exception", e);
             }
         }
 
-        Completer<V> result = Completer.create();
+        Completer<State<V>> result = Completer.create();
         try {
             delegate.apply(ctx).then((value, error) -> {
                 if (ctx.isSync()) {
@@ -142,16 +151,16 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 if (error == null) {
                     if (resultDecision.isConsideredExpected(value)) {
                         ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
-                        result.complete(value);
+                        result.complete(State.done(value));
                     } else {
-                        doRetry(ctx, attempt + 1, delay, stopwatch, error).thenComplete(result);
+                        result.complete(state.retry(error));
                     }
                 } else {
                     if (exceptionDecision.isConsideredExpected(error)) {
                         ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                         result.completeWithError(error);
                     } else {
-                        doRetry(ctx, attempt + 1, delay, stopwatch, error).thenComplete(result);
+                        result.complete(state.retry(error));
                     }
                 }
             });
@@ -160,9 +169,41 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 result.completeWithError(e);
             } else {
-                doRetry(ctx, attempt + 1, delay, stopwatch, e).thenComplete(result);
+                result.complete(state.retry(e));
             }
         }
         return result.future();
+    }
+
+    private static class State<V> {
+        private final boolean shouldContinue;
+        private final V value;
+
+        private final int attempt;
+        private final Throwable lastFailure;
+
+        static <V> State<V> initial() {
+            return new State<>(true, null, 0, null);
+        }
+
+        static <V> State<V> done(V value) {
+            return new State<>(false, value, -1, null);
+        }
+
+        private State(boolean shouldContinue, V value, int attempt, Throwable lastFailure) {
+            this.shouldContinue = shouldContinue;
+            this.value = value;
+
+            this.attempt = attempt;
+            this.lastFailure = lastFailure;
+        }
+
+        public boolean shouldContinue() {
+            return shouldContinue;
+        }
+
+        public State<V> retry(Throwable failure) {
+            return new State<>(true, null, attempt + 1, failure);
+        }
     }
 }
