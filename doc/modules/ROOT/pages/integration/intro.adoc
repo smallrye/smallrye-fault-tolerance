@@ -26,7 +26,6 @@ The remaining integration concerns are described in the following sections:
 * xref:integration/metrics.adoc[emitting metrics] for fault tolerance strategies;
 * xref:integration/thread-pool.adoc[providing a thread pool] for `@Asynchronous` methods and other asynchronous tasks;
 * xref:integration/context-propagation.adoc[enabling Context Propagation] for `@Asynchronous` methods;
-* xref:integration/opentracing.adoc[enabling OpenTracing integration] with Context Propagation;
 * xref:integration/event-loop.adoc[integrating an event loop] for non-blocking method invocations;
 * xref:integration/async-types.adoc[integrating additional types] for asynchronous invocations;
 * xref:integration/kotlin.adoc[integrating Kotlin support] for `suspend` functions;

@@ -40,7 +40,6 @@
         <module>apiimpl</module>
         <module>fault-tolerance</module>
         <module>context-propagation</module>
-        <module>tracing-propagation</module>
 
         <module>standalone</module>
     </modules>

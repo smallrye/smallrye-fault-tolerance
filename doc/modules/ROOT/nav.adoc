@@ -27,7 +27,6 @@
 ** xref:integration/metrics.adoc[Metrics]
 ** xref:integration/thread-pool.adoc[Thread Pool]
 ** xref:integration/context-propagation.adoc[Context Propagation]
-** xref:integration/opentracing.adoc[OpenTracing]
 ** xref:integration/event-loop.adoc[Event Loop]
 ** xref:integration/async-types.adoc[Additional Asynchronous Types Integration Concerns]
 ** xref:integration/kotlin.adoc[Kotlin Integration Concerns]
