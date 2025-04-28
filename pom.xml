@@ -65,7 +65,6 @@
         <version.mutiny>2.7.0</version.mutiny>
         <!-- OpenTelemetry 1.48.0 is required by MicroProfile Telemetry 2.1 (MP Platform 7.1) -->
         <version.opentelemetry>1.48.0</version.opentelemetry>
-        <version.opentracing>0.33.0</version.opentracing>
         <version.rxjava3>3.1.12</version.rxjava3>
         <!-- this is the last SmallRye Common version that supports Java 11 -->
         <version.smallrye-common>2.8.0</version.smallrye-common>
@@ -198,27 +197,6 @@
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-api</artifactId>
                 <version>${version.opentelemetry}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.opentracing</groupId>
-                <artifactId>opentracing-api</artifactId>
-                <version>${version.opentracing}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.opentracing</groupId>
-                <artifactId>opentracing-util</artifactId>
-                <version>${version.opentracing}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.opentracing</groupId>
-                <artifactId>opentracing-mock</artifactId>
-                <version>${version.opentracing}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.opentracing</groupId>
-                <artifactId>opentracing-util</artifactId>
-                <version>${version.opentracing}</version>
-                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>io.reactivex.rxjava3</groupId>
@@ -392,11 +370,6 @@
             <dependency>
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-context-propagation</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.smallrye</groupId>
-                <artifactId>smallrye-fault-tolerance-tracing-propagation</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

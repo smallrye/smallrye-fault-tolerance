@@ -25,8 +25,6 @@
   See xref:integration/async-types.adoc[Additional Asynchronous Types Integration Concerns].
 * `implementation/standalone`: Standalone implementation of the {smallrye-fault-tolerance} programmatic API.
   See xref:integration/programmatic-api.adoc[Programmatic API Integration Concerns].
-* `implementation/tracing-propagation`: Optional integration between MicroProfile Context Propagation and OpenTracing.
-  See xref:integration/opentracing.adoc[OpenTracing integration].
 * `implementation/vertx`: Optional integration of the Vert.x event loop and Vert.x `Future`.
   See xref:integration/event-loop.adoc[Event Loop integration] and xref:integration/async-types.adoc[Additional Asynchronous Types Integration Concerns].
 * `testsuite/basic`: Basic test suite.
