@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-autoconfig-parent</artifactId>
-        <version>6.9.2-SNAPSHOT</version>
+        <version>6.9.2</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-autoconfig-core</artifactId>
