@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.vertx.async;
 
+import static io.smallrye.faulttolerance.util.AssertjUtil.condition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -8,7 +9,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,12 +52,11 @@ public class AsyncOnVertxThreadTest extends AbstractVertxTest {
         // 10 immediate calls
         await().atMost(5, TimeUnit.SECONDS).until(() -> results.size() == 10);
 
-        assertThat(results).haveExactly(10,
-                new Condition<>("Hello!"::equals, "successful result"));
+        assertThat(results).haveExactly(10, condition("Hello!"::equals));
 
         // 10 immediate calls: 4 identical items for each
         assertThat(MyService.currentContexts).hasSize(40);
-        assertThat(MyService.currentContexts).allMatch(it -> executionStyle == it.executionStyle);
+        assertThat(MyService.currentContexts).allMatch(it -> it.executionStyle == executionStyle);
         assertThat(MyService.currentContexts).allMatch(ContextDescription::isDuplicatedContext);
         assertThat(new HashSet<>(MyService.currentContexts)).hasSize(10);
     }
