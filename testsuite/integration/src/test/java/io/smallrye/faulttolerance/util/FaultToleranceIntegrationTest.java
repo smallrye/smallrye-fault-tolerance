@@ -12,7 +12,6 @@ import org.jboss.weld.junit5.auto.EnableAutoWeld;
 import io.smallrye.config.inject.ConfigExtension;
 import io.smallrye.context.inject.SmallryeContextCdiExtension;
 import io.smallrye.faulttolerance.FaultToleranceExtension;
-import io.smallrye.faulttolerance.TestAsyncExecutorProvider;
 import io.smallrye.metrics.setup.MetricCdiInjectionExtension;
 
 @Retention(RetentionPolicy.RUNTIME)

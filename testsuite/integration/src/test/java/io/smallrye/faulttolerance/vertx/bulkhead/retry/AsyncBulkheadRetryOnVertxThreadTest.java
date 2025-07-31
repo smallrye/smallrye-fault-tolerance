@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.vertx.bulkhead.retry;
 
+import static io.smallrye.faulttolerance.util.AssertjUtil.condition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -8,7 +9,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-import org.assertj.core.api.Condition;
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,15 +53,13 @@ public class AsyncBulkheadRetryOnVertxThreadTest extends AbstractVertxTest {
         // 3 immediate calls + 3 immediately queued calls + 6 successfully retried rejections + 8 unsuccessfully retried rejections
         await().atMost(5, TimeUnit.SECONDS).until(() -> results.size() == 20);
 
-        assertThat(results).haveExactly(12,
-                new Condition<>("Hello!"::equals, "successful result"));
-        assertThat(results).haveExactly(8,
-                new Condition<>(it -> it instanceof BulkheadException, "failed result"));
+        assertThat(results).haveExactly(12, condition("Hello!"::equals));
+        assertThat(results).haveExactly(8, condition(it -> it instanceof BulkheadException));
 
         // 3 immediate calls + 3 queued calls + 6 successfully retried rejections: 4 identical items for each
         // 8 unsuccessfully retried rejections: 2 identical items for each
         assertThat(MyService.currentContexts).hasSize(64);
-        assertThat(MyService.currentContexts).allMatch(it -> executionStyle == it.executionStyle);
+        assertThat(MyService.currentContexts).allMatch(it -> it.executionStyle == executionStyle);
         assertThat(MyService.currentContexts).allMatch(ContextDescription::isDuplicatedContext);
         assertThat(new HashSet<>(MyService.currentContexts)).hasSize(20);
     }

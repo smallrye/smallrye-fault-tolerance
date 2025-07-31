@@ -28,7 +28,7 @@ public class MyService {
     MyRequestScopedService requestScopedService;
 
     @AsynchronousNonBlocking
-    @Retry(maxRetries = 20, delay = 5, delayUnit = ChronoUnit.MILLIS)
+    @Retry(maxRetries = 20, delay = 5, delayUnit = ChronoUnit.MILLIS, jitter = 0)
     public CompletionStage<String> hello() {
         requestScopedService.call();
 

@@ -22,7 +22,7 @@ final class VertxExecutor implements Executor {
             vertxContext.executeBlocking(() -> {
                 wrappedRunnable.run();
                 return null;
-            });
+            }, false);
         } else {
             vertxContext.runOnContext(ignored -> {
                 wrappedRunnable.run();

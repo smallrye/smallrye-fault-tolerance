@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.vertx.retry.fallback;
 
+import static io.smallrye.faulttolerance.util.AssertjUtil.condition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -8,7 +9,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,12 +52,11 @@ public class AsyncRetryFallbackOnVertxThreadTest extends AbstractVertxTest {
         // 10 calls
         await().atMost(5, TimeUnit.SECONDS).until(() -> results.size() == 10);
 
-        assertThat(results).haveExactly(10,
-                new Condition<>("Hello!"::equals, "successful result"));
+        assertThat(results).haveExactly(10, condition("Hello!"::equals));
 
-        // 10 calls, for each of them: 1 initial call + 10 retries + 1 fallback + 1 before call + 1 after call
+        // 10 calls, for each of them: 1 before call + 1 initial call + 10 retries + 1 fallback + 1 after call
         assertThat(MyService.currentContexts).hasSize(140);
-        assertThat(MyService.currentContexts).allMatch(it -> executionStyle == it.executionStyle);
+        assertThat(MyService.currentContexts).allMatch(it -> it.executionStyle == executionStyle);
         assertThat(MyService.currentContexts).allMatch(ContextDescription::isDuplicatedContext);
         assertThat(new HashSet<>(MyService.currentContexts)).hasSize(10);
     }

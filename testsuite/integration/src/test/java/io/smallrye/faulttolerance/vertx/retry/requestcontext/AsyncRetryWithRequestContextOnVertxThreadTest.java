@@ -44,17 +44,16 @@ public class AsyncRetryWithRequestContextOnVertxThreadTest extends AbstractVertx
         runOnVertx(() -> {
             VertxContext.current().duplicate().execute(executionStyle, () -> {
                 boolean activated = rcc.activate();
-                try {
+
+                MyService.currentContexts.add(VertxContext.current().describe());
+                myService.hello().whenComplete((value, error) -> {
                     MyService.currentContexts.add(VertxContext.current().describe());
-                    myService.hello().whenComplete((value, error) -> {
-                        MyService.currentContexts.add(VertxContext.current().describe());
-                        result.set(error == null ? value : error);
-                    });
-                } finally {
+                    result.set(error == null ? value : error);
+
                     if (activated) {
                         rcc.deactivate();
                     }
-                }
+                });
             });
         });
 
@@ -62,9 +61,9 @@ public class AsyncRetryWithRequestContextOnVertxThreadTest extends AbstractVertx
 
         assertThat(result.get()).isEqualTo("Hello!");
 
-        // 1 initial call + 10 retries + 1 before call + 1 after call
+        // 1 before call + 1 initial call + 10 retries + 1 after call
         assertThat(MyService.currentContexts).hasSize(13);
-        assertThat(MyService.currentContexts).allMatch(it -> executionStyle == it.executionStyle);
+        assertThat(MyService.currentContexts).allMatch(it -> it.executionStyle == executionStyle);
         assertThat(MyService.currentContexts).allMatch(ContextDescription::isDuplicatedContext);
         assertThat(new HashSet<>(MyService.currentContexts)).hasSize(1);
 

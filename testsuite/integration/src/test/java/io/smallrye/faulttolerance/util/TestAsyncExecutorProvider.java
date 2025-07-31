@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance;
+package io.smallrye.faulttolerance.util;
 
 import java.util.concurrent.ExecutorService;
 
@@ -7,6 +7,8 @@ import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.context.ManagedExecutor;
+
+import io.smallrye.faulttolerance.AsyncExecutorProvider;
 
 @Singleton
 @Alternative
