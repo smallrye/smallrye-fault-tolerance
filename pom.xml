@@ -28,7 +28,7 @@
     <packaging>pom</packaging>
 
     <name>SmallRye Fault Tolerance: Parent</name>
-    <url>http://smallrye.io</url>
+    <url>https://smallrye.io</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -79,6 +79,7 @@
         <version.jacoco-maven-plugin>0.8.12</version.jacoco-maven-plugin>
         <version.pitest-maven>1.16.1</version.pitest-maven>
         <version.pitest-junit5-plugin>1.2.1</version.pitest-junit5-plugin>
+        <version.sundrio>0.201.0</version.sundrio>
 
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
@@ -414,7 +415,37 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.sundr</groupId>
+                <artifactId>sundr-maven-plugin</artifactId>
+                <version>${version.sundrio}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate-bom</goal>
+                        </goals>
+                        <configuration>
+                            <boms>
+                                <bom>
+                                    <artifactId>smallrye-fault-tolerance-bom</artifactId>
+                                    <name>Smallrye Fault Tolerance: BOM</name>
+                                    <description>Centralized dependencyManagement for the SmallRye Fault Tolerance Project</description>
+                                    <modules>
+                                        <excludes>
+                                            <exclude>io.smallrye:smallrye-fault-tolerance-tck</exclude>
+                                            <exclude>io.smallrye:smallrye-fault-tolerance-testsuite*</exclude>
+                                        </excludes>
+                                    </modules>
+                                </bom>
+                            </boms>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
     <profiles>
         <profile>
             <id>not-release</id>
