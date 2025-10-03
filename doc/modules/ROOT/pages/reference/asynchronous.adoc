@@ -7,7 +7,7 @@ The how-to guide also explains what _asynchronous fault tolerance_ is and when d
 
 === `@Asynchronous`
 
-This annotation may only be placed on methods that return `Future` or `CompletionStage`.
+This annotation may only be placed on methods that return `java.util.concurrent.Future` or java.util.concurrent.`CompletionStage`.
 It may also be placed on a class, in which case all business methods must return `Future` or `CompletionStage`.
 
 The method call is offloaded to another thread.
@@ -122,11 +122,12 @@ See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics
 include::partial$srye-feature.adoc[]
 
 {microprofile-fault-tolerance} supports asynchronous fault tolerance for methods that return `CompletionStage`.
-(The `Future` type is not truly asynchronous, so we won't take it into account here.)
+(The `java.util.concurrent.Future` type is not truly asynchronous, so we won't take it into account here.)
 {smallrye-fault-tolerance} adds support for additional asynchronous types:
 
 * Mutiny: `Uni`
 * RxJava 3: `Single`, `Maybe`, `Completable`
+* Vert.x: `io.vertx.core.Future`
 
 These types are treated just like `CompletionStage`, so everything that works for `CompletionStage` works for these types as well.
 Stream-like types (`Multi`, `Observable`, `Flowable`) are not supported, because their semantics can't be easily expressed in terms of `CompletionStage`.
@@ -158,11 +159,12 @@ Otherwise, add a dependency to your application:
 
 * https://smallrye.io/smallrye-mutiny/[Mutiny]: `io.smallrye:smallrye-fault-tolerance-mutiny`
 * https://github.com/ReactiveX/RxJava/tree/3.x[RxJava 3]: `io.smallrye:smallrye-fault-tolerance-rxjava3`
+* https://vertx.io/docs/vertx-core/java/#_future_results[Vert.x `Future`]: `io.smallrye:smallrye-fault-tolerance-vertx`
 
 .Quarkus
 ****
-In Quarkus, the Mutiny support library is present by default.
-You can use fault tolerance on methods that return `Uni` out of the box.
+In Quarkus, the Mutiny and Vert.x support libraries are present by default.
+You can use fault tolerance on methods that return `Uni` (and Vert.x `Future`) out of the box.
 ****
 
 [[kotlin-suspend-functions]]
@@ -268,6 +270,6 @@ Note that the existing annotations still work without a change, both in compatib
 That is, if a method (or class) is annotated `@Asynchronous`, execution will be offloaded to a thread pool.
 If a method (or class) is annotated `@AsynchronousNonBlocking`, execution will happen on the original thread.
 
-Also note that this doesn't affect methods returning `Future`.
+Also note that this doesn't affect methods returning `java.util.concurrent.Future`.
 You still have to annotate them `@Asynchronous` to make sure they are executed on a thread pool and are guarded properly.
 As mentioned in the <<recommendation>>, we discourage using these methods, because the only way to obtain the future value is blocking.

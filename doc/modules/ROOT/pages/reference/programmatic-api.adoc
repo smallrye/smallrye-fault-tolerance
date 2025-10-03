@@ -91,8 +91,8 @@ public class MyService {
     The `get` method works just like `call`, but accepts a `Supplier`.
 
 The previous example shows how to apply fault tolerance to synchronous actions.
-{smallrye-fault-tolerance} naturally also supports guarding asynchronous actions, using the `CompletionStage` type.
-Unlike the declarative API, the programmatic API doesn't support asynchronous actions that return the `Future` type.
+{smallrye-fault-tolerance} naturally also supports guarding asynchronous actions, using the `java.util.concurrent.CompletionStage` type.
+Unlike the declarative API, the programmatic API doesn't support asynchronous actions that return the `java.util.concurrent.Future` type.
 
 [source,java]
 ----
@@ -160,10 +160,11 @@ This is given to `Guard` when calling or adapting the action, and to `TypedGuard
 If the type is asynchronous (such as `CompletionStage`), the asynchronous behavior will also be guarded; the action is only considered complete when the `CompletionStage` actually completes.
 If the type is not asynchronous, only the synchronous behavior will be guarded; the action is considered complete when the method returns.
 
+To enable support of additional asynchronous types, it is enough to include the support libraries, as described in xref:reference/asynchronous.adoc#async-types[Additional Asynchronous Types].
+
 ==== Mutiny Support
 
-It is enough to include the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny`, as described in xref:reference/asynchronous.adoc#async-types[Additional Asynchronous Types].
-With this library present, both `Guard` and `TypedGuard` will recognize `Uni` as an asynchronous type and guard it properly.
+For example, when the Mutiny support library `io.smallrye:smallrye-fault-tolerance-mutiny` is present, both `Guard` and `TypedGuard` will recognize `Uni` as an asynchronous type and guard it properly.
 Guarding a `Multi` is not supported.
 
 For example:
