@@ -35,7 +35,7 @@ As a special case, if an asynchronous method in fact does throw an exception (it
 
 == `@Asynchronous`
 
-A method that returns `Future` or `CompletionStage` may be annotated `@Asynchronous`.
+A method that returns `java.util.concurrent.Future` or `java.util.concurrent.CompletionStage` may be annotated `@Asynchronous`.
 Such method is executed on another thread.
 Additionally, if the return type is `CompletionStage`, asynchronous fault tolerance applies.
 

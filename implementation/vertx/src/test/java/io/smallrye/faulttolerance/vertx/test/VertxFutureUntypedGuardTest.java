@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.mutiny.test;
+package io.smallrye.faulttolerance.vertx.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
@@ -21,9 +20,9 @@ import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.RateLimitException;
 import io.smallrye.faulttolerance.core.util.TestException;
 import io.smallrye.faulttolerance.core.util.party.Party;
-import io.smallrye.mutiny.Uni;
+import io.vertx.core.Future;
 
-public class MutinyUntypedGuardTest {
+public class VertxFutureUntypedGuardTest {
     private ExecutorService executor;
 
     @BeforeEach
@@ -49,17 +48,17 @@ public class MutinyUntypedGuardTest {
         for (int i = 0; i < 4; i++) {
             guard.call(() -> {
                 party.participant().attend();
-                return Uni.createFrom().item("ignored");
-            }, Types.UNI_STRING).subscribeAsCompletionStage();
+                return io.vertx.core.Future.succeededFuture("ignored");
+            }, Types.FUTURE_STRING);
             guard.call(() -> {
                 party.participant().attend();
-                return Uni.createFrom().item(42);
-            }, Types.UNI_INTEGER).subscribeAsCompletionStage();
+                return io.vertx.core.Future.succeededFuture(42);
+            }, Types.FUTURE_INTEGER);
         }
 
         party.organizer().waitForAll();
 
-        assertThat(guard.call(() -> Uni.createFrom().item("value"), Types.UNI_STRING).subscribeAsCompletionStage())
+        assertThat(guard.call(() -> Future.succeededFuture("value"), Types.FUTURE_STRING).toCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
                 .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
                 .withCauseExactlyInstanceOf(BulkheadException.class);
@@ -74,18 +73,18 @@ public class MutinyUntypedGuardTest {
                 .build();
 
         for (int i = 0; i < 3; i++) {
-            assertThat(guard.call(this::stringAction, Types.UNI_STRING).subscribeAsCompletionStage())
+            assertThat(guard.call(this::stringAction, Types.FUTURE_STRING).toCompletionStage())
                     .failsWithin(10, TimeUnit.SECONDS)
                     .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
                     .withCauseExactlyInstanceOf(TestException.class);
 
-            assertThat(guard.call(this::integerAction, Types.UNI_INTEGER).subscribeAsCompletionStage())
+            assertThat(guard.call(this::integerAction, Types.FUTURE_INTEGER).toCompletionStage())
                     .failsWithin(10, TimeUnit.SECONDS)
                     .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
                     .withCauseExactlyInstanceOf(TestException.class);
         }
 
-        assertThat(guard.call(this::stringAction, Types.UNI_STRING).subscribeAsCompletionStage())
+        assertThat(guard.call(this::stringAction, Types.FUTURE_STRING).toCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
                 .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
                 .withCauseExactlyInstanceOf(CircuitBreakerOpenException.class);
@@ -98,31 +97,33 @@ public class MutinyUntypedGuardTest {
                 .withThreadOffload(true)
                 .build();
 
-        List<Future<?>> futures = new ArrayList<>();
+        List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             futures.add(executor.submit(() -> {
-                return guard.call(() -> Uni.createFrom().item("ignored"), Types.UNI_STRING).await().indefinitely();
+                return guard.call(() -> Future.succeededFuture("ignored"), Types.FUTURE_STRING)
+                        .toCompletionStage().toCompletableFuture().join();
             }));
             futures.add(executor.submit(() -> {
-                return guard.call(() -> Uni.createFrom().item(42), Types.UNI_INTEGER).await().indefinitely();
+                return guard.call(() -> Future.succeededFuture(42), Types.FUTURE_INTEGER)
+                        .toCompletionStage().toCompletableFuture().join();
             }));
         }
 
-        for (Future<?> future : futures) {
+        for (java.util.concurrent.Future<?> future : futures) {
             future.get();
         }
 
-        assertThat(guard.call(() -> Uni.createFrom().item("value"), Types.UNI_STRING).subscribeAsCompletionStage())
+        assertThat(guard.call(() -> Future.succeededFuture("value"), Types.FUTURE_STRING).toCompletionStage())
                 .failsWithin(10, TimeUnit.SECONDS)
                 .withThrowableOfType(ExecutionException.class) // caused by AssertJ calling future.get()
                 .withCauseExactlyInstanceOf(RateLimitException.class);
     }
 
-    public Uni<String> stringAction() {
-        return Uni.createFrom().failure(new TestException());
+    public Future<String> stringAction() {
+        return Future.failedFuture(new TestException());
     }
 
-    public Uni<Integer> integerAction() {
-        return Uni.createFrom().failure(new TestException());
+    public Future<Integer> integerAction() {
+        return Future.failedFuture(new TestException());
     }
 }
