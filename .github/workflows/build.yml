@@ -30,7 +30,8 @@ jobs:
         - 11
         - 17
         - 21
-        - 24
+        - 25
+        - 26-ea
         os:
         - ubuntu-latest
         - windows-latest

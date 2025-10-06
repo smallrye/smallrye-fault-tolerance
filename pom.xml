@@ -53,7 +53,7 @@
         <version.jboss-logging>3.6.1.Final</version.jboss-logging>
         <version.jboss-logging-tools>3.0.4.Final</version.jboss-logging-tools>
         <version.kotlin>2.2.20</version.kotlin>
-        <version.kotlin-dokka>2.0.0</version.kotlin-dokka>
+        <version.kotlin-dokka>2.1.0-Beta</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.10.2</version.kotlinx-coroutines>
         <!-- Micrometer 1.13.0 has a breaking change in Prometheus library -->
         <version.micrometer-core>1.12.5</version.micrometer-core>
