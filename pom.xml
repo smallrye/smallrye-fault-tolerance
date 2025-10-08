@@ -68,7 +68,7 @@
         <version.opentracing>0.33.0</version.opentracing>
         <version.rxjava3>3.1.12</version.rxjava3>
         <!-- this is the last SmallRye Common version that supports Java 11 -->
-        <version.smallrye-common>2.8.0</version.smallrye-common>
+        <version.smallrye-common>2.13.9</version.smallrye-common>
         <!-- smallrye-config is purely used for testing -->
         <!-- this is the last SmallRye Config version that supports Java 11 -->
         <version.smallrye-config>3.10.2</version.smallrye-config>
