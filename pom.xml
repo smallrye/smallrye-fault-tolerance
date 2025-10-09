@@ -91,7 +91,7 @@
         <!-- Weld API: 5.0 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
         <version.weld-api>5.0.SP3</version.weld-api>
         <!-- Weld Core: 5.1 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
-        <version.weld-core>5.1.6.Final</version.weld-core>
+        <version.weld-core>6.0.3.Final</version.weld-core>
         <!-- Weld JUnit: 4.0 is EE 10, 5.0 is EE 11 -->
         <version.weld-junit5>4.0.5.Final</version.weld-junit5>
 
