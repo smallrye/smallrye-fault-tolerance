@@ -95,7 +95,7 @@
         <!-- Weld JUnit: 4.0 is EE 10, 5.0 is EE 11 -->
         <version.weld-junit5>4.0.5.Final</version.weld-junit5>
 
-        <version.jacoco-maven-plugin>0.8.13</version.jacoco-maven-plugin>
+        <version.jacoco-maven-plugin>0.8.14</version.jacoco-maven-plugin>
         <version.pitest-maven>1.20.6</version.pitest-maven>
         <version.pitest-junit5-plugin>1.2.3</version.pitest-junit5-plugin>
         <version.sundrio>0.230.1</version.sundrio>
