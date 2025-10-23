@@ -78,7 +78,7 @@
         <version.smallrye-metrics>4.0.0</version.smallrye-metrics>
         <!-- smallrye-opentelemetry is purely used for testing -->
         <version.smallrye-opentelemetry>2.10.1</version.smallrye-opentelemetry>
-        <version.vertx>4.5.21</version.vertx>
+        <version.vertx>5.0.5</version.vertx>
 
         <version.arquillian>1.10.0.Final</version.arquillian>
         <!-- Arquillian Weld: 3.0 is EE 10, 4.0 is EE 11 -->
