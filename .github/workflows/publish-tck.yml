@@ -37,7 +37,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         ZIP_NAME: smallrye-fault-tolerance-${{ inputs.version }}-tck-results-java-${{ matrix.java }}.zip
       run: |
-        mvn -s .github/maven-ci-settings.xml -B formatter:validate verify --file pom.xml -Dpublish-tck
+        mvn -s .github/maven-ci-settings.xml -B --no-transfer-progress formatter:validate verify --file pom.xml -Dpublish-tck
         cd testsuite/tck/target
         zip -r $ZIP_NAME surefire-reports/
         gh release upload ${{ inputs.version }} $ZIP_NAME
