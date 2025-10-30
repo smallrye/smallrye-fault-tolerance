@@ -98,7 +98,7 @@
         <version.jacoco-maven-plugin>0.8.14</version.jacoco-maven-plugin>
         <version.pitest-maven>1.21.0</version.pitest-maven>
         <version.pitest-junit5-plugin>1.2.3</version.pitest-junit5-plugin>
-        <version.sundrio>0.230.1</version.sundrio>
+        <version.sundrio>0.230.2</version.sundrio>
 
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
