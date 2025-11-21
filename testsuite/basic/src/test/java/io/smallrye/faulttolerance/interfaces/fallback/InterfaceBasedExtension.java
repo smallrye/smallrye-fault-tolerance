@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.defaultmethod;
+package io.smallrye.faulttolerance.interfaces.fallback;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;

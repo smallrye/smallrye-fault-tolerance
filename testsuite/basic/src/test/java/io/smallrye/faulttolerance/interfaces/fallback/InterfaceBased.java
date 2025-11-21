@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.defaultmethod;
+package io.smallrye.faulttolerance.interfaces.fallback;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

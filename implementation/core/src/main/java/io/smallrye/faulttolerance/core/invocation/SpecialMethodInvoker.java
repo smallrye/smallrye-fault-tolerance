@@ -22,7 +22,7 @@ public class SpecialMethodInvoker<V> implements Invoker<V> {
 
         MethodType methodType = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
         Class<?> declaringClass = method.getDeclaringClass();
-        this.methodHandle = MethodHandles.lookup()
+        this.methodHandle = MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup())
                 .findSpecial(declaringClass, method.getName(), methodType, declaringClass);
         this.target = target;
         this.arguments = arguments;

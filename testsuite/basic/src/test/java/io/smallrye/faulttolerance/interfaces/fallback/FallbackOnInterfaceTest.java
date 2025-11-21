@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.defaultmethod;
+package io.smallrye.faulttolerance.interfaces.fallback;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,10 +10,15 @@ import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 @FaultToleranceBasicTest
 @AddExtensions(InterfaceBasedExtension.class)
-@AddBeanClasses(SimpleService.class)
-public class DefaultMethodTest {
+@AddBeanClasses({ PublicHello.class, PackagePrivateHello.class, PublicPing.class, PackagePrivatePing.class })
+public class FallbackOnInterfaceTest {
     @Test
-    public void test(HelloService service) {
+    public void defaultMethods(HelloService service) {
         assertThat(service.hello()).isEqualTo("Hello, world!");
+    }
+
+    @Test
+    public void privateMethods(PingService service) {
+        assertThat(service.ping()).isEqualTo("Ping! Pong!");
     }
 }
