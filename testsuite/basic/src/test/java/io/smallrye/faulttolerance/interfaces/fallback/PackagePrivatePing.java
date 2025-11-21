@@ -1,13 +1,13 @@
-package io.smallrye.faulttolerance.defaultmethod;
+package io.smallrye.faulttolerance.interfaces.fallback;
 
 import org.eclipse.microprofile.faulttolerance.Fallback;
 
 @RegisterInterfaceBased
-public interface SimpleService {
+interface PackagePrivatePing {
     @Fallback(fallbackMethod = "fallback")
-    String hello();
+    String ping();
 
     default String fallback() {
-        return "Hello, world!";
+        return "Pong!";
     }
 }
