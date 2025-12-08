@@ -64,7 +64,7 @@
         <!-- this is the last Mutiny version that supports Java 11 -->
         <version.mutiny>2.7.0</version.mutiny>
         <!-- OpenTelemetry 1.48.0 is required by MicroProfile Telemetry 2.1 (MP Platform 7.1) -->
-        <version.opentelemetry>1.48.0</version.opentelemetry>
+        <version.opentelemetry>1.57.0</version.opentelemetry>
         <version.opentracing>0.33.0</version.opentracing>
         <version.rxjava3>3.1.12</version.rxjava3>
         <!-- this is the last SmallRye Common version that supports Java 11 -->
