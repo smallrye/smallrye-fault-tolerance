@@ -29,7 +29,7 @@ final class TypeNames {
     static final TypeName FAULT_TOLERANCE_METHOD = ClassName.get("io.smallrye.faulttolerance.autoconfig",
             "FaultToleranceMethod");
 
-    static final TypeName CONFIG_UTIL = ClassName.get("io.smallrye.faulttolerance.basicconfig", "ConfigUtil");
+    static final TypeName CONFIG_UTIL = ClassName.get("io.smallrye.faulttolerance.apiimpl.basicconfig", "ConfigUtil");
 
     static TypeName supplierOf(TypeName type) {
         return ParameterizedTypeName.get(ClassName.get(Supplier.class), type);

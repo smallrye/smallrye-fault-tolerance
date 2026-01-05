@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.basicconfig;
+package io.smallrye.faulttolerance.apiimpl.basicconfig;
 
 import org.eclipse.microprofile.faulttolerance.Bulkhead;
 
