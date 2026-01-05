@@ -26,7 +26,7 @@ import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
 import io.smallrye.faulttolerance.api.RateLimitType;
 import io.smallrye.faulttolerance.api.TypedGuard;
-import io.smallrye.faulttolerance.basicconfig.BasicFaultToleranceOperation;
+import io.smallrye.faulttolerance.apiimpl.basicconfig.BasicFaultToleranceOperation;
 import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;

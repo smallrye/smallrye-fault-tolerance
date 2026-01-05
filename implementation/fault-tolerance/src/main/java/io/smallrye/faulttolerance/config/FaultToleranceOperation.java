@@ -35,10 +35,10 @@ import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.RetryWhen;
+import io.smallrye.faulttolerance.apiimpl.basicconfig.BasicFaultToleranceOperation;
 import io.smallrye.faulttolerance.autoconfig.Config;
 import io.smallrye.faulttolerance.autoconfig.FaultToleranceMethod;
 import io.smallrye.faulttolerance.autoconfig.MethodDescriptor;
-import io.smallrye.faulttolerance.basicconfig.BasicFaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.FallbackMethodCandidates;
 
 /**

@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.basicconfig;
+package io.smallrye.faulttolerance.apiimpl.basicconfig;
 
 import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
 

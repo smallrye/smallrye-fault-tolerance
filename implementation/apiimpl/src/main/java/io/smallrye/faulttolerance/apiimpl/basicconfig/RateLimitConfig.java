@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.basicconfig;
+package io.smallrye.faulttolerance.apiimpl.basicconfig;
 
 import io.smallrye.faulttolerance.api.RateLimit;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;

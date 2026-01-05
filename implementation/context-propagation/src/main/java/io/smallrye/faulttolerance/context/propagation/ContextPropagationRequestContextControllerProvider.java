@@ -1,4 +1,4 @@
-package io.smallrye.faulttolerance.propagation;
+package io.smallrye.faulttolerance.context.propagation;
 
 import jakarta.enterprise.context.ContextNotActiveException;
 import jakarta.enterprise.context.control.RequestContextController;

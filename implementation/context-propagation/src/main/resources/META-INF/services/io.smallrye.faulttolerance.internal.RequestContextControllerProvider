@@ -1,1 +1,1 @@
-io.smallrye.faulttolerance.propagation.ContextPropagationRequestContextControllerProvider
+io.smallrye.faulttolerance.context.propagation.ContextPropagationRequestContextControllerProvider
