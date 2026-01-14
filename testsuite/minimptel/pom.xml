@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.smallrye</groupId>
+        <artifactId>smallrye-fault-tolerance-testsuite-parent</artifactId>
+        <version>6.10.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>smallrye-fault-tolerance-minimptel</artifactId>
+
+    <!--
+      - The implementation is as small as possible to support MicroProfile Fault Tolerance TCK.
+      - It does not implement the full MicroProfile Telemetry specification or pass its TCK.
+      -
+      - The code is based on SmallRye OpenTelemetry, but heavily simplified and stripped down.
+      -->
+    <name>SmallRye Fault Tolerance: Miniature Implementation of MicroProfile Telemetry</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile.config</groupId>
+            <artifactId>microprofile-config-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>${version.opentelemetry}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
+            <version>${version.opentelemetry}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <version>${version.opentelemetry}</version>
+        </dependency>
+    </dependencies>
+</project>

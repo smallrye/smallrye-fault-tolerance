@@ -16,6 +16,7 @@
     <modules>
         <module>basic</module>
         <module>integration</module>
+        <module>minimptel</module>
         <module>tck</module>
     </modules>
 </project>
