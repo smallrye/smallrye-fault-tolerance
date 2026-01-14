@@ -76,8 +76,6 @@
         <version.smallrye-context-propagation>2.3.0</version.smallrye-context-propagation>
         <!-- smallrye-metrics is purely used for testing -->
         <version.smallrye-metrics>4.0.0</version.smallrye-metrics>
-        <!-- smallrye-opentelemetry is purely used for testing -->
-        <version.smallrye-opentelemetry>2.10.1</version.smallrye-opentelemetry>
         <version.vertx>4.5.24</version.vertx>
 
         <version.arquillian>1.10.0.Final</version.arquillian>
@@ -274,24 +272,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>io.smallrye.opentelemetry</groupId>
-                <artifactId>smallrye-opentelemetry-cdi</artifactId>
-                <version>${version.smallrye-opentelemetry}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.smallrye.opentelemetry</groupId>
-                <artifactId>smallrye-opentelemetry-config</artifactId>
-                <version>${version.smallrye-opentelemetry}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.smallrye.opentelemetry</groupId>
-                <artifactId>smallrye-opentelemetry-exporters</artifactId>
-                <version>${version.smallrye-opentelemetry}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
                 <groupId>org.jetbrains.kotlinx</groupId>
                 <artifactId>kotlinx-coroutines-jdk9</artifactId>
                 <version>${version.kotlinx-coroutines}</version>
@@ -389,7 +369,6 @@
                 <artifactId>smallrye-fault-tolerance-vertx</artifactId>
                 <version>${project.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-autoconfig-core</artifactId>
@@ -420,7 +399,6 @@
                 <artifactId>smallrye-fault-tolerance-tracing-propagation</artifactId>
                 <version>${project.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-standalone</artifactId>
@@ -430,6 +408,11 @@
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-fault-tolerance-standalone</artifactId>
                 <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-fault-tolerance-minimptel</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
