@@ -37,18 +37,12 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
 
-        <!--
-          - need to stay on Jakarta EE 10 dependencies for now, because:
-          - * Weld 6.0 requires Java 17, and we need to support Java 11 still
-          - * WildFly still supports Jakarta EE 10
-         -->
-
-        <!-- Jakarta Annotations: 2.1 is EE 10, 3.0 is EE 11, 3.1 will be EE 12 -->
-        <version.jakarta-annotations>2.1.1</version.jakarta-annotations>
-        <!-- Jakarta CDI: 4.0 is EE 10, 4.1 is EE 11, 5.0 will be EE 12 -->
-        <version.jakarta-cdi>4.0.1</version.jakarta-cdi>
-        <!-- Jakarta Interceptors: 2.1 is EE 10, 2.2 is EE 11 -->
-        <version.jakarta-interceptors>2.1.0</version.jakarta-interceptors>
+        <!-- Jakarta Annotations: 3.0 is EE 11, 3.1 will be EE 12 -->
+        <version.jakarta-annotations>3.0.0</version.jakarta-annotations>
+        <!-- Jakarta CDI: 4.1 is EE 11, 5.0 will be EE 12 -->
+        <version.jakarta-cdi>4.1.0</version.jakarta-cdi>
+        <!-- Jakarta Interceptors: 2.2 is EE 11 -->
+        <version.jakarta-interceptors>2.2.0</version.jakarta-interceptors>
         <version.javapoet>0.11.0</version.javapoet>
         <version.jboss-logging>3.6.2.Final</version.jboss-logging>
         <version.jboss-logging-tools>3.0.4.Final</version.jboss-logging-tools>
@@ -77,19 +71,19 @@
         <version.vertx>4.5.25</version.vertx>
 
         <version.arquillian>1.10.1.Final</version.arquillian>
-        <!-- Arquillian Weld: 3.0 is EE 10, 4.0 is EE 11 -->
-        <version.arquillian-weld>3.0.2.Final</version.arquillian-weld>
+        <!-- Arquillian Weld: 4.0 is EE 11 -->
+        <version.arquillian-weld>4.0.0.Final</version.arquillian-weld>
         <version.assertj>3.27.7</version.assertj>
         <version.awaitility>4.3.0</version.awaitility>
         <!-- JUnit Jupiter 6.0 makes small but breaking changes -->
         <version.junit-jupiter>5.14.3</version.junit-jupiter>
         <version.testng>7.12.0</version.testng>
-        <!-- Weld API: 5.0 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
-        <version.weld-api>5.0.SP3</version.weld-api>
-        <!-- Weld Core: 5.1 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
-        <version.weld-core>5.1.6.Final</version.weld-core>
-        <!-- Weld JUnit: 4.0 is EE 10, 5.0 is EE 11 -->
-        <version.weld-junit5>4.0.5.Final</version.weld-junit5>
+        <!-- Weld API: 6.0 is EE 11, 7.0 will be EE 12 -->
+        <version.weld-api>6.0.Final</version.weld-api>
+        <!-- Weld Core: 6.0 is EE 11, 7.0 will be EE 12 -->
+        <version.weld-core>6.0.4.Final</version.weld-core>
+        <!-- Weld JUnit: 5.0 is EE 11 -->
+        <version.weld-junit5>5.0.3.Final</version.weld-junit5>
 
         <version.jacoco-maven-plugin>0.8.14</version.jacoco-maven-plugin>
         <version.pitest-maven>1.22.1</version.pitest-maven>
