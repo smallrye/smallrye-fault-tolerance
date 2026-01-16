@@ -26,7 +26,7 @@ The event loop integration is also used in some other situations when guarding n
 == Vert.x
 
 {smallrye-fault-tolerance} includes an implementation of the event loop integration API for Vert.x.
-This implementation is compiled and tested against Vert.x version {vertx4-version}, but should also work fine with Vert.x 3.x.
+This implementation is compiled and tested against Vert.x version {vertx-version}, but should also work fine with Vert.x 4.x.
 
 This implementation is present in the `io.smallrye:smallrye-fault-tolerance-vertx` artifact.
 Including this artifact is enough to enable the Vert.x integration.

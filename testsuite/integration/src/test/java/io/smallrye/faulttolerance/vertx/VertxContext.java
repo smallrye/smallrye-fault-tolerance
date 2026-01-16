@@ -1,9 +1,11 @@
 package io.smallrye.faulttolerance.vertx;
 
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import io.vertx.core.Context;
-import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.internal.ContextInternal;
 
 // assumes that verticles are not used and no context is created explicitly,
 // which means that all contexts are event loop contexts
@@ -55,10 +57,11 @@ public class VertxContext {
     }
 
     public ContextDescription describe() {
-        String uuid = context.getLocal("my-uuid");
+        ConcurrentMap<Object, Object> map = ContextInternal.LOCAL_MAP.get(context, ConcurrentHashMap::new);
+        String uuid = (String) map.get("my-uuid");
         if (uuid == null) {
             uuid = UUID.randomUUID().toString();
-            context.putLocal("my-uuid", uuid);
+            map.put("my-uuid", uuid);
         }
 
         ExecutionStyle executionStyle = Context.isOnEventLoopThread()
