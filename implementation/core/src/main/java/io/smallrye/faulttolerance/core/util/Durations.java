@@ -15,32 +15,20 @@ public final class Durations {
     private static final long MAX_YEARS = Long.MAX_VALUE / SECONDS_IN_YEAR;
 
     public static long timeInMillis(long value, ChronoUnit unit) {
-        switch (unit) {
-            case NANOS:
-                return TimeUnit.NANOSECONDS.toMillis(value);
-            case MICROS:
-                return TimeUnit.MICROSECONDS.toMillis(value);
-            case MILLIS:
-                return value;
-            case SECONDS:
-                return TimeUnit.SECONDS.toMillis(value);
-            case MINUTES:
-                return TimeUnit.MINUTES.toMillis(value);
-            case HOURS:
-                return TimeUnit.HOURS.toMillis(value);
-            case HALF_DAYS:
-                return convert(value, MAX_HALF_DAYS, SECONDS_IN_HALF_DAY);
-            case DAYS:
-                return TimeUnit.DAYS.toMillis(value);
-            case WEEKS:
-                return convert(value, MAX_WEEKS, SECONDS_IN_WEEK);
-            case MONTHS:
-                return convert(value, MAX_MONTHS, SECONDS_IN_MONTH);
-            case YEARS:
-                return convert(value, MAX_YEARS, SECONDS_IN_YEAR);
-            default:
-                throw new IllegalArgumentException("Unsupported time unit: " + unit);
-        }
+        return switch (unit) {
+            case NANOS -> TimeUnit.NANOSECONDS.toMillis(value);
+            case MICROS -> TimeUnit.MICROSECONDS.toMillis(value);
+            case MILLIS -> value;
+            case SECONDS -> TimeUnit.SECONDS.toMillis(value);
+            case MINUTES -> TimeUnit.MINUTES.toMillis(value);
+            case HOURS -> TimeUnit.HOURS.toMillis(value);
+            case HALF_DAYS -> convert(value, MAX_HALF_DAYS, SECONDS_IN_HALF_DAY);
+            case DAYS -> TimeUnit.DAYS.toMillis(value);
+            case WEEKS -> convert(value, MAX_WEEKS, SECONDS_IN_WEEK);
+            case MONTHS -> convert(value, MAX_MONTHS, SECONDS_IN_MONTH);
+            case YEARS -> convert(value, MAX_YEARS, SECONDS_IN_YEAR);
+            default -> throw new IllegalArgumentException("Unsupported time unit: " + unit);
+        };
     }
 
     private static long convert(long value, long maxInUnit, long secondsInUnit) {

@@ -197,18 +197,11 @@ public class MicrometerRecorder implements MetricsRecorder {
 
     @Override
     public void circuitBreakerFinished(CircuitBreakerEvents.Result result) {
-        Tag circuitBreakerResultTag = null;
-        switch (result) {
-            case SUCCESS:
-                circuitBreakerResultTag = CIRCUIT_BREAKER_RESULT_SUCCESS;
-                break;
-            case FAILURE:
-                circuitBreakerResultTag = CIRCUIT_BREAKER_RESULT_FAILURE;
-                break;
-            case PREVENTED:
-                circuitBreakerResultTag = CIRCUIT_BREAKER_RESULT_CB_OPEN;
-                break;
-        }
+        Tag circuitBreakerResultTag = switch (result) {
+            case SUCCESS -> CIRCUIT_BREAKER_RESULT_SUCCESS;
+            case FAILURE -> CIRCUIT_BREAKER_RESULT_FAILURE;
+            case PREVENTED -> CIRCUIT_BREAKER_RESULT_CB_OPEN;
+        };
         registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, Arrays.asList(methodTag, circuitBreakerResultTag)).increment();
     }
 

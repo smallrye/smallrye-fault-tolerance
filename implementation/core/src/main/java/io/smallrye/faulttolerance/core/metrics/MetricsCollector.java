@@ -169,23 +169,20 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
                 long now = System.nanoTime();
 
                 switch (event.targetState) {
-                    case CLOSED:
+                    case CLOSED -> {
                         closedStart = now;
                         previousHalfOpenTime.addAndGet(now - halfOpenStart);
-
-                        break;
-                    case OPEN:
+                    }
+                    case OPEN -> {
                         openStart = now;
                         previousClosedTime.addAndGet(now - closedStart);
 
                         metrics.circuitBreakerMovedToOpen();
-
-                        break;
-                    case HALF_OPEN:
+                    }
+                    case HALF_OPEN -> {
                         halfOpenStart = now;
                         previousOpenTime.addAndGet(now - openStart);
-
-                        break;
+                    }
                 }
             });
         }

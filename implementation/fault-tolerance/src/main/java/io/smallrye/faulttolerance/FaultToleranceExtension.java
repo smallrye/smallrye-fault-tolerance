@@ -184,18 +184,12 @@ public class FaultToleranceExtension implements Extension {
         }
         for (MetricsIntegration metricsIntegration : metricsIntegrations) {
             switch (metricsIntegration) {
-                case OPENTELEMETRY:
-                    bbd.addAnnotatedType(bm.createAnnotatedType(OpenTelemetryProvider.class),
-                            OpenTelemetryProvider.class.getName());
-                    break;
-                case MICROMETER:
-                    bbd.addAnnotatedType(bm.createAnnotatedType(MicrometerProvider.class),
-                            MicrometerProvider.class.getName());
-                    break;
-                case NOOP:
-                    bbd.addAnnotatedType(bm.createAnnotatedType(NoopProvider.class),
-                            NoopProvider.class.getName());
-                    break;
+                case OPENTELEMETRY -> bbd.addAnnotatedType(bm.createAnnotatedType(OpenTelemetryProvider.class),
+                        OpenTelemetryProvider.class.getName());
+                case MICROMETER -> bbd.addAnnotatedType(bm.createAnnotatedType(MicrometerProvider.class),
+                        MicrometerProvider.class.getName());
+                case NOOP -> bbd.addAnnotatedType(bm.createAnnotatedType(NoopProvider.class),
+                        NoopProvider.class.getName());
             }
         }
     }
