@@ -35,18 +35,10 @@ public class CompoundMetricsProvider implements MetricsProvider {
     CompoundMetricsProvider(
             Instance<MetricsProvider> lookup,
             Enablement enablement,
-            @ConfigProperty(name = MicroProfileMetricsProvider.DISABLED, defaultValue = "false") boolean mpMetricsDisabled,
             @ConfigProperty(name = OpenTelemetryProvider.DISABLED, defaultValue = "false") boolean openTelemetryDisabled,
             @ConfigProperty(name = MicrometerProvider.DISABLED, defaultValue = "false") boolean micrometerDisabled) {
 
         List<MetricsProvider> providers = new ArrayList<>();
-        if (!mpMetricsDisabled) {
-            try {
-                providers.add(lookup.select(MicroProfileMetricsProvider.class).get());
-            } catch (Exception ignored) {
-                // either the bean does not exist, or some of its dependencies does not exist
-            }
-        }
         if (!openTelemetryDisabled) {
             try {
                 providers.add(lookup.select(OpenTelemetryProvider.class).get());

@@ -1,12 +1,11 @@
 = Metrics
 
-{smallrye-fault-tolerance} provides support for MicroProfile Metrics, OpenTelemetry and Micrometer.
+{smallrye-fault-tolerance} provides support for OpenTelemetry and Micrometer.
 Alternatively, metrics may be completely disabled at the integration level.
 
 As usual, this integration is based on CDI.
 {smallrye-fault-tolerance} includes an internal interface `MetricsProvider` and these implementations:
 
-* `io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider`
 * `io.smallrye.faulttolerance.metrics.OpenTelemetryProvider`
 * `io.smallrye.faulttolerance.metrics.MicrometerProvider`
 * `io.smallrye.faulttolerance.metrics.NoopProvider`
@@ -32,7 +31,6 @@ In addition to a zero-parameter constructor, which is used in the default integr
 
 `MetricsIntegration` is an enum with these values:
 
-* `MICROPROFILE_METRICS`: use MicroProfile Metrics integration
 * `OPENTELEMETRY`: use OpenTelemetry (MicroProfile Telemetry) integration
 * `MICROMETER`: use Micrometer integration
 * `NOOP`: no metrics
@@ -40,13 +38,6 @@ In addition to a zero-parameter constructor, which is used in the default integr
 == Metrics Providers
 
 Metrics providers have additional requirements, as described below.
-
-=== MicroProfile Metrics
-
-If MicroProfile Metrics should be used, the integrator must ensure that the following artifacts are present:
-
-* `org.eclipse.microprofile.metrics:microprofile-metrics-api`;
-* some implementation of MicroProfile Metrics.
 
 === OpenTelemetry
 

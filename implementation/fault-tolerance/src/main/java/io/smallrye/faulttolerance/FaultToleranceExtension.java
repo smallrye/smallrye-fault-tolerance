@@ -75,7 +75,6 @@ import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.internal.StrategyCache;
 import io.smallrye.faulttolerance.metrics.CompoundMetricsProvider;
 import io.smallrye.faulttolerance.metrics.MetricsIntegration;
-import io.smallrye.faulttolerance.metrics.MicroProfileMetricsProvider;
 import io.smallrye.faulttolerance.metrics.MicrometerProvider;
 import io.smallrye.faulttolerance.metrics.NoopProvider;
 import io.smallrye.faulttolerance.metrics.OpenTelemetryProvider;
@@ -112,9 +111,6 @@ public class FaultToleranceExtension implements Extension {
 
     private static Set<MetricsIntegration> allPresentMetrics() {
         Set<MetricsIntegration> result = EnumSet.noneOf(MetricsIntegration.class);
-        if (isPresent("org.eclipse.microprofile.metrics.MetricRegistry")) {
-            result.add(MetricsIntegration.MICROPROFILE_METRICS);
-        }
         if (isPresent("io.opentelemetry.api.metrics.Meter")) {
             result.add(MetricsIntegration.OPENTELEMETRY);
         }
@@ -188,10 +184,6 @@ public class FaultToleranceExtension implements Extension {
         }
         for (MetricsIntegration metricsIntegration : metricsIntegrations) {
             switch (metricsIntegration) {
-                case MICROPROFILE_METRICS:
-                    bbd.addAnnotatedType(bm.createAnnotatedType(MicroProfileMetricsProvider.class),
-                            MicroProfileMetricsProvider.class.getName());
-                    break;
                 case OPENTELEMETRY:
                     bbd.addAnnotatedType(bm.createAnnotatedType(OpenTelemetryProvider.class),
                             OpenTelemetryProvider.class.getName());

@@ -47,6 +47,12 @@ public class OpenTelemetryProducer {
         return sdk.getMeter(NAME);
     }
 
+    @Produces
+    @Singleton
+    public MetricsAccess metricsAccess(OpenTelemetrySdk sdk) { // parameter needed for ordering
+        return new MetricsAccess(Providers.InMemoryMetrics.reader);
+    }
+
     public void close(@Disposes OpenTelemetrySdk sdk) {
         List<CompletableResultCode> shutdown = new ArrayList<>();
         shutdown.add(sdk.getSdkTracerProvider().shutdown());

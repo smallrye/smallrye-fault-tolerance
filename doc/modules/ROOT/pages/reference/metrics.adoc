@@ -11,8 +11,7 @@ For all methods guarded with some fault tolerance strategy, the following metric
 |===
 | Name | `ft.invocations.total`
 | Type
-a| * MP Metrics: `Counter`
-* OpenTelemetry: `LongCounter`
+a| * OpenTelemetry: `LongCounter`
 * Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the method was called.
@@ -46,8 +45,7 @@ The behavior of the timer thread can be observed through the following metrics:
 |===
 | Name | `ft.timer.scheduled`
 | Type
-a| * MP Metrics: `Gauge<Integer>`
-* OpenTelemetry: `LongUpDownCounter`
+a| * OpenTelemetry: `LongUpDownCounter`
 * Micrometer: `Gauge`
 | Unit | None
 | Description | The number of tasks that are currently scheduled (for future execution) on the timer.
@@ -57,13 +55,13 @@ a| * `id` - the ID of the timer, to distinguish multiple timers in a multi-appli
 
 == Micrometer Support
 
-In addition to the MicroProfile Metrics and OpenTelemetry support (as specified by {microprofile-fault-tolerance}), {smallrye-fault-tolerance} also provides support for https://micrometer.io/[Micrometer].
+In addition to the OpenTelemetry support (as specified by {microprofile-fault-tolerance}), {smallrye-fault-tolerance} also provides support for https://micrometer.io/[Micrometer].
 The set of metrics emitted to Micrometer is the same, using the same metric names and tags.
 
 Note that distribution summaries in Micrometer, including timers, do not emit quantiles by default.
 Micrometer recommends that libraries should not configure them out of the box, so if you need them, you should use a `MeterFilter`.
 
-The following implementation makes sure Micrometer emits the same quantiles as MicroProfile Metrics for all fault tolerance metrics:
+The following implementation makes sure Micrometer emits some common quantiles for all fault tolerance metrics:
 
 [source,java]
 ----
@@ -72,7 +70,7 @@ static final MeterFilter ENABLE_HISTOGRAMS = new MeterFilter() {
     public DistributionStatisticConfig configure(Meter.Id id, DistributionStatisticConfig config) {
         if (id.getName().startsWith("ft.")) {
             return DistributionStatisticConfig.builder()
-                    .percentiles(0.5, 0.75, 0.95, 0.98, 0.99, 0.999)
+                    .percentiles(0.5, 0.75, 0.9, 0.95, 0.99, 0.999)
                     .build()
                     .merge(config);
         }
@@ -97,9 +95,6 @@ It is also possible to disable individual metric providers:
 
 [source,properties]
 ----
-# to disable MP Metrics
-smallrye.faulttolerance.mpmetrics.disabled=true
-
 # to disable OpenTelemetry Metrics
 smallrye.faulttolerance.opentelemetry.disabled=true
 

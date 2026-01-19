@@ -132,8 +132,7 @@ Circuit breaker exposes the following metrics:
 |===
 | Name | `ft.circuitbreaker.calls.total`
 | Type
-a| * MP Metrics: `Counter`
-* OpenTelemetry: `LongCounter`
+a| * OpenTelemetry: `LongCounter`
 * Micrometer: `Counter`
 | Unit | None
 | Description | The number of times the circuit breaker logic was run. This is usually once per method call, but may be more than once if the method call is retried.
@@ -149,12 +148,10 @@ a| * `method` - the fully qualified method name
 |===
 | Name | `ft.circuitbreaker.state.total`
 | Type
-a| * MP Metrics: `Gauge<Long>`
-* OpenTelemetry: `LongCounter`
+a| * OpenTelemetry: `LongCounter`
 * Micrometer: `TimeGauge`
 | Unit
-a| * MP Metrics: nanoseconds
-* OpenTelemetry: nanoseconds
+a| * OpenTelemetry: nanoseconds
 * Micrometer: nanoseconds
 | Description | Amount of time the circuit breaker has spent in each state
 | Tags
@@ -167,8 +164,7 @@ a| * `method` - the fully qualified method name
 |===
 | Name | `ft.circuitbreaker.opened.total`
 | Type
-a| * MP Metrics: `Counter`
-* OpenTelemetry: `LongCounter`
+a| * OpenTelemetry: `LongCounter`
 * Micrometer: `Counter`
 | Unit | None
 | Description | Number of times the circuit breaker has moved from closed state to open state
@@ -182,8 +178,7 @@ a| * `method` - the fully qualified method name
 2+a|
 include::partial$srye-feature.adoc[]
 | Type
-a| * MP Metrics: `Gauge<Long>`
-* OpenTelemetry: `LongUpDownCounter`
+a| * OpenTelemetry: `LongUpDownCounter`
 * Micrometer: `Gauge`
 | Unit | None
 | Description | Whether the circuit breaker is currently in given state (`1`) or not (`0`)
