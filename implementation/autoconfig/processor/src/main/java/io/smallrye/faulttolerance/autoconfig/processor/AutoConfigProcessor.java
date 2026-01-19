@@ -491,14 +491,11 @@ public class AutoConfigProcessor extends AbstractProcessor {
 
     private static String newMemberName(ExecutableElement annotationMember) {
         String result = annotationMember.getSimpleName().toString();
-        switch (result) {
-            case "jitterDelayUnit":
-                result = "jitterUnit";
-                break;
-            case "durationUnit":
-                result = "maxDurationUnit";
-                break;
-        }
+        result = switch (result) {
+            case "jitterDelayUnit" -> "jitterUnit";
+            case "durationUnit" -> "maxDurationUnit";
+            default -> result;
+        };
         result = StringUtil.skewer(result);
         return result;
     }

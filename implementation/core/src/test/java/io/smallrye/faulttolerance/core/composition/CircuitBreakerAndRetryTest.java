@@ -88,15 +88,9 @@ public class CircuitBreakerAndRetryTest {
         public Future<V> apply(FaultToleranceContext<V> ctx) {
             ctx.registerEventHandler(CircuitBreakerEvents.Finished.class, event -> {
                 switch (event.result) {
-                    case SUCCESS:
-                        successCount.incrementAndGet();
-                        break;
-                    case FAILURE:
-                        failureCount.incrementAndGet();
-                        break;
-                    case PREVENTED:
-                        preventedCount.incrementAndGet();
-                        break;
+                    case SUCCESS -> successCount.incrementAndGet();
+                    case FAILURE -> failureCount.incrementAndGet();
+                    case PREVENTED -> preventedCount.incrementAndGet();
                 }
             });
             return delegate.apply(ctx);

@@ -36,16 +36,15 @@ public class AsyncHelloService {
     @Retry(maxRetries = 2)
     public CompletionStage<String> retry(Result result) throws IOException {
         COUNTER.incrementAndGet();
-        switch (result) {
-            case FAILURE:
-                throw new IOException("Simulated IO error");
-            case COMPLETE_EXCEPTIONALLY:
+        return switch (result) {
+            case FAILURE -> throw new IOException("Simulated IO error");
+            case COMPLETE_EXCEPTIONALLY -> {
                 CompletableFuture<String> future = new CompletableFuture<>();
                 future.completeExceptionally(new IOException("Simulated IO error"));
-                return future;
-            default:
-                return completedFuture("Hello");
-        }
+                yield future;
+            }
+            default -> completedFuture("Hello");
+        };
     }
 
     @Asynchronous

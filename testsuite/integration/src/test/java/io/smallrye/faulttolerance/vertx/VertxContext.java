@@ -24,19 +24,14 @@ public class VertxContext {
 
     public void execute(ExecutionStyle style, Runnable runnable) {
         switch (style) {
-            case EVENT_LOOP:
-                context.runOnContext(ignored -> {
-                    runnable.run();
-                });
-                break;
-            case WORKER:
-                context.executeBlocking(() -> {
-                    runnable.run();
-                    return null;
-                });
-                break;
-            default:
-                throw new UnsupportedOperationException("" + style);
+            case EVENT_LOOP -> context.runOnContext(ignored -> {
+                runnable.run();
+            });
+            case WORKER -> context.executeBlocking(() -> {
+                runnable.run();
+                return null;
+            });
+            default -> throw new UnsupportedOperationException("" + style);
         }
     }
 

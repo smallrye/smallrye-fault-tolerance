@@ -54,16 +54,12 @@ public class BasicCircuitBreakerMaintenanceImpl implements CircuitBreakerMainten
         }
 
         int currentState = circuitBreaker.currentState();
-        switch (currentState) {
-            case CircuitBreaker.STATE_CLOSED:
-                return CircuitBreakerState.CLOSED;
-            case CircuitBreaker.STATE_OPEN:
-                return CircuitBreakerState.OPEN;
-            case CircuitBreaker.STATE_HALF_OPEN:
-                return CircuitBreakerState.HALF_OPEN;
-            default:
-                throw new IllegalStateException("Unknown circuit breaker state " + currentState);
-        }
+        return switch (currentState) {
+            case CircuitBreaker.STATE_CLOSED -> CircuitBreakerState.CLOSED;
+            case CircuitBreaker.STATE_OPEN -> CircuitBreakerState.OPEN;
+            case CircuitBreaker.STATE_HALF_OPEN -> CircuitBreakerState.HALF_OPEN;
+            default -> throw new IllegalStateException("Unknown circuit breaker state " + currentState);
+        };
     }
 
     @Override

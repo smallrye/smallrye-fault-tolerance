@@ -87,21 +87,21 @@ final class EventHandlers {
         if (circuitBreakerOnSuccess != null || circuitBreakerOnFailure != null || circuitBreakerOnPrevented != null) {
             ctx.registerEventHandler(CircuitBreakerEvents.Finished.class, event -> {
                 switch (event.result) {
-                    case SUCCESS:
+                    case SUCCESS -> {
                         if (circuitBreakerOnSuccess != null) {
                             circuitBreakerOnSuccess.run();
                         }
-                        break;
-                    case FAILURE:
+                    }
+                    case FAILURE -> {
                         if (circuitBreakerOnFailure != null) {
                             circuitBreakerOnFailure.run();
                         }
-                        break;
-                    case PREVENTED:
+                    }
+                    case PREVENTED -> {
                         if (circuitBreakerOnPrevented != null) {
                             circuitBreakerOnPrevented.run();
                         }
-                        break;
+                    }
                 }
             });
         }

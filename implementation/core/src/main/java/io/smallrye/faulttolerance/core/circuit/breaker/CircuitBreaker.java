@@ -63,16 +63,12 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             // it must be passed through as a parameter to all the state methods,
             // so that they don't see the circuit breaker moving to a different state under them
             State currentState = state.get();
-            switch (currentState.id) {
-                case STATE_CLOSED:
-                    return inClosed(ctx, currentState);
-                case STATE_OPEN:
-                    return inOpen(ctx, currentState);
-                case STATE_HALF_OPEN:
-                    return inHalfOpen(ctx, currentState);
-                default:
-                    throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
-            }
+            return switch (currentState.id) {
+                case STATE_CLOSED -> inClosed(ctx, currentState);
+                case STATE_OPEN -> inOpen(ctx, currentState);
+                case STATE_HALF_OPEN -> inHalfOpen(ctx, currentState);
+                default -> throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
+            };
         } finally {
             LOG.trace("CircuitBreaker finished");
         }
@@ -126,16 +122,12 @@ public class CircuitBreaker<V> implements FaultToleranceStrategy<V> {
             // it must be passed through as a parameter to all the state methods,
             // so that they don't see the circuit breaker moving to a different state under them
             State currentState = this.state.get();
-            switch (currentState.id) {
-                case STATE_CLOSED:
-                    return inClosed(ctx, currentState);
-                case STATE_OPEN:
-                    return inOpen(ctx, currentState);
-                case STATE_HALF_OPEN:
-                    return inHalfOpen(ctx, currentState);
-                default:
-                    throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
-            }
+            return switch (currentState.id) {
+                case STATE_CLOSED -> inClosed(ctx, currentState);
+                case STATE_OPEN -> inOpen(ctx, currentState);
+                case STATE_HALF_OPEN -> inHalfOpen(ctx, currentState);
+                default -> throw new AssertionError("Invalid circuit breaker state: " + currentState.id);
+            };
         }
     }
 

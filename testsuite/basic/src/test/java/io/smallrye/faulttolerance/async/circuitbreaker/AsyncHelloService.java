@@ -27,16 +27,15 @@ public class AsyncHelloService {
     @CircuitBreaker(requestVolumeThreshold = THRESHOLD, failureRatio = 0.5, delay = DELAY, successThreshold = 1)
     public Future<String> hello(Result result) throws IOException {
         COUNTER.incrementAndGet();
-        switch (result) {
-            case FAILURE:
-                throw new IOException("Simulated IO error");
-            case COMPLETE_EXCEPTIONALLY:
+        return switch (result) {
+            case FAILURE -> throw new IOException("Simulated IO error");
+            case COMPLETE_EXCEPTIONALLY -> {
                 CompletableFuture<String> future = new CompletableFuture<>();
                 future.completeExceptionally(new IOException("Simulated IO error"));
-                return future;
-            default:
-                return completedFuture(OK);
-        }
+                yield future;
+            }
+            default -> completedFuture(OK);
+        };
     }
 
     enum Result {

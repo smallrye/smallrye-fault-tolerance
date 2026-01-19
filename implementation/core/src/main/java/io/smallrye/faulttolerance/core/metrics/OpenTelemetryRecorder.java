@@ -228,18 +228,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void circuitBreakerFinished(CircuitBreakerEvents.Result result) {
-        String circuitBreakerResult = null;
-        switch (result) {
-            case SUCCESS:
-                circuitBreakerResult = CIRCUIT_BREAKER_RESULT_SUCCESS;
-                break;
-            case FAILURE:
-                circuitBreakerResult = CIRCUIT_BREAKER_RESULT_FAILURE;
-                break;
-            case PREVENTED:
-                circuitBreakerResult = CIRCUIT_BREAKER_RESULT_CB_OPEN;
-                break;
-        }
+        String circuitBreakerResult = switch (result) {
+            case SUCCESS -> CIRCUIT_BREAKER_RESULT_SUCCESS;
+            case FAILURE -> CIRCUIT_BREAKER_RESULT_FAILURE;
+            case PREVENTED -> CIRCUIT_BREAKER_RESULT_CB_OPEN;
+        };
         circuitBreakerCallsTotal.add(1, Attributes.of(
                 METHOD, methodName,
                 CIRCUIT_BREAKER_RESULT, circuitBreakerResult));
