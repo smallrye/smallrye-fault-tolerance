@@ -71,7 +71,7 @@
         <version.smallrye-common>2.8.0</version.smallrye-common>
         <!-- smallrye-config is purely used for testing -->
         <!-- this is the last SmallRye Config version that supports Java 11 -->
-        <version.smallrye-config>3.10.2</version.smallrye-config>
+        <version.smallrye-config>3.15.1</version.smallrye-config>
         <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>2.3.0</version.smallrye-context-propagation>
         <!-- smallrye-metrics is purely used for testing -->
