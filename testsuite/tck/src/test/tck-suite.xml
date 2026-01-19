@@ -2,7 +2,10 @@
 <suite name="MicroProfile TCKs" verbose="1" preserve-order="true" configfailurepolicy="continue">
     <test name="MicroProfile Fault Tolerance TCK">
         <packages>
-            <package name="org.eclipse.microprofile.fault.tolerance.tck.*"/>
+            <package name="org.eclipse.microprofile.fault.tolerance.tck.*">
+                <!-- MP Metrics not required -->
+                <exclude name="org.eclipse.microprofile.fault.tolerance.tck.metrics"/>
+            </package>
         </packages>
     </test>
 </suite>

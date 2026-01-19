@@ -1,11 +1,13 @@
 package io.smallrye.faulttolerance.kotlin.reuse.metrics
 
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.AttributeKey.stringKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.sdk.metrics.data.LongPointData
+import io.smallrye.faulttolerance.minimptel.MetricsAccess
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
-import org.eclipse.microprofile.metrics.MetricRegistry
-import org.eclipse.microprofile.metrics.Tag
-import org.eclipse.microprofile.metrics.annotation.RegistryType
 import org.jboss.weld.junit5.auto.AddBeanClasses
 import org.junit.jupiter.api.Test
 
@@ -13,7 +15,7 @@ import org.junit.jupiter.api.Test
 @AddBeanClasses(MyFaultTolerance::class)
 class ReuseKotlinMetricsTest {
     @Test
-    fun test(service: MyService, @RegistryType(type = MetricRegistry.Type.BASE) metrics: MetricRegistry) = runBlocking<Unit> {
+    fun test(service: MyService, metrics: MetricsAccess) = runBlocking<Unit> {
         assertThat(service.first()).isEqualTo("fallback")
         assertThat(service.second()).isEqualTo("fallback")
         assertThat(service.second()).isEqualTo("fallback")
@@ -21,36 +23,36 @@ class ReuseKotlinMetricsTest {
 
         // first
 
-        assertThat(metrics.counter("ft.invocations.total",
-            Tag("method", "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.first"),
-            Tag("result", "valueReturned"),
-            Tag("fallback", "applied")
-        ).count).isEqualTo(1);
+        assertThat(metrics.get(LongPointData::class.java, "ft.invocations.total", Attributes.of(
+            stringKey("method"), "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.first",
+            stringKey("result"), "valueReturned",
+            stringKey("fallback"), "applied")
+        ).value).isEqualTo(1);
 
-        assertThat(metrics.counter("ft.retry.retries.total",
-            Tag("method", "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.first"))
-            .count).isEqualTo(2);
-        assertThat(metrics.counter("ft.retry.calls.total",
-            Tag("method", "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.first"),
-            Tag("retried", "true"),
-            Tag("retryResult", "maxRetriesReached")
-        ).count).isEqualTo(1);
+        assertThat(metrics.get(LongPointData::class.java, "ft.retry.retries.total", Attributes.of(
+            stringKey("method"), "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.first"))
+            .value).isEqualTo(2);
+        assertThat(metrics.get(LongPointData::class.java, "ft.retry.calls.total", Attributes.of(
+            stringKey("method"), "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.first",
+            stringKey("retried"), "true",
+            stringKey("retryResult"), "maxRetriesReached")
+        ).value).isEqualTo(1);
 
         // second
 
-        assertThat(metrics.counter("ft.invocations.total",
-            Tag("method", "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.second"),
-            Tag("result", "valueReturned"),
-            Tag("fallback", "applied")
-        ).count).isEqualTo(3);
+        assertThat(metrics.get(LongPointData::class.java, "ft.invocations.total", Attributes.of(
+            stringKey("method"), "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.second",
+            stringKey("result"), "valueReturned",
+            stringKey("fallback"), "applied")
+        ).value).isEqualTo(3);
 
-        assertThat(metrics.counter("ft.retry.retries.total",
-            Tag("method", "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.second")
-        ).count).isEqualTo(6);
-        assertThat(metrics.counter("ft.retry.calls.total",
-            Tag("method", "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.second"),
-            Tag("retried", "true"),
-            Tag("retryResult", "maxRetriesReached")
-        ).count).isEqualTo(3);
+        assertThat(metrics.get(LongPointData::class.java, "ft.retry.retries.total", Attributes.of(
+            stringKey("method"), "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.second")
+        ).value).isEqualTo(6);
+        assertThat(metrics.get(LongPointData::class.java, "ft.retry.calls.total", Attributes.of(
+            stringKey("method"), "io.smallrye.faulttolerance.kotlin.reuse.metrics.MyService.second",
+            stringKey("retried"), "true",
+            stringKey("retryResult"), "maxRetriesReached")
+        ).value).isEqualTo(3);
     }
 }

@@ -60,15 +60,15 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.smallrye</groupId>
+            <artifactId>smallrye-fault-tolerance-minimptel</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.smallrye</groupId>
-            <artifactId>smallrye-metrics</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -79,11 +79,6 @@
         <dependency>
             <groupId>io.reactivex.rxjava3</groupId>
             <artifactId>rxjava</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.microprofile.metrics</groupId>
-            <artifactId>microprofile-metrics-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -188,6 +183,7 @@
                 <configuration>
                     <systemPropertyVariables>
                         <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
+                        <otel.metrics.exporter>in-memory</otel.metrics.exporter>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

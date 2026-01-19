@@ -4,23 +4,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.temporal.ChronoUnit;
-import java.util.SortedMap;
+import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.microprofile.metrics.Gauge;
-import org.eclipse.microprofile.metrics.MetricID;
-import org.eclipse.microprofile.metrics.MetricRegistry;
-import org.eclipse.microprofile.metrics.annotation.RegistryType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import io.opentelemetry.sdk.metrics.data.LongPointData;
+import io.opentelemetry.sdk.metrics.data.PointData;
 import io.smallrye.faulttolerance.Types;
 import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.metrics.MetricsConstants;
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;
+import io.smallrye.faulttolerance.minimptel.MetricsAccess;
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
 
 // needs to stay in sync with `StandaloneMetricsTimerTest`
@@ -34,7 +33,7 @@ public class CdiMetricsTimerTest {
     }
 
     @Test
-    public void test(@RegistryType(type = MetricRegistry.Type.BASE) MetricRegistry metrics) throws Exception {
+    public void test(MetricsAccess metrics) throws Exception {
         Callable<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
                 .withThreadOffload(true)
                 .withTimeout().duration(1, ChronoUnit.MINUTES).done()
@@ -47,7 +46,7 @@ public class CdiMetricsTimerTest {
         assertThat(future).isNotCompleted();
 
         await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
-            assertThat(findTimerGauge(metrics).getValue()).isEqualTo(1);
+            assertThat(findTimer(metrics)).isEqualTo(1);
         });
 
         barrier.open();
@@ -55,7 +54,7 @@ public class CdiMetricsTimerTest {
         assertThat(future).succeedsWithin(2, TimeUnit.SECONDS)
                 .isEqualTo("hello");
 
-        assertThat(findTimerGauge(metrics).getValue()).isEqualTo(0);
+        assertThat(findTimer(metrics)).isEqualTo(0);
     }
 
     public CompletionStage<String> action() throws InterruptedException {
@@ -67,10 +66,9 @@ public class CdiMetricsTimerTest {
         return CompletableFuture.completedFuture("fallback");
     }
 
-    private static Gauge<?> findTimerGauge(MetricRegistry metrics) {
-        SortedMap<MetricID, Gauge> timers = metrics.getGauges(
-                (id, metric) -> id.getName().equals(MetricsConstants.TIMER_SCHEDULED));
+    private static long findTimer(MetricsAccess metrics) {
+        Collection<? extends PointData> timers = metrics.getAll(MetricsConstants.TIMER_SCHEDULED);
         assertThat(timers).hasSize(1);
-        return timers.values().iterator().next();
+        return ((LongPointData) timers.iterator().next()).getValue();
     }
 }

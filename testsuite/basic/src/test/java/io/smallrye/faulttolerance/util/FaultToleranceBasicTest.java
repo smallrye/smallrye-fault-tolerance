@@ -10,11 +10,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.smallrye.config.inject.ConfigExtension;
 import io.smallrye.faulttolerance.FaultToleranceExtension;
-import io.smallrye.metrics.setup.MetricCdiInjectionExtension;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@ExtendWith({ WeldWithFaultToleranceExtension.class, ResetSmallRyeMetricsExtension.class })
-@AddExtensions({ FaultToleranceExtension.class, ConfigExtension.class, MetricCdiInjectionExtension.class })
+@ExtendWith(WeldWithFaultToleranceExtension.class)
+@AddExtensions({ FaultToleranceExtension.class, ConfigExtension.class })
 public @interface FaultToleranceBasicTest {
 }

@@ -2,10 +2,6 @@ package io.smallrye.faulttolerance.metrics;
 
 public enum MetricsIntegration {
     /**
-     * Metrics integration using {@link MicroProfileMetricsProvider}.
-     */
-    MICROPROFILE_METRICS,
-    /**
      * Metrics integration using {@link OpenTelemetryProvider}.
      */
     OPENTELEMETRY,
