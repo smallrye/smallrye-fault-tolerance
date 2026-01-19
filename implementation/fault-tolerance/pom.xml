@@ -126,16 +126,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.jboss.logging</groupId>
-                            <artifactId>jboss-logging</artifactId>
-                        </path>
-                        <path>
-                            <groupId>org.jboss.logging</groupId>
-                            <artifactId>jboss-logging-processor</artifactId>
-                        </path>
-
+                    <annotationProcessorPaths combine.children="append">
                         <path>
                             <groupId>io.smallrye</groupId>
                             <artifactId>smallrye-fault-tolerance-autoconfig-processor</artifactId>
