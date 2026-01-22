@@ -85,7 +85,7 @@
         <version.awaitility>4.3.0</version.awaitility>
         <!-- JUnit Jupiter 6.0 makes small but breaking changes -->
         <version.junit-jupiter>5.14.0</version.junit-jupiter>
-        <version.testng>7.11.0</version.testng>
+        <version.testng>7.12.0</version.testng>
         <!-- Weld API: 5.0 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
         <version.weld-api>5.0.SP3</version.weld-api>
         <!-- Weld Core: 5.1 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
