@@ -81,7 +81,7 @@
         <version.arquillian>1.10.0.Final</version.arquillian>
         <!-- Arquillian Weld: 3.0 is EE 10, 4.0 is EE 11 -->
         <version.arquillian-weld>3.0.2.Final</version.arquillian-weld>
-        <version.assertj>3.27.6</version.assertj>
+        <version.assertj>3.27.7</version.assertj>
         <version.awaitility>4.3.0</version.awaitility>
         <!-- JUnit Jupiter 6.0 makes small but breaking changes -->
         <version.junit-jupiter>5.14.0</version.junit-jupiter>
