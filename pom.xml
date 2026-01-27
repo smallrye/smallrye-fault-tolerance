@@ -50,7 +50,7 @@
         <!-- Jakarta Interceptors: 2.1 is EE 10, 2.2 is EE 11 -->
         <version.jakarta-interceptors>2.1.0</version.jakarta-interceptors>
         <version.javapoet>1.13.0</version.javapoet>
-        <version.jboss-logging>3.6.1.Final</version.jboss-logging>
+        <version.jboss-logging>3.6.2.Final</version.jboss-logging>
         <version.jboss-logging-tools>3.0.4.Final</version.jboss-logging-tools>
         <version.kotlin>2.3.0</version.kotlin>
         <version.kotlin-dokka>2.1.0</version.kotlin-dokka>
