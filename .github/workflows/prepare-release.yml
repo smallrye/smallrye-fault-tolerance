@@ -58,7 +58,7 @@ jobs:
         MP_FT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.microprofile-fault-tolerance -q -DforceStdout)
         sed -i -e 's|microprofile-fault-tolerance-version: .*|microprofile-fault-tolerance-version: '"'$MP_FT_VERSION'"'|' doc/antora.yml
         VERTX_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=version.vertx -q -DforceStdout)
-        sed -i -e 's|vertx4-version: .*|vertx4-version: '"'$VERTX_VERSION'"'|' doc/antora.yml
+        sed -i -e 's|vertx-version: .*|vertx-version: '"'$VERTX_VERSION'"'|' doc/antora.yml
         git add -A .
         git commit -a -m 'Amendments before release'
         git push
