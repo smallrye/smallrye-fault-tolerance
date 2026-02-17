@@ -76,7 +76,7 @@
         <version.smallrye-context-propagation>2.3.0</version.smallrye-context-propagation>
         <!-- smallrye-metrics is purely used for testing -->
         <version.smallrye-metrics>4.0.0</version.smallrye-metrics>
-        <version.vertx>4.5.24</version.vertx>
+        <version.vertx>5.0.8</version.vertx>
 
         <version.arquillian>1.10.0.Final</version.arquillian>
         <!-- Arquillian Weld: 3.0 is EE 10, 4.0 is EE 11 -->
