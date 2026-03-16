@@ -76,7 +76,7 @@
         <version.smallrye-context-propagation>2.3.0</version.smallrye-context-propagation>
         <!-- smallrye-metrics is purely used for testing -->
         <version.smallrye-metrics>4.0.0</version.smallrye-metrics>
-        <version.vertx>4.5.24</version.vertx>
+        <version.vertx>4.5.25</version.vertx>
 
         <version.arquillian>1.10.1.Final</version.arquillian>
         <!-- Arquillian Weld: 3.0 is EE 10, 4.0 is EE 11 -->
@@ -84,7 +84,7 @@
         <version.assertj>3.27.7</version.assertj>
         <version.awaitility>4.3.0</version.awaitility>
         <!-- JUnit Jupiter 6.0 makes small but breaking changes -->
-        <version.junit-jupiter>5.14.0</version.junit-jupiter>
+        <version.junit-jupiter>5.14.3</version.junit-jupiter>
         <version.testng>7.12.0</version.testng>
         <!-- Weld API: 5.0 is EE 10, 6.0 is EE 11, 7.0 will be EE 12 -->
         <version.weld-api>5.0.SP3</version.weld-api>
