@@ -78,7 +78,7 @@
         <version.smallrye-metrics>4.0.0</version.smallrye-metrics>
         <version.vertx>4.5.24</version.vertx>
 
-        <version.arquillian>1.10.0.Final</version.arquillian>
+        <version.arquillian>1.10.1.Final</version.arquillian>
         <!-- Arquillian Weld: 3.0 is EE 10, 4.0 is EE 11 -->
         <version.arquillian-weld>3.0.2.Final</version.arquillian-weld>
         <version.assertj>3.27.7</version.assertj>
