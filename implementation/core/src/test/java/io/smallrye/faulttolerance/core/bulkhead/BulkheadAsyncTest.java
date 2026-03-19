@@ -14,12 +14,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.core.Completer;
+import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.async.ThreadOffload;
 import io.smallrye.faulttolerance.core.util.TestInvocation;
@@ -241,5 +244,41 @@ public class BulkheadAsyncTest {
             }
         }
         return Optional.empty();
+    }
+
+    @Test
+    public void shouldNotStackOverflowOnSynchronousCompletion() throws Throwable {
+        // no `ThreadOffload`, all completions are synchronous,
+        // even though the tasks themselves are asynchronous
+        //
+        // the first task returns a pending `Future` (holds the work permit),
+        // then many tasks are queued behind it; when the first task's `Future`
+        // is completed, the `then` callback fires synchronously and triggers
+        // a chain of tasks that would lead to `StackOverflowError` in the original
+        // naive implementation of `Bulkhead` / `BulkheadTask`
+
+        Completer<String> firstTaskCompleter = Completer.create();
+        AtomicBoolean first = new AtomicBoolean(true);
+
+        FaultToleranceStrategy<String> delegate = ctx -> {
+            if (first.compareAndSet(true, false)) {
+                return firstTaskCompleter.future();
+            }
+            return Future.of("hello");
+        };
+
+        Bulkhead<String> bulkhead = new Bulkhead<>(delegate, "test", 1, 10_000, false);
+
+        List<Future<String>> results = new ArrayList<>();
+        for (int i = 0; i < 10_001; i++) {
+            results.add(bulkhead.apply(async(null)));
+        }
+
+        // all tasks are queued behind the first one; complete it to trigger the chain
+        firstTaskCompleter.complete("hello");
+
+        for (Future<String> result : results) {
+            assertThat(result.awaitBlocking()).isEqualTo("hello");
+        }
     }
 }
