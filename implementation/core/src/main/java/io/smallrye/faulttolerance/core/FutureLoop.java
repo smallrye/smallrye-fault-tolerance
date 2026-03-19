@@ -1,5 +1,6 @@
 package io.smallrye.faulttolerance.core;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -22,14 +23,16 @@ final class FutureLoop<T> {
         return loop.delegate;
     }
 
-    private void run(T value, Result<T> previousResult) {
-        if (previousResult != null && previousResult.inProgress) {
+    private static final Object ITERATION_IN_PROGRESS = new Object();
+    private static final Object ITERATION_DONE = new Object();
+
+    private void run(T value, AtomicReference<Object> previousResult) {
+        if (previousResult != null && previousResult.compareAndSet(ITERATION_IN_PROGRESS, value)) {
             // synchronous iteration, set the result value and return to start new iteration in the old stack frame
-            previousResult.value = value;
             return;
         }
 
-        Result<T> currentResult = new Result<>();
+        AtomicReference<Object> currentResult = new AtomicReference<>(ITERATION_IN_PROGRESS);
         do {
             try {
                 if (condition.test(value)) {
@@ -48,21 +51,13 @@ final class FutureLoop<T> {
                 delegate.completeWithError(e);
                 return;
             }
-        } while ((value = currentResult.resetValue()) != Result.NONE);
-        currentResult.inProgress = false;
-    }
 
-    @SuppressWarnings("unchecked")
-    private static class Result<T> {
-        private static final Object NONE = new Object();
-
-        boolean inProgress = true;
-        T value = (T) NONE;
-
-        T resetValue() {
-            T result = value;
-            value = (T) NONE;
-            return result;
-        }
+            Object claimed = currentResult.compareAndExchange(ITERATION_IN_PROGRESS, ITERATION_DONE);
+            if (claimed == ITERATION_IN_PROGRESS) {
+                return;
+            }
+            value = (T) claimed;
+            currentResult.set(ITERATION_IN_PROGRESS);
+        } while (true);
     }
 }
