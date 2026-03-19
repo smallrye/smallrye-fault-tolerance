@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-fault-tolerance-implementation-parent</artifactId>
-        <version>7.0.0-SNAPSHOT</version>
+        <version>7.0.0-RC1</version>
     </parent>
 
     <artifactId>smallrye-fault-tolerance-kotlin</artifactId>
@@ -133,4 +133,8 @@
         </plugins>
     </build>
 
+
+  <scm>
+    <tag>7.0.0-RC1</tag>
+  </scm>
 </project>
