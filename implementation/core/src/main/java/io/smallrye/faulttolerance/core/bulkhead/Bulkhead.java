@@ -7,6 +7,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
@@ -179,20 +180,24 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
     }
 
     private void runQueuedTask() {
-        // it's enough to run just one queued task, because when that task finishes,
-        // it will run another one, etc. etc.
-        // this has performance implications (potentially fewer threads are utilized
-        // than possible), but it currently makes the code easier to reason about
-        BulkheadTask queuedTask = queue.pollFirst();
-        if (queuedTask != null) {
-            if (workSemaphore.tryAcquire()) {
-                LOG.trace("Work semaphore acquired, running task");
-                queuedTask.run();
-            } else {
-                LOG.trace("Work semaphore not acquired, putting task back to queue");
-                queue.addFirst(queuedTask);
+        // `BulkheadTask.run()` returns `true` when the task completed synchronously,
+        // in which case we loop to process the next queued task. For async completion,
+        // the task's callback calls `runQueuedTask()` itself. This avoids unbounded
+        // recursion that would occur if the tasks's callback always called `runQueuedTask()`.
+        boolean loop;
+        do {
+            loop = false;
+            BulkheadTask queuedTask = queue.pollFirst();
+            if (queuedTask != null) {
+                if (workSemaphore.tryAcquire()) {
+                    LOG.trace("Work semaphore acquired, running task");
+                    loop = queuedTask.run();
+                } else {
+                    LOG.trace("Work semaphore not acquired, putting task back to queue");
+                    queue.addFirst(queuedTask);
+                }
             }
-        }
+        } while (loop);
     }
 
     // only for tests
@@ -206,14 +211,23 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
     }
 
     private class BulkheadTask {
+        private static final int RUNNING = 0;
+        private static final int COMPLETED_SYNC = 1;
+        private static final int WILL_COMPLETE_ASYNC = 2;
+
         private final Completer<V> result = Completer.create();
         private final FaultToleranceContext<V> ctx;
+        private final AtomicInteger state = new AtomicInteger(RUNNING);
 
         private BulkheadTask(FaultToleranceContext<V> ctx) {
             this.ctx = ctx;
         }
 
-        public void run() {
+        /**
+         * @return {@code true} if the task completed synchronously and the caller
+         *         should loop to process the next queued task (instead of recursing)
+         */
+        public boolean run() {
             ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
             ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
 
@@ -230,15 +244,18 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
                         result.completeWithError(error);
                     }
 
-                    runQueuedTask();
+                    if (!state.compareAndSet(RUNNING, COMPLETED_SYNC)) {
+                        runQueuedTask();
+                    }
                 });
+                return !state.compareAndSet(RUNNING, WILL_COMPLETE_ASYNC);
             } catch (Exception e) {
                 releaseSemaphores();
                 ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
 
                 result.completeWithError(e);
 
-                runQueuedTask();
+                return true;
             }
         }
 
