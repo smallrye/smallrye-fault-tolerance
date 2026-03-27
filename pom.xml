@@ -64,7 +64,7 @@
         <version.smallrye-config>3.16.0</version.smallrye-config>
         <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>2.3.0</version.smallrye-context-propagation>
-        <version.vertx>5.0.9</version.vertx>
+        <version.vertx>5.0.10</version.vertx>
 
         <version.arquillian>1.10.1.Final</version.arquillian>
         <!-- Arquillian Weld: 4.0 is EE 11 -->
