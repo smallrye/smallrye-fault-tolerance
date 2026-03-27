@@ -184,17 +184,20 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
         // in which case we loop to process the next queued task. For async completion,
         // the task's callback calls `runQueuedTask()` itself. This avoids unbounded
         // recursion that would occur if the tasks's callback always called `runQueuedTask()`.
+        //
+        // The work semaphore is acquired _before_ polling the queue to prevent a race
+        // where a task is temporarily invisible (polled out of the queue but not yet
+        // put back) while a work permit becomes available, leaving the task stuck.
         boolean loop;
         do {
             loop = false;
-            BulkheadTask queuedTask = queue.pollFirst();
-            if (queuedTask != null) {
-                if (workSemaphore.tryAcquire()) {
+            if (workSemaphore.tryAcquire()) {
+                BulkheadTask queuedTask = queue.pollFirst();
+                if (queuedTask != null) {
                     LOG.trace("Work semaphore acquired, running task");
                     loop = queuedTask.run();
                 } else {
-                    LOG.trace("Work semaphore not acquired, putting task back to queue");
-                    queue.addFirst(queuedTask);
+                    workSemaphore.release();
                 }
             }
         } while (loop);

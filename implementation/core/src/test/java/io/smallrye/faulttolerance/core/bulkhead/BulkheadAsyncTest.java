@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -279,6 +280,44 @@ public class BulkheadAsyncTest {
 
         for (Future<String> result : results) {
             assertThat(result.awaitBlocking()).isEqualTo("hello");
+        }
+    }
+
+    @Test
+    public void shouldProcessAllQueuedTasksUnderConcurrentSubmission() throws Throwable {
+        // Stress test: many threads submit tasks concurrently, with async
+        // completion via ThreadOffload. Verifies that no task is left stuck
+        // in the queue due to races between concurrent `runQueuedTask()` calls.
+
+        ExecutorService pool = Executors.newFixedThreadPool(50);
+        try {
+            TestInvocation<String> invocation = TestInvocation.of(() -> "hello");
+            ThreadOffload<String> offload = new ThreadOffload<>(invocation, pool, true);
+            Bulkhead<String> bulkhead = new Bulkhead<>(offload, "test", 5, 1000, false);
+
+            for (int iteration = 0; iteration < 500; iteration++) {
+                int taskCount = 1000;
+                Barrier startBarrier = Barrier.noninterruptible();
+                List<java.util.concurrent.Future<Future<String>>> submitted = new ArrayList<>();
+
+                for (int i = 0; i < taskCount; i++) {
+                    submitted.add(pool.submit(() -> {
+                        startBarrier.await();
+                        return bulkhead.apply(async(null));
+                    }));
+                }
+
+                // release all submitters at once to maximize contention
+                startBarrier.open();
+
+                for (var f : submitted) {
+                    Future<String> result = f.get(10, TimeUnit.SECONDS);
+                    assertThat(result.awaitBlocking()).isEqualTo("hello");
+                }
+            }
+        } finally {
+            pool.shutdownNow();
+            pool.awaitTermination(1, TimeUnit.SECONDS);
         }
     }
 }
