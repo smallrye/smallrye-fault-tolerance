@@ -32,13 +32,7 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
 
     // circuit breaker
 
-    private volatile CircuitBreakerState state;
-    private final AtomicLong previousHalfOpenTime = new AtomicLong();
-    private volatile long halfOpenStart;
-    private final AtomicLong previousClosedTime = new AtomicLong();
-    private volatile long closedStart;
-    private final AtomicLong previousOpenTime = new AtomicLong();
-    private volatile long openStart;
+    private volatile CircuitBreakerTimes cbTimes;
 
     // bulkhead
 
@@ -55,20 +49,20 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         this.hasRetry = operation.hasRetry();
         this.hasTimeout = operation.hasTimeout();
 
-        this.state = CircuitBreakerState.CLOSED;
-        this.closedStart = System.nanoTime();
+        this.cbTimes = new CircuitBreakerTimes(CircuitBreakerState.CLOSED,
+                System.nanoTime(), 0, 0, 0);
 
         if (hasCircuitBreaker) {
-            metrics.registerCircuitBreakerIsClosed(() -> CircuitBreakerState.CLOSED == state);
-            metrics.registerCircuitBreakerIsOpen(() -> CircuitBreakerState.OPEN == state);
-            metrics.registerCircuitBreakerIsHalfOpen(() -> CircuitBreakerState.HALF_OPEN == state);
+            metrics.registerCircuitBreakerIsClosed(() -> cbTimes.currentState == CircuitBreakerState.CLOSED);
+            metrics.registerCircuitBreakerIsOpen(() -> cbTimes.currentState == CircuitBreakerState.OPEN);
+            metrics.registerCircuitBreakerIsHalfOpen(() -> cbTimes.currentState == CircuitBreakerState.HALF_OPEN);
 
             metrics.registerCircuitBreakerTimeSpentInClosed(
-                    () -> getTime(CircuitBreakerState.CLOSED, closedStart, previousClosedTime));
+                    () -> cbTimes.timeInState(CircuitBreakerState.CLOSED));
             metrics.registerCircuitBreakerTimeSpentInOpen(
-                    () -> getTime(CircuitBreakerState.OPEN, openStart, previousOpenTime));
+                    () -> cbTimes.timeInState(CircuitBreakerState.OPEN));
             metrics.registerCircuitBreakerTimeSpentInHalfOpen(
-                    () -> getTime(CircuitBreakerState.HALF_OPEN, halfOpenStart, previousHalfOpenTime));
+                    () -> cbTimes.timeInState(CircuitBreakerState.HALF_OPEN));
         }
 
         if (hasBulkhead) {
@@ -77,12 +71,6 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
                 metrics.registerBulkheadExecutionsWaiting(waitingExecutions::get);
             }
         }
-    }
-
-    private long getTime(CircuitBreakerState measuredState, long measuredStateStart, AtomicLong prevMeasuredStateTime) {
-        return state == measuredState
-                ? prevMeasuredStateTime.get() + System.nanoTime() - measuredStateStart
-                : prevMeasuredStateTime.get();
     }
 
     @Override
@@ -164,25 +152,20 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
             ctx.registerEventHandler(CircuitBreakerEvents.Finished.class,
                     event -> metrics.circuitBreakerFinished(event.result));
             ctx.registerEventHandler(CircuitBreakerEvents.StateTransition.class, event -> {
-                state = event.targetState;
-
+                CircuitBreakerTimes current = cbTimes;
                 long now = System.nanoTime();
+                long elapsed = now - current.currentStateStart;
+                cbTimes = switch (event.targetState) {
+                    case CLOSED -> new CircuitBreakerTimes(CircuitBreakerState.CLOSED,
+                            now, current.closedTime, current.openTime, current.halfOpenTime + elapsed);
+                    case OPEN -> new CircuitBreakerTimes(CircuitBreakerState.OPEN,
+                            now, current.closedTime + elapsed, current.openTime, current.halfOpenTime);
+                    case HALF_OPEN -> new CircuitBreakerTimes(CircuitBreakerState.HALF_OPEN,
+                            now, current.closedTime, current.openTime + elapsed, current.halfOpenTime);
+                };
 
-                switch (event.targetState) {
-                    case CLOSED -> {
-                        closedStart = now;
-                        previousHalfOpenTime.addAndGet(now - halfOpenStart);
-                    }
-                    case OPEN -> {
-                        openStart = now;
-                        previousClosedTime.addAndGet(now - closedStart);
-
-                        metrics.circuitBreakerMovedToOpen();
-                    }
-                    case HALF_OPEN -> {
-                        halfOpenStart = now;
-                        previousOpenTime.addAndGet(now - openStart);
-                    }
+                if (event.targetState == CircuitBreakerState.OPEN) {
+                    metrics.circuitBreakerMovedToOpen();
                 }
             });
         }
@@ -219,6 +202,23 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         if (hasRateLimit) {
             ctx.registerEventHandler(RateLimitEvents.DecisionMade.class,
                     event -> metrics.rateLimitDecisionMade(event.permitted));
+        }
+    }
+
+    private record CircuitBreakerTimes(CircuitBreakerState currentState,
+            long currentStateStart,
+            long closedTime,
+            long openTime,
+            long halfOpenTime) {
+        long timeInState(CircuitBreakerState measuredState) {
+            long accumulated = switch (measuredState) {
+                case CLOSED -> closedTime;
+                case OPEN -> openTime;
+                case HALF_OPEN -> halfOpenTime;
+            };
+            return currentState == measuredState
+                    ? accumulated + (System.nanoTime() - currentStateStart)
+                    : accumulated;
         }
     }
 }
