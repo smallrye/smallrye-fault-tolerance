@@ -123,8 +123,8 @@ public class MicrometerRecorder implements MetricsRecorder {
         }
 
         if (operation.hasRateLimit()) {
-            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_ACCEPTED));
-            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_REJECTED));
+            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, RATE_LIMIT_RESULT_PERMITTED));
+            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, RATE_LIMIT_RESULT_REJECTED));
         }
     }
 
