@@ -6,7 +6,6 @@ import java.util.Deque;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -105,23 +104,24 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
             ctx.fireEvent(BulkheadEvents.DecisionMade.ACCEPTED);
             ctx.fireEvent(BulkheadEvents.StartedWaiting.INSTANCE);
 
-            AtomicBoolean cancellationInvalid = new AtomicBoolean(false);
-            AtomicBoolean cancelled = new AtomicBoolean(false);
-            AtomicReference<Thread> executingThread = new AtomicReference<>(Thread.currentThread());
+            Object cancellationLock = new Object();
+            AtomicReference<Thread> threadToCancel = new AtomicReference<>(Thread.currentThread());
             ctx.registerEventHandler(FutureCancellationEvent.class, event -> {
-                if (cancellationInvalid.get()) {
-                    // in case of retries, multiple handlers of FutureCancellationEvent may be registered,
-                    // need to make sure that a handler belonging to an older bulkhead task doesn't do anything
-                    return;
-                }
+                synchronized (cancellationLock) {
+                    Thread thread = threadToCancel.getAndSet(null);
+                    if (thread == null) {
+                        // in case of retries, multiple handlers of `FutureCancellationEvent` may be registered,
+                        // need to make sure that a handler belonging to an older bulkhead task doesn't do anything
+                        return;
+                    }
 
-                if (LOG.isTraceEnabled()) {
-                    LOG.tracef("Cancelling bulkhead task,%s interrupting executing thread",
-                            (event.interruptible ? "" : " NOT"));
-                }
-                cancelled.set(true);
-                if (event.interruptible) {
-                    executingThread.get().interrupt();
+                    if (LOG.isTraceEnabled()) {
+                        LOG.tracef("Cancelling bulkhead task,%s interrupting executing thread",
+                                (event.interruptible ? "" : " NOT"));
+                    }
+                    if (event.interruptible) {
+                        thread.interrupt();
+                    }
                 }
             });
 
@@ -129,7 +129,7 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
                 workSemaphore.acquire();
                 LOG.trace("Work semaphore acquired, running task");
             } catch (InterruptedException e) {
-                cancellationInvalid.set(true);
+                threadToCancel.set(null);
 
                 capacitySemaphore.release();
                 LOG.trace("Capacity semaphore released, task leaving bulkhead");
@@ -140,12 +140,14 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
             ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
             ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
             try {
-                if (cancelled.get()) {
+                if (threadToCancel.get() == null) {
                     return Future.ofError(new CancellationException());
                 }
                 return delegate.apply(ctx);
             } finally {
-                cancellationInvalid.set(true);
+                synchronized (cancellationLock) {
+                    threadToCancel.set(null);
+                }
 
                 workSemaphore.release();
                 LOG.trace("Work semaphore released, task finished");
