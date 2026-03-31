@@ -11,6 +11,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import io.smallrye.faulttolerance.core.util.RunnableWrapper;
@@ -38,10 +39,12 @@ public final class ThreadTimer implements Timer {
             return 1;
         }
 
-        return System.identityHashCode(o1) < System.identityHashCode(o2) ? -1 : 1;
+        return Long.compare(o1.sequenceNumber, o2.sequenceNumber);
     };
 
     private final int id;
+
+    private final AtomicLong taskSequence = new AtomicLong(0);
 
     private final SortedSet<Task> tasks = new ConcurrentSkipListSet<>(TASK_COMPARATOR);
 
@@ -124,13 +127,23 @@ public final class ThreadTimer implements Timer {
     @Override
     public TimerTask schedule(long delayInMillis, Runnable task, Executor executor) {
         long startTime = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayInMillis);
+        TimerTask timerTask = scheduleAtTime(startTime, task, executor);
+        LOG.scheduledTimerTask(timerTask, delayInMillis);
+        return timerTask;
+    }
+
+    // only for tests
+    TimerTask scheduleAtTime(long startTime, Runnable task) {
+        return scheduleAtTime(startTime, task, null);
+    }
+
+    private TimerTask scheduleAtTime(long startTime, Runnable task, Executor executor) {
         task = RunnableWrapper.INSTANCE.wrap(task);
         Task timerTask = executor == null || executor == defaultExecutor
                 ? new Task(startTime, task)
                 : new TaskWithExecutor(startTime, task, executor);
         tasks.add(timerTask);
         LockSupport.unpark(thread);
-        LOG.scheduledTimerTask(timerTask, delayInMillis);
         return timerTask;
     }
 
@@ -154,10 +167,12 @@ public final class ThreadTimer implements Timer {
         // finished or cancelled: not present in the `tasks` queue && `runnable == null`
 
         final long startTime; // in nanos, to be compared with System.nanoTime()
+        final long sequenceNumber;
         volatile Runnable runnable;
 
         Task(long startTime, Runnable runnable) {
             this.startTime = startTime;
+            this.sequenceNumber = taskSequence.getAndIncrement();
             this.runnable = checkNotNull(runnable, "Runnable task must be set");
         }
 
