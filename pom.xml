@@ -43,7 +43,7 @@
         <version.jakarta-cdi>4.1.0</version.jakarta-cdi>
         <!-- Jakarta Interceptors: 2.2 is EE 11 -->
         <version.jakarta-interceptors>2.2.0</version.jakarta-interceptors>
-        <version.javapoet>0.12.0</version.javapoet>
+        <version.javapoet>0.13.0</version.javapoet>
         <version.jboss-logging>3.6.3.Final</version.jboss-logging>
         <version.jboss-logging-tools>3.0.4.Final</version.jboss-logging-tools>
         <version.kotlin>2.3.20</version.kotlin>
