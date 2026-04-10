@@ -59,7 +59,7 @@
         <!-- OpenTelemetry 1.48.0 is required by MicroProfile Telemetry 2.1 (MP Platform 7.1) -->
         <version.opentelemetry>1.48.0</version.opentelemetry>
         <version.rxjava3>3.1.12</version.rxjava3>
-        <version.smallrye-common>2.17.0</version.smallrye-common>
+        <version.smallrye-common>2.17.1</version.smallrye-common>
         <!-- smallrye-config is purely used for testing -->
         <version.smallrye-config>3.16.0</version.smallrye-config>
         <!-- smallrye-context-propagation is purely used for testing -->
