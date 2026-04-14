@@ -49,7 +49,7 @@
         <version.kotlin>2.3.20</version.kotlin>
         <version.kotlin-dokka>2.2.0</version.kotlin-dokka>
         <version.kotlinx-coroutines>1.10.2</version.kotlinx-coroutines>
-        <version.micrometer-core>1.16.4</version.micrometer-core>
+        <version.micrometer-core>1.16.5</version.micrometer-core>
         <version.microprofile-fault-tolerance>4.1.2</version.microprofile-fault-tolerance>
         <version.microprofile-config-api>3.1</version.microprofile-config-api>
         <!-- MicroProfile Metrics API is required to run the TCK, but no implementation is necessary -->
