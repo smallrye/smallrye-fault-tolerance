@@ -51,7 +51,7 @@
         <version.kotlinx-coroutines>1.10.2</version.kotlinx-coroutines>
         <version.micrometer-core>1.16.5</version.micrometer-core>
         <version.microprofile-fault-tolerance>4.1.2</version.microprofile-fault-tolerance>
-        <version.microprofile-config-api>3.1</version.microprofile-config-api>
+        <version.microprofile-config-api>3.1.1</version.microprofile-config-api>
         <!-- MicroProfile Metrics API is required to run the TCK, but no implementation is necessary -->
         <version.microprofile-metrics-api>4.0.1</version.microprofile-metrics-api>
         <version.microprofile-context-propagation-api>1.3</version.microprofile-context-propagation-api>
