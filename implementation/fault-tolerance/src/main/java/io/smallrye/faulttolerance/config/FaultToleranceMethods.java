@@ -1,14 +1,20 @@
 package io.smallrye.faulttolerance.config;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Inherited;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import jakarta.enterprise.inject.Stereotype;
 import jakarta.enterprise.inject.spi.AnnotatedMethod;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -80,7 +86,11 @@ public class FaultToleranceMethods {
             directlyPresent.add(annotationType);
             return cdiMethod.getAnnotation(annotationType);
         }
-        return cdiMethod.getDeclaringType().getAnnotation(annotationType);
+        A annotation = cdiMethod.getDeclaringType().getAnnotation(annotationType);
+        if (annotation == null) {
+            annotation = findInStereotypes(cdiMethod.getDeclaringType().getAnnotations(), annotationType);
+        }
+        return annotation;
     }
 
     // ---
@@ -139,9 +149,16 @@ public class FaultToleranceMethods {
     }
 
     private static <A extends Annotation> A getAnnotationFromClass(Class<?> clazz, Class<A> annotationType) {
+        // all Fault Tolerance annotations (in MP FT API and SRye FT API) are `@Inherited`,
+        // but stereotypes don't have to be
+        boolean notInherited = !annotationType.isAnnotationPresent(Inherited.class);
+
         while (clazz != null) {
             A annotation = clazz.getAnnotation(annotationType);
-            if (annotation != null) {
+            if (annotation == null) {
+                annotation = findInStereotypes(Arrays.asList(clazz.getAnnotations()), annotationType);
+            }
+            if (annotation != null || notInherited) {
                 return annotation;
             }
             clazz = clazz.getSuperclass();
@@ -196,5 +213,27 @@ public class FaultToleranceMethods {
             result.add(createMethodDescriptor(reflectiveMethod));
         }
         return result;
+    }
+
+    private static <A extends Annotation> A findInStereotypes(Collection<Annotation> annotations, Class<A> annotationType) {
+        Deque<Annotation> worklist = new ArrayDeque<>(annotations);
+        Set<Class<? extends Annotation>> seen = new HashSet<>();
+
+        while (!worklist.isEmpty()) {
+            Annotation annotation = worklist.removeFirst();
+            Class<? extends Annotation> type = annotation.annotationType();
+            if (!type.isAnnotationPresent(Stereotype.class)) {
+                continue;
+            }
+            if (!seen.add(type)) {
+                continue;
+            }
+            A found = type.getAnnotation(annotationType);
+            if (found != null) {
+                return found;
+            }
+            Collections.addAll(worklist, type.getAnnotations());
+        }
+        return null;
     }
 }
