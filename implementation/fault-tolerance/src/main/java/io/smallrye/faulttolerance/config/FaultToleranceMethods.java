@@ -5,11 +5,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.security.PrivilegedActionException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import jakarta.enterprise.inject.Stereotype;
 import jakarta.enterprise.inject.spi.AnnotatedMethod;
 
 import org.eclipse.microprofile.faulttolerance.Asynchronous;
@@ -92,10 +94,12 @@ public class FaultToleranceMethods {
             directlyPresent.add(annotationType);
             return cdiMethod.getAnnotation(annotationType);
         }
-        return cdiMethod.getDeclaringType().getAnnotation(annotationType);
+        A annotation = cdiMethod.getDeclaringType().getAnnotation(annotationType);
+        if (annotation == null) {
+            annotation = findInStereotypes(cdiMethod.getDeclaringType().getAnnotations(), annotationType);
+        }
+        return annotation;
     }
-
-    // ---
 
     public static FaultToleranceMethod create(Class<?> beanClass, Method method) {
         Set<Class<? extends Annotation>> annotationsPresentDirectly = new HashSet<>();
@@ -160,6 +164,9 @@ public class FaultToleranceMethods {
     private static <A extends Annotation> A getAnnotationFromClass(Class<?> clazz, Class<A> annotationType) {
         while (clazz != null) {
             A annotation = clazz.getAnnotation(annotationType);
+            if (annotation == null) {
+                annotation = findInStereotypes(Arrays.asList(clazz.getAnnotations()), annotationType);
+            }
             if (annotation != null) {
                 return annotation;
             }
@@ -167,8 +174,6 @@ public class FaultToleranceMethods {
         }
         return null;
     }
-
-    // ---
 
     private static void searchForMethods(FaultToleranceMethod result, Class<?> beanClass, Method method)
             throws PrivilegedActionException {
@@ -215,5 +220,33 @@ public class FaultToleranceMethods {
             result.add(createMethodDescriptor(reflectiveMethod));
         }
         return result;
+    }
+
+    private static <A extends Annotation> A findInStereotypes(
+            Collection<Annotation> classAnnotations, Class<A> annotationType) {
+        return findInStereotypes(classAnnotations, annotationType, new HashSet<>());
+    }
+
+    private static <A extends Annotation> A findInStereotypes(
+            Collection<Annotation> classAnnotations, Class<A> annotationType,
+            Set<Class<? extends Annotation>> visited) {
+        for (Annotation classAnnotation : classAnnotations) {
+            Class<? extends Annotation> stereotypeType = classAnnotation.annotationType();
+            if (!stereotypeType.isAnnotationPresent(Stereotype.class)) {
+                continue;
+            }
+            if (!visited.add(stereotypeType)) {
+                continue;
+            }
+            A found = stereotypeType.getAnnotation(annotationType);
+            if (found != null) {
+                return found;
+            }
+            found = findInStereotypes(Arrays.asList(stereotypeType.getAnnotations()), annotationType, visited);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
     }
 }
