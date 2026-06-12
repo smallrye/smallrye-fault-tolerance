@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.metrics;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -45,8 +47,18 @@ public class OpenTelemetryProvider implements MetricsProvider {
         if (enabled) {
             Timer timer = executorHolder.getTimer();
             Attributes attributes = Attributes.of(AttributeKey.stringKey("id"), "" + timer.getId());
-            this.meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
-                    .buildWithCallback(m -> m.record(timer.countScheduledTasks(), attributes));
+            if (System.getSecurityManager() == null) {
+                this.meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
+                        .buildWithCallback(m -> m.record(timer.countScheduledTasks(), attributes));
+            } else {
+                // OpenTelemetry 1.62.0 introduced changes that break under a security manager,
+                // so we need to use `doPrivileged` if a security manager is present.
+                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    this.meter.upDownCounterBuilder(MetricsConstants.TIMER_SCHEDULED)
+                            .buildWithCallback(m -> m.record(timer.countScheduledTasks(), attributes));
+                    return null;
+                });
+            }
         }
     }
 

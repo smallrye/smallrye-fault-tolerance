@@ -1,0 +1,8 @@
+// Security policy for SmallRye Fault Tolerance tests
+//
+// The goal is to make sure that the Security Manager is active so that the `doPrivileged`
+// code paths are exercised. The actual permissions are hard to narrow down as tests and
+// Maven Surefire plugin share the policy file.
+grant {
+    permission java.security.AllPermission;
+};
