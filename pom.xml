@@ -61,7 +61,7 @@
         <version.rxjava3>3.1.12</version.rxjava3>
         <version.smallrye-common>2.19.0</version.smallrye-common>
         <!-- smallrye-config is purely used for testing -->
-        <version.smallrye-config>3.18.0</version.smallrye-config>
+        <version.smallrye-config>3.18.1</version.smallrye-config>
         <!-- smallrye-context-propagation is purely used for testing -->
         <version.smallrye-context-propagation>2.3.0</version.smallrye-context-propagation>
         <version.vertx>5.1.5</version.vertx>
