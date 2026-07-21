@@ -81,7 +81,7 @@
         <version.weld-junit5>5.0.3.Final</version.weld-junit5>
 
         <version.jacoco-maven-plugin>0.8.15</version.jacoco-maven-plugin>
-        <version.pitest-maven>1.25.7</version.pitest-maven>
+        <version.pitest-maven>1.25.8</version.pitest-maven>
         <version.pitest-junit5-plugin>1.2.3</version.pitest-junit5-plugin>
         <version.sundrio>0.300.0</version.sundrio>
 
