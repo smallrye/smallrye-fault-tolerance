@@ -57,7 +57,7 @@
         <version.microprofile-context-propagation-api>1.3</version.microprofile-context-propagation-api>
         <version.mutiny>3.3.0</version.mutiny>
         <!-- note that MicroProfile Telemetry 2.1 (MP Platform 7.1) requires 1.48.0  -->
-        <version.opentelemetry>1.62.0</version.opentelemetry>
+        <version.opentelemetry>1.64.0</version.opentelemetry>
         <version.rxjava3>3.1.12</version.rxjava3>
         <version.smallrye-common>2.20.0</version.smallrye-common>
         <!-- smallrye-config is purely used for testing -->
