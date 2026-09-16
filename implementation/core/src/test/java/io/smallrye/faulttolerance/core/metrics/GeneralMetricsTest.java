@@ -10,6 +10,8 @@ import java.util.function.LongSupplier;
 
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.core.FaultToleranceContext;
+import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 import io.smallrye.faulttolerance.core.util.TestException;
 
@@ -37,6 +39,22 @@ public class GeneralMetricsTest {
 
         assertThat(metrics.valueReturned).isEqualTo(0);
         assertThat(metrics.exceptionThrown).isEqualTo(1);
+    }
+
+    // regression test for a memory leak in `DelegatingMetricsCollector`
+    @Test
+    public void metricsCollectorIsReusedForSameOperation() throws Throwable {
+        MockMetricsProvider provider = new MockMetricsProvider();
+        FaultToleranceStrategy<String> collector = new DelegatingMetricsCollector<>(invocation(), provider,
+                new MockMeteredOperation());
+
+        for (int i = 0; i < 1000; i++) {
+            FaultToleranceContext<String> ctx = sync(() -> "foobar");
+            ctx.set(MeteredOperationName.class, new MeteredOperationName("mock"));
+            assertThat(collector.apply(ctx).awaitBlocking()).isEqualTo("foobar");
+        }
+
+        assertThat(provider.counter).isEqualTo(1);
     }
 
     private static class MockMeteredOperation implements MeteredOperation {
@@ -88,6 +106,21 @@ public class GeneralMetricsTest {
         @Override
         public Object cacheKey() {
             return name();
+        }
+    }
+
+    private static class MockMetricsProvider implements MetricsProvider {
+        int counter;
+
+        @Override
+        public boolean isEnabled() {
+            return true;
+        }
+
+        @Override
+        public MetricsRecorder create(MeteredOperation operation) {
+            counter++;
+            return new MockMetricsRecorder();
         }
     }
 
