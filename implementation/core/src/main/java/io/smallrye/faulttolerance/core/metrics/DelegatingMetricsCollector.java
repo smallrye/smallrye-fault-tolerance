@@ -12,7 +12,8 @@ public class DelegatingMetricsCollector<V> implements FaultToleranceStrategy<V> 
     private final MetricsProvider provider;
     private final MeteredOperation originalOperation;
 
-    private final ConcurrentMap<MeteredOperation, MetricsCollector<V>> cache = new ConcurrentHashMap<>();
+    // keyed by `MeteredOperation.cacheKey()`
+    private final ConcurrentMap<Object, MetricsCollector<V>> cache = new ConcurrentHashMap<>();
 
     public DelegatingMetricsCollector(FaultToleranceStrategy<V> delegate,
             MetricsProvider provider, MeteredOperation originalOperation) {
@@ -29,7 +30,7 @@ public class DelegatingMetricsCollector<V> implements FaultToleranceStrategy<V> 
                 : originalOperation;
         FaultToleranceStrategy<V> delegate;
         if (operation.enabled()) {
-            delegate = cache.computeIfAbsent(operation,
+            delegate = cache.computeIfAbsent(operation.cacheKey(),
                     ignored -> new MetricsCollector<>(this.delegate, provider.create(operation), operation));
         } else {
             delegate = this.delegate;
