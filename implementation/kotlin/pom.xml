@@ -18,8 +18,8 @@
             <artifactId>smallrye-fault-tolerance-api</artifactId>
             <exclusions>
                 <exclusion>
-                    <groupId>jakarta.enterprise</groupId>
-                    <artifactId>jakarta.enterprise.cdi-api</artifactId>
+                    <groupId>jakarta.cdi</groupId>
+                    <artifactId>jakarta.cdi-api</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.eclipse.microprofile.fault-tolerance</groupId>

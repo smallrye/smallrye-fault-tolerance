@@ -40,7 +40,7 @@
         <!-- Jakarta Annotations: 3.0 is EE 11, 3.1 will be EE 12 -->
         <version.jakarta-annotations>3.0.0</version.jakarta-annotations>
         <!-- Jakarta CDI: 4.1 is EE 11, 5.0 will be EE 12 -->
-        <version.jakarta-cdi>4.1.0</version.jakarta-cdi>
+        <version.jakarta-cdi>5.0.0</version.jakarta-cdi>
         <!-- Jakarta Interceptors: 2.2 is EE 11 -->
         <version.jakarta-interceptors>2.2.0</version.jakarta-interceptors>
         <version.javapoet>0.19.0</version.javapoet>
@@ -113,15 +113,9 @@
                 <version>${version.jakarta-annotations}</version>
             </dependency>
             <dependency>
-                <groupId>jakarta.enterprise</groupId>
-                <artifactId>jakarta.enterprise.cdi-api</artifactId>
+                <groupId>jakarta.cdi</groupId>
+                <artifactId>jakarta.cdi-api</artifactId>
                 <version>${version.jakarta-cdi}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>jakarta.el</groupId>
-                        <artifactId>jakarta.el-api</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>jakarta.interceptor</groupId>
