@@ -82,6 +82,9 @@
                     <dependenciesToScan>
                         <dependency>org.eclipse.microprofile.fault-tolerance:microprofile-fault-tolerance-tck</dependency>
                     </dependenciesToScan>
+                    <includes>
+                        <include>org.eclipse.microprofile.fault.tolerance.tck.**</include>
+                    </includes>
                     <systemPropertyVariables>
                         <java.util.logging.config.file>${project.build.testOutputDirectory}/logging.properties</java.util.logging.config.file>
                     </systemPropertyVariables>
@@ -96,9 +99,7 @@
                     <execution>
                         <id>default-test</id>
                         <configuration>
-                            <suiteXmlFiles>
-                                <suiteXmlFile>src/test/tck-suite.xml</suiteXmlFile>
-                            </suiteXmlFiles>
+                            <excludesFile>src/test/tck-excludes.txt</excludesFile>
                         </configuration>
                     </execution>
                     <execution>
@@ -108,9 +109,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <suiteXmlFiles>
-                                <suiteXmlFile>src/test/tck-suite-non-compatible.xml</suiteXmlFile>
-                            </suiteXmlFiles>
+                            <excludesFile>src/test/tck-excludes-non-compatible.txt</excludesFile>
                             <systemPropertyVariables>
                                 <smallrye.faulttolerance.mp-compatibility>false</smallrye.faulttolerance.mp-compatibility>
                             </systemPropertyVariables>
