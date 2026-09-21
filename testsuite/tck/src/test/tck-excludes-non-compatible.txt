@@ -1,0 +1,6 @@
+# MP Metrics are not required
+org.eclipse.microprofile.fault.tolerance.tck.metrics.*
+
+# these tests assume the MicroProfile Fault Tolerance compatible mode
+org.eclipse.microprofile.fault.tolerance.tck.RetryConditionTest#testNoAsynRetryOnMethodException
+org.eclipse.microprofile.fault.tolerance.tck.RetryConditionTest#testNoAsynWilNotRetryExceptionally

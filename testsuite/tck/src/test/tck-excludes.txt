@@ -1,0 +1,2 @@
+# MP Metrics are not required
+org.eclipse.microprofile.fault.tolerance.tck.metrics.*
