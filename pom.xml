@@ -74,7 +74,7 @@
         <version.junit-jupiter>6.1.3</version.junit-jupiter>
         <version.testng>7.12.0</version.testng>
         <!-- Weld API: 6.0 is EE 11, 7.0 will be EE 12 -->
-        <version.weld-api>6.0.Final</version.weld-api>
+        <version.weld-api>7.0.Final</version.weld-api>
         <!-- Weld Core: 6.0 is EE 11, 7.0 will be EE 12 -->
         <version.weld-core>6.0.4.Final</version.weld-core>
         <!-- Weld JUnit: 5.0 is EE 11 -->
