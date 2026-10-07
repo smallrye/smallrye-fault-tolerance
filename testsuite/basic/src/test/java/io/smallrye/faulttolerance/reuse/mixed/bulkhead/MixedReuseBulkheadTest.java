@@ -7,7 +7,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.BulkheadException;
-import org.jboss.weld.junit5.auto.AddBeanClasses;
+import org.jboss.weld.junit.jupiter.auto.AddBeanClasses;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.core.util.barrier.Barrier;

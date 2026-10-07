@@ -8,7 +8,7 @@ import io.smallrye.faulttolerance.minimptel.MetricsAccess
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
-import org.jboss.weld.junit5.auto.AddBeanClasses
+import org.jboss.weld.junit.jupiter.auto.AddBeanClasses
 import org.junit.jupiter.api.Test
 
 @FaultToleranceBasicTest

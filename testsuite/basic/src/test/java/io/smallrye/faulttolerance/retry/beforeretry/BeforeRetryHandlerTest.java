@@ -3,7 +3,7 @@ package io.smallrye.faulttolerance.retry.beforeretry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.jboss.weld.junit5.auto.AddBeanClasses;
+import org.jboss.weld.junit.jupiter.auto.AddBeanClasses;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;

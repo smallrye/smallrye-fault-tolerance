@@ -5,7 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.jboss.weld.junit5.auto.AddExtensions;
+import org.jboss.weld.junit.jupiter.auto.AddExtensions;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.smallrye.config.inject.ConfigExtension;

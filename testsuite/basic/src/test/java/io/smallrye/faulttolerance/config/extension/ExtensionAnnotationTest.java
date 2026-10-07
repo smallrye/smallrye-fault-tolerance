@@ -23,7 +23,7 @@ import java.time.temporal.ChronoUnit;
 import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
-import org.jboss.weld.junit5.auto.AddExtensions;
+import org.jboss.weld.junit.jupiter.auto.AddExtensions;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.FaultToleranceOperations;

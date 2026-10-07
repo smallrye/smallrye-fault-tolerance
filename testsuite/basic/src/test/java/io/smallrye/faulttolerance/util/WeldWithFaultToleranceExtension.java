@@ -6,7 +6,7 @@ import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatio
 import java.lang.reflect.Method;
 import java.util.Optional;
 
-import org.jboss.weld.junit5.auto.WeldJunit5AutoExtension;
+import org.jboss.weld.junit.jupiter.auto.WeldJunit5AutoExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
