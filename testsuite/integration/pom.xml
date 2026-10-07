@@ -48,7 +48,7 @@
         </dependency>
         <dependency>
             <groupId>org.jboss.weld</groupId>
-            <artifactId>weld-junit5</artifactId>
+            <artifactId>weld-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

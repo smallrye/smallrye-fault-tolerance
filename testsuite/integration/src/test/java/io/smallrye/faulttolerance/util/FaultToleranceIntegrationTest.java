@@ -5,9 +5,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.jboss.weld.junit5.auto.AddBeanClasses;
-import org.jboss.weld.junit5.auto.AddExtensions;
-import org.jboss.weld.junit5.auto.EnableAutoWeld;
+import org.jboss.weld.junit.jupiter.auto.AddBeanClasses;
+import org.jboss.weld.junit.jupiter.auto.AddExtensions;
+import org.jboss.weld.junit.jupiter.auto.EnableAutoWeld;
 
 import io.smallrye.config.inject.ConfigExtension;
 import io.smallrye.context.inject.SmallryeContextCdiExtension;

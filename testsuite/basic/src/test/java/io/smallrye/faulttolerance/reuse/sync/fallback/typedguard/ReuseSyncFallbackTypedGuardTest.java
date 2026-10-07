@@ -2,7 +2,7 @@ package io.smallrye.faulttolerance.reuse.sync.fallback.typedguard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.jboss.weld.junit5.auto.AddBeanClasses;
+import org.jboss.weld.junit.jupiter.auto.AddBeanClasses;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;

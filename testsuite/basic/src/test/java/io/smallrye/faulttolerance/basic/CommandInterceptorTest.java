@@ -26,7 +26,7 @@ import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenException;
 import org.eclipse.microprofile.faulttolerance.exceptions.TimeoutException;
-import org.jboss.weld.junit5.auto.AddBeanClasses;
+import org.jboss.weld.junit.jupiter.auto.AddBeanClasses;
 import org.junit.jupiter.api.Test;
 
 import io.smallrye.faulttolerance.util.FaultToleranceBasicTest;
