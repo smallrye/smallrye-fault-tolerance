@@ -1,0 +1,80 @@
+title: SmallRye Fault Tolerance
+nav:
+- title: Index
+  page: index
+- title: How-to
+  items:
+  - title: Begin
+    page: howto/begin
+  - title: Supply Fallback Values
+    page: howto/fallback
+  - title: Limit Concurrency
+    page: howto/bulkhead
+  - title: Fail Fast on Recurring Failures
+    page: howto/circuit-breaker
+  - title: Watch for Timeouts
+    page: howto/timeout
+  - title: Retry on Failures
+    page: howto/retry
+  - title: Guard Asynchronous Methods
+    page: howto/asynchronous
+  - title: Limit Execution Rate
+    page: howto/rate-limit
+  - title: Use Multiple Strategies
+    page: howto/multiple
+- title: Reference
+  items:
+  - title: Fallback
+    page: reference/fallback
+  - title: Bulkhead
+    page: reference/bulkhead
+  - title: Circuit Breaker
+    page: reference/circuit-breaker
+  - title: Timeout
+    page: reference/timeout
+  - title: Retry
+    page: reference/retry
+  - title: Asynchronous Execution
+    page: reference/asynchronous
+  - title: Rate Limit
+    page: reference/rate-limit
+  - title: Configuration
+    page: reference/config
+  - title: Metrics
+    page: reference/metrics
+  - title: Non-compatible Mode
+    page: reference/non-compat
+  - title: Programmatic API
+    page: reference/programmatic-api
+  - title: Reusable Fault Tolerance
+    page: reference/reusable
+- title: Integration
+  items:
+  - title: Introduction
+    page: integration/intro
+  - title: Metrics
+    page: integration/metrics
+  - title: Thread Pool
+    page: integration/thread-pool
+  - title: Context Propagation
+    page: integration/context-propagation
+  - title: Event Loop
+    page: integration/event-loop
+  - title: Additional Asynchronous Types Integration Concerns
+    page: integration/async-types
+  - title: Kotlin Integration Concerns
+    page: integration/kotlin
+  - title: Programmatic API Integration Concerns
+    page: integration/programmatic-api
+- title: Internals
+  items:
+  - title: Project Structure
+    page: internals/project-structure
+  - title: Instructions
+    page: internals/instructions
+  - title: Fault Tolerance Core
+    page: internals/core
+  - title: Configuration System
+    page: internals/config
+  - title: Logging
+    page: internals/logging
