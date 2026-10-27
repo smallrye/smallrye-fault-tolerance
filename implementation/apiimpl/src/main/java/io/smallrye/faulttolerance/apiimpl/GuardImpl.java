@@ -336,6 +336,8 @@ public class GuardImpl implements Guard {
                     rateLimitBuilder != null ? timeInNanos(rateLimitBuilder.timeWindow, rateLimitBuilder.timeWindowUnit) : 0,
                     rateLimitBuilder != null ? timeInNanos(rateLimitBuilder.minSpacing, rateLimitBuilder.minSpacingUnit) : 0,
                     retryBuilder != null,
+                    retryBuilder != null ? retryBuilder.maxRetries : 0,
+                    retryBuilder != null ? timeInNanos(retryBuilder.maxDuration, retryBuilder.maxDurationUnit) : 0,
                     timeoutBuilder != null,
                     timeoutBuilder != null ? timeInNanos(timeoutBuilder.value, timeoutBuilder.unit) : 0);
         }

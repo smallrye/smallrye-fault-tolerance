@@ -139,6 +139,16 @@ public class GeneralMetricsTest {
         }
 
         @Override
+        public int retryMaxRetries() {
+            return 0;
+        }
+
+        @Override
+        public long retryMaxDuration() {
+            return 0;
+        }
+
+        @Override
         public boolean hasTimeout() {
             return false;
         }

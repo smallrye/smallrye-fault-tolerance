@@ -107,6 +107,18 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
+    public int retryMaxRetries() {
+        return operation.getRetry() != null ? operation.getRetry().maxRetries() : 0;
+    }
+
+    @Override
+    public long retryMaxDuration() {
+        return operation.getRetry() != null
+                ? timeInNanos(operation.getRetry().maxDuration(), operation.getRetry().durationUnit())
+                : 0;
+    }
+
+    @Override
     public boolean hasTimeout() {
         return operation.hasTimeout();
     }

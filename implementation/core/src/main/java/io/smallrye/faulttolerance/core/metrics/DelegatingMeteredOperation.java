@@ -91,6 +91,16 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
+    public int retryMaxRetries() {
+        return operation.retryMaxRetries();
+    }
+
+    @Override
+    public long retryMaxDuration() {
+        return operation.retryMaxDuration();
+    }
+
+    @Override
     public boolean hasTimeout() {
         return operation.hasTimeout();
     }
