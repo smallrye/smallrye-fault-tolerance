@@ -99,7 +99,7 @@ a| * OpenTelemetry: `LongUpDownCounter`
 | Description | Number of executions currently waiting in the queue.
 | Tags
 a| * `method` - the fully qualified method name
-| Notes | Only added if the method is also `@Asynchronous` or `@AsynchronousNonBlocking`
+| Notes | Only added if the method is also `@Asynchronous` or `@AsynchronousNonBlocking`.
 |===
 
 [cols="1,5"]
@@ -128,7 +128,36 @@ a| * OpenTelemetry: seconds
 | Description | Histogram of the time that method executions spent waiting in the queue.
 | Tags
 a| * `method` - the fully qualified method name
-| Notes | Only added if the method is also `@Asynchronous` or `@AsynchronousNonBlocking`
+| Notes | Only added if the method is also `@Asynchronous` or `@AsynchronousNonBlocking`.
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.bulkhead.config.limit`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the bulkhead limit (the `value` member of the `@Bulkhead` annotation, `limit` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.bulkhead.config.queueSize`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the bulkhead waiting queue size (the `waitingTaskQueue` member of the `@Bulkhead` annotation, `queueSize` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+| Notes | Only added if the method is also `@Asynchronous` or `@AsynchronousNonBlocking`.
 |===
 
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.

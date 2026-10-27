@@ -26,6 +26,16 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
+    public int bulkheadLimit() {
+        return operation.bulkheadLimit();
+    }
+
+    @Override
+    public int bulkheadQueueSize() {
+        return operation.bulkheadQueueSize();
+    }
+
+    @Override
     public boolean hasCircuitBreaker() {
         return operation.hasCircuitBreaker();
     }

@@ -23,6 +23,8 @@ public final class MetricsConstants {
     public static final String BULKHEAD_EXECUTIONS_WAITING = "ft.bulkhead.executionsWaiting";
     public static final String BULKHEAD_RUNNING_DURATION = "ft.bulkhead.runningDuration";
     public static final String BULKHEAD_WAITING_DURATION = "ft.bulkhead.waitingDuration";
+    public static final String BULKHEAD_CONFIG_LIMIT = "ft.bulkhead.config.limit";
+    public static final String BULKHEAD_CONFIG_QUEUE_SIZE = "ft.bulkhead.config.queueSize";
 
     public static final String RATE_LIMIT_CALLS_TOTAL = "ft.ratelimit.calls.total";
 

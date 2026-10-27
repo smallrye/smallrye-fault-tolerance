@@ -1,6 +1,8 @@
 package io.smallrye.faulttolerance.core.metrics;
 
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_CONFIG_LIMIT;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_CONFIG_QUEUE_SIZE;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_EXECUTIONS_RUNNING;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_EXECUTIONS_WAITING;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_RUNNING_DURATION;
@@ -71,9 +73,6 @@ public class MicrometerRecorder implements MetricsRecorder {
     }
 
     private void registerMetrics(MeteredOperation operation) {
-        // make sure all applicable metrics for given method are registered eagerly
-        // we only touch counters and histograms, because gauges are registered eagerly elsewhere
-
         if (operation.hasFallback()) {
             registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_APPLIED));
             registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_VALUE_RETURNED, FALLBACK_APPLIED));
@@ -119,6 +118,11 @@ public class MicrometerRecorder implements MetricsRecorder {
             registry.timer(BULKHEAD_RUNNING_DURATION, methodTagSingleton);
             if (operation.mayBeAsynchronous()) {
                 registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton);
+            }
+
+            registerGauge(operation::bulkheadLimit, BULKHEAD_CONFIG_LIMIT, methodTag);
+            if (operation.mayBeAsynchronous()) {
+                registerGauge(operation::bulkheadQueueSize, BULKHEAD_CONFIG_QUEUE_SIZE, methodTag);
             }
         }
 
