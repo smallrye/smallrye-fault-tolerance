@@ -13,6 +13,9 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_B
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.INVOCATIONS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_LIMIT;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_MIN_SPACING;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_WINDOW;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CALLS_TOTAL;
@@ -161,6 +164,13 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
         if (operation.hasRateLimit()) {
             this.rateLimitCallsTotal = meter.counterBuilder(RATE_LIMIT_CALLS_TOTAL).build();
+
+            registerAsyncGauge(operation::rateLimitLimit, RATE_LIMIT_CONFIG_LIMIT,
+                    Attributes.of(METHOD, methodName));
+            registerAsyncDurationGauge(() -> operation.rateLimitWindow() * NANOS_TO_SECONDS, RATE_LIMIT_CONFIG_WINDOW,
+                    Attributes.of(METHOD, methodName));
+            registerAsyncDurationGauge(() -> operation.rateLimitMinSpacing() * NANOS_TO_SECONDS,
+                    RATE_LIMIT_CONFIG_MIN_SPACING, Attributes.of(METHOD, methodName));
         } else {
             this.rateLimitCallsTotal = null;
         }

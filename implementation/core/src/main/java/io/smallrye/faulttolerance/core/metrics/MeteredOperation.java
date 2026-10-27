@@ -17,6 +17,12 @@ public interface MeteredOperation {
 
     boolean hasRateLimit();
 
+    int rateLimitLimit();
+
+    long rateLimitWindow();
+
+    long rateLimitMinSpacing();
+
     boolean hasRetry();
 
     boolean hasTimeout();

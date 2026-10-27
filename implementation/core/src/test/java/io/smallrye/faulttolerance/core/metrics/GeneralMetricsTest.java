@@ -99,6 +99,21 @@ public class GeneralMetricsTest {
         }
 
         @Override
+        public int rateLimitLimit() {
+            return 0;
+        }
+
+        @Override
+        public long rateLimitWindow() {
+            return 0;
+        }
+
+        @Override
+        public long rateLimitMinSpacing() {
+            return 0;
+        }
+
+        @Override
         public boolean hasRetry() {
             return false;
         }

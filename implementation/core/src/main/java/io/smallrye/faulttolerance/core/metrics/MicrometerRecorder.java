@@ -13,6 +13,9 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_B
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.INVOCATIONS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_LIMIT;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_MIN_SPACING;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_WINDOW;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CALLS_TOTAL;
@@ -132,6 +135,10 @@ public class MicrometerRecorder implements MetricsRecorder {
         if (operation.hasRateLimit()) {
             registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, RATE_LIMIT_RESULT_PERMITTED));
             registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, RATE_LIMIT_RESULT_REJECTED));
+
+            registerGauge(operation::rateLimitLimit, RATE_LIMIT_CONFIG_LIMIT, methodTag);
+            registerTimeGauge(operation::rateLimitWindow, RATE_LIMIT_CONFIG_WINDOW, methodTag);
+            registerTimeGauge(operation::rateLimitMinSpacing, RATE_LIMIT_CONFIG_MIN_SPACING, methodTag);
         }
     }
 

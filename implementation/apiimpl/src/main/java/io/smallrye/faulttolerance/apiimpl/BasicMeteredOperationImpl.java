@@ -12,6 +12,9 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     private final boolean hasCircuitBreaker;
     private final boolean hasFallback;
     private final boolean hasRateLimit;
+    private final int rateLimitLimit;
+    private final long rateLimitWindow;
+    private final long rateLimitMinSpacing;
     private final boolean hasRetry;
     private final boolean hasTimeout;
     private final long timeoutDuration;
@@ -21,7 +24,7 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
             boolean hasBulkhead, int bulkheadLimit, int bulkheadQueueSize,
             boolean hasCircuitBreaker,
             boolean hasFallback,
-            boolean hasRateLimit,
+            boolean hasRateLimit, int rateLimitLimit, long rateLimitWindow, long rateLimitMinSpacing,
             boolean hasRetry,
             boolean hasTimeout, long timeoutDuration) {
         this.enabled = enabled;
@@ -33,6 +36,9 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
         this.hasCircuitBreaker = hasCircuitBreaker;
         this.hasFallback = hasFallback;
         this.hasRateLimit = hasRateLimit;
+        this.rateLimitLimit = rateLimitLimit;
+        this.rateLimitWindow = rateLimitWindow;
+        this.rateLimitMinSpacing = rateLimitMinSpacing;
         this.hasRetry = hasRetry;
         this.hasTimeout = hasTimeout;
         this.timeoutDuration = timeoutDuration;
@@ -76,6 +82,21 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     @Override
     public boolean hasRateLimit() {
         return hasRateLimit;
+    }
+
+    @Override
+    public int rateLimitLimit() {
+        return rateLimitLimit;
+    }
+
+    @Override
+    public long rateLimitWindow() {
+        return rateLimitWindow;
+    }
+
+    @Override
+    public long rateLimitMinSpacing() {
+        return rateLimitMinSpacing;
     }
 
     @Override
