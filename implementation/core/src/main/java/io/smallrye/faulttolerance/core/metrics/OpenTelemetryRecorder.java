@@ -8,6 +8,10 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_RUNNING_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_WAITING_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_DELAY;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_REQUEST_VOLUME_THRESHOLD;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_CURRENT;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_TOTAL;
@@ -130,6 +134,15 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
         if (operation.hasCircuitBreaker()) {
             this.circuitBreakerCallsTotal = meter.counterBuilder(CIRCUIT_BREAKER_CALLS_TOTAL).build();
             this.circuitBreakerOpenedTotal = meter.counterBuilder(CIRCUIT_BREAKER_OPENED_TOTAL).build();
+
+            registerAsyncGauge(operation::circuitBreakerDelay, CIRCUIT_BREAKER_CONFIG_DELAY, "nanoseconds",
+                    Attributes.of(METHOD, methodName));
+            registerAsyncGauge(operation::circuitBreakerRequestVolumeThreshold,
+                    CIRCUIT_BREAKER_CONFIG_REQUEST_VOLUME_THRESHOLD, Attributes.of(METHOD, methodName));
+            registerAsyncGauge(operation::circuitBreakerFailureRatio, CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO,
+                    Attributes.of(METHOD, methodName));
+            registerAsyncGauge(operation::circuitBreakerSuccessThreshold, CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD,
+                    Attributes.of(METHOD, methodName));
         } else {
             this.circuitBreakerCallsTotal = null;
             this.circuitBreakerOpenedTotal = null;
@@ -190,6 +203,14 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     private void registerAsyncGauge(LongSupplier supplier, String name, Attributes attributes) {
         meter.gaugeBuilder(name).ofLongs().buildWithCallback(m -> m.record(supplier.getAsLong(), attributes));
+    }
+
+    private void registerAsyncGauge(LongSupplier supplier, String name, String unit, Attributes attributes) {
+        meter.gaugeBuilder(name).setUnit(unit).ofLongs().buildWithCallback(m -> m.record(supplier.getAsLong(), attributes));
+    }
+
+    private void registerAsyncGauge(DoubleSupplier supplier, String name, Attributes attributes) {
+        meter.gaugeBuilder(name).buildWithCallback(m -> m.record(supplier.getAsDouble(), attributes));
     }
 
     private void registerAsyncDurationGauge(DoubleSupplier supplier, String name, Attributes attributes) {

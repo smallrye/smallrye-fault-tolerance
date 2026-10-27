@@ -157,7 +157,6 @@ a| * OpenTelemetry: nanoseconds
 | Tags
 a| * `method` - the fully qualified method name
 * `state` = `[open\|closed\|halfOpen]` - the circuit breaker state
-| Notes | Although this metric is a `Gauge`, its value increases monotonically.
 |===
 
 [cols="1,5"]
@@ -185,6 +184,64 @@ a| * OpenTelemetry: `LongUpDownCounter`
 | Tags
 a| * `method` - the fully qualified method name
 * `state` = `[open\|closed\|halfOpen]` - the circuit breaker state
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.config.delay`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `TimeGauge`
+| Unit
+a| * OpenTelemetry: nanoseconds
+* Micrometer: nanoseconds
+| Description | The effective value of the circuit breaker delay (the `delay` and `delayUnit` members of the `@CircuitBreaker` annotation, `delay` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.config.requestVolumeThreshold`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the circuit breaker request volume threshold (the `requestVolumeThreshold` member of the `@CircuitBreaker` annotation, `requestVolumeThreshold` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.config.failureRatio`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the circuit breaker failure ratio (the `failureRatio` member of the `@CircuitBreaker` annotation, `failureRatio` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.circuitbreaker.config.successThreshold`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the circuit breaker success threshold (the `successThreshold` member of the `@CircuitBreaker` annotation, `successThreshold` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
 |===
 
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.

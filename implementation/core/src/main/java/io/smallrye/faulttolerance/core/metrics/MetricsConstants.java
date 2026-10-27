@@ -18,6 +18,10 @@ public final class MetricsConstants {
     public static final String CIRCUIT_BREAKER_STATE_CURRENT = "ft.circuitbreaker.state.current";
     public static final String CIRCUIT_BREAKER_STATE_TOTAL = "ft.circuitbreaker.state.total";
     public static final String CIRCUIT_BREAKER_OPENED_TOTAL = "ft.circuitbreaker.opened.total";
+    public static final String CIRCUIT_BREAKER_CONFIG_DELAY = "ft.circuitbreaker.config.delay";
+    public static final String CIRCUIT_BREAKER_CONFIG_REQUEST_VOLUME_THRESHOLD = "ft.circuitbreaker.config.requestVolumeThreshold";
+    public static final String CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO = "ft.circuitbreaker.config.failureRatio";
+    public static final String CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD = "ft.circuitbreaker.config.successThreshold";
 
     public static final String BULKHEAD_CALLS_TOTAL = "ft.bulkhead.calls.total";
     public static final String BULKHEAD_EXECUTIONS_RUNNING = "ft.bulkhead.executionsRunning";

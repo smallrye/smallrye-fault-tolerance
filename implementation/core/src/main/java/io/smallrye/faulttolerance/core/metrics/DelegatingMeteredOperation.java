@@ -41,6 +41,26 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
+    public long circuitBreakerDelay() {
+        return operation.circuitBreakerDelay();
+    }
+
+    @Override
+    public int circuitBreakerRequestVolumeThreshold() {
+        return operation.circuitBreakerRequestVolumeThreshold();
+    }
+
+    @Override
+    public double circuitBreakerFailureRatio() {
+        return operation.circuitBreakerFailureRatio();
+    }
+
+    @Override
+    public int circuitBreakerSuccessThreshold() {
+        return operation.circuitBreakerSuccessThreshold();
+    }
+
+    @Override
     public boolean hasFallback() {
         return operation.hasFallback();
     }
