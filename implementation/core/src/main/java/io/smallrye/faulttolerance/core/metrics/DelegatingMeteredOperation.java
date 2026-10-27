@@ -51,6 +51,21 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
+    public int rateLimitLimit() {
+        return operation.rateLimitLimit();
+    }
+
+    @Override
+    public long rateLimitWindow() {
+        return operation.rateLimitWindow();
+    }
+
+    @Override
+    public long rateLimitMinSpacing() {
+        return operation.rateLimitMinSpacing();
+    }
+
+    @Override
     public boolean hasRetry() {
         return operation.hasRetry();
     }

@@ -28,6 +28,9 @@ public final class MetricsConstants {
     public static final String BULKHEAD_CONFIG_QUEUE_SIZE = "ft.bulkhead.config.queueSize";
 
     public static final String RATE_LIMIT_CALLS_TOTAL = "ft.ratelimit.calls.total";
+    public static final String RATE_LIMIT_CONFIG_LIMIT = "ft.ratelimit.config.limit";
+    public static final String RATE_LIMIT_CONFIG_WINDOW = "ft.ratelimit.config.window";
+    public static final String RATE_LIMIT_CONFIG_MIN_SPACING = "ft.ratelimit.config.minSpacing";
 
     public static final String TIMER_SCHEDULED = "ft.timer.scheduled";
 }

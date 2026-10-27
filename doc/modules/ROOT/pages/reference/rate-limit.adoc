@@ -143,4 +143,50 @@ a| * `method` - the fully qualified method name
 * `rateLimitResult` = `[permitted\|rejected]` - whether the rate limit permitted the method call
 |===
 
+[cols="1,5"]
+|===
+| Name | `ft.ratelimit.config.limit`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the maximum number of method calls that are permitted within the time window (the `value` member of the `@RateLimit` annotation, `limit` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.ratelimit.config.window`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleGauge`
+* Micrometer: `TimeGauge`
+| Unit
+a| * OpenTelemetry: seconds
+* Micrometer: nanoseconds
+| Description | The effective value of the rate limit time window (the `window` and `windowUnit` members of the `@RateLimit` annotation, `window` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.ratelimit.config.minSpacing`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleGauge`
+* Micrometer: `TimeGauge`
+| Unit
+a| * OpenTelemetry: seconds
+* Micrometer: nanoseconds
+| Description | The effective value of the minimal spacing between 2 method calls (the `minSpacing` and `minSpacingUnit` members of the `@RateLimit` annotation, `minSpacing` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.

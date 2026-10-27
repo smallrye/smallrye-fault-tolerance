@@ -61,6 +61,25 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
+    public int rateLimitLimit() {
+        return operation.getRateLimit() != null ? operation.getRateLimit().value() : 0;
+    }
+
+    @Override
+    public long rateLimitWindow() {
+        return operation.getRateLimit() != null
+                ? timeInNanos(operation.getRateLimit().window(), operation.getRateLimit().windowUnit())
+                : 0;
+    }
+
+    @Override
+    public long rateLimitMinSpacing() {
+        return operation.getRateLimit() != null
+                ? timeInNanos(operation.getRateLimit().minSpacing(), operation.getRateLimit().minSpacingUnit())
+                : 0;
+    }
+
+    @Override
     public boolean hasRetry() {
         return operation.hasRetry();
     }

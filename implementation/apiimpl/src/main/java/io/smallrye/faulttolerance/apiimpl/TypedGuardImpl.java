@@ -347,6 +347,9 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
                     circuitBreakerBuilder != null,
                     false,
                     rateLimitBuilder != null,
+                    rateLimitBuilder != null ? rateLimitBuilder.maxInvocations : 0,
+                    rateLimitBuilder != null ? timeInNanos(rateLimitBuilder.timeWindow, rateLimitBuilder.timeWindowUnit) : 0,
+                    rateLimitBuilder != null ? timeInNanos(rateLimitBuilder.minSpacing, rateLimitBuilder.minSpacingUnit) : 0,
                     retryBuilder != null,
                     timeoutBuilder != null,
                     timeoutBuilder != null ? timeInNanos(timeoutBuilder.value, timeoutBuilder.unit) : 0);
