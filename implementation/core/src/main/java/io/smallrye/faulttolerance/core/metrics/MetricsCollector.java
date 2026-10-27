@@ -105,6 +105,8 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
     }
 
     private void registerMetrics(FaultToleranceContext<V> ctx) {
+        long start = System.nanoTime();
+
         // general + fallback
 
         AtomicBoolean fallbackDefined = new AtomicBoolean(false);
@@ -113,7 +115,8 @@ public class MetricsCollector<V> implements FaultToleranceStrategy<V> {
         ctx.registerEventHandler(FallbackEvents.Applied.class, ignored -> fallbackApplied.set(true));
 
         ctx.registerEventHandler(GeneralMetricsEvents.ExecutionFinished.class,
-                event -> metrics.executionFinished(event.succeeded, fallbackDefined.get(), fallbackApplied.get()));
+                event -> metrics.executionFinished(event.succeeded, fallbackDefined.get(), fallbackApplied.get(),
+                        System.nanoTime() - start));
 
         // retry
 
