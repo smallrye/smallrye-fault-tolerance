@@ -15,6 +15,7 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_B
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_CURRENT;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.INVOCATIONS_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.INVOCATIONS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_LIMIT;
@@ -93,6 +94,8 @@ public class MicrometerRecorder implements MetricsRecorder {
             registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_DEFINED));
             registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_DEFINED));
         }
+
+        registry.timer(INVOCATIONS_DURATION, methodTagSingleton);
 
         if (operation.hasRetry()) {
             registry.counter(RETRY_RETRIES_TOTAL, methodTagSingleton);
@@ -187,10 +190,11 @@ public class MicrometerRecorder implements MetricsRecorder {
     // ---
 
     @Override
-    public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
+    public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration) {
         Tag resultTag = succeeded ? RESULT_VALUE_RETURNED : RESULT_EXCEPTION_THROWN;
         Tag fallbackTag = fallbackDefined ? (fallbackApplied ? FALLBACK_APPLIED : FALLBACK_NOT_APPLIED) : FALLBACK_NOT_DEFINED;
         registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, resultTag, fallbackTag)).increment();
+        registry.timer(INVOCATIONS_DURATION, methodTagSingleton).record(duration, TimeUnit.NANOSECONDS);
     }
 
     @Override

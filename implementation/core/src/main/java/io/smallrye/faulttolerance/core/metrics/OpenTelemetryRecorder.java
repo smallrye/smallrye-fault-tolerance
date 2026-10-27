@@ -15,6 +15,7 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_B
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_CURRENT;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.INVOCATIONS_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.INVOCATIONS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_LIMIT;
@@ -94,6 +95,7 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
     private final String methodName;
 
     private final LongCounter invocationsTotal;
+    private final DoubleHistogram invocationsDuration;
     private final LongCounter retryCallsTotal;
     private final LongCounter retryRetriesTotal;
     private final LongCounter timeoutCallsTotal;
@@ -110,6 +112,10 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
         this.methodName = operation.name();
 
         this.invocationsTotal = meter.counterBuilder(INVOCATIONS_TOTAL).build();
+        this.invocationsDuration = meter.histogramBuilder(INVOCATIONS_DURATION)
+                .setUnit("seconds")
+                .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)
+                .build();
 
         if (operation.hasRetry()) {
             this.retryCallsTotal = meter.counterBuilder(RETRY_CALLS_TOTAL).build();
@@ -227,7 +233,7 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
     // ---
 
     @Override
-    public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
+    public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration) {
         String fallback = fallbackDefined
                 ? (fallbackApplied ? FALLBACK_APPLIED : FALLBACK_NOT_APPLIED)
                 : FALLBACK_NOT_DEFINED;
@@ -236,6 +242,7 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
                 METHOD, methodName,
                 RESULT, succeeded ? RESULT_VALUE_RETURNED : RESULT_EXCEPTION_THROWN,
                 FALLBACK, fallback));
+        invocationsDuration.record(duration * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
     }
 
     @Override

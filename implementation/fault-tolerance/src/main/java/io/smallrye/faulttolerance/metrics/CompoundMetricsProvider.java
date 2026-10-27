@@ -89,9 +89,9 @@ public class CompoundMetricsProvider implements MetricsProvider {
         }
 
         @Override
-        public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
+        public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration) {
             for (MetricsRecorder recorder : recorders) {
-                recorder.executionFinished(succeeded, fallbackDefined, fallbackApplied);
+                recorder.executionFinished(succeeded, fallbackDefined, fallbackApplied, duration);
             }
         }
 

@@ -8,7 +8,7 @@ import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 public interface MetricsRecorder {
     // general + fallback
 
-    void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied);
+    void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration);
 
     // retry
 
@@ -62,7 +62,7 @@ public interface MetricsRecorder {
 
     MetricsRecorder NOOP = new MetricsRecorder() {
         @Override
-        public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
+        public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration) {
         }
 
         @Override

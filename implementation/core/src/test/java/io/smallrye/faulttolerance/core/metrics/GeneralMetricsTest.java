@@ -189,7 +189,7 @@ public class GeneralMetricsTest {
         int exceptionThrown;
 
         @Override
-        public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
+        public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration) {
             if (succeeded) {
                 valueReturned++;
             } else {

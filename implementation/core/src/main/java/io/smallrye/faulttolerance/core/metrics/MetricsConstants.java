@@ -6,6 +6,7 @@ public final class MetricsConstants {
     }
 
     public static final String INVOCATIONS_TOTAL = "ft.invocations.total";
+    public static final String INVOCATIONS_DURATION = "ft.invocations.duration";
 
     public static final String RETRY_CALLS_TOTAL = "ft.retry.calls.total";
     public static final String RETRY_RETRIES_TOTAL = "ft.retry.retries.total";

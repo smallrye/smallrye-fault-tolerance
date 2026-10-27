@@ -5,7 +5,7 @@
 [[general]]
 == General Metrics
 
-For all methods guarded with some fault tolerance strategy, the following metric is emitted:
+For all methods guarded with some fault tolerance strategy, the following metrics are emitted:
 
 [cols="1,5"]
 |===
@@ -22,6 +22,23 @@ a| * `method` - the fully qualified method name
 |===
 
 For xref:reference/asynchronous.adoc[asynchronous methods], "value returned" means that the `CompletionStage` completed successfully, while "exception thrown" means that the `CompletionStage` completed exceptionally.
+
+[cols="1,5"]
+|===
+| Name | `ft.invocations.duration`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleHistogram` with explicit bucket boundaries `[0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]`
+* Micrometer: `Timer`
+| Unit
+a| * OpenTelemetry: seconds
+* Micrometer: nanoseconds
+| Description | Histogram of execution times for the method
+| Tags
+a| * `method` - the fully qualified method name
+| Notes | The measured time spans the whole guarded execution, including all fault tolerance strategies (fallback, retries, etc.). For asynchronous methods, the measurement ends when the `CompletionStage` completes.
+|===
 
 == Specific Metrics
 
