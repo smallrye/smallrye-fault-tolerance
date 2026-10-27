@@ -10,6 +10,10 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     private final int bulkheadLimit;
     private final int bulkheadQueueSize;
     private final boolean hasCircuitBreaker;
+    private final long circuitBreakerDelay;
+    private final int circuitBreakerRequestVolumeThreshold;
+    private final double circuitBreakerFailureRatio;
+    private final int circuitBreakerSuccessThreshold;
     private final boolean hasFallback;
     private final boolean hasRateLimit;
     private final int rateLimitLimit;
@@ -22,7 +26,8 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     BasicMeteredOperationImpl(boolean enabled, String name,
             boolean mayBeAsynchronous,
             boolean hasBulkhead, int bulkheadLimit, int bulkheadQueueSize,
-            boolean hasCircuitBreaker,
+            boolean hasCircuitBreaker, long circuitBreakerDelay, int circuitBreakerRequestVolumeThreshold,
+            double circuitBreakerFailureRatio, int circuitBreakerSuccessThreshold,
             boolean hasFallback,
             boolean hasRateLimit, int rateLimitLimit, long rateLimitWindow, long rateLimitMinSpacing,
             boolean hasRetry,
@@ -34,6 +39,10 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
         this.bulkheadLimit = bulkheadLimit;
         this.bulkheadQueueSize = bulkheadQueueSize;
         this.hasCircuitBreaker = hasCircuitBreaker;
+        this.circuitBreakerDelay = circuitBreakerDelay;
+        this.circuitBreakerRequestVolumeThreshold = circuitBreakerRequestVolumeThreshold;
+        this.circuitBreakerFailureRatio = circuitBreakerFailureRatio;
+        this.circuitBreakerSuccessThreshold = circuitBreakerSuccessThreshold;
         this.hasFallback = hasFallback;
         this.hasRateLimit = hasRateLimit;
         this.rateLimitLimit = rateLimitLimit;
@@ -72,6 +81,26 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     @Override
     public boolean hasCircuitBreaker() {
         return hasCircuitBreaker;
+    }
+
+    @Override
+    public long circuitBreakerDelay() {
+        return circuitBreakerDelay;
+    }
+
+    @Override
+    public int circuitBreakerRequestVolumeThreshold() {
+        return circuitBreakerRequestVolumeThreshold;
+    }
+
+    @Override
+    public double circuitBreakerFailureRatio() {
+        return circuitBreakerFailureRatio;
+    }
+
+    @Override
+    public int circuitBreakerSuccessThreshold() {
+        return circuitBreakerSuccessThreshold;
     }
 
     @Override

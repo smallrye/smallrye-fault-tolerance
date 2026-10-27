@@ -8,6 +8,10 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_RUNNING_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_WAITING_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_DELAY;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_REQUEST_VOLUME_THRESHOLD;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_OPENED_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_CURRENT;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.CIRCUIT_BREAKER_STATE_TOTAL;
@@ -26,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -115,6 +120,12 @@ public class MicrometerRecorder implements MetricsRecorder {
             registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, Arrays.asList(methodTag, CIRCUIT_BREAKER_RESULT_CB_OPEN));
 
             registry.counter(CIRCUIT_BREAKER_OPENED_TOTAL, methodTagSingleton);
+
+            registerTimeGauge(operation::circuitBreakerDelay, CIRCUIT_BREAKER_CONFIG_DELAY, methodTag);
+            registerGauge(operation::circuitBreakerRequestVolumeThreshold, CIRCUIT_BREAKER_CONFIG_REQUEST_VOLUME_THRESHOLD,
+                    methodTag);
+            registerGauge(operation::circuitBreakerFailureRatio, CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO, methodTag);
+            registerGauge(operation::circuitBreakerSuccessThreshold, CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD, methodTag);
         }
 
         if (operation.hasBulkhead()) {
@@ -157,6 +168,10 @@ public class MicrometerRecorder implements MetricsRecorder {
 
     private void registerGauge(BooleanSupplier supplier, String name, Tag... tags) {
         registry.gauge(name, Arrays.asList(tags), supplier, ignored -> supplier.getAsBoolean() ? 1.0 : 0.0);
+    }
+
+    private void registerGauge(DoubleSupplier supplier, String name, Tag... tags) {
+        registry.gauge(name, Arrays.asList(tags), supplier, ignored -> supplier.getAsDouble());
     }
 
     private void registerTimeGauge(LongSupplier supplier, String name, Tag... tags) {

@@ -51,6 +51,28 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
+    public long circuitBreakerDelay() {
+        return operation.getCircuitBreaker() != null
+                ? timeInNanos(operation.getCircuitBreaker().delay(), operation.getCircuitBreaker().delayUnit())
+                : 0;
+    }
+
+    @Override
+    public int circuitBreakerRequestVolumeThreshold() {
+        return operation.getCircuitBreaker() != null ? operation.getCircuitBreaker().requestVolumeThreshold() : 0;
+    }
+
+    @Override
+    public double circuitBreakerFailureRatio() {
+        return operation.getCircuitBreaker() != null ? operation.getCircuitBreaker().failureRatio() : 0;
+    }
+
+    @Override
+    public int circuitBreakerSuccessThreshold() {
+        return operation.getCircuitBreaker() != null ? operation.getCircuitBreaker().successThreshold() : 0;
+    }
+
+    @Override
     public boolean hasFallback() {
         return operation.hasFallback();
     }

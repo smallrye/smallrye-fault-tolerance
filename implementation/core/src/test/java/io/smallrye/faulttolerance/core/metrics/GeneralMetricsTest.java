@@ -89,6 +89,26 @@ public class GeneralMetricsTest {
         }
 
         @Override
+        public long circuitBreakerDelay() {
+            return 0;
+        }
+
+        @Override
+        public int circuitBreakerRequestVolumeThreshold() {
+            return 0;
+        }
+
+        @Override
+        public double circuitBreakerFailureRatio() {
+            return 0;
+        }
+
+        @Override
+        public int circuitBreakerSuccessThreshold() {
+            return 0;
+        }
+
+        @Override
         public boolean hasFallback() {
             return false;
         }

@@ -13,6 +13,14 @@ public interface MeteredOperation {
 
     boolean hasCircuitBreaker();
 
+    long circuitBreakerDelay();
+
+    int circuitBreakerRequestVolumeThreshold();
+
+    double circuitBreakerFailureRatio();
+
+    int circuitBreakerSuccessThreshold();
+
     boolean hasFallback();
 
     boolean hasRateLimit();
