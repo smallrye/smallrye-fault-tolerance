@@ -7,6 +7,10 @@ public interface MeteredOperation {
 
     boolean hasBulkhead();
 
+    int bulkheadLimit();
+
+    int bulkheadQueueSize();
+
     boolean hasCircuitBreaker();
 
     boolean hasFallback();

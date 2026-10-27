@@ -74,6 +74,16 @@ public class GeneralMetricsTest {
         }
 
         @Override
+        public int bulkheadLimit() {
+            return 0;
+        }
+
+        @Override
+        public int bulkheadQueueSize() {
+            return 0;
+        }
+
+        @Override
         public boolean hasCircuitBreaker() {
             return false;
         }

@@ -338,9 +338,16 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
         }
 
         private MeteredOperation buildMeteredOperation() {
-            return new BasicMeteredOperationImpl(descriptionSet, description, asyncSupport != null, bulkheadBuilder != null,
-                    circuitBreakerBuilder != null, false, rateLimitBuilder != null,
-                    retryBuilder != null, timeoutBuilder != null);
+            return new BasicMeteredOperationImpl(descriptionSet, description,
+                    asyncSupport != null,
+                    bulkheadBuilder != null,
+                    bulkheadBuilder != null ? bulkheadBuilder.limit : 0,
+                    bulkheadBuilder != null ? bulkheadBuilder.queueSize : 0,
+                    circuitBreakerBuilder != null,
+                    false,
+                    rateLimitBuilder != null,
+                    retryBuilder != null,
+                    timeoutBuilder != null);
         }
 
         private static Supplier<BackOff> prepareRetryBackoff(BasicFaultToleranceOperation op,

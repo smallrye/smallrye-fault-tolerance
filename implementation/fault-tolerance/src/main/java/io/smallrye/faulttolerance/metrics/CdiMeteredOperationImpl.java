@@ -34,6 +34,16 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     }
 
     @Override
+    public int bulkheadLimit() {
+        return operation.getBulkhead() != null ? operation.getBulkhead().value() : 0;
+    }
+
+    @Override
+    public int bulkheadQueueSize() {
+        return operation.getBulkhead() != null ? operation.getBulkhead().waitingTaskQueue() : 0;
+    }
+
+    @Override
     public boolean hasCircuitBreaker() {
         return operation.hasCircuitBreaker();
     }

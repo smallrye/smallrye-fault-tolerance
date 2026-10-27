@@ -1,6 +1,8 @@
 package io.smallrye.faulttolerance.core.metrics;
 
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_CONFIG_LIMIT;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_CONFIG_QUEUE_SIZE;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_EXECUTIONS_RUNNING;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_EXECUTIONS_WAITING;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.BULKHEAD_RUNNING_DURATION;
@@ -96,9 +98,6 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
         this.meter = meter;
         this.methodName = operation.name();
 
-        // make sure all applicable metrics for given method are registered eagerly
-        // we only touch sync metrics, because async metrics are registered eagerly elsewhere
-
         this.invocationsTotal = meter.counterBuilder(INVOCATIONS_TOTAL).build();
 
         if (operation.hasRetry()) {
@@ -142,6 +141,13 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
             } else {
                 this.bulkheadWaitingDuration = null;
             }
+
+            registerAsyncGauge(operation::bulkheadLimit, BULKHEAD_CONFIG_LIMIT,
+                    Attributes.of(METHOD, methodName));
+            if (operation.mayBeAsynchronous()) {
+                registerAsyncGauge(operation::bulkheadQueueSize, BULKHEAD_CONFIG_QUEUE_SIZE,
+                        Attributes.of(METHOD, methodName));
+            }
         } else {
             this.bulkheadCallsTotal = null;
             this.bulkheadRunningDuration = null;
@@ -165,6 +171,10 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     private void registerAsyncCounter(LongSupplier supplier, String name, String unit, Attributes attributes) {
         meter.counterBuilder(name).setUnit(unit).buildWithCallback(m -> m.record(supplier.getAsLong(), attributes));
+    }
+
+    private void registerAsyncGauge(LongSupplier supplier, String name, Attributes attributes) {
+        meter.gaugeBuilder(name).ofLongs().buildWithCallback(m -> m.record(supplier.getAsLong(), attributes));
     }
 
     // ---

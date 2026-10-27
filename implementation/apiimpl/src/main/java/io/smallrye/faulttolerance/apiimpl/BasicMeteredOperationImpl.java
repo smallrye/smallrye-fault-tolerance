@@ -7,18 +7,28 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     private final String name;
     private final boolean mayBeAsynchronous;
     private final boolean hasBulkhead;
+    private final int bulkheadLimit;
+    private final int bulkheadQueueSize;
     private final boolean hasCircuitBreaker;
     private final boolean hasFallback;
     private final boolean hasRateLimit;
     private final boolean hasRetry;
     private final boolean hasTimeout;
 
-    BasicMeteredOperationImpl(boolean enabled, String name, boolean mayBeAsynchronous, boolean hasBulkhead,
-            boolean hasCircuitBreaker, boolean hasFallback, boolean hasRateLimit, boolean hasRetry, boolean hasTimeout) {
+    BasicMeteredOperationImpl(boolean enabled, String name,
+            boolean mayBeAsynchronous,
+            boolean hasBulkhead, int bulkheadLimit, int bulkheadQueueSize,
+            boolean hasCircuitBreaker,
+            boolean hasFallback,
+            boolean hasRateLimit,
+            boolean hasRetry,
+            boolean hasTimeout) {
         this.enabled = enabled;
         this.name = name;
         this.mayBeAsynchronous = mayBeAsynchronous;
         this.hasBulkhead = hasBulkhead;
+        this.bulkheadLimit = bulkheadLimit;
+        this.bulkheadQueueSize = bulkheadQueueSize;
         this.hasCircuitBreaker = hasCircuitBreaker;
         this.hasFallback = hasFallback;
         this.hasRateLimit = hasRateLimit;
@@ -39,6 +49,16 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     @Override
     public boolean hasBulkhead() {
         return hasBulkhead;
+    }
+
+    @Override
+    public int bulkheadLimit() {
+        return bulkheadLimit;
+    }
+
+    @Override
+    public int bulkheadQueueSize() {
+        return bulkheadQueueSize;
     }
 
     @Override
