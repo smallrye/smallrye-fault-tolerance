@@ -20,6 +20,8 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     private final long rateLimitWindow;
     private final long rateLimitMinSpacing;
     private final boolean hasRetry;
+    private final int retryMaxRetries;
+    private final long retryMaxDuration;
     private final boolean hasTimeout;
     private final long timeoutDuration;
 
@@ -30,7 +32,7 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
             double circuitBreakerFailureRatio, int circuitBreakerSuccessThreshold,
             boolean hasFallback,
             boolean hasRateLimit, int rateLimitLimit, long rateLimitWindow, long rateLimitMinSpacing,
-            boolean hasRetry,
+            boolean hasRetry, int retryMaxRetries, long retryMaxDuration,
             boolean hasTimeout, long timeoutDuration) {
         this.enabled = enabled;
         this.name = name;
@@ -49,6 +51,8 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
         this.rateLimitWindow = rateLimitWindow;
         this.rateLimitMinSpacing = rateLimitMinSpacing;
         this.hasRetry = hasRetry;
+        this.retryMaxRetries = retryMaxRetries;
+        this.retryMaxDuration = retryMaxDuration;
         this.hasTimeout = hasTimeout;
         this.timeoutDuration = timeoutDuration;
     }
@@ -131,6 +135,16 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     @Override
     public boolean hasRetry() {
         return hasRetry;
+    }
+
+    @Override
+    public int retryMaxRetries() {
+        return retryMaxRetries;
+    }
+
+    @Override
+    public long retryMaxDuration() {
+        return retryMaxDuration;
     }
 
     @Override

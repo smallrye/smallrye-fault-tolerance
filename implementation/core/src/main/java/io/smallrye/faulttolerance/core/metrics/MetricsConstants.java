@@ -9,6 +9,8 @@ public final class MetricsConstants {
 
     public static final String RETRY_CALLS_TOTAL = "ft.retry.calls.total";
     public static final String RETRY_RETRIES_TOTAL = "ft.retry.retries.total";
+    public static final String RETRY_CONFIG_MAX_RETRIES = "ft.retry.config.maxRetries";
+    public static final String RETRY_CONFIG_MAX_DURATION = "ft.retry.config.maxDuration";
 
     public static final String TIMEOUT_CALLS_TOTAL = "ft.timeout.calls.total";
     public static final String TIMEOUT_EXECUTION_DURATION = "ft.timeout.executionDuration";

@@ -33,6 +33,10 @@ public interface MeteredOperation {
 
     boolean hasRetry();
 
+    int retryMaxRetries();
+
+    long retryMaxDuration();
+
     boolean hasTimeout();
 
     long timeoutDuration();

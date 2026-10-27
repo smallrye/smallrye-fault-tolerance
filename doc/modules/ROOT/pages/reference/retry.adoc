@@ -123,6 +123,38 @@ a| * OpenTelemetry: `LongCounter`
 a| * `method` - the fully qualified method name
 |===
 
+[cols="1,5"]
+|===
+| Name | `ft.retry.config.maxRetries`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `LongGauge`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The effective value of the maximum number of retries (the `maxRetries` member of the `@Retry` annotation, `maxRetries` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+| Notes | A value of -1 means that the number of retries is unlimited.
+|===
+
+[cols="1,5"]
+|===
+| Name | `ft.retry.config.maxDuration`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleGauge`
+* Micrometer: `TimeGauge`
+| Unit
+a| * OpenTelemetry: seconds
+* Micrometer: nanoseconds
+| Description | The effective value of the maximum total duration of all retry attempts (the `maxDuration` and `durationUnit` members of the `@Retry` annotation, `maxDuration` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+| Notes | A value of 0 means that the total duration of retries is unlimited.
+|===
+
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.
 
 == Extra Features

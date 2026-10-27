@@ -21,6 +21,8 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMI
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_MIN_SPACING;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_WINDOW;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CONFIG_MAX_DURATION;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CONFIG_MAX_RETRIES;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CONFIG_DURATION;
@@ -103,6 +105,9 @@ public class MicrometerRecorder implements MetricsRecorder {
             registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE));
             registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_RETRIES_REACHED));
             registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_DURATION_REACHED));
+
+            registerGauge(operation::retryMaxRetries, RETRY_CONFIG_MAX_RETRIES, methodTag);
+            registerTimeGauge(operation::retryMaxDuration, RETRY_CONFIG_MAX_DURATION, methodTag);
         }
 
         if (operation.hasTimeout()) {

@@ -21,6 +21,8 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMI
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_MIN_SPACING;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMIT_CONFIG_WINDOW;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CONFIG_MAX_DURATION;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CONFIG_MAX_RETRIES;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CONFIG_DURATION;
@@ -112,6 +114,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
         if (operation.hasRetry()) {
             this.retryCallsTotal = meter.counterBuilder(RETRY_CALLS_TOTAL).build();
             this.retryRetriesTotal = meter.counterBuilder(RETRY_RETRIES_TOTAL).build();
+
+            registerAsyncGauge(operation::retryMaxRetries, RETRY_CONFIG_MAX_RETRIES,
+                    Attributes.of(METHOD, methodName));
+            registerAsyncDurationGauge(() -> operation.retryMaxDuration() * NANOS_TO_SECONDS, RETRY_CONFIG_MAX_DURATION,
+                    Attributes.of(METHOD, methodName));
         } else {
             this.retryCallsTotal = null;
             this.retryRetriesTotal = null;
