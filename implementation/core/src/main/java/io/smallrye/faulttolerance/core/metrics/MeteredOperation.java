@@ -21,6 +21,8 @@ public interface MeteredOperation {
 
     boolean hasTimeout();
 
+    long timeoutDuration();
+
     String name();
 
     Object cacheKey();

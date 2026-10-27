@@ -16,10 +16,12 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMI
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CONFIG_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_EXECUTION_DURATION;
 
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -114,6 +116,9 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
                     .setUnit("seconds")
                     .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)
                     .build();
+
+            registerAsyncDurationGauge(() -> operation.timeoutDuration() * NANOS_TO_SECONDS, TIMEOUT_CONFIG_DURATION,
+                    Attributes.of(METHOD, methodName));
         } else {
             this.timeoutCallsTotal = null;
             this.timeoutExecutionDuration = null;
@@ -175,6 +180,10 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     private void registerAsyncGauge(LongSupplier supplier, String name, Attributes attributes) {
         meter.gaugeBuilder(name).ofLongs().buildWithCallback(m -> m.record(supplier.getAsLong(), attributes));
+    }
+
+    private void registerAsyncDurationGauge(DoubleSupplier supplier, String name, Attributes attributes) {
+        meter.gaugeBuilder(name).setUnit("seconds").buildWithCallback(m -> m.record(supplier.getAsDouble(), attributes));
     }
 
     // ---

@@ -73,4 +73,20 @@ a| * OpenTelemetry: seconds
 a| * `method` - the fully qualified method name
 |===
 
+[cols="1,5"]
+|===
+| Name | `ft.timeout.config.duration`
+2+a|
+include::partial$srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleGauge`
+* Micrometer: `TimeGauge`
+| Unit
+a| * OpenTelemetry: seconds
+* Micrometer: nanoseconds
+| Description | The effective value of the timeout duration (the `value` and `unit` members of the `@Timeout` annotation, `duration` in the programmatic API). The value is constant at runtime.
+| Tags
+a| * `method` - the fully qualified method name
+|===
+
 See xref:reference/metrics.adoc[the Metrics reference guide] for general metrics information.

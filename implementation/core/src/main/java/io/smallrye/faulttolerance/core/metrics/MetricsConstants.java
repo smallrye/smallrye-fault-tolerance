@@ -12,6 +12,7 @@ public final class MetricsConstants {
 
     public static final String TIMEOUT_CALLS_TOTAL = "ft.timeout.calls.total";
     public static final String TIMEOUT_EXECUTION_DURATION = "ft.timeout.executionDuration";
+    public static final String TIMEOUT_CONFIG_DURATION = "ft.timeout.config.duration";
 
     public static final String CIRCUIT_BREAKER_CALLS_TOTAL = "ft.circuitbreaker.calls.total";
     public static final String CIRCUIT_BREAKER_STATE_CURRENT = "ft.circuitbreaker.state.current";
