@@ -109,6 +109,11 @@ public class GeneralMetricsTest {
         }
 
         @Override
+        public long timeoutDuration() {
+            return 0;
+        }
+
+        @Override
         public String name() {
             return "mock";
         }

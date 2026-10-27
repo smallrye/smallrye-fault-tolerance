@@ -61,6 +61,11 @@ final class DelegatingMeteredOperation implements MeteredOperation {
     }
 
     @Override
+    public long timeoutDuration() {
+        return operation.timeoutDuration();
+    }
+
+    @Override
     public String name() {
         return name;
     }

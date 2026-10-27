@@ -4,6 +4,7 @@ import static io.smallrye.faulttolerance.apiimpl.GuardCommon.createExceptionDeci
 import static io.smallrye.faulttolerance.apiimpl.GuardCommon.createResultDecision;
 import static io.smallrye.faulttolerance.core.Invocation.invocation;
 import static io.smallrye.faulttolerance.core.util.Durations.timeInMillis;
+import static io.smallrye.faulttolerance.core.util.Durations.timeInNanos;
 import static io.smallrye.faulttolerance.core.util.Preconditions.check;
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
@@ -326,7 +327,8 @@ public class GuardImpl implements Guard {
                     false,
                     rateLimitBuilder != null,
                     retryBuilder != null,
-                    timeoutBuilder != null);
+                    timeoutBuilder != null,
+                    timeoutBuilder != null ? timeInNanos(timeoutBuilder.value, timeoutBuilder.unit) : 0);
         }
 
         private static Supplier<BackOff> prepareRetryBackoff(BasicFaultToleranceOperation op, RetryBuilderImpl retryBuilder) {

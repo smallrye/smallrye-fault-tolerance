@@ -1,5 +1,7 @@
 package io.smallrye.faulttolerance.metrics;
 
+import static io.smallrye.faulttolerance.core.util.Durations.timeInNanos;
+
 import io.smallrye.faulttolerance.SpecCompatibility;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
@@ -66,6 +68,11 @@ public final class CdiMeteredOperationImpl implements MeteredOperation {
     @Override
     public boolean hasTimeout() {
         return operation.hasTimeout();
+    }
+
+    @Override
+    public long timeoutDuration() {
+        return operation.getTimeout() != null ? timeInNanos(operation.getTimeout().value(), operation.getTimeout().unit()) : 0;
     }
 
     @Override

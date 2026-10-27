@@ -14,6 +14,7 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     private final boolean hasRateLimit;
     private final boolean hasRetry;
     private final boolean hasTimeout;
+    private final long timeoutDuration;
 
     BasicMeteredOperationImpl(boolean enabled, String name,
             boolean mayBeAsynchronous,
@@ -22,7 +23,7 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
             boolean hasFallback,
             boolean hasRateLimit,
             boolean hasRetry,
-            boolean hasTimeout) {
+            boolean hasTimeout, long timeoutDuration) {
         this.enabled = enabled;
         this.name = name;
         this.mayBeAsynchronous = mayBeAsynchronous;
@@ -34,6 +35,7 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
         this.hasRateLimit = hasRateLimit;
         this.hasRetry = hasRetry;
         this.hasTimeout = hasTimeout;
+        this.timeoutDuration = timeoutDuration;
     }
 
     @Override
@@ -84,6 +86,11 @@ final class BasicMeteredOperationImpl implements MeteredOperation {
     @Override
     public boolean hasTimeout() {
         return hasTimeout;
+    }
+
+    @Override
+    public long timeoutDuration() {
+        return timeoutDuration;
     }
 
     @Override

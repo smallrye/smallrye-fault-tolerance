@@ -14,6 +14,15 @@ public final class Durations {
     private static final long MAX_MONTHS = Long.MAX_VALUE / SECONDS_IN_MONTH;
     private static final long MAX_YEARS = Long.MAX_VALUE / SECONDS_IN_YEAR;
 
+    public static long timeInNanos(long value, ChronoUnit unit) {
+        return switch (unit) {
+            case NANOS -> value;
+            case MICROS -> TimeUnit.MICROSECONDS.toNanos(value);
+            case MILLIS -> TimeUnit.MILLISECONDS.toNanos(value);
+            default -> TimeUnit.MILLISECONDS.toNanos(timeInMillis(value, unit));
+        };
+    }
+
     public static long timeInMillis(long value, ChronoUnit unit) {
         return switch (unit) {
             case NANOS -> TimeUnit.NANOSECONDS.toMillis(value);

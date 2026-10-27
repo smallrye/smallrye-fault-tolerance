@@ -16,6 +16,7 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RATE_LIMI
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_CALLS_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.RETRY_RETRIES_TOTAL;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CALLS_TOTAL;
+import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CONFIG_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_EXECUTION_DURATION;
 
 import java.util.Arrays;
@@ -101,6 +102,8 @@ public class MicrometerRecorder implements MetricsRecorder {
             registry.counter(TIMEOUT_CALLS_TOTAL, Arrays.asList(methodTag, TIMED_OUT_FALSE));
 
             registry.timer(TIMEOUT_EXECUTION_DURATION, methodTagSingleton);
+
+            registerTimeGauge(operation::timeoutDuration, TIMEOUT_CONFIG_DURATION, methodTag);
         }
 
         if (operation.hasCircuitBreaker()) {
