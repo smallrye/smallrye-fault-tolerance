@@ -1,0 +1,14 @@
+// Attributes shared by every page. smallrye.io overrides the ones it needs when it publishes.
+// Pages in subdirectories set :version-root: (../ per level) before including this file.
+ifndef::version-root[:version-root:]
+:idprefix:
+:idseparator: -
+:sectanchors:
+:partialsdir: {version-root}_partials
+:examples-dir: {version-root}_examples
+:smallrye-fault-tolerance: SmallRye Fault Tolerance
+:smallrye-fault-tolerance-version: 7.0.0
+:microprofile-fault-tolerance: MicroProfile Fault Tolerance
+:microprofile-fault-tolerance-version: 4.1.2
+:microprofile-fault-tolerance-url: https://download.eclipse.org/microprofile/microprofile-fault-tolerance-4.1/microprofile-fault-tolerance-spec-4.1.html
+:vertx-version: 5.2.1

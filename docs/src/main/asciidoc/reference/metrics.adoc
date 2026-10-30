@@ -1,0 +1,126 @@
+= Metrics
+:version-root: ../
+include::{version-root}_attributes.adoc[]
+
+{smallrye-fault-tolerance} exposes metrics, as {microprofile-fault-tolerance-url}#_integration_with_microprofile_metrics_and_microprofile_telemetry[specified] by {microprofile-fault-tolerance}.
+
+[[general]]
+== General Metrics
+
+For all methods guarded with some fault tolerance strategy, the following metrics are emitted:
+
+[cols="1,5"]
+|===
+| Name | `ft.invocations.total`
+| Type
+a| * OpenTelemetry: `LongCounter`
+* Micrometer: `Counter`
+| Unit | None
+| Description | The number of times the method was called.
+| Tags
+a| * `method` - the fully qualified method name
+* `result` = `[valueReturned\|exceptionThrown]` - whether the invocation returned a value or threw an exception
+* `fallback` = `[applied\|notApplied\|notDefined]` - `applied` if fallback was used, `notApplied` if a fallback is configured but was not used, `notDefined` if a fallback is not configured
+|===
+
+For xref:reference/asynchronous.adoc[asynchronous methods], "value returned" means that the `CompletionStage` completed successfully, while "exception thrown" means that the `CompletionStage` completed exceptionally.
+
+[cols="1,5"]
+|===
+| Name | `ft.invocations.duration`
+2+a|
+include::{partialsdir}/srye-feature.adoc[]
+| Type
+a| * OpenTelemetry: `DoubleHistogram` with explicit bucket boundaries `[0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]`
+* Micrometer: `Timer`
+| Unit
+a| * OpenTelemetry: seconds
+* Micrometer: nanoseconds
+| Description | Histogram of execution times for the method
+| Tags
+a| * `method` - the fully qualified method name
+| Notes | The measured time spans the whole guarded execution, including all fault tolerance strategies (fallback, retries, etc.). For asynchronous methods, the measurement ends when the `CompletionStage` completes.
+|===
+
+== Specific Metrics
+
+In addition to the general metrics described above, most fault tolerance strategies emit their own metrics.
+Those are described in the reference guides:
+
+* xref:reference/bulkhead.adoc#metrics[Bulkhead]
+* xref:reference/circuit-breaker.adoc#metrics[Circuit Breaker]
+* xref:reference/rate-limit.adoc#metrics[Rate Limit]
+* xref:reference/retry.adoc#metrics[Retry]
+* xref:reference/timeout.adoc#metrics[Timeout]
+
+== Timer Metrics
+
+For task scheduling purposes (e.g. watching timeouts or delaying retries), {smallrye-fault-tolerance} maintains one thread called the _timer thread_.
+Most of the time, it is kept sleeping (parked), it only wakes up (unparks) when necessary to submit tasks to executors.
+
+The behavior of the timer thread can be observed through the following metrics:
+
+[cols="1,5"]
+|===
+| Name | `ft.timer.scheduled`
+| Type
+a| * OpenTelemetry: `LongUpDownCounter`
+* Micrometer: `Gauge`
+| Unit | None
+| Description | The number of tasks that are currently scheduled (for future execution) on the timer.
+| Tags
+a| * `id` - the ID of the timer, to distinguish multiple timers in a multi-application environment
+|===
+
+== Micrometer Support
+
+In addition to the OpenTelemetry support (as specified by {microprofile-fault-tolerance}), {smallrye-fault-tolerance} also provides support for https://micrometer.io/[Micrometer].
+The set of metrics emitted to Micrometer is the same, using the same metric names and tags.
+
+Note that distribution summaries in Micrometer, including timers, do not emit quantiles by default.
+Micrometer recommends that libraries should not configure them out of the box, so if you need them, you should use a `MeterFilter`.
+
+The following implementation makes sure Micrometer emits some common quantiles for all fault tolerance metrics:
+
+[source,java]
+----
+static final MeterFilter ENABLE_HISTOGRAMS = new MeterFilter() {
+    @Override
+    public DistributionStatisticConfig configure(Meter.Id id, DistributionStatisticConfig config) {
+        if (id.getName().startsWith("ft.")) {
+            return DistributionStatisticConfig.builder()
+                    .percentiles(0.5, 0.75, 0.9, 0.95, 0.99, 0.999)
+                    .build()
+                    .merge(config);
+        }
+        return config;
+    }
+};
+----
+
+== Disabling Metrics
+
+It is possible to completely disable fault tolerance metrics using MicroProfile Config:
+
+[source,properties]
+----
+smallrye.faulttolerance.metrics.enabled=false
+
+# alternatively, a specification-defined property can be used
+MP_Fault_Tolerance_Metrics_Enabled=false
+----
+
+It is also possible to disable individual metric providers:
+
+[source,properties]
+----
+# to disable OpenTelemetry Metrics
+smallrye.faulttolerance.opentelemetry.disabled=true
+
+# to disable Micrometer
+smallrye.faulttolerance.micrometer.disabled=true
+----
+
+Note that setting `smallrye.faulttolerance.*.disabled` to `false` does not mean the provider is enabled unconditionally.
+When that provider is not discovered or selected by the integrator, it cannot be enabled in any way.
+These properties are only meant for disabling an otherwise enabled metrics provider; not the other way around.
