@@ -339,7 +339,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
         private MeteredOperation buildMeteredOperation() {
             return new BasicMeteredOperationImpl(descriptionSet, description, asyncSupport != null, bulkheadBuilder != null,
-                    circuitBreakerBuilder != null, false, rateLimitBuilder != null,
+                    circuitBreakerBuilder != null, fallbackBuilder != null, rateLimitBuilder != null,
                     retryBuilder != null, timeoutBuilder != null);
         }
 
