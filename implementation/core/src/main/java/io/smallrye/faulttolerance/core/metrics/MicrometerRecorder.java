@@ -29,15 +29,16 @@ import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_C
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_CONFIG_DURATION;
 import static io.smallrye.faulttolerance.core.metrics.MetricsConstants.TIMEOUT_EXECUTION_DURATION;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import io.smallrye.faulttolerance.core.circuit.breaker.CircuitBreakerEvents;
 
 public class MicrometerRecorder implements MetricsRecorder {
@@ -74,90 +75,183 @@ public class MicrometerRecorder implements MetricsRecorder {
 
     private final MeterRegistry registry;
     private final Tag methodTag;
-    private final Iterable<Tag> methodTagSingleton;
+    private final Tags methodTagSingleton;
+
+    // invocation
+    // when fallback is defined, the `*FallbackApplied` and `*FallbackNotApplied` variants are non-null
+    // when fallback is NOT defined, the `*FallbackNotDefined` variants are non-null
+    private final Counter invocationValueReturnedFallbackApplied;
+    private final Counter invocationExceptionThrownFallbackApplied;
+    private final Counter invocationValueReturnedFallbackNotApplied;
+    private final Counter invocationExceptionThrownFallbackNotApplied;
+    private final Counter invocationValueReturnedFallbackNotDefined;
+    private final Counter invocationExceptionThrownFallbackNotDefined;
+    private final Timer invocationDuration;
+
+    // retry
+    private final Counter retryRetriesTotal;
+    private final Counter retryRetriedValueReturned;
+    private final Counter retryRetriedExceptionNotRetryable;
+    private final Counter retryRetriedMaxRetriesReached;
+    private final Counter retryRetriedMaxDurationReached;
+    private final Counter retryNotRetriedValueReturned;
+    private final Counter retryNotRetriedExceptionNotRetryable;
+    private final Counter retryNotRetriedMaxRetriesReached;
+    private final Counter retryNotRetriedMaxDurationReached;
+
+    // timeout
+    private final Counter timeoutTimedOutTrue;
+    private final Counter timeoutTimedOutFalse;
+    private final Timer timeoutExecutionDuration;
+
+    // circuit breaker
+    private final Counter circuitBreakerSuccess;
+    private final Counter circuitBreakerFailure;
+    private final Counter circuitBreakerPrevented;
+    private final Counter circuitBreakerOpenedTotal;
+
+    // bulkhead
+    private final Counter bulkheadAccepted;
+    private final Counter bulkheadRejected;
+    private final Timer bulkheadRunningDuration;
+    private final Timer bulkheadWaitingDuration;
+
+    // rate limit
+    private final Counter rateLimitPermitted;
+    private final Counter rateLimitRejected;
 
     public MicrometerRecorder(MeterRegistry registry, MeteredOperation operation) {
         this.registry = registry;
         this.methodTag = Tag.of("method", operation.name());
-        this.methodTagSingleton = Collections.singleton(methodTag);
+        this.methodTagSingleton = Tags.of(methodTag);
 
-        registerMetrics(operation);
-    }
-
-    private void registerMetrics(MeteredOperation operation) {
         if (operation.hasFallback()) {
-            registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_APPLIED));
-            registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_VALUE_RETURNED, FALLBACK_APPLIED));
-            registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_APPLIED));
-            registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_APPLIED));
+            invocationValueReturnedFallbackApplied = registry.counter(INVOCATIONS_TOTAL,
+                    Tags.of(methodTag, RESULT_VALUE_RETURNED, FALLBACK_APPLIED));
+            invocationExceptionThrownFallbackApplied = registry.counter(INVOCATIONS_TOTAL,
+                    Tags.of(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_APPLIED));
+            invocationValueReturnedFallbackNotApplied = registry.counter(INVOCATIONS_TOTAL,
+                    Tags.of(methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_APPLIED));
+            invocationExceptionThrownFallbackNotApplied = registry.counter(INVOCATIONS_TOTAL,
+                    Tags.of(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_APPLIED));
+            invocationValueReturnedFallbackNotDefined = null;
+            invocationExceptionThrownFallbackNotDefined = null;
         } else {
-            registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_DEFINED));
-            registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_DEFINED));
+            invocationValueReturnedFallbackApplied = null;
+            invocationExceptionThrownFallbackApplied = null;
+            invocationValueReturnedFallbackNotApplied = null;
+            invocationExceptionThrownFallbackNotApplied = null;
+            invocationValueReturnedFallbackNotDefined = registry.counter(INVOCATIONS_TOTAL,
+                    Tags.of(methodTag, RESULT_VALUE_RETURNED, FALLBACK_NOT_DEFINED));
+            invocationExceptionThrownFallbackNotDefined = registry.counter(INVOCATIONS_TOTAL,
+                    Tags.of(methodTag, RESULT_EXCEPTION_THROWN, FALLBACK_NOT_DEFINED));
         }
-
-        registry.timer(INVOCATIONS_DURATION, methodTagSingleton);
+        invocationDuration = registry.timer(INVOCATIONS_DURATION, methodTagSingleton);
 
         if (operation.hasRetry()) {
-            registry.counter(RETRY_RETRIES_TOTAL, methodTagSingleton);
+            retryRetriesTotal = registry.counter(RETRY_RETRIES_TOTAL, methodTagSingleton);
 
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_FALSE, RETRY_RESULT_VALUE_RETURNED));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_FALSE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_FALSE, RETRY_RESULT_MAX_RETRIES_REACHED));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_FALSE, RETRY_RESULT_MAX_DURATION_REACHED));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_VALUE_RETURNED));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_RETRIES_REACHED));
-            registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_DURATION_REACHED));
+            retryRetriedValueReturned = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_TRUE, RETRY_RESULT_VALUE_RETURNED));
+            retryRetriedExceptionNotRetryable = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_TRUE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE));
+            retryRetriedMaxRetriesReached = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_RETRIES_REACHED));
+            retryRetriedMaxDurationReached = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_TRUE, RETRY_RESULT_MAX_DURATION_REACHED));
+            retryNotRetriedValueReturned = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_FALSE, RETRY_RESULT_VALUE_RETURNED));
+            retryNotRetriedExceptionNotRetryable = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_FALSE, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE));
+            retryNotRetriedMaxRetriesReached = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_FALSE, RETRY_RESULT_MAX_RETRIES_REACHED));
+            retryNotRetriedMaxDurationReached = registry.counter(RETRY_CALLS_TOTAL,
+                    Tags.of(methodTag, RETRIED_FALSE, RETRY_RESULT_MAX_DURATION_REACHED));
 
-            registerGauge(operation::retryMaxRetries, RETRY_CONFIG_MAX_RETRIES, methodTag);
-            registerTimeGauge(operation::retryMaxDuration, RETRY_CONFIG_MAX_DURATION, methodTag);
+            registerGauge(operation::retryMaxRetries, RETRY_CONFIG_MAX_RETRIES, methodTagSingleton);
+            registerTimeGauge(operation::retryMaxDuration, RETRY_CONFIG_MAX_DURATION, methodTagSingleton);
+        } else {
+            retryRetriesTotal = null;
+            retryRetriedValueReturned = null;
+            retryRetriedExceptionNotRetryable = null;
+            retryRetriedMaxRetriesReached = null;
+            retryRetriedMaxDurationReached = null;
+            retryNotRetriedValueReturned = null;
+            retryNotRetriedExceptionNotRetryable = null;
+            retryNotRetriedMaxRetriesReached = null;
+            retryNotRetriedMaxDurationReached = null;
         }
 
         if (operation.hasTimeout()) {
-            registry.counter(TIMEOUT_CALLS_TOTAL, Arrays.asList(methodTag, TIMED_OUT_TRUE));
-            registry.counter(TIMEOUT_CALLS_TOTAL, Arrays.asList(methodTag, TIMED_OUT_FALSE));
+            timeoutTimedOutTrue = registry.counter(TIMEOUT_CALLS_TOTAL, Tags.of(methodTag, TIMED_OUT_TRUE));
+            timeoutTimedOutFalse = registry.counter(TIMEOUT_CALLS_TOTAL, Tags.of(methodTag, TIMED_OUT_FALSE));
+            timeoutExecutionDuration = registry.timer(TIMEOUT_EXECUTION_DURATION, methodTagSingleton);
 
-            registry.timer(TIMEOUT_EXECUTION_DURATION, methodTagSingleton);
-
-            registerTimeGauge(operation::timeoutDuration, TIMEOUT_CONFIG_DURATION, methodTag);
+            registerTimeGauge(operation::timeoutDuration, TIMEOUT_CONFIG_DURATION, methodTagSingleton);
+        } else {
+            timeoutTimedOutTrue = null;
+            timeoutTimedOutFalse = null;
+            timeoutExecutionDuration = null;
         }
 
         if (operation.hasCircuitBreaker()) {
-            registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, Arrays.asList(methodTag, CIRCUIT_BREAKER_RESULT_SUCCESS));
-            registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, Arrays.asList(methodTag, CIRCUIT_BREAKER_RESULT_FAILURE));
-            registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, Arrays.asList(methodTag, CIRCUIT_BREAKER_RESULT_CB_OPEN));
+            circuitBreakerSuccess = registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL,
+                    Tags.of(methodTag, CIRCUIT_BREAKER_RESULT_SUCCESS));
+            circuitBreakerFailure = registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL,
+                    Tags.of(methodTag, CIRCUIT_BREAKER_RESULT_FAILURE));
+            circuitBreakerPrevented = registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL,
+                    Tags.of(methodTag, CIRCUIT_BREAKER_RESULT_CB_OPEN));
+            circuitBreakerOpenedTotal = registry.counter(CIRCUIT_BREAKER_OPENED_TOTAL,
+                    methodTagSingleton);
 
-            registry.counter(CIRCUIT_BREAKER_OPENED_TOTAL, methodTagSingleton);
-
-            registerTimeGauge(operation::circuitBreakerDelay, CIRCUIT_BREAKER_CONFIG_DELAY, methodTag);
+            registerTimeGauge(operation::circuitBreakerDelay, CIRCUIT_BREAKER_CONFIG_DELAY,
+                    methodTagSingleton);
             registerGauge(operation::circuitBreakerRequestVolumeThreshold, CIRCUIT_BREAKER_CONFIG_REQUEST_VOLUME_THRESHOLD,
-                    methodTag);
-            registerGauge(operation::circuitBreakerFailureRatio, CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO, methodTag);
-            registerGauge(operation::circuitBreakerSuccessThreshold, CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD, methodTag);
+                    methodTagSingleton);
+            registerGauge(operation::circuitBreakerFailureRatio, CIRCUIT_BREAKER_CONFIG_FAILURE_RATIO,
+                    methodTagSingleton);
+            registerGauge(operation::circuitBreakerSuccessThreshold, CIRCUIT_BREAKER_CONFIG_SUCCESS_THRESHOLD,
+                    methodTagSingleton);
+        } else {
+            circuitBreakerSuccess = null;
+            circuitBreakerFailure = null;
+            circuitBreakerPrevented = null;
+            circuitBreakerOpenedTotal = null;
         }
 
         if (operation.hasBulkhead()) {
-            registry.counter(BULKHEAD_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_ACCEPTED));
-            registry.counter(BULKHEAD_CALLS_TOTAL, Arrays.asList(methodTag, BULKHEAD_RESULT_REJECTED));
-
-            registry.timer(BULKHEAD_RUNNING_DURATION, methodTagSingleton);
+            bulkheadAccepted = registry.counter(BULKHEAD_CALLS_TOTAL, Tags.of(methodTag, BULKHEAD_RESULT_ACCEPTED));
+            bulkheadRejected = registry.counter(BULKHEAD_CALLS_TOTAL, Tags.of(methodTag, BULKHEAD_RESULT_REJECTED));
+            bulkheadRunningDuration = registry.timer(BULKHEAD_RUNNING_DURATION, methodTagSingleton);
             if (operation.mayBeAsynchronous()) {
-                registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton);
+                bulkheadWaitingDuration = registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton);
+            } else {
+                bulkheadWaitingDuration = null;
             }
 
-            registerGauge(operation::bulkheadLimit, BULKHEAD_CONFIG_LIMIT, methodTag);
+            registerGauge(operation::bulkheadLimit, BULKHEAD_CONFIG_LIMIT, methodTagSingleton);
             if (operation.mayBeAsynchronous()) {
-                registerGauge(operation::bulkheadQueueSize, BULKHEAD_CONFIG_QUEUE_SIZE, methodTag);
+                registerGauge(operation::bulkheadQueueSize, BULKHEAD_CONFIG_QUEUE_SIZE, methodTagSingleton);
             }
+        } else {
+            bulkheadAccepted = null;
+            bulkheadRejected = null;
+            bulkheadRunningDuration = null;
+            bulkheadWaitingDuration = null;
         }
 
         if (operation.hasRateLimit()) {
-            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, RATE_LIMIT_RESULT_PERMITTED));
-            registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, RATE_LIMIT_RESULT_REJECTED));
+            rateLimitPermitted = registry.counter(RATE_LIMIT_CALLS_TOTAL,
+                    Tags.of(methodTag, RATE_LIMIT_RESULT_PERMITTED));
+            rateLimitRejected = registry.counter(RATE_LIMIT_CALLS_TOTAL,
+                    Tags.of(methodTag, RATE_LIMIT_RESULT_REJECTED));
 
-            registerGauge(operation::rateLimitLimit, RATE_LIMIT_CONFIG_LIMIT, methodTag);
-            registerTimeGauge(operation::rateLimitWindow, RATE_LIMIT_CONFIG_WINDOW, methodTag);
-            registerTimeGauge(operation::rateLimitMinSpacing, RATE_LIMIT_CONFIG_MIN_SPACING, methodTag);
+            registerGauge(operation::rateLimitLimit, RATE_LIMIT_CONFIG_LIMIT, methodTagSingleton);
+            registerTimeGauge(operation::rateLimitWindow, RATE_LIMIT_CONFIG_WINDOW, methodTagSingleton);
+            registerTimeGauge(operation::rateLimitMinSpacing, RATE_LIMIT_CONFIG_MIN_SPACING, methodTagSingleton);
+        } else {
+            rateLimitPermitted = null;
+            rateLimitRejected = null;
         }
     }
 
@@ -170,20 +264,20 @@ public class MicrometerRecorder implements MetricsRecorder {
     // Micrometer has an API to make sure the state object is held strongly, but that
     // has more overhead (and the API that needs to be used is uglier)
 
-    private void registerGauge(LongSupplier supplier, String name, Tag... tags) {
-        registry.gauge(name, Arrays.asList(tags), supplier, ignored -> (double) supplier.getAsLong());
+    private void registerGauge(LongSupplier supplier, String name, Tags tags) {
+        registry.gauge(name, tags, supplier, ignored -> (double) supplier.getAsLong());
     }
 
-    private void registerGauge(BooleanSupplier supplier, String name, Tag... tags) {
-        registry.gauge(name, Arrays.asList(tags), supplier, ignored -> supplier.getAsBoolean() ? 1.0 : 0.0);
+    private void registerGauge(BooleanSupplier supplier, String name, Tags tags) {
+        registry.gauge(name, tags, supplier, ignored -> supplier.getAsBoolean() ? 1.0 : 0.0);
     }
 
-    private void registerGauge(DoubleSupplier supplier, String name, Tag... tags) {
-        registry.gauge(name, Arrays.asList(tags), supplier, ignored -> supplier.getAsDouble());
+    private void registerGauge(DoubleSupplier supplier, String name, Tags tags) {
+        registry.gauge(name, tags, supplier, ignored -> supplier.getAsDouble());
     }
 
-    private void registerTimeGauge(LongSupplier supplier, String name, Tag... tags) {
-        registry.more().timeGauge(name, Arrays.asList(tags), supplier, TimeUnit.NANOSECONDS,
+    private void registerTimeGauge(LongSupplier supplier, String name, Tags tags) {
+        registry.more().timeGauge(name, tags, supplier, TimeUnit.NANOSECONDS,
                 ignored -> (double) supplier.getAsLong());
     }
 
@@ -191,122 +285,130 @@ public class MicrometerRecorder implements MetricsRecorder {
 
     @Override
     public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied, long duration) {
-        Tag resultTag = succeeded ? RESULT_VALUE_RETURNED : RESULT_EXCEPTION_THROWN;
-        Tag fallbackTag = fallbackDefined ? (fallbackApplied ? FALLBACK_APPLIED : FALLBACK_NOT_APPLIED) : FALLBACK_NOT_DEFINED;
-        registry.counter(INVOCATIONS_TOTAL, Arrays.asList(methodTag, resultTag, fallbackTag)).increment();
-        registry.timer(INVOCATIONS_DURATION, methodTagSingleton).record(duration, TimeUnit.NANOSECONDS);
+        Counter counter;
+        if (succeeded) {
+            if (fallbackDefined) {
+                counter = fallbackApplied
+                        ? invocationValueReturnedFallbackApplied
+                        : invocationValueReturnedFallbackNotApplied;
+            } else {
+                counter = invocationValueReturnedFallbackNotDefined;
+            }
+        } else {
+            if (fallbackDefined) {
+                counter = fallbackApplied
+                        ? invocationExceptionThrownFallbackApplied
+                        : invocationExceptionThrownFallbackNotApplied;
+            } else {
+                counter = invocationExceptionThrownFallbackNotDefined;
+            }
+        }
+        counter.increment();
+        invocationDuration.record(duration, TimeUnit.NANOSECONDS);
     }
 
     @Override
     public void retryAttempted() {
-        registry.counter(RETRY_RETRIES_TOTAL, methodTagSingleton).increment();
+        retryRetriesTotal.increment();
     }
 
     @Override
     public void retryValueReturned(boolean retried) {
-        registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
-                RETRY_RESULT_VALUE_RETURNED)).increment();
+        (retried ? retryRetriedValueReturned : retryNotRetriedValueReturned).increment();
     }
 
     @Override
     public void retryExceptionNotRetryable(boolean retried) {
-        registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
-                RETRY_RESULT_EXCEPTION_NOT_RETRYABLE)).increment();
+        (retried ? retryRetriedExceptionNotRetryable : retryNotRetriedExceptionNotRetryable).increment();
     }
 
     @Override
     public void retryMaxRetriesReached(boolean retried) {
-        registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
-                RETRY_RESULT_MAX_RETRIES_REACHED)).increment();
+        (retried ? retryRetriedMaxRetriesReached : retryNotRetriedMaxRetriesReached).increment();
     }
 
     @Override
     public void retryMaxDurationReached(boolean retried) {
-        registry.counter(RETRY_CALLS_TOTAL, Arrays.asList(methodTag, retried ? RETRIED_TRUE : RETRIED_FALSE,
-                RETRY_RESULT_MAX_DURATION_REACHED)).increment();
+        (retried ? retryRetriedMaxDurationReached : retryNotRetriedMaxDurationReached).increment();
     }
 
     @Override
     public void timeoutFinished(boolean timedOut, long time) {
-        registry.counter(TIMEOUT_CALLS_TOTAL, Arrays.asList(methodTag, timedOut ? TIMED_OUT_TRUE : TIMED_OUT_FALSE))
-                .increment();
-        registry.timer(TIMEOUT_EXECUTION_DURATION, methodTagSingleton).record(time, TimeUnit.NANOSECONDS);
+        (timedOut ? timeoutTimedOutTrue : timeoutTimedOutFalse).increment();
+        timeoutExecutionDuration.record(time, TimeUnit.NANOSECONDS);
     }
 
     @Override
     public void circuitBreakerFinished(CircuitBreakerEvents.Result result) {
-        Tag circuitBreakerResultTag = switch (result) {
-            case SUCCESS -> CIRCUIT_BREAKER_RESULT_SUCCESS;
-            case FAILURE -> CIRCUIT_BREAKER_RESULT_FAILURE;
-            case PREVENTED -> CIRCUIT_BREAKER_RESULT_CB_OPEN;
-        };
-        registry.counter(CIRCUIT_BREAKER_CALLS_TOTAL, Arrays.asList(methodTag, circuitBreakerResultTag)).increment();
+        switch (result) {
+            case SUCCESS -> circuitBreakerSuccess.increment();
+            case FAILURE -> circuitBreakerFailure.increment();
+            case PREVENTED -> circuitBreakerPrevented.increment();
+        }
     }
 
     @Override
     public void circuitBreakerMovedToOpen() {
-        registry.counter(CIRCUIT_BREAKER_OPENED_TOTAL, methodTagSingleton).increment();
+        circuitBreakerOpenedTotal.increment();
     }
 
     @Override
     public void registerCircuitBreakerIsClosed(BooleanSupplier supplier) {
-        registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, methodTag, CIRCUIT_BREAKER_STATE_CLOSED);
+        registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, Tags.of(methodTag, CIRCUIT_BREAKER_STATE_CLOSED));
     }
 
     @Override
     public void registerCircuitBreakerIsOpen(BooleanSupplier supplier) {
-        registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, methodTag, CIRCUIT_BREAKER_STATE_OPEN);
+        registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, Tags.of(methodTag, CIRCUIT_BREAKER_STATE_OPEN));
     }
 
     @Override
     public void registerCircuitBreakerIsHalfOpen(BooleanSupplier supplier) {
-        registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN);
+        registerGauge(supplier, CIRCUIT_BREAKER_STATE_CURRENT, Tags.of(methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN));
     }
 
     @Override
     public void registerCircuitBreakerTimeSpentInClosed(LongSupplier supplier) {
-        registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, methodTag, CIRCUIT_BREAKER_STATE_CLOSED);
+        registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, Tags.of(methodTag, CIRCUIT_BREAKER_STATE_CLOSED));
     }
 
     @Override
     public void registerCircuitBreakerTimeSpentInOpen(LongSupplier supplier) {
-        registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, methodTag, CIRCUIT_BREAKER_STATE_OPEN);
+        registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, Tags.of(methodTag, CIRCUIT_BREAKER_STATE_OPEN));
     }
 
     @Override
     public void registerCircuitBreakerTimeSpentInHalfOpen(LongSupplier supplier) {
-        registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN);
+        registerTimeGauge(supplier, CIRCUIT_BREAKER_STATE_TOTAL, Tags.of(methodTag, CIRCUIT_BREAKER_STATE_HALF_OPEN));
     }
 
     @Override
     public void bulkheadDecisionMade(boolean accepted) {
-        Tag bulkheadResultTag = accepted ? BULKHEAD_RESULT_ACCEPTED : BULKHEAD_RESULT_REJECTED;
-        registry.counter(BULKHEAD_CALLS_TOTAL, Arrays.asList(methodTag, bulkheadResultTag)).increment();
+        (accepted ? bulkheadAccepted : bulkheadRejected).increment();
     }
 
     @Override
     public void registerBulkheadExecutionsRunning(LongSupplier supplier) {
-        registerGauge(supplier, BULKHEAD_EXECUTIONS_RUNNING, methodTag);
+        registerGauge(supplier, BULKHEAD_EXECUTIONS_RUNNING, methodTagSingleton);
     }
 
     @Override
     public void registerBulkheadExecutionsWaiting(LongSupplier supplier) {
-        registerGauge(supplier, BULKHEAD_EXECUTIONS_WAITING, methodTag);
+        registerGauge(supplier, BULKHEAD_EXECUTIONS_WAITING, methodTagSingleton);
     }
 
     @Override
     public void updateBulkheadRunningDuration(long time) {
-        registry.timer(BULKHEAD_RUNNING_DURATION, methodTagSingleton).record(time, TimeUnit.NANOSECONDS);
+        bulkheadRunningDuration.record(time, TimeUnit.NANOSECONDS);
     }
 
     @Override
     public void updateBulkheadWaitingDuration(long time) {
-        registry.timer(BULKHEAD_WAITING_DURATION, methodTagSingleton).record(time, TimeUnit.NANOSECONDS);
+        bulkheadWaitingDuration.record(time, TimeUnit.NANOSECONDS);
     }
 
     @Override
     public void rateLimitDecisionMade(boolean permitted) {
-        Tag rateLimitResultTag = permitted ? RATE_LIMIT_RESULT_PERMITTED : RATE_LIMIT_RESULT_REJECTED;
-        registry.counter(RATE_LIMIT_CALLS_TOTAL, Arrays.asList(methodTag, rateLimitResultTag)).increment();
+        (permitted ? rateLimitPermitted : rateLimitRejected).increment();
     }
 }
