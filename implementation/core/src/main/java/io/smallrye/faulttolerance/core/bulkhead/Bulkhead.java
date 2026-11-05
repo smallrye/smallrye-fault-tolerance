@@ -16,6 +16,7 @@ import io.smallrye.faulttolerance.core.FaultToleranceContext;
 import io.smallrye.faulttolerance.core.FaultToleranceStrategy;
 import io.smallrye.faulttolerance.core.Future;
 import io.smallrye.faulttolerance.core.async.FutureCancellationEvent;
+import io.smallrye.faulttolerance.core.util.RunnableWrapper;
 
 /**
  * Unified bulkhead that behaves in a semaphore fashion for synchronous executions
@@ -37,15 +38,23 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
     private final Semaphore capacitySemaphore;
     private final Semaphore workSemaphore;
     private final boolean syncQueueing;
+    private final RunnableWrapper runnableWrapper;
 
     // `syncQueueing` may only be enabled if this bulkhead is executed on an extra thread
     public Bulkhead(FaultToleranceStrategy<V> delegate, String description, int size, int queueSize, boolean syncQueueing) {
+        this(delegate, description, size, queueSize, syncQueueing, RunnableWrapper.INSTANCE);
+    }
+
+    // only for tests
+    Bulkhead(FaultToleranceStrategy<V> delegate, String description, int size, int queueSize, boolean syncQueueing,
+            RunnableWrapper runnableWrapper) {
         this.delegate = delegate;
         this.description = description;
         this.queue = new ConcurrentLinkedDeque<>();
         this.capacitySemaphore = new Semaphore(Math.addExact(size, queueSize), true);
         this.workSemaphore = new Semaphore(size, true);
         this.syncQueueing = syncQueueing;
+        this.runnableWrapper = runnableWrapper;
     }
 
     @Override
@@ -224,6 +233,10 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
         private final FaultToleranceContext<V> ctx;
         private final AtomicInteger state = new AtomicInteger(RUNNING);
 
+        // queued task runs on a thread that completed a previous task, so the thread contexts
+        // of this task must be captured here, when the task is created, and restored in `run()`
+        private final Runnable contextualRun = runnableWrapper.wrap(this::doRun);
+
         private BulkheadTask(FaultToleranceContext<V> ctx) {
             this.ctx = ctx;
         }
@@ -233,6 +246,13 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
          *         should loop to process the next queued task (instead of recursing)
          */
         public boolean run() {
+            // calls `doRun()` with restored contexts
+            contextualRun.run();
+            // once `doRun()` returns, `state` cannot change
+            return state.get() == COMPLETED_SYNC;
+        }
+
+        private void doRun() {
             ctx.fireEvent(BulkheadEvents.FinishedWaiting.INSTANCE);
             ctx.fireEvent(BulkheadEvents.StartedRunning.INSTANCE);
 
@@ -253,14 +273,14 @@ public class Bulkhead<V> implements FaultToleranceStrategy<V> {
                         runQueuedTask();
                     }
                 });
-                return !state.compareAndSet(RUNNING, WILL_COMPLETE_ASYNC);
+                state.compareAndSet(RUNNING, WILL_COMPLETE_ASYNC);
             } catch (Exception e) {
                 releaseSemaphores();
                 ctx.fireEvent(BulkheadEvents.FinishedRunning.INSTANCE);
 
                 result.completeWithError(e);
 
-                return true;
+                state.set(COMPLETED_SYNC);
             }
         }
 
