@@ -184,6 +184,11 @@
                 <version>${version.opentelemetry}</version>
             </dependency>
             <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-sdk-testing</artifactId>
+                <version>${version.opentelemetry}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.reactivex.rxjava3</groupId>
                 <artifactId>rxjava</artifactId>
                 <version>${version.rxjava3}</version>

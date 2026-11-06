@@ -50,14 +50,61 @@ public class GeneralMetricsTest {
 
         for (int i = 0; i < 1000; i++) {
             FaultToleranceContext<String> ctx = sync(() -> "foobar");
-            ctx.set(MeteredOperationName.class, new MeteredOperationName("mock"));
+            ctx.set(MeteredOperationMetadata.class, new MeteredOperationMetadata("mock", false));
             assertThat(collector.apply(ctx).awaitBlocking()).isEqualTo("foobar");
         }
 
         assertThat(provider.counter).isEqualTo(1);
     }
 
+    @Test
+    public void hasFallbackIsTakenFromContext_true() throws Throwable {
+        MockMetricsProvider provider = new MockMetricsProvider();
+        FaultToleranceStrategy<String> collector = new DelegatingMetricsCollector<>(invocation(), provider,
+                new MockMeteredOperation(false));
+
+        FaultToleranceContext<String> ctx = sync(() -> "foobar");
+        ctx.set(MeteredOperationMetadata.class, new MeteredOperationMetadata("mock", true));
+        assertThat(collector.apply(ctx).awaitBlocking()).isEqualTo("foobar");
+
+        assertThat(provider.lastOperation.hasFallback()).isTrue();
+    }
+
+    @Test
+    public void hasFallbackIsTakenFromContext_false() throws Throwable {
+        MockMetricsProvider provider = new MockMetricsProvider();
+        FaultToleranceStrategy<String> collector = new DelegatingMetricsCollector<>(invocation(), provider,
+                new MockMeteredOperation(true));
+
+        FaultToleranceContext<String> ctx = sync(() -> "foobar");
+        ctx.set(MeteredOperationMetadata.class, new MeteredOperationMetadata("mock", false));
+        assertThat(collector.apply(ctx).awaitBlocking()).isEqualTo("foobar");
+
+        assertThat(provider.lastOperation.hasFallback()).isFalse();
+    }
+
+    @Test
+    public void hasFallbackDefaultsToOperation() throws Throwable {
+        MockMetricsProvider provider = new MockMetricsProvider();
+        FaultToleranceStrategy<String> collector = new DelegatingMetricsCollector<>(invocation(), provider,
+                new MockMeteredOperation(true));
+
+        assertThat(collector.apply(sync(() -> "foobar")).awaitBlocking()).isEqualTo("foobar");
+
+        assertThat(provider.lastOperation.hasFallback()).isTrue();
+    }
+
     private static class MockMeteredOperation implements MeteredOperation {
+        private final boolean hasFallback;
+
+        MockMeteredOperation() {
+            this(false);
+        }
+
+        MockMeteredOperation(boolean hasFallback) {
+            this.hasFallback = hasFallback;
+        }
+
         @Override
         public boolean enabled() {
             return true;
@@ -110,7 +157,7 @@ public class GeneralMetricsTest {
 
         @Override
         public boolean hasFallback() {
-            return false;
+            return hasFallback;
         }
 
         @Override
@@ -171,6 +218,7 @@ public class GeneralMetricsTest {
 
     private static class MockMetricsProvider implements MetricsProvider {
         int counter;
+        MeteredOperation lastOperation;
 
         @Override
         public boolean isEnabled() {
@@ -180,6 +228,7 @@ public class GeneralMetricsTest {
         @Override
         public MetricsRecorder create(MeteredOperation operation) {
             counter++;
+            lastOperation = operation;
             return new MockMetricsRecorder();
         }
     }

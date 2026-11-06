@@ -77,7 +77,7 @@ import io.smallrye.faulttolerance.core.invocation.ConstantInvoker;
 import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
-import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
+import io.smallrye.faulttolerance.core.metrics.MeteredOperationMetadata;
 import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
@@ -243,7 +243,8 @@ public class FaultToleranceInterceptor {
         } else {
             threadOffload = null;
         }
-        MeteredOperationName meteredOperationName = new MeteredOperationName(operation.getName());
+        MeteredOperationMetadata meteredOperationMetadata = new MeteredOperationMetadata(
+                operation.getName(), operation.hasFallback());
 
         Consumer<FaultToleranceContext<?>> contextModifier = ctx -> {
             ctx.set(InvocationContext.class, invocationContext);
@@ -257,7 +258,7 @@ public class FaultToleranceInterceptor {
             if (threadOffload != null) {
                 ctx.set(ThreadOffloadEnabled.class, new ThreadOffloadEnabled(threadOffload));
             }
-            ctx.set(MeteredOperationName.class, meteredOperationName);
+            ctx.set(MeteredOperationMetadata.class, meteredOperationMetadata);
         };
 
         // invocation itself
