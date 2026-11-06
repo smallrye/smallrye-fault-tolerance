@@ -5,7 +5,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import io.smallrye.faulttolerance.api.FaultTolerance;
-import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
 
 public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
     private final Supplier<FaultToleranceImpl<?, T>> builder;
@@ -24,7 +23,7 @@ public final class LazyFaultTolerance<T> implements FaultTolerance<T> {
         return asyncType;
     }
 
-    public T call(Callable<T> action, MeteredOperationName meteredOperationName) throws Exception {
+    public T call(Callable<T> action, String meteredOperationName) throws Exception {
         return instance().call(action, meteredOperationName);
     }
 

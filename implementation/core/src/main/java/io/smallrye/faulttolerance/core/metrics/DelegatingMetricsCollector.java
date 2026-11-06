@@ -24,9 +24,9 @@ public class DelegatingMetricsCollector<V> implements FaultToleranceStrategy<V> 
 
     @Override
     public Future<V> apply(FaultToleranceContext<V> ctx) {
-        MeteredOperationName name = ctx.get(MeteredOperationName.class);
-        MeteredOperation operation = name != null
-                ? new DelegatingMeteredOperation(originalOperation, name.get())
+        MeteredOperationMetadata metadata = ctx.get(MeteredOperationMetadata.class);
+        MeteredOperation operation = metadata != null
+                ? new DelegatingMeteredOperation(originalOperation, metadata)
                 : originalOperation;
         FaultToleranceStrategy<V> delegate;
         if (operation.enabled()) {

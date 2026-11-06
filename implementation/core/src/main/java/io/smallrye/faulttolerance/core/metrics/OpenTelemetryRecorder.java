@@ -35,47 +35,47 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
             2.5, 5.0, 7.5, 10.0);
     private static final double NANOS_TO_SECONDS = 1.0 / 1_000_000_000.0;
 
-    private static final AttributeKey<String> METHOD = AttributeKey.stringKey("method");
+    static final AttributeKey<String> METHOD = AttributeKey.stringKey("method");
 
-    private static final AttributeKey<String> RESULT = AttributeKey.stringKey("result");
-    private static final String RESULT_VALUE_RETURNED = "valueReturned";
-    private static final String RESULT_EXCEPTION_THROWN = "exceptionThrown";
+    static final AttributeKey<String> RESULT = AttributeKey.stringKey("result");
+    static final String RESULT_VALUE_RETURNED = "valueReturned";
+    static final String RESULT_EXCEPTION_THROWN = "exceptionThrown";
 
-    private static final AttributeKey<String> FALLBACK = AttributeKey.stringKey("fallback");
-    private static final String FALLBACK_APPLIED = "applied";
-    private static final String FALLBACK_NOT_APPLIED = "notApplied";
-    private static final String FALLBACK_NOT_DEFINED = "notDefined";
+    static final AttributeKey<String> FALLBACK = AttributeKey.stringKey("fallback");
+    static final String FALLBACK_APPLIED = "applied";
+    static final String FALLBACK_NOT_APPLIED = "notApplied";
+    static final String FALLBACK_NOT_DEFINED = "notDefined";
 
-    private static final AttributeKey<String> RETRIED = AttributeKey.stringKey("retried");
-    private static final String RETRIED_TRUE = "true";
-    private static final String RETRIED_FALSE = "false";
-    private static final AttributeKey<String> RETRY_RESULT = AttributeKey.stringKey("retryResult");
-    private static final String RETRY_RESULT_VALUE_RETURNED = "valueReturned";
-    private static final String RETRY_RESULT_EXCEPTION_NOT_RETRYABLE = "exceptionNotRetryable";
-    private static final String RETRY_RESULT_MAX_RETRIES_REACHED = "maxRetriesReached";
-    private static final String RETRY_RESULT_MAX_DURATION_REACHED = "maxDurationReached";
+    static final AttributeKey<String> RETRIED = AttributeKey.stringKey("retried");
+    static final String RETRIED_TRUE = "true";
+    static final String RETRIED_FALSE = "false";
+    static final AttributeKey<String> RETRY_RESULT = AttributeKey.stringKey("retryResult");
+    static final String RETRY_RESULT_VALUE_RETURNED = "valueReturned";
+    static final String RETRY_RESULT_EXCEPTION_NOT_RETRYABLE = "exceptionNotRetryable";
+    static final String RETRY_RESULT_MAX_RETRIES_REACHED = "maxRetriesReached";
+    static final String RETRY_RESULT_MAX_DURATION_REACHED = "maxDurationReached";
 
-    private static final AttributeKey<String> TIMED_OUT = AttributeKey.stringKey("timedOut");
-    private static final String TIMED_OUT_TRUE = "true";
-    private static final String TIMED_OUT_FALSE = "false";
+    static final AttributeKey<String> TIMED_OUT = AttributeKey.stringKey("timedOut");
+    static final String TIMED_OUT_TRUE = "true";
+    static final String TIMED_OUT_FALSE = "false";
 
-    private static final AttributeKey<String> CIRCUIT_BREAKER_RESULT = AttributeKey.stringKey("circuitBreakerResult");
-    private static final String CIRCUIT_BREAKER_RESULT_SUCCESS = "success";
-    private static final String CIRCUIT_BREAKER_RESULT_FAILURE = "failure";
-    private static final String CIRCUIT_BREAKER_RESULT_CB_OPEN = "circuitBreakerOpen";
+    static final AttributeKey<String> CIRCUIT_BREAKER_RESULT = AttributeKey.stringKey("circuitBreakerResult");
+    static final String CIRCUIT_BREAKER_RESULT_SUCCESS = "success";
+    static final String CIRCUIT_BREAKER_RESULT_FAILURE = "failure";
+    static final String CIRCUIT_BREAKER_RESULT_CB_OPEN = "circuitBreakerOpen";
 
-    private static final AttributeKey<String> CIRCUIT_BREAKER_STATE = AttributeKey.stringKey("state");
-    private static final String CIRCUIT_BREAKER_STATE_CLOSED = "closed";
-    private static final String CIRCUIT_BREAKER_STATE_OPEN = "open";
-    private static final String CIRCUIT_BREAKER_STATE_HALF_OPEN = "halfOpen";
+    static final AttributeKey<String> CIRCUIT_BREAKER_STATE = AttributeKey.stringKey("state");
+    static final String CIRCUIT_BREAKER_STATE_CLOSED = "closed";
+    static final String CIRCUIT_BREAKER_STATE_OPEN = "open";
+    static final String CIRCUIT_BREAKER_STATE_HALF_OPEN = "halfOpen";
 
-    private static final AttributeKey<String> BULKHEAD_RESULT = AttributeKey.stringKey("bulkheadResult");
-    private static final String BULKHEAD_RESULT_ACCEPTED = "accepted";
-    private static final String BULKHEAD_RESULT_REJECTED = "rejected";
+    static final AttributeKey<String> BULKHEAD_RESULT = AttributeKey.stringKey("bulkheadResult");
+    static final String BULKHEAD_RESULT_ACCEPTED = "accepted";
+    static final String BULKHEAD_RESULT_REJECTED = "rejected";
 
-    private static final AttributeKey<String> RATE_LIMIT_RESULT = AttributeKey.stringKey("rateLimitResult");
-    private static final String RATE_LIMIT_RESULT_PERMITTED = "permitted";
-    private static final String RATE_LIMIT_RESULT_REJECTED = "rejected";
+    static final AttributeKey<String> RATE_LIMIT_RESULT = AttributeKey.stringKey("rateLimitResult");
+    static final String RATE_LIMIT_RESULT_PERMITTED = "permitted";
+    static final String RATE_LIMIT_RESULT_REJECTED = "rejected";
 
     private final Meter meter;
     private final String methodName;
@@ -95,9 +95,6 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
     public OpenTelemetryRecorder(Meter meter, MeteredOperation operation) {
         this.meter = meter;
         this.methodName = operation.name();
-
-        // make sure all applicable metrics for given method are registered eagerly
-        // we only touch sync metrics, because async metrics are registered eagerly elsewhere
 
         this.invocationsTotal = meter.counterBuilder(INVOCATIONS_TOTAL).build();
 
@@ -169,6 +166,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     // ---
 
+    // the instrument fields have a value only if the operation declares the corresponding strategy,
+    // but a metrics recorder may be shared by multiple operations with the same cache key and different
+    // strategies, so a record method may be called even when the corresponding field is `null`;
+    // in that case, the instrument is created on demand
+
     @Override
     public void executionFinished(boolean succeeded, boolean fallbackDefined, boolean fallbackApplied) {
         String fallback = fallbackDefined
@@ -183,12 +185,21 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void retryAttempted() {
-        retryRetriesTotal.add(1, Attributes.of(METHOD, methodName));
+        LongCounter counter = retryRetriesTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(RETRY_RETRIES_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(METHOD, methodName));
+
     }
 
     @Override
     public void retryValueReturned(boolean retried) {
-        retryCallsTotal.add(1, Attributes.of(
+        LongCounter counter = retryCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.RETRY_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 RETRIED, retried ? RETRIED_TRUE : RETRIED_FALSE,
                 RETRY_RESULT, RETRY_RESULT_VALUE_RETURNED));
@@ -196,7 +207,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void retryExceptionNotRetryable(boolean retried) {
-        retryCallsTotal.add(1, Attributes.of(
+        LongCounter counter = retryCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.RETRY_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 RETRIED, retried ? RETRIED_TRUE : RETRIED_FALSE,
                 RETRY_RESULT, RETRY_RESULT_EXCEPTION_NOT_RETRYABLE));
@@ -204,7 +219,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void retryMaxRetriesReached(boolean retried) {
-        retryCallsTotal.add(1, Attributes.of(
+        LongCounter counter = retryCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.RETRY_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 RETRIED, retried ? RETRIED_TRUE : RETRIED_FALSE,
                 RETRY_RESULT, RETRY_RESULT_MAX_RETRIES_REACHED));
@@ -212,7 +231,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void retryMaxDurationReached(boolean retried) {
-        retryCallsTotal.add(1, Attributes.of(
+        LongCounter counter = retryCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.RETRY_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 RETRIED, retried ? RETRIED_TRUE : RETRIED_FALSE,
                 RETRY_RESULT, RETRY_RESULT_MAX_DURATION_REACHED));
@@ -220,15 +243,27 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void timeoutFinished(boolean timedOut, long time) {
-        timeoutCallsTotal.add(1, Attributes.of(
+        LongCounter counter = timeoutCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.TIMEOUT_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 TIMED_OUT, timedOut ? TIMED_OUT_TRUE : TIMED_OUT_FALSE));
-        timeoutExecutionDuration.record(time * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
+
+        DoubleHistogram histogram = timeoutExecutionDuration;
+        if (histogram == null) {
+            histogram = meter.histogramBuilder(MetricsConstants.TIMEOUT_EXECUTION_DURATION)
+                    .setUnit("seconds")
+                    .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)
+                    .build();
+        }
+        histogram.record(time * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
     }
 
     @Override
     public void circuitBreakerFinished(CircuitBreakerEvents.Result result) {
-        String circuitBreakerResult = null;
+        String circuitBreakerResult;
         switch (result) {
             case SUCCESS:
                 circuitBreakerResult = CIRCUIT_BREAKER_RESULT_SUCCESS;
@@ -239,15 +274,25 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
             case PREVENTED:
                 circuitBreakerResult = CIRCUIT_BREAKER_RESULT_CB_OPEN;
                 break;
+            default:
+                throw new IllegalArgumentException("Unknown circuit breaker result: " + result);
         }
-        circuitBreakerCallsTotal.add(1, Attributes.of(
+        LongCounter counter = circuitBreakerCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.CIRCUIT_BREAKER_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 CIRCUIT_BREAKER_RESULT, circuitBreakerResult));
     }
 
     @Override
     public void circuitBreakerMovedToOpen() {
-        circuitBreakerOpenedTotal.add(1, Attributes.of(METHOD, methodName));
+        LongCounter counter = circuitBreakerOpenedTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.CIRCUIT_BREAKER_OPENED_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(METHOD, methodName));
     }
 
     @Override
@@ -294,7 +339,11 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void bulkheadDecisionMade(boolean accepted) {
-        bulkheadCallsTotal.add(1, Attributes.of(
+        LongCounter counter = bulkheadCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.BULKHEAD_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 BULKHEAD_RESULT, accepted ? BULKHEAD_RESULT_ACCEPTED : BULKHEAD_RESULT_REJECTED));
     }
@@ -311,17 +360,35 @@ public class OpenTelemetryRecorder implements MetricsRecorder {
 
     @Override
     public void updateBulkheadRunningDuration(long time) {
-        bulkheadRunningDuration.record(time * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
+        DoubleHistogram histogram = bulkheadRunningDuration;
+        if (histogram == null) {
+            histogram = meter.histogramBuilder(MetricsConstants.BULKHEAD_RUNNING_DURATION)
+                    .setUnit("seconds")
+                    .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)
+                    .build();
+        }
+        histogram.record(time * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
     }
 
     @Override
     public void updateBulkheadWaitingDuration(long time) {
-        bulkheadWaitingDuration.record(time * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
+        DoubleHistogram histogram = bulkheadWaitingDuration;
+        if (histogram == null) {
+            histogram = meter.histogramBuilder(MetricsConstants.BULKHEAD_WAITING_DURATION)
+                    .setUnit("seconds")
+                    .setExplicitBucketBoundariesAdvice(BUCKET_BOUNDARIES)
+                    .build();
+        }
+        histogram.record(time * NANOS_TO_SECONDS, Attributes.of(METHOD, methodName));
     }
 
     @Override
     public void rateLimitDecisionMade(boolean permitted) {
-        rateLimitCallsTotal.add(1, Attributes.of(
+        LongCounter counter = rateLimitCallsTotal;
+        if (counter == null) {
+            counter = meter.counterBuilder(MetricsConstants.RATE_LIMIT_CALLS_TOTAL).build();
+        }
+        counter.add(1, Attributes.of(
                 METHOD, methodName,
                 RATE_LIMIT_RESULT, permitted ? RATE_LIMIT_RESULT_PERMITTED : RATE_LIMIT_RESULT_REJECTED));
     }
