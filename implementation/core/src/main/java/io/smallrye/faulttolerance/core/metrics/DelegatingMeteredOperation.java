@@ -2,11 +2,11 @@ package io.smallrye.faulttolerance.core.metrics;
 
 final class DelegatingMeteredOperation implements MeteredOperation {
     private final MeteredOperation operation;
-    private final String name;
+    private final MeteredOperationMetadata metadata;
 
-    DelegatingMeteredOperation(MeteredOperation operation, String name) {
+    DelegatingMeteredOperation(MeteredOperation operation, MeteredOperationMetadata metadata) {
         this.operation = operation;
-        this.name = name;
+        this.metadata = metadata;
     }
 
     @Override
@@ -62,7 +62,7 @@ final class DelegatingMeteredOperation implements MeteredOperation {
 
     @Override
     public boolean hasFallback() {
-        return operation.hasFallback();
+        return metadata.hasFallback();
     }
 
     @Override
@@ -112,11 +112,11 @@ final class DelegatingMeteredOperation implements MeteredOperation {
 
     @Override
     public String name() {
-        return name;
+        return metadata.name();
     }
 
     @Override
     public Object cacheKey() {
-        return name;
+        return metadata.name();
     }
 }
