@@ -41,7 +41,7 @@ import io.smallrye.faulttolerance.core.invocation.Invoker;
 import io.smallrye.faulttolerance.core.invocation.StrategyInvoker;
 import io.smallrye.faulttolerance.core.metrics.DelegatingMetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
-import io.smallrye.faulttolerance.core.metrics.MeteredOperationName;
+import io.smallrye.faulttolerance.core.metrics.MeteredOperationMetadata;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
@@ -101,11 +101,14 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
         this.hasFallback = hasFallback;
     }
 
-    T call(Callable<T> action, MeteredOperationName meteredOperationName) throws Exception {
+    T call(Callable<T> action, String meteredOperationName) throws Exception {
+        MeteredOperationMetadata metadata = meteredOperationName != null
+                ? new MeteredOperationMetadata(meteredOperationName, hasFallback)
+                : null;
         if (asyncSupport == null) {
             FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> Future.from((Callable<V>) action), false);
-            if (meteredOperationName != null) {
-                ctx.set(MeteredOperationName.class, meteredOperationName);
+            if (metadata != null) {
+                ctx.set(MeteredOperationMetadata.class, metadata);
             }
             eventHandlers.register(ctx);
             try {
@@ -119,8 +122,8 @@ public final class FaultToleranceImpl<V, T> implements FaultTolerance<T> {
 
         Invoker<T> invoker = new CallableInvoker<>(action);
         FaultToleranceContext<V> ctx = new FaultToleranceContext<>(() -> asyncSupport.toFuture(invoker), true);
-        if (meteredOperationName != null) {
-            ctx.set(MeteredOperationName.class, meteredOperationName);
+        if (metadata != null) {
+            ctx.set(MeteredOperationMetadata.class, metadata);
         }
         eventHandlers.register(ctx);
         Invoker<Future<V>> wrapper = new StrategyInvoker<>(null, strategy, ctx);
