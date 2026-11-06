@@ -1,8 +1,6 @@
 package io.smallrye.faulttolerance.core;
 
-import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -63,20 +61,13 @@ public final class FaultToleranceContext<V> {
 
     // out-of-band communication between fault tolerance strategies in a single chain
 
-    private final ConcurrentMap<Class<? extends FaultToleranceEvent>, Collection<Consumer<? extends FaultToleranceEvent>>> eventHandlers = new ConcurrentHashMap<>();
+    private final EventHandlerList eventHandlers = new EventHandlerList();
 
     public <E extends FaultToleranceEvent> void registerEventHandler(Class<E> eventType, Consumer<E> handler) {
-        eventHandlers.computeIfAbsent(eventType, ignored -> new ConcurrentLinkedQueue<>()).add(handler);
+        eventHandlers.add(eventType, handler);
     }
 
     public <E extends FaultToleranceEvent> void fireEvent(E event) {
-        Collection<Consumer<? extends FaultToleranceEvent>> handlers = eventHandlers.get(event.getClass());
-        if (handlers != null) {
-            for (Consumer<? extends FaultToleranceEvent> handler : handlers) {
-                @SuppressWarnings("unchecked")
-                Consumer<E> consumer = (Consumer<E>) handler;
-                consumer.accept(event);
-            }
-        }
+        eventHandlers.fire(event);
     }
 }
