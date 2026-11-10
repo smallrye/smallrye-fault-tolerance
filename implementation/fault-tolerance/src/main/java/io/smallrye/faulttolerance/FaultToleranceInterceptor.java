@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -47,6 +48,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceExceptio
 import io.smallrye.common.annotation.Identifier;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.BeforeRetryHandler;
+import io.smallrye.faulttolerance.api.ComputedDelayHandler;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.NeverOnResult;
@@ -82,6 +84,7 @@ import io.smallrye.faulttolerance.core.metrics.MetricsCollector;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
+import io.smallrye.faulttolerance.core.retry.ComputedBackOff;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
 import io.smallrye.faulttolerance.core.retry.CustomBackOff;
 import io.smallrye.faulttolerance.core.retry.ExponentialBackOff;
@@ -131,6 +134,8 @@ public class FaultToleranceInterceptor {
 
     private final BeforeRetryHandlerProvider beforeRetryHandlerProvider;
 
+    private final ComputedDelayHandlerProvider computedDelayHandlerProvider;
+
     private final MetricsProvider metricsProvider;
 
     private final ExecutorService asyncExecutor;
@@ -156,6 +161,7 @@ public class FaultToleranceInterceptor {
             StrategyCache cache,
             FallbackHandlerProvider fallbackHandlerProvider,
             BeforeRetryHandlerProvider beforeRetryHandlerProvider,
+            ComputedDelayHandlerProvider computedDelayHandlerProvider,
             MetricsProvider metricsProvider,
             ExecutorHolder executorHolder,
             RequestContextIntegration requestContextIntegration,
@@ -168,6 +174,7 @@ public class FaultToleranceInterceptor {
         this.cache = cache;
         this.fallbackHandlerProvider = fallbackHandlerProvider;
         this.beforeRetryHandlerProvider = beforeRetryHandlerProvider;
+        this.computedDelayHandlerProvider = computedDelayHandlerProvider;
         this.metricsProvider = metricsProvider;
         asyncExecutor = executorHolder.getAsyncExecutor();
         eventLoop = executorHolder.getEventLoop();
@@ -398,7 +405,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
+            Function<FaultToleranceContext<?>, BackOff> backoff = prepareRetryBackoff(point, operation);
 
             result = new Retry<>(result, point.toString(),
                     createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
@@ -406,8 +413,8 @@ public class FaultToleranceInterceptor {
                             operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
                     timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit()),
-                    () -> new ThreadSleepDelay(backoff.get()),
-                    () -> new TimerDelay(backoff.get(), timer),
+                    ctx -> new ThreadSleepDelay(backoff.apply(ctx)),
+                    ctx -> new TimerDelay(backoff.apply(ctx), timer),
                     SystemStopwatch.INSTANCE,
                     operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
@@ -476,7 +483,7 @@ public class FaultToleranceInterceptor {
         }
 
         if (operation.hasRetry()) {
-            Supplier<BackOff> backoff = prepareRetryBackoff(operation);
+            Function<FaultToleranceContext<?>, BackOff> backoff = prepareRetryBackoff(point, operation);
 
             result = new Retry<>(result, point.toString(),
                     createResultDecision(operation.hasRetryWhen() ? operation.getRetryWhen().result() : null),
@@ -484,8 +491,8 @@ public class FaultToleranceInterceptor {
                             operation.hasRetryWhen() ? operation.getRetryWhen().exception() : null),
                     operation.getRetry().maxRetries(),
                     timeInMillis(operation.getRetry().maxDuration(), operation.getRetry().durationUnit()),
-                    () -> new ThreadSleepDelay(backoff.get()),
-                    () -> new TimerDelay(backoff.get(), timer),
+                    ctx -> new ThreadSleepDelay(backoff.apply(ctx)),
+                    ctx -> new TimerDelay(backoff.apply(ctx), timer),
                     SystemStopwatch.INSTANCE,
                     operation.hasBeforeRetry() ? prepareBeforeRetryFunction(point, operation) : null);
         }
@@ -506,24 +513,26 @@ public class FaultToleranceInterceptor {
         return result;
     }
 
-    private Supplier<BackOff> prepareRetryBackoff(FaultToleranceOperation operation) {
+    private Function<FaultToleranceContext<?>, BackOff> prepareRetryBackoff(InterceptionPoint point,
+            FaultToleranceOperation operation) {
         long delayMs = timeInMillis(operation.getRetry().delay(), operation.getRetry().delayUnit());
 
         long jitterMs = timeInMillis(operation.getRetry().jitter(), operation.getRetry().jitterDelayUnit());
         Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
+        Function<FaultToleranceContext<?>, BackOff> baseBackoff;
         if (operation.hasExponentialBackoff()) {
             int factor = operation.getExponentialBackoff().factor();
             long maxDelay = timeInMillis(operation.getExponentialBackoff().maxDelay(),
                     operation.getExponentialBackoff().maxDelayUnit());
-            return () -> new ExponentialBackOff(delayMs, factor, jitter, maxDelay);
+            baseBackoff = ctx -> new ExponentialBackOff(delayMs, factor, jitter, maxDelay);
         } else if (operation.hasFibonacciBackoff()) {
             long maxDelay = timeInMillis(operation.getFibonacciBackoff().maxDelay(),
                     operation.getFibonacciBackoff().maxDelayUnit());
-            return () -> new FibonacciBackOff(delayMs, jitter, maxDelay);
+            baseBackoff = ctx -> new FibonacciBackOff(delayMs, jitter, maxDelay);
         } else if (operation.hasCustomBackoff()) {
             Class<? extends CustomBackoffStrategy> strategy = operation.getCustomBackoff().value();
-            return () -> {
+            baseBackoff = ctx -> {
                 CustomBackoffStrategy instance;
                 try {
                     instance = strategy.getConstructor().newInstance();
@@ -534,8 +543,23 @@ public class FaultToleranceInterceptor {
                 return new CustomBackOff(instance::nextDelayInMillis);
             };
         } else {
-            return () -> new ConstantBackOff(delayMs, jitter);
+            baseBackoff = ctx -> new ConstantBackOff(delayMs, jitter);
         }
+
+        if (operation.hasComputedDelay()) {
+            ComputedDelayHandler computedDelayHandler = computedDelayHandlerProvider.get(operation);
+            if (computedDelayHandler != null) {
+                return ctx -> new ComputedBackOff(cause -> {
+                    ExecutionContext executionContext = new ExecutionContextImpl(
+                            ctx.get(InvocationContext.class), cause);
+                    return computedDelayHandler.getDelay(executionContext);
+                }, baseBackoff.apply(ctx), jitter);
+            } else {
+                throw new FaultToleranceException("Could not obtain retry delay handler for " + point);
+            }
+        }
+
+        return baseBackoff;
     }
 
     // V = value type, e.g. String
@@ -543,8 +567,7 @@ public class FaultToleranceInterceptor {
     //
     // in synchronous scenario, V = T
     // in asynchronous scenario, T is an async type that eventually produces V
-    private <V, T> FallbackFunction<V> prepareFallbackFunction(
-            InterceptionPoint point, FaultToleranceOperation operation) {
+    private <V, T> FallbackFunction<V> prepareFallbackFunction(InterceptionPoint point, FaultToleranceOperation operation) {
         AsyncSupport<V, T> asyncSupport = cache.getAsyncSupport(point, operation);
 
         String fallbackMethodName = operation.getFallback().fallbackMethod();

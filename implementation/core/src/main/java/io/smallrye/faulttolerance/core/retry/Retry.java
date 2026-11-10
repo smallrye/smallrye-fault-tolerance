@@ -5,6 +5,7 @@ import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
@@ -27,14 +28,24 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
     private final ExceptionDecision exceptionDecision;
     private final long maxRetries; // this is an `int` in MP FT, but `long` allows easier handling of "infinity"
     private final long maxTotalDurationInMillis;
-    private final Supplier<SyncDelay> syncDelayBetweenRetries;
-    private final Supplier<AsyncDelay> asyncDelayBetweenRetries;
+    private final Function<FaultToleranceContext<?>, SyncDelay> syncDelayBetweenRetries;
+    private final Function<FaultToleranceContext<?>, AsyncDelay> asyncDelayBetweenRetries;
     private final Stopwatch stopwatch;
     private final Consumer<FailureContext> beforeRetry;
 
     public Retry(FaultToleranceStrategy<V> delegate, String description, ResultDecision resultDecision,
             ExceptionDecision exceptionDecision, long maxRetries, long maxTotalDurationInMillis,
             Supplier<SyncDelay> syncDelayBetweenRetries, Supplier<AsyncDelay> asyncDelayBetweenRetries,
+            Stopwatch stopwatch, Consumer<FailureContext> beforeRetry) {
+        this(delegate, description, resultDecision, exceptionDecision, maxRetries, maxTotalDurationInMillis,
+                ignored -> syncDelayBetweenRetries.get(), ignored -> asyncDelayBetweenRetries.get(),
+                stopwatch, beforeRetry);
+    }
+
+    public Retry(FaultToleranceStrategy<V> delegate, String description, ResultDecision resultDecision,
+            ExceptionDecision exceptionDecision, long maxRetries, long maxTotalDurationInMillis,
+            Function<FaultToleranceContext<?>, SyncDelay> syncDelayBetweenRetries,
+            Function<FaultToleranceContext<?>, AsyncDelay> asyncDelayBetweenRetries,
             Stopwatch stopwatch, Consumer<FailureContext> beforeRetry) {
         this.delegate = checkNotNull(delegate, "Retry delegate must be set");
         this.description = checkNotNull(description, "Retry description must be set");
@@ -53,8 +64,8 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         LOG.trace("Retry started");
         try {
             AsyncDelay delay = ctx.isAsync()
-                    ? asyncDelayBetweenRetries.get()
-                    : new SyncDelayAsAsync(syncDelayBetweenRetries.get());
+                    ? asyncDelayBetweenRetries.apply(ctx)
+                    : new SyncDelayAsAsync(syncDelayBetweenRetries.apply(ctx));
             RunningStopwatch runningStopwatch = stopwatch.start();
             return retryLoop(ctx, runningStopwatch, delay);
         } finally {

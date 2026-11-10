@@ -4,7 +4,9 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,6 +15,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.faulttolerance.api.Guard;
 import io.smallrye.faulttolerance.api.TypedGuard;
 import io.smallrye.faulttolerance.core.util.TestException;
 
@@ -92,6 +95,39 @@ public class StandaloneRetryAsyncTest {
                 .succeedsWithin(10, TimeUnit.SECONDS)
                 .isEqualTo("fallback");
         assertThat(counter).hasValue(4); // 1 initial invocation + 3 retries
+    }
+
+    @Test
+    public void asyncRetryWithComputedDelay() {
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
+                .withRetry().maxRetries(3).computedDelay(e -> Duration.ofMillis(10)).done()
+                .withFallback().applyOn(TestException.class).handler(this::fallback).done()
+                .build()
+                .adaptSupplier(this::actionFail);
+
+        assertThat(guarded.get())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("fallback");
+        assertThat(counter).hasValue(4); // 1 initial invocation + 3 retries
+    }
+
+    @Test
+    public void asyncRetryWithComputedDelay_untyped() throws Exception {
+        Callable<CompletionStage<String>> guarded = Guard.create()
+                .withRetry().maxRetries(5).computedDelay(e -> Duration.ofMillis(10)).done()
+                .build()
+                .adaptCallable(() -> {
+                    int value = counter.incrementAndGet();
+                    if (value < 4) {
+                        throw new TestException();
+                    }
+                    return completedFuture("success");
+                }, Types.CS_STRING);
+
+        assertThat(guarded.call())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("success");
+        assertThat(counter).hasValue(4); // 1 initial invocation, 2 unsuccessful retries, 1 successful retry
     }
 
     public CompletionStage<String> actionFail() {

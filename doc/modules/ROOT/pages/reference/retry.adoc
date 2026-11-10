@@ -272,6 +272,74 @@ It is an error to add a `@RetryWhen` annotation to a program element that doesn'
 
 For more information about `@RetryWhen`, see the javadoc of the annotation.
 
+=== Retry Delay Suggested by the Failure
+
+include::partial$srye-feature.adoc[]
+
+Sometimes, the failure itself suggests how long to wait before the next attempt.
+The typical example is the HTTP `Retry-After` header.
+{smallrye-fault-tolerance} does not parse any such headers; that is another layer's responsibility.
+However, the `@ComputedDelay` annotation allows specifying a handler that extracts the suggested delay from the failure.
+
+The `@ComputedDelay` annotation may be present on any program element (method or class) that also has the `@Retry` annotation.
+For example:
+
+[source,java]
+----
+package com.example;
+
+@ApplicationScoped
+public class MyService {
+    @Retry
+    @ComputedDelay(MyDelayComputation.class) // <1>
+    public String hello() {
+        ...
+    }
+
+    public static class MyDelayComputation implements ComputedDelayHandler {
+        @Override
+        public Duration getDelay(ExecutionContext context) { // <2>
+            if (context.getFailure() instanceof MyExceptionWithDelay e) {
+                return Duration.ofMillis(e.getDelay());
+            }
+            return null; // <3>
+        }
+    }
+}
+----
+
+<1> Specifies that the `MyDelayComputation` handler should be used to obtain the retry delay.
+<2> The failure that caused the retry is available from the `ExecutionContext`.
+<3> Returning `null` means that the failure doesn't suggest any delay.
+
+The handler is called before each retry and the returned value is interpreted as follows:
+
+* If the handler returns a zero or positive `Duration`, that duration is used as the delay.
+  The jitter configured by `@Retry` is applied to it.
+* If the handler returns `null`, the configured delay and backoff strategy are used.
+  That is constant backoff by default, or the strategy specified by `@ExponentialBackoff`, `@FibonacciBackoff` or `@CustomBackoff`.
+* If the handler returns a negative `Duration`, a warning is logged and the configured delay and backoff strategy are used.
+
+Note that the retry delay handler must be fast and non-blocking (i.e., it must not do any IO or long-running computations) and must not throw an exception.
+
+It is an error to add a `@ComputedDelay` annotation to a program element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@ComputedDelay` on a method).
+
+When using the programmatic API, the `computedDelay(...)` method of the retry builder accepts a `Function<Throwable, Duration>` with the same semantics:
+
+[source,java]
+----
+Guard guard = Guard.create()
+        .withRetry().maxRetries(5).computedDelay(failure -> {
+            if (failure instanceof MyExceptionWithDelay e) {
+                return Duration.ofMillis(e.getDelay());
+            }
+            return null;
+        }).done()
+        .build();
+----
+
+For more information about `@ComputedDelay`, see the javadoc of the annotation.
+
 === Before Retry Actions
 
 include::partial$srye-feature.adoc[]

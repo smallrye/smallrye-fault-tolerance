@@ -15,6 +15,7 @@ import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
+import io.smallrye.faulttolerance.api.ComputedDelay;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
@@ -58,6 +59,7 @@ public class FaultToleranceMethod {
     public FibonacciBackoff fibonacciBackoff;
     public RetryWhen retryWhen;
     public BeforeRetry beforeRetry;
+    public ComputedDelay computedDelay;
 
     // types of annotations that were declared directly on the method;
     // other annotations, if present, were declared on the type
