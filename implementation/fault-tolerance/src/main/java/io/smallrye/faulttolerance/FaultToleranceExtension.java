@@ -62,6 +62,7 @@ import io.smallrye.common.annotation.Identifier;
 import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
+import io.smallrye.faulttolerance.api.ComputedDelay;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.ExponentialBackoff;
 import io.smallrye.faulttolerance.api.FibonacciBackoff;
@@ -138,7 +139,7 @@ public class FaultToleranceExtension implements Extension {
     void registerInterceptorBindings(@Observes BeforeBeanDiscovery bbd, BeanManager bm) {
         LOG.activated(getImplementationVersion().orElse("unknown"));
 
-        // certain SmallRye annotations (@CircuitBreakerName, @*Backoff, @RetryWhen, @BeforeRetry)
+        // certain SmallRye annotations (@CircuitBreakerName, @*Backoff, @RetryWhen, @BeforeRetry, @ComputedDelay)
         // do _not_ trigger the fault tolerance interceptor alone, only in combination
         // with other fault tolerance annotations
         bbd.addInterceptorBinding(new FTInterceptorBindingAnnotatedType<>(bm.createAnnotatedType(ApplyGuard.class)));
@@ -158,6 +159,8 @@ public class FaultToleranceExtension implements Extension {
                 DefaultFallbackHandlerProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultBeforeRetryHandlerProvider.class),
                 DefaultBeforeRetryHandlerProvider.class.getName());
+        bbd.addAnnotatedType(bm.createAnnotatedType(DefaultComputedDelayHandlerProvider.class),
+                DefaultComputedDelayHandlerProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(DefaultAsyncExecutorProvider.class),
                 DefaultAsyncExecutorProvider.class.getName());
         bbd.addAnnotatedType(bm.createAnnotatedType(ExecutorHolder.class),
@@ -270,6 +273,16 @@ public class FaultToleranceExtension implements Extension {
                 if (annotatedType.isAnnotationPresent(BeforeRetry.class)
                         && !annotatedType.isAnnotationPresent(Retry.class)) {
                     event.addDefinitionError(LOG.beforeRetryAnnotationWithoutRetry(annotatedType.getJavaClass()));
+                }
+
+                if (annotatedMethod.isAnnotationPresent(ComputedDelay.class)
+                        && !annotatedMethod.isAnnotationPresent(Retry.class)) {
+                    event.addDefinitionError(LOG.computedDelayAnnotationWithoutRetry(method.method));
+                }
+
+                if (annotatedType.isAnnotationPresent(ComputedDelay.class)
+                        && !annotatedType.isAnnotationPresent(Retry.class)) {
+                    event.addDefinitionError(LOG.computedDelayAnnotationWithoutRetry(annotatedType.getJavaClass()));
                 }
 
                 if (annotatedMethod.isAnnotationPresent(Asynchronous.class)

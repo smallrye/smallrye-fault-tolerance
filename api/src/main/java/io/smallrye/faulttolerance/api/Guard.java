@@ -1,10 +1,12 @@
 package io.smallrye.faulttolerance.api;
 
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -706,6 +708,19 @@ public interface Guard {
              * @return this retry builder
              */
             RetryBuilder beforeRetry(Consumer<Throwable> value);
+
+            /**
+             * Sets a computed delay handler, which is called before each retry to determine the delay based on the failure.
+             * If the handler returns a non-null, non-negative duration, that duration is used as the retry delay
+             * (with jitter applied, as configured).
+             * <p>
+             * If the handler returns {@code null} or a negative duration, the configured delay and backoff strategy are used.
+             *
+             * @param value the retry delay handler, must not be {@code null}
+             * @return this retry builder
+             * @see ComputedDelay @ComputedDelay
+             */
+            RetryBuilder computedDelay(Function<Throwable, Duration> value);
 
             /**
              * Configures retry to use an exponential backoff instead of the default constant backoff.

@@ -31,6 +31,7 @@ import io.smallrye.faulttolerance.api.ApplyGuard;
 import io.smallrye.faulttolerance.api.AsynchronousNonBlocking;
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.CircuitBreakerName;
+import io.smallrye.faulttolerance.api.ComputedDelay;
 import io.smallrye.faulttolerance.api.CustomBackoff;
 import io.smallrye.faulttolerance.api.RetryWhen;
 import io.smallrye.faulttolerance.apiimpl.basicconfig.BasicFaultToleranceOperation;
@@ -62,6 +63,7 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
     private final CustomBackoffConfig customBackoff;
     private final RetryWhenConfig retryWhen;
     private final BeforeRetryConfig beforeRetry;
+    private final ComputedDelayConfig computedDelay;
 
     private final Method fallbackMethod;
     private final List<Method> fallbackMethodsWithExceptionParameter;
@@ -84,6 +86,7 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         this.customBackoff = CustomBackoffConfigImpl.create(method);
         this.retryWhen = RetryWhenConfigImpl.create(method);
         this.beforeRetry = BeforeRetryConfigImpl.create(method);
+        this.computedDelay = ComputedDelayConfigImpl.create(method);
 
         if (method.fallbackMethod != null) {
             try {
@@ -229,6 +232,14 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         return beforeRetry;
     }
 
+    public boolean hasComputedDelay() {
+        return computedDelay != null;
+    }
+
+    public ComputedDelay getComputedDelay() {
+        return computedDelay;
+    }
+
     public Method getFallbackMethod() {
         return fallbackMethod;
     }
@@ -269,6 +280,7 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         validateFallback();
         validateRetryWhen();
         validateBeforeRetry();
+        validateComputedDelay();
     }
 
     private void validateFallback() {
@@ -330,6 +342,18 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         }
     }
 
+    private void validateComputedDelay() {
+        if (computedDelay == null) {
+            return;
+        }
+
+        computedDelay.validate();
+
+        if (retry == null) {
+            throw computedDelay.fail("missing @Retry");
+        }
+    }
+
     @Override
     public void materialize() {
         super.materialize();
@@ -360,6 +384,9 @@ public class FaultToleranceOperation extends BasicFaultToleranceOperation {
         }
         if (beforeRetry != null) {
             beforeRetry.materialize();
+        }
+        if (computedDelay != null) {
+            computedDelay.materialize();
         }
     }
 

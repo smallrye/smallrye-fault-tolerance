@@ -54,4 +54,9 @@ interface CdiLogger extends BasicLogger {
 
     @Message(id = 10, value = "Guard/TypedGuard with identifier 'global' is not allowed: %s")
     DefinitionException guardWithIdentifierGlobal(String bean);
+
+    @Message(id = 11, value = "@ComputedDelay present on '%s', but @Retry is missing")
+    DefinitionException computedDelayAnnotationWithoutRetry(MethodDescriptor method);
+
+    DefinitionException computedDelayAnnotationWithoutRetry(Class<?> clazz);
 }

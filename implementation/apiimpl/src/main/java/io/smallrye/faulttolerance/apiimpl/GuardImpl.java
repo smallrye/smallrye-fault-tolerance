@@ -11,12 +11,14 @@ import static io.smallrye.faulttolerance.core.util.SneakyThrow.sneakyThrow;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -45,6 +47,7 @@ import io.smallrye.faulttolerance.core.metrics.MeteredOperation;
 import io.smallrye.faulttolerance.core.metrics.MetricsProvider;
 import io.smallrye.faulttolerance.core.rate.limit.RateLimit;
 import io.smallrye.faulttolerance.core.retry.BackOff;
+import io.smallrye.faulttolerance.core.retry.ComputedBackOff;
 import io.smallrye.faulttolerance.core.retry.ConstantBackOff;
 import io.smallrye.faulttolerance.core.retry.CustomBackOff;
 import io.smallrye.faulttolerance.core.retry.ExponentialBackOff;
@@ -348,24 +351,31 @@ public class GuardImpl implements Guard {
             long jitterMs = timeInMillis(op.getRetry().jitter(), op.getRetry().jitterDelayUnit());
             Jitter jitter = jitterMs == 0 ? Jitter.ZERO : new RandomJitter(jitterMs);
 
+            Supplier<BackOff> baseBackoff;
             if (op.hasExponentialBackoff()) {
                 int factor = op.getExponentialBackoff().factor();
                 long maxDelayMs = timeInMillis(op.getExponentialBackoff().maxDelay(),
                         op.getExponentialBackoff().maxDelayUnit());
-                return () -> new ExponentialBackOff(delayMs, factor, jitter, maxDelayMs);
+                baseBackoff = () -> new ExponentialBackOff(delayMs, factor, jitter, maxDelayMs);
             } else if (op.hasFibonacciBackoff()) {
                 long maxDelayMs = timeInMillis(op.getFibonacciBackoff().maxDelay(), op.getFibonacciBackoff().maxDelayUnit());
-                return () -> new FibonacciBackOff(delayMs, jitter, maxDelayMs);
+                baseBackoff = () -> new FibonacciBackOff(delayMs, jitter, maxDelayMs);
             } else if (retryBuilder.customBackoffBuilder != null) {
                 Supplier<CustomBackoffStrategy> strategy = retryBuilder.customBackoffBuilder.strategy;
-                return () -> {
+                baseBackoff = () -> {
                     CustomBackoffStrategy instance = strategy.get();
                     instance.init(delayMs);
                     return new CustomBackOff(instance::nextDelayInMillis);
                 };
             } else {
-                return () -> new ConstantBackOff(delayMs, jitter);
+                baseBackoff = () -> new ConstantBackOff(delayMs, jitter);
             }
+
+            if (retryBuilder.computedDelay != null) {
+                return () -> new ComputedBackOff(retryBuilder.computedDelay, baseBackoff.get(), jitter);
+            }
+
+            return baseBackoff;
         }
 
         static class BulkheadBuilderImpl implements BulkheadBuilder,
@@ -753,6 +763,7 @@ public class GuardImpl implements Guard {
             private Predicate<Throwable> whenExceptionPredicate;
             private Predicate<Object> whenResultPredicate;
             private Consumer<Throwable> beforeRetry;
+            private Function<Throwable, Duration> computedDelay;
 
             private ExponentialBackoffBuilderImpl exponentialBackoffBuilder;
             private FibonacciBackoffBuilderImpl fibonacciBackoffBuilder;
@@ -852,6 +863,12 @@ public class GuardImpl implements Guard {
             @Override
             public RetryBuilder beforeRetry(Consumer<Throwable> value) {
                 this.beforeRetry = checkNotNull(value, "Before retry handler must be set");
+                return this;
+            }
+
+            @Override
+            public RetryBuilder computedDelay(Function<Throwable, Duration> value) {
+                this.computedDelay = checkNotNull(value, "Retry delay handler must be set");
                 return this;
             }
 
