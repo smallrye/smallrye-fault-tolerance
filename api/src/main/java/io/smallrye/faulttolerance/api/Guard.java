@@ -168,6 +168,11 @@ public interface Guard {
          * The description may be an arbitrary string. Duplicates are permitted.
          * <p>
          * If no description is set, no metrics are emitted and a random UUID is used for other purposes.
+         * <p>
+         * When multiple guards share the same description, all their metrics are recorded under the same identifier
+         * and therefore are merged. That may be intentional, but note that the configuration metrics
+         * (the {@code ft.*.config.*} gauges) for a given description only reflect the first guard that happened
+         * to be used. The behavioral metrics are not affected and still merge correctly.
          *
          * @param value a description, must not be {@code null}
          * @return this fault tolerance builder

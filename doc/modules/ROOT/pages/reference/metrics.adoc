@@ -51,6 +51,22 @@ Those are described in the reference guides:
 * xref:reference/retry.adoc#metrics[Retry]
 * xref:reference/timeout.adoc#metrics[Timeout]
 
+== Metrics Sharing
+
+The `method` tag, which all metrics described above have, is the metrics identifier.
+For the annotation-based API, it is the fully qualified method name; for the xref:reference/programmatic-api.adoc[programmatic API], it is the guard's description.
+Overloaded methods (which differ only in parameters) share the same identifier, and so do distinct guards configured with the same description.
+Metrics recorded under the same identifier merge into a single series, including the `ft.\*.config.*` gauges.
+
+There are two limitations when it comes to the configuration gauges:
+
+* In the annotation-based API, if two methods share an identifier but declare different values for the same configuration property (e.g. two overloads of a `@Retry` method with different `maxRetries`), the gauge for that configuration metric only reflects one of them.
+
+* In the programmatic API, if two guards share a description but declare different fault tolerance strategies, only configuration gauges of the guard that happened to be used first are registered.
+The other guards with the same description do not expose configuration metrics at all.
+
+The behavioral metrics are not affected and still merge correctly in both APIs.
+
 == Timer Metrics
 
 For task scheduling purposes (e.g. watching timeouts or delaying retries), {smallrye-fault-tolerance} maintains one thread called the _timer thread_.
