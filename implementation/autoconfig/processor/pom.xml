@@ -18,10 +18,6 @@
             <artifactId>smallrye-fault-tolerance-autoconfig-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.palantir.javapoet</groupId>
-            <artifactId>javapoet</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config-common</artifactId>
             <version>${version.smallrye-config}</version>
@@ -31,6 +27,10 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye.jdeparser</groupId>
+            <artifactId>jdeparser</artifactId>
         </dependency>
     </dependencies>
 
