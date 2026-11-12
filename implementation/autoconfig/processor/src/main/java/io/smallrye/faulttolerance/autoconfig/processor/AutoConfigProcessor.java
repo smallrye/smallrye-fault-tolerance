@@ -1,12 +1,12 @@
 package io.smallrye.faulttolerance.autoconfig.processor;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -16,30 +16,30 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.SimpleTypeVisitor8;
 import javax.tools.Diagnostic;
-
-import com.palantir.javapoet.ArrayTypeName;
-import com.palantir.javapoet.ClassName;
-import com.palantir.javapoet.CodeBlock;
-import com.palantir.javapoet.FieldSpec;
-import com.palantir.javapoet.JavaFile;
-import com.palantir.javapoet.MethodSpec;
-import com.palantir.javapoet.TypeName;
-import com.palantir.javapoet.TypeSpec;
 
 import io.smallrye.config.common.utils.StringUtil;
 import io.smallrye.faulttolerance.autoconfig.AutoConfig;
 import io.smallrye.faulttolerance.autoconfig.ConfigConstants;
 import io.smallrye.faulttolerance.autoconfig.ConfigDeclarativeOnly;
+import io.smallrye.jdeparser.Expr;
+import io.smallrye.jdeparser.JDeparser;
+import io.smallrye.jdeparser.Sources;
+import io.smallrye.jdeparser.Type;
+import io.smallrye.jdeparser.Var;
+import io.smallrye.jdeparser.creator.BlockCreator;
+import io.smallrye.jdeparser.creator.SourceFileCreator;
+import io.smallrye.jdeparser.format.Filer;
+import io.smallrye.jdeparser.format.FormatPreferences;
 
 @SupportedAnnotationTypes("io.smallrye.faulttolerance.autoconfig.AutoConfig")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
@@ -116,6 +116,11 @@ public class AutoConfigProcessor extends AbstractProcessor {
         }
     }
 
+    private Sources newSources() {
+        return JDeparser.createSources(Filer.newInstance(processingEnv.getFiler()), FormatPreferences.defaults(),
+                io.smallrye.jdeparser.SourceVersion.JAVA_17);
+    }
+
     private void generateConfigImpl(TypeElement configClass, TypeElement annotationDeclaration, boolean declarativeOnly)
             throws IOException {
         AutoConfig autoConfig = configClass.getAnnotation(AutoConfig.class);
@@ -123,359 +128,533 @@ public class AutoConfigProcessor extends AbstractProcessor {
         boolean newConfigAllowed = autoConfig.newConfigAllowed();
 
         String packageName = configClass.getQualifiedName().toString().replace("." + configClass.getSimpleName(), "");
-        ClassName configImplClassName = ClassName.get(packageName, configClass.getSimpleName() + "Impl");
+        String configImplName = configClass.getSimpleName() + "Impl";
+        Type configType = Type.of(configClass.asType());
+        Type configImplType = Type.named(packageName + "." + configImplName);
 
-        TypeName annotationType = TypeName.get(annotationDeclaration.asType());
+        Type annotationType = Type.of(annotationDeclaration.asType());
+        String annotationName = annotationDeclaration.getSimpleName().toString();
+        String annotationVar = firstToLowerCase(annotationName);
+        List<ExecutableElement> annotationMembers = ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements());
 
         String newSuffix = newAnnotationName(annotationDeclaration) + "." + ConfigConstants.ENABLED;
-        String oldSuffix = annotationDeclaration.getSimpleName() + "/" + ConfigConstants.ENABLED;
+        String oldSuffix = annotationName + "/" + ConfigConstants.ENABLED;
 
-        JavaFile.builder(packageName, TypeSpec.classBuilder(configImplClassName)
-                .addOriginatingElement(configClass)
-                .addJavadoc("Automatically generated from the {@link $L} config interface, do not modify.",
-                        configClass.getSimpleName())
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addSuperinterface(configClass.asType())
-                .addFields(declarativeOnly ? List.of(
-                        FieldSpec.builder(TypeNames.CLASS, "beanClass", Modifier.PRIVATE, Modifier.FINAL).build(),
-                        FieldSpec.builder(TypeNames.METHOD_DESCRIPTOR, "method", Modifier.PRIVATE, Modifier.FINAL).build(),
-                        FieldSpec.builder(TypeName.BOOLEAN, "onMethod", Modifier.PRIVATE, Modifier.FINAL)
-                                .addJavadoc(
-                                        "{@code true} if annotation was placed on a method; {@code false} if annotation was placed on a class.")
-                                .build())
-                        : List.of())
-                .addField(FieldSpec.builder(TypeNames.STRING, "description", Modifier.PRIVATE, Modifier.FINAL)
-                        .addJavadoc(declarativeOnly
-                                ? "Description for the error message: a fully qualified method name."
-                                : "Description for the error message: a fully qualified method name or identifier.")
-                        .build())
-                .addField(FieldSpec.builder(TypeNames.STRING, "configKey", Modifier.PRIVATE, Modifier.FINAL)
-                        .addJavadoc(declarativeOnly
-                                ? "Configuration key: either {@code <classname>/<methodname>} or {@code <classname>}."
-                                : "Configuration key: either {@code <classname>/<methodname>} or {@code <classname>} or {@code <id>}.")
-                        .build())
-                .addField(FieldSpec.builder(annotationType, "instance", Modifier.PRIVATE, Modifier.FINAL)
-                        .addJavadoc(configurable
-                                ? "Backing annotation instance. Used when runtime configuration doesn't override it."
-                                : "Backing annotation instance.")
-                        .build())
-                .addFields(configurable ? ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())
-                        .stream()
-                        .map(annotationMember -> FieldSpec.builder(
-                                TypeName.get(annotationMember.getReturnType()).box(),
-                                "_" + annotationMember.getSimpleName(), Modifier.PRIVATE)
-                                .addJavadoc(
-                                        "Cached value of the {@code $1L.$2L} annotation member; {@code null} if not looked up yet.",
-                                        annotationDeclaration.getSimpleName(), annotationMember.getSimpleName())
-                                .build())
-                        .collect(Collectors.toList()) : Collections.emptyList())
-                .addMethod(MethodSpec.constructorBuilder()
-                        .addModifiers(Modifier.PRIVATE)
-                        .addParameter(TypeNames.FAULT_TOLERANCE_METHOD, "method")
-                        .addCode(declarativeOnly
-                                ? CodeBlock.builder()
-                                        .addStatement("this.beanClass = method.beanClass")
-                                        .addStatement("this.method = method.method")
-                                        .addStatement("this.onMethod = method.annotationsPresentDirectly.contains($1T.class)",
-                                                annotationType)
-                                        .build()
-                                : CodeBlock.builder()
-                                        .addStatement(
-                                                "boolean onMethod = method.annotationsPresentDirectly.contains($1T.class)",
-                                                annotationType)
-                                        .build())
-                        .addStatement("this.description = method.method.toString()")
-                        .addStatement(
-                                "this.configKey = onMethod ? method.method.declaringClass.getName() + \"/\" + method.method.name : method.method.declaringClass.getName()")
-                        .addStatement("this.instance = method.$1L", firstToLowerCase(
-                                annotationDeclaration.getSimpleName().toString()))
-                        .build())
-                .addMethods(declarativeOnly
-                        ? List.of()
-                        : List.of(MethodSpec.constructorBuilder()
-                                .addModifiers(Modifier.PRIVATE)
-                                .addParameter(TypeNames.STRING, "id")
-                                .addParameter(annotationType, "instance")
-                                .addStatement("this.description = \"Guard with @Identifier(\" + id + \")\"")
-                                .addStatement("this.configKey = id")
-                                .addStatement("this.instance = instance")
-                                .build()))
-                .addMethod(MethodSpec.methodBuilder("create")
-                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .returns(configImplClassName)
-                        .addParameter(TypeNames.FAULT_TOLERANCE_METHOD, "method")
-                        .beginControlFlow("if (method.$L == null)",
-                                firstToLowerCase(annotationDeclaration.getSimpleName().toString()))
-                        .addStatement("return null")
-                        .endControlFlow()
-                        .addCode(configurable ? CodeBlock.builder()
-                                .beginControlFlow("if (!$1T.isEnabled($2S, $3S, method.method))",
-                                        TypeNames.CONFIG_UTIL, newSuffix, oldSuffix)
-                                .addStatement("return null")
-                                .endControlFlow()
-                                .build() : CodeBlock.builder().build())
-                        .addStatement("return new $T(method)", configImplClassName)
-                        .build())
-                .addMethods(declarativeOnly
-                        ? List.of()
-                        : List.of(MethodSpec.methodBuilder("create")
-                                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                                .returns(configImplClassName)
-                                .addParameter(TypeNames.STRING, "id")
-                                .addParameter(TypeNames.supplierOf(annotationType), "supplier")
-                                .beginControlFlow("if (supplier == null)")
-                                .addStatement("return null")
-                                .endControlFlow()
-                                .addCode(configurable ? CodeBlock.builder()
-                                        .beginControlFlow("if (!$1T.isEnabled($2S, $3S, id))",
-                                                TypeNames.CONFIG_UTIL, newSuffix, oldSuffix)
-                                        .addStatement("return null")
-                                        .endControlFlow()
-                                        .build() : CodeBlock.builder().build())
-                                .addStatement("return new $T(id, supplier.get())", configImplClassName)
-                                .build()))
-                .addMethods(declarativeOnly ? List.of(
-                        MethodSpec.methodBuilder("isOnMethod")
-                                .addAnnotation(Override.class)
-                                .addModifiers(Modifier.PUBLIC)
-                                .returns(TypeName.BOOLEAN)
-                                .addStatement("return onMethod")
-                                .build(),
-                        MethodSpec.methodBuilder("beanClass")
-                                .addAnnotation(Override.class)
-                                .addModifiers(Modifier.PUBLIC)
-                                .returns(TypeNames.CLASS)
-                                .addStatement("return beanClass")
-                                .build(),
-                        MethodSpec.methodBuilder("method")
-                                .addAnnotation(Override.class)
-                                .addModifiers(Modifier.PUBLIC)
-                                .returns(TypeNames.METHOD_DESCRIPTOR)
-                                .addStatement("return method")
-                                .build())
-                        : List.of())
-                .addMethod(MethodSpec.methodBuilder("annotationType")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeNames.CLASS_OF_ANNOTATION)
-                        .addStatement("return $T.class", annotationType)
-                        .build())
-                .addMethods(ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())
-                        .stream()
-                        .map(annotationMember -> MethodSpec.methodBuilder(annotationMember.getSimpleName().toString())
-                                .addAnnotation(Override.class)
-                                .addModifiers(Modifier.PUBLIC)
-                                .returns(TypeName.get(annotationMember.getReturnType()))
-                                .addCode(configurable
-                                        ? generateConfigurableMethod(annotationMember, annotationDeclaration, newConfigAllowed)
-                                        : generateNonconfigurableMethod(annotationMember))
-                                .build())
-                        .collect(Collectors.toList()))
-                .addMethod(MethodSpec.methodBuilder("materialize")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeName.VOID)
-                        .addCode(generateMaterializeMethod(annotationDeclaration))
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("fail")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeNames.FT_DEFINITION_EXCEPTION)
-                        .addParameter(TypeNames.STRING, "reason")
-                        .addStatement("return new $1T(\"Invalid @$2T on \" + description + \": \" + reason)",
-                                TypeNames.FT_DEFINITION_EXCEPTION, annotationType)
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("fail")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeNames.FT_DEFINITION_EXCEPTION)
-                        .addParameter(TypeNames.STRING, "member")
-                        .addParameter(TypeNames.STRING, "reason")
-                        .addStatement("return new $1T(\"Invalid @$2T.\" + member + \" on \" + description + \": \" + reason)",
-                                TypeNames.FT_DEFINITION_EXCEPTION, annotationType)
-                        .build())
-                .build())
-                .indent("    ") // 4 spaces
-                .build()
-                .writeTo(processingEnv.getFiler());
+        Sources sources = newSources();
+        sources.createSourceFile(packageName, configImplName, sf -> {
+            // TODO sf.originatingElement(configClass);
+            sf.import_(Type.of(Annotation.class));
+            sf.import_(annotationType);
+            if (!declarativeOnly) {
+                sf.import_(Type.of(Supplier.class));
+            }
+            if (configurable) {
+                sf.import_(Types.MP_CONFIG);
+                sf.import_(Types.MP_CONFIG_PROVIDER);
+            }
+            sf.import_(Types.FT_DEFINITION_EXCEPTION);
+            sf.import_(Types.FAULT_TOLERANCE_METHOD);
+            if (declarativeOnly) {
+                sf.import_(Types.METHOD_DESCRIPTOR);
+                sf.import_(Types.CONFIG_UTIL);
+            }
+            importMemberTypes(sf, annotationMembers);
+
+            sf.class_(configImplName, cc -> {
+                cc.docComment(doc -> {
+                    doc.text("Automatically generated from the ");
+                    doc.link(configType);
+                    doc.text(" config interface, do not modify.");
+                });
+                cc.public_();
+                cc.final_();
+                cc.implements_(configType);
+
+                if (declarativeOnly) {
+                    cc.field("beanClass", fc -> {
+                        fc.private_();
+                        fc.final_();
+                        fc.type(Types.CLASS);
+                    });
+                    cc.field("method", fc -> {
+                        fc.private_();
+                        fc.final_();
+                        fc.type(Types.METHOD_DESCRIPTOR);
+                    });
+                    cc.field("onMethod", fc -> {
+                        fc.private_();
+                        fc.final_();
+                        fc.type(Type.BOOLEAN);
+                        fc.docComment(doc -> {
+                            doc.code("true");
+                            doc.text(" if annotation was placed on a method; ");
+                            doc.code("false");
+                            doc.text(" if annotation was placed on a class.");
+                        });
+                    });
+                }
+                cc.field("description", fc -> {
+                    fc.private_();
+                    fc.final_();
+                    fc.type(Type.STRING);
+                    fc.docComment(doc -> doc.text(declarativeOnly
+                            ? "Description for the error message: a fully qualified method name."
+                            : "Description for the error message: a fully qualified method name or identifier."));
+                });
+                cc.field("configKey", fc -> {
+                    fc.private_();
+                    fc.final_();
+                    fc.type(Type.STRING);
+                    fc.docComment(doc -> {
+                        doc.text("Configuration key: either ");
+                        doc.code("<classname>/<methodname>");
+                        doc.text(" or ");
+                        doc.code("<classname>");
+                        if (!declarativeOnly) {
+                            doc.text(" or ");
+                            doc.code("<id>");
+                        }
+                        doc.text(".");
+                    });
+                });
+                cc.field("instance", fc -> {
+                    fc.private_();
+                    fc.final_();
+                    fc.type(annotationType);
+                    fc.docComment(doc -> doc.text(configurable
+                            ? "Backing annotation instance. Used when runtime configuration doesn't override it."
+                            : "Backing annotation instance."));
+                });
+                if (configurable) {
+                    for (ExecutableElement annotationMember : annotationMembers) {
+                        cc.field("_" + annotationMember.getSimpleName(), fc -> {
+                            fc.private_();
+                            fc.type(type(annotationMember.getReturnType()).box());
+                            fc.docComment(doc -> {
+                                doc.text("Cached value of the ");
+                                doc.code(annotationName + "." + annotationMember.getSimpleName());
+                                doc.text(" annotation member; ");
+                                doc.code("null");
+                                doc.text(" if not looked up yet.");
+                            });
+                        });
+                    }
+                }
+
+                cc.constructor(mc -> {
+                    mc.private_();
+                    Var method = mc.param("method", Types.FAULT_TOLERANCE_METHOD);
+                    mc.body(body -> {
+                        Expr annotationPresentDirectly = method.field("annotationsPresentDirectly")
+                                .call("contains", annotationType.class_());
+                        Expr onMethod;
+                        if (declarativeOnly) {
+                            body.emit(Expr.THIS.field("beanClass").assign(method.field("beanClass")));
+                            body.emit(Expr.THIS.field("method").assign(method.field("method")));
+                            body.emit(Expr.THIS.field("onMethod").assign(annotationPresentDirectly));
+                            onMethod = Expr.$v("onMethod");
+                        } else {
+                            onMethod = body.var(Type.BOOLEAN, "onMethod", annotationPresentDirectly);
+                        }
+                        body.emit(Expr.THIS.field("description").assign(method.field("method").call("toString")));
+                        Expr declaringClassName = method.field("method").field("declaringClass").call("getName");
+                        body.emit(Expr.THIS.field("configKey").assign(onMethod.cond(
+                                declaringClassName.add(Expr.str("/")).add(method.field("method").field("name")),
+                                declaringClassName)));
+                        body.emit(Expr.THIS.field("instance").assign(method.field(annotationVar)));
+                    });
+                });
+                if (!declarativeOnly) {
+                    cc.constructor(mc -> {
+                        mc.private_();
+                        Var id = mc.param("id", Type.STRING);
+                        Var instance = mc.param("instance", annotationType);
+                        mc.body(body -> {
+                            body.emit(Expr.THIS.field("description").assign(
+                                    Expr.str("Guard with @Identifier(").add(id).add(Expr.str(")"))));
+                            body.emit(Expr.THIS.field("configKey").assign(id));
+                            body.emit(Expr.THIS.field("instance").assign(instance));
+                        });
+                    });
+                }
+
+                cc.method("create", mc -> {
+                    mc.public_();
+                    mc.static_();
+                    mc.returning(configImplType);
+                    Var method = mc.param("method", Types.FAULT_TOLERANCE_METHOD);
+                    mc.body(body -> {
+                        body.if_(method.field(annotationVar).eq(Expr.NULL), then -> then.return_(Expr.NULL));
+                        if (configurable) {
+                            body.if_(Types.CONFIG_UTIL.call("isEnabled",
+                                    Expr.str(newSuffix), Expr.str(oldSuffix), method.field("method")).not(),
+                                    then -> then.return_(Expr.NULL));
+                        }
+                        body.return_(configImplType.new_(method));
+                    });
+                });
+                if (!declarativeOnly) {
+                    cc.method("create", mc -> {
+                        mc.public_();
+                        mc.static_();
+                        mc.returning(configImplType);
+                        Var id = mc.param("id", Type.STRING);
+                        Var supplier = mc.param("supplier", Types.supplierOf(annotationType));
+                        mc.body(body -> {
+                            body.if_(supplier.eq(Expr.NULL), then -> then.return_(Expr.NULL));
+                            if (configurable) {
+                                body.if_(Types.CONFIG_UTIL.call("isEnabled",
+                                        Expr.str(newSuffix), Expr.str(oldSuffix), id).not(),
+                                        then -> then.return_(Expr.NULL));
+                            }
+                            body.return_(configImplType.new_(id, supplier.call("get")));
+                        });
+                    });
+                }
+
+                if (declarativeOnly) {
+                    cc.method("isOnMethod", mc -> {
+                        mc.annotate(Types.OVERRIDE);
+                        mc.public_();
+                        mc.returning(Type.BOOLEAN);
+                        mc.body(body -> body.return_(Expr.$v("onMethod")));
+                    });
+                    cc.method("beanClass", mc -> {
+                        mc.annotate(Types.OVERRIDE);
+                        mc.public_();
+                        mc.returning(Types.CLASS);
+                        mc.body(body -> body.return_(Expr.$v("beanClass")));
+                    });
+                    cc.method("method", mc -> {
+                        mc.annotate(Types.OVERRIDE);
+                        mc.public_();
+                        mc.returning(Types.METHOD_DESCRIPTOR);
+                        mc.body(body -> body.return_(Expr.$v("method")));
+                    });
+                }
+
+                cc.method("annotationType", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Types.CLASS_OF_ANNOTATION);
+                    mc.body(body -> body.return_(annotationType.class_()));
+                });
+
+                for (ExecutableElement annotationMember : annotationMembers) {
+                    cc.method(annotationMember.getSimpleName().toString(), mc -> {
+                        mc.annotate(Types.OVERRIDE);
+                        mc.public_();
+                        mc.returning(type(annotationMember.getReturnType()));
+                        mc.body(body -> {
+                            if (configurable) {
+                                generateConfigurableMethod(body, annotationMember, annotationDeclaration, newConfigAllowed);
+                            } else {
+                                generateNonconfigurableMethod(body, annotationMember);
+                            }
+                        });
+                    });
+                }
+
+                cc.method("materialize", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Type.VOID);
+                    mc.body(body -> {
+                        for (ExecutableElement annotationMember : annotationMembers) {
+                            body.emit(Expr.callPlain(annotationMember.getSimpleName().toString()));
+                        }
+                    });
+                });
+
+                cc.method("fail", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Types.FT_DEFINITION_EXCEPTION);
+                    Var reason = mc.param("reason", Type.STRING);
+                    mc.body(body -> body.return_(Types.FT_DEFINITION_EXCEPTION.new_(
+                            Expr.str("Invalid @" + annotationName + " on ")
+                                    .add(Expr.$v("description"))
+                                    .add(Expr.str(": "))
+                                    .add(reason))));
+                });
+                cc.method("fail", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Types.FT_DEFINITION_EXCEPTION);
+                    Var member = mc.param("member", Type.STRING);
+                    Var reason = mc.param("reason", Type.STRING);
+                    mc.body(body -> body.return_(Types.FT_DEFINITION_EXCEPTION.new_(
+                            Expr.str("Invalid @" + annotationName + ".")
+                                    .add(member)
+                                    .add(Expr.str(" on "))
+                                    .add(Expr.$v("description"))
+                                    .add(Expr.str(": "))
+                                    .add(reason))));
+                });
+            });
+        });
+        sources.writeSources();
     }
 
     private void generateNoConfigImpl(TypeElement configClass, TypeElement annotationDeclaration) throws IOException {
         String packageName = configClass.getQualifiedName().toString().replace("." + configClass.getSimpleName(), "");
-        ClassName configImplClassName = ClassName.get(packageName, configClass.getSimpleName().toString()
-                .replace("Config", "NoConfig") + "Impl");
+        String configImplName = configClass.getSimpleName().toString().replace("Config", "NoConfig") + "Impl";
+        Type configType = Type.of(configClass.asType());
+        Type configImplType = Type.named(packageName + "." + configImplName);
 
-        TypeName annotationType = TypeName.get(annotationDeclaration.asType());
+        Type annotationType = Type.of(annotationDeclaration.asType());
+        String annotationName = annotationDeclaration.getSimpleName().toString();
+        List<ExecutableElement> annotationMembers = ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements());
 
-        JavaFile.builder(packageName, TypeSpec.classBuilder(configImplClassName)
-                .addOriginatingElement(configClass)
-                .addJavadoc("Automatically generated from the {@link $L} config interface, do not modify.",
-                        configClass.getSimpleName())
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addSuperinterface(configClass.asType())
-                .addField(FieldSpec.builder(annotationType, "instance", Modifier.PRIVATE, Modifier.FINAL)
-                        .addJavadoc("Backing annotation instance.")
-                        .build())
-                .addMethod(MethodSpec.constructorBuilder()
-                        .addModifiers(Modifier.PRIVATE)
-                        .addParameter(annotationType, "instance")
-                        .addStatement("this.instance = instance")
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("create")
-                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                        .returns(configImplClassName)
-                        .addParameter(TypeNames.supplierOf(annotationType), "supplier")
-                        .beginControlFlow("if (supplier == null)")
-                        .addStatement("return null")
-                        .endControlFlow()
-                        .addStatement("return new $T(supplier.get())", configImplClassName)
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("annotationType")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeNames.CLASS_OF_ANNOTATION)
-                        .addStatement("return $T.class", annotationType)
-                        .build())
-                .addMethods(ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())
-                        .stream()
-                        .map(annotationMember -> MethodSpec.methodBuilder(annotationMember.getSimpleName().toString())
-                                .addAnnotation(Override.class)
-                                .addModifiers(Modifier.PUBLIC)
-                                .returns(TypeName.get(annotationMember.getReturnType()))
-                                .addCode(generateNonconfigurableMethod(annotationMember))
-                                .build())
-                        .collect(Collectors.toList()))
-                .addMethod(MethodSpec.methodBuilder("materialize")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeName.VOID)
-                        .addComment("no config, no need to materialize")
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("fail")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeNames.FT_DEFINITION_EXCEPTION)
-                        .addParameter(TypeNames.STRING, "reason")
-                        .addStatement("return new $1T(\"Invalid @$2T: \" + reason)",
-                                TypeNames.FT_DEFINITION_EXCEPTION, annotationType)
-                        .build())
-                .addMethod(MethodSpec.methodBuilder("fail")
-                        .addAnnotation(Override.class)
-                        .addModifiers(Modifier.PUBLIC)
-                        .returns(TypeNames.FT_DEFINITION_EXCEPTION)
-                        .addParameter(TypeNames.STRING, "member")
-                        .addParameter(TypeNames.STRING, "reason")
-                        .addStatement("return new $1T(\"Invalid @$2T.\" + member + \": \" + reason)",
-                                TypeNames.FT_DEFINITION_EXCEPTION, annotationType)
-                        .build())
-                .build())
-                .indent("    ") // 4 spaces
-                .build()
-                .writeTo(processingEnv.getFiler());
+        Sources sources = newSources();
+        sources.createSourceFile(packageName, configImplName, sf -> {
+            sf.import_(annotationType);
+            sf.import_(Type.of(Annotation.class));
+            sf.import_(Type.of(Supplier.class));
+            sf.import_(Types.FT_DEFINITION_EXCEPTION);
+            importMemberTypes(sf, annotationMembers);
+
+            sf.class_(configImplName, cc -> {
+                cc.docComment(doc -> {
+                    doc.text("Automatically generated from the ");
+                    doc.link(configType);
+                    doc.text(" config interface, do not modify.");
+                });
+                cc.public_();
+                cc.final_();
+                cc.implements_(configType);
+
+                cc.field("instance", fc -> {
+                    fc.private_();
+                    fc.final_();
+                    fc.type(annotationType);
+                    fc.docComment(doc -> doc.text("Backing annotation instance."));
+                });
+
+                cc.constructor(mc -> {
+                    mc.private_();
+                    Var instance = mc.param("instance", annotationType);
+                    mc.body(body -> body.emit(Expr.THIS.field("instance").assign(instance)));
+                });
+
+                cc.method("create", mc -> {
+                    mc.public_();
+                    mc.static_();
+                    mc.returning(configImplType);
+                    Var supplier = mc.param("supplier", Types.supplierOf(annotationType));
+                    mc.body(body -> {
+                        body.if_(supplier.eq(Expr.NULL), then -> then.return_(Expr.NULL));
+                        body.return_(configImplType.new_(supplier.call("get")));
+                    });
+                });
+
+                cc.method("annotationType", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Types.CLASS_OF_ANNOTATION);
+                    mc.body(body -> body.return_(annotationType.class_()));
+                });
+
+                for (ExecutableElement annotationMember : annotationMembers) {
+                    cc.method(annotationMember.getSimpleName().toString(), mc -> {
+                        mc.annotate(Types.OVERRIDE);
+                        mc.public_();
+                        mc.returning(type(annotationMember.getReturnType()));
+                        mc.body(body -> generateNonconfigurableMethod(body, annotationMember));
+                    });
+                }
+
+                cc.method("materialize", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Type.VOID);
+                    mc.body(body -> body.lineComment("no config, no need to materialize"));
+                });
+
+                cc.method("fail", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Types.FT_DEFINITION_EXCEPTION);
+                    Var reason = mc.param("reason", Type.STRING);
+                    mc.body(body -> body.return_(Types.FT_DEFINITION_EXCEPTION.new_(
+                            Expr.str("Invalid @" + annotationName + ": ").add(reason))));
+                });
+                cc.method("fail", mc -> {
+                    mc.annotate(Types.OVERRIDE);
+                    mc.public_();
+                    mc.returning(Types.FT_DEFINITION_EXCEPTION);
+                    Var member = mc.param("member", Type.STRING);
+                    Var reason = mc.param("reason", Type.STRING);
+                    mc.body(body -> body.return_(Types.FT_DEFINITION_EXCEPTION.new_(
+                            Expr.str("Invalid @" + annotationName + ".")
+                                    .add(member)
+                                    .add(Expr.str(": "))
+                                    .add(reason))));
+                });
+            });
+        });
+        sources.writeSources();
     }
 
-    private CodeBlock generateConfigurableMethod(ExecutableElement annotationMember, TypeElement annotationDeclaration,
-            boolean newConfigAllowed) {
-        if (newConfigAllowed) {
-            String newAnnotationName = newAnnotationName(annotationDeclaration);
-            String newMemberName = newMemberName(annotationMember);
+    private void generateConfigurableMethod(BlockCreator body, ExecutableElement annotationMember,
+            TypeElement annotationDeclaration, boolean newConfigAllowed) {
+        String memberName = annotationMember.getSimpleName().toString();
+        String annotationName = annotationDeclaration.getSimpleName().toString();
+        Var cached = Expr.$v("_" + memberName);
+        Expr rawTypeClass = rawType(annotationMember.getReturnType()).class_();
 
-            return CodeBlock.builder()
-                    .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                    .addStatement("$1T config = $2T.getConfig()", TypeNames.MP_CONFIG, TypeNames.MP_CONFIG_PROVIDER)
-                    .beginControlFlow("")
-                    .add("// smallrye.faulttolerance.\"<configKey>\".<annotation>.<member>\n")
-                    .addStatement("String newKey = \"" + ConfigConstants.PREFIX + "\\\"\" + this.configKey + \"\\\"."
-                            + newAnnotationName + "." + newMemberName + "\"")
-                    .add("// <configKey>/<annotation>/<member>\n")
-                    .addStatement("String oldKey = this.configKey + " + "\"/" + annotationDeclaration.getSimpleName()
-                            + "/" + annotationMember.getSimpleName() + "\"")
-                    .addStatement(
-                            "_$1L = config.getOptionalValue(newKey, $2T.class).or(() -> config.getOptionalValue(oldKey, $2T.class)).orElse(null)",
-                            annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
-                    .endControlFlow()
-                    .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                    .add("// smallrye.faulttolerance.global.<annotation>.<member>\n")
-                    .addStatement("String newKey = \"" + ConfigConstants.PREFIX + ConfigConstants.GLOBAL + "."
-                            + newAnnotationName + "." + newMemberName + "\"")
-                    .add("// <annotation>/<member>\n")
-                    .addStatement("String oldKey = \"" + annotationDeclaration.getSimpleName()
-                            + "/" + annotationMember.getSimpleName() + "\"")
-                    .addStatement(
-                            "_$1L = config.getOptionalValue(newKey, $2T.class).or(() -> config.getOptionalValue(oldKey, $2T.class)).orElse(null)",
-                            annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
-                    .endControlFlow()
-                    .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                    .add("// annotation value\n")
-                    .addStatement("_$1L = instance.$1L()", annotationMember.getSimpleName())
-                    .endControlFlow()
-                    .endControlFlow()
-                    .addStatement("return _$L", annotationMember.getSimpleName())
-                    .build();
-        } else {
-            return CodeBlock.builder()
-                    .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                    .addStatement("$1T config = $2T.getConfig()", TypeNames.MP_CONFIG, TypeNames.MP_CONFIG_PROVIDER)
-                    .beginControlFlow("")
-                    .add("// <configKey>/<annotation>/<member>\n")
-                    .addStatement("String key = this.configKey + " + "\"/" + annotationDeclaration.getSimpleName()
-                            + "/" + annotationMember.getSimpleName() + "\"")
-                    .addStatement(
-                            "_$1L = config.getOptionalValue(key, $2T.class).orElse(null)",
-                            annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
-                    .endControlFlow()
-                    .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                    .add("// <annotation>/<member>\n")
-                    .addStatement("String key = \"" + annotationDeclaration.getSimpleName()
-                            + "/" + annotationMember.getSimpleName() + "\"")
-                    .addStatement(
-                            "_$1L = config.getOptionalValue(key, $2T.class).orElse(null)",
-                            annotationMember.getSimpleName(), rawType(annotationMember.getReturnType()))
-                    .endControlFlow()
-                    .beginControlFlow("if (_$L == null)", annotationMember.getSimpleName())
-                    .add("// annotation value\n")
-                    .addStatement("_$1L = instance.$1L()", annotationMember.getSimpleName())
-                    .endControlFlow()
-                    .endControlFlow()
-                    .addStatement("return _$L", annotationMember.getSimpleName())
-                    .build();
+        body.if_(cached.eq(Expr.NULL), outer -> {
+            Var config = outer.var(Types.MP_CONFIG, "config", Types.MP_CONFIG_PROVIDER.call("getConfig"));
+            if (newConfigAllowed) {
+                String newAnnotationName = newAnnotationName(annotationDeclaration);
+                String newMemberName = newMemberName(annotationMember);
+
+                outer.block(block -> {
+                    block.lineComment("smallrye.faulttolerance.\"<configKey>\".<annotation>.<member>");
+                    Var newKey = block.var(Type.STRING, "newKey",
+                            Expr.str(ConfigConstants.PREFIX + "\"")
+                                    .add(Expr.THIS.field("configKey"))
+                                    .add(Expr.str("\"." + newAnnotationName + "." + newMemberName)));
+                    block.lineComment("<configKey>/<annotation>/<member>");
+                    Var oldKey = block.var(Type.STRING, "oldKey",
+                            Expr.THIS.field("configKey").add(Expr.str("/" + annotationName + "/" + memberName)));
+                    block.emit(cached.assign(lookupWithFallback(config, newKey, oldKey, rawTypeClass)));
+                });
+                outer.if_(cached.eq(Expr.NULL), then -> {
+                    then.lineComment("smallrye.faulttolerance.global.<annotation>.<member>");
+                    Var newKey = then.var(Type.STRING, "newKey",
+                            Expr.str(ConfigConstants.PREFIX + ConfigConstants.GLOBAL + "."
+                                    + newAnnotationName + "." + newMemberName));
+                    then.lineComment("<annotation>/<member>");
+                    Var oldKey = then.var(Type.STRING, "oldKey", Expr.str(annotationName + "/" + memberName));
+                    then.emit(cached.assign(lookupWithFallback(config, newKey, oldKey, rawTypeClass)));
+                });
+            } else {
+                outer.block(block -> {
+                    block.lineComment("<configKey>/<annotation>/<member>");
+                    Var key = block.var(Type.STRING, "key",
+                            Expr.THIS.field("configKey").add(Expr.str("/" + annotationName + "/" + memberName)));
+                    block.emit(cached.assign(lookup(config, key, rawTypeClass)));
+                });
+                outer.if_(cached.eq(Expr.NULL), then -> {
+                    then.lineComment("<annotation>/<member>");
+                    Var key = then.var(Type.STRING, "key", Expr.str(annotationName + "/" + memberName));
+                    then.emit(cached.assign(lookup(config, key, rawTypeClass)));
+                });
+            }
+            outer.if_(cached.eq(Expr.NULL), then -> {
+                then.lineComment("annotation value");
+                then.emit(cached.assign(Expr.$v("instance").call(memberName)));
+            });
+        });
+        body.return_(cached);
+    }
+
+    private static Expr lookup(Var config, Expr key, Expr rawTypeClass) {
+        return config.call("getOptionalValue", key, rawTypeClass).call("orElse", Expr.NULL);
+    }
+
+    private static Expr lookupWithFallback(Var config, Expr newKey, Expr oldKey, Expr rawTypeClass) {
+        return config.call("getOptionalValue", newKey, rawTypeClass)
+                .call("or", Expr.lambda(config.call("getOptionalValue", oldKey, rawTypeClass)))
+                .call("orElse", Expr.NULL);
+    }
+
+    private void generateNonconfigurableMethod(BlockCreator body, ExecutableElement annotationMember) {
+        body.return_(Expr.$v("instance").call(annotationMember.getSimpleName().toString()));
+    }
+
+    private static void importMemberTypes(SourceFileCreator sf, List<ExecutableElement> annotationMembers) {
+        for (ExecutableElement annotationMember : annotationMembers) {
+            importTypes(sf, annotationMember.getReturnType());
         }
     }
 
-    private CodeBlock generateNonconfigurableMethod(ExecutableElement annotationMember) {
-        return CodeBlock.builder()
-                .addStatement("return instance.$1L()", annotationMember.getSimpleName())
-                .build();
-    }
-
-    private CodeBlock generateMaterializeMethod(TypeElement annotationDeclaration) {
-        CodeBlock.Builder builder = CodeBlock.builder();
-        for (ExecutableElement annotationElement : ElementFilter.methodsIn(annotationDeclaration.getEnclosedElements())) {
-            builder.addStatement("$L()", annotationElement.getSimpleName());
+    private static void importTypes(SourceFileCreator sf, TypeMirror type) {
+        switch (type.getKind()) {
+            case ARRAY -> importTypes(sf, ((ArrayType) type).getComponentType());
+            case DECLARED -> {
+                DeclaredType declared = (DeclaredType) type;
+                sf.import_(rawType(declared));
+                declared.getTypeArguments().forEach(it -> importTypes(sf, it));
+            }
+            case WILDCARD -> {
+                WildcardType wildcard = (WildcardType) type;
+                if (wildcard.getExtendsBound() != null) {
+                    importTypes(sf, wildcard.getExtendsBound());
+                }
+                if (wildcard.getSuperBound() != null) {
+                    importTypes(sf, wildcard.getSuperBound());
+                }
+            }
+            default -> {
+                // primitive types don't need an import
+            }
         }
-        return builder.build();
     }
 
-    private static TypeName rawType(TypeMirror type) {
-        return type.accept(new SimpleTypeVisitor8<TypeName, Void>() {
+    /**
+     * Converts the given type mirror to a {@link Type} including type arguments. Unlike
+     * {@link Type#of(TypeMirror)}, this also supports wildcards.
+     */
+    private static Type type(TypeMirror type) {
+        return type.accept(new SimpleTypeVisitor8<Type, Void>() {
             @Override
-            public TypeName visitArray(ArrayType t, Void unused) {
-                TypeName componentType = rawType(t.getComponentType());
-                return ArrayTypeName.of(componentType);
+            public Type visitArray(ArrayType t, Void unused) {
+                return type(t.getComponentType()).array();
             }
 
             @Override
-            public TypeName visitDeclared(DeclaredType t, Void unused) {
-                return ClassName.get((TypeElement) t.asElement());
+            public Type visitDeclared(DeclaredType t, Void unused) {
+                Type raw = rawType(t);
+                if (t.getTypeArguments().isEmpty()) {
+                    return raw;
+                }
+                return raw.typeArg(t.getTypeArguments().stream().map(AutoConfigProcessor::type).toList());
             }
 
             @Override
-            public TypeName visitPrimitive(PrimitiveType t, Void unused) {
-                return TypeName.get(t);
+            public Type visitWildcard(WildcardType t, Void unused) {
+                if (t.getExtendsBound() != null) {
+                    return type(t.getExtendsBound()).wildcardExtends();
+                }
+                if (t.getSuperBound() != null) {
+                    return type(t.getSuperBound()).wildcardSuper();
+                }
+                return Type.WILDCARD;
             }
 
             @Override
-            protected TypeName defaultAction(TypeMirror e, Void unused) {
+            public Type visitPrimitive(PrimitiveType t, Void unused) {
+                return Type.of(t);
+            }
+
+            @Override
+            protected Type defaultAction(TypeMirror e, Void unused) {
+                throw new IllegalArgumentException("Unexpected type mirror: " + e);
+            }
+        }, null);
+    }
+
+    private static Type rawType(TypeMirror type) {
+        return type.accept(new SimpleTypeVisitor8<Type, Void>() {
+            @Override
+            public Type visitArray(ArrayType t, Void unused) {
+                return rawType(t.getComponentType()).array();
+            }
+
+            @Override
+            public Type visitDeclared(DeclaredType t, Void unused) {
+                return Type.named(((TypeElement) t.asElement()).getQualifiedName().toString());
+            }
+
+            @Override
+            public Type visitPrimitive(PrimitiveType t, Void unused) {
+                return Type.of(t);
+            }
+
+            @Override
+            protected Type defaultAction(TypeMirror e, Void unused) {
                 throw new IllegalArgumentException("Unexpected type mirror: " + e);
             }
         }, null);
