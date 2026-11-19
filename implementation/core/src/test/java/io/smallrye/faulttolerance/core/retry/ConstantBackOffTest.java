@@ -11,7 +11,7 @@ public class ConstantBackOffTest {
         BackOff backOff = new ConstantBackOff(100, Jitter.ZERO);
 
         for (int i = 0; i < 100; i++) {
-            assertThat(backOff.getInMillis(null)).isEqualTo(100);
+            assertThat(backOff.getInMillis(null, null)).isEqualTo(100);
         }
     }
 
@@ -20,7 +20,7 @@ public class ConstantBackOffTest {
         BackOff backOff = new ConstantBackOff(100, new FixedJitter(50));
 
         for (int i = 0; i < 100; i++) {
-            assertThat(backOff.getInMillis(null)).isEqualTo(150);
+            assertThat(backOff.getInMillis(null, null)).isEqualTo(150);
         }
     }
 
@@ -29,7 +29,7 @@ public class ConstantBackOffTest {
         BackOff backOff = new ConstantBackOff(100, new RandomJitter(50));
 
         for (int i = 0; i < 100; i++) {
-            assertThat(backOff.getInMillis(null)).isGreaterThanOrEqualTo(50).isLessThanOrEqualTo(150);
+            assertThat(backOff.getInMillis(null, null)).isGreaterThanOrEqualTo(50).isLessThanOrEqualTo(150);
         }
 
     }
@@ -39,7 +39,7 @@ public class ConstantBackOffTest {
         BackOff backOff = new ConstantBackOff(0, Jitter.ZERO);
 
         for (int i = 0; i < 100; i++) {
-            assertThat(backOff.getInMillis(null)).isEqualTo(0);
+            assertThat(backOff.getInMillis(null, null)).isEqualTo(0);
         }
     }
 
@@ -48,7 +48,7 @@ public class ConstantBackOffTest {
         BackOff backOff = new ConstantBackOff(0, new FixedJitter(50));
 
         for (int i = 0; i < 100; i++) {
-            assertThat(backOff.getInMillis(null)).isEqualTo(50);
+            assertThat(backOff.getInMillis(null, null)).isEqualTo(50);
         }
     }
 
@@ -57,7 +57,7 @@ public class ConstantBackOffTest {
         BackOff backOff = new ConstantBackOff(0, new RandomJitter(50));
 
         for (int i = 0; i < 100; i++) {
-            assertThat(backOff.getInMillis(null)).isGreaterThanOrEqualTo(0).isLessThanOrEqualTo(50);
+            assertThat(backOff.getInMillis(null, null)).isGreaterThanOrEqualTo(0).isLessThanOrEqualTo(50);
         }
     }
 

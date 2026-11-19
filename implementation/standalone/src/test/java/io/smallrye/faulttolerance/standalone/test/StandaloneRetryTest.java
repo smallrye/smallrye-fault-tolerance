@@ -3,6 +3,8 @@ package io.smallrye.faulttolerance.standalone.test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 
@@ -84,7 +86,7 @@ public class StandaloneRetryTest {
     @Test
     public void retryWithComputedDelay() throws Exception {
         Callable<String> guarded = TypedGuard.create(String.class)
-                .withRetry().maxRetries(3).computedDelay(e -> Duration.ofMillis(10)).done()
+                .withRetry().maxRetries(3).computedDelay((r, e) -> Duration.ofMillis(10)).done()
                 .withFallback().applyOn(TestException.class).handler(this::fallback).done()
                 .build()
                 .adaptCallable(this::actionThrow);
@@ -96,7 +98,7 @@ public class StandaloneRetryTest {
     @Test
     public void retryWithComputedDelay_untyped() throws Exception {
         Callable<String> guarded = Guard.create()
-                .withRetry().maxRetries(5).computedDelay(e -> Duration.ofMillis(10)).done()
+                .withRetry().maxRetries(5).computedDelay((r, e) -> Duration.ofMillis(10)).done()
                 .build()
                 .adaptCallable(() -> {
                     counter++;
@@ -108,6 +110,76 @@ public class StandaloneRetryTest {
 
         assertThat(guarded.call()).isEqualTo("success");
         assertThat(counter).isEqualTo(4); // 1 initial invocation, 2 unsuccessful retries, 1 successful retry
+    }
+
+    @Test
+    public void retryWithComputedDelayOnResult() throws Exception {
+        List<Object> seenResults = new ArrayList<>();
+        Callable<String> guarded = TypedGuard.create(String.class)
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .computedDelay((result, failure) -> {
+                    seenResults.add(result);
+                    return Duration.ofMillis(10);
+                }).done()
+                .build()
+                .adaptCallable(() -> {
+                    counter++;
+                    return counter < 3 ? "retry-" + counter : "success";
+                });
+
+        assertThat(guarded.call()).isEqualTo("success");
+        assertThat(counter).isEqualTo(3);
+        assertThat(seenResults).containsExactly("retry-1", "retry-2");
+    }
+
+    @Test
+    public void retryWithComputedDelayOnResult_untyped() throws Exception {
+        List<Object> seenResults = new ArrayList<>();
+        Callable<String> guarded = Guard.create()
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .computedDelay((result, failure) -> {
+                    seenResults.add(result);
+                    return Duration.ofMillis(10);
+                }).done()
+                .build()
+                .adaptCallable(() -> {
+                    counter++;
+                    return counter < 3 ? "retry-" + counter : "success";
+                }, String.class);
+
+        assertThat(guarded.call()).isEqualTo("success");
+        assertThat(counter).isEqualTo(3);
+        assertThat(seenResults).containsExactly("retry-1", "retry-2");
+    }
+
+    @Test
+    public void retryWithComputedDelayOnResultAndFailure() throws Exception {
+        List<Object> seenFailures = new ArrayList<>();
+        List<Object> seenResults = new ArrayList<>();
+        Callable<String> guarded = TypedGuard.create(String.class)
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .computedDelay((result, failure) -> {
+                    seenResults.add(result);
+                    seenFailures.add(failure);
+                    return Duration.ofMillis(10);
+                }).done()
+                .build()
+                .adaptCallable(() -> {
+                    counter++;
+                    if (counter == 1) {
+                        return "retry";
+                    } else if (counter == 2) {
+                        throw new TestException();
+                    }
+                    return "success";
+                });
+
+        assertThat(guarded.call()).isEqualTo("success");
+        assertThat(counter).isEqualTo(3);
+        assertThat(seenResults).containsExactly("retry", null);
+        assertThat(seenFailures).hasSize(2);
+        assertThat(seenFailures.get(0)).isNull();
+        assertThat(seenFailures.get(1)).isInstanceOf(TestException.class);
     }
 
     public String actionThrow() throws TestException {

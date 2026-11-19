@@ -18,9 +18,9 @@ final class SyncDelayAsAsync implements AsyncDelay {
     }
 
     @Override
-    public void after(Throwable cause, Runnable task, Executor executor) {
+    public void after(Object result, Throwable cause, Runnable task, Executor executor) {
         try {
-            delegate.sleep(cause);
+            delegate.sleep(result, cause);
         } catch (InterruptedException e) {
             throw sneakyThrow(e);
         }

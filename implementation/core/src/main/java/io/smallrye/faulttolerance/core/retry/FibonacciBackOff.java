@@ -28,7 +28,7 @@ public class FibonacciBackOff implements BackOff {
     }
 
     @Override
-    public synchronized long getInMillis(Throwable cause) {
+    public synchronized long getInMillis(Object result, Throwable cause) {
         if (lastDelayA == 0) {
             lastDelayA = initialDelayInMillis;
             return lastDelayA + jitter.generate();

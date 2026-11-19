@@ -13,7 +13,7 @@ public interface AsyncDelay {
      * Runs the {@code task} after delay on given {@link Executor}.
      * If given {@code executor} is {@code null}, the task is executed on an implementation-defined thread.
      */
-    void after(Throwable cause, Runnable task, Executor executor);
+    void after(Object result, Throwable cause, Runnable task, Executor executor);
 
-    Supplier<AsyncDelay> NONE = () -> (cause, task, executor) -> task.run();
+    Supplier<AsyncDelay> NONE = () -> (result, cause, task, executor) -> task.run();
 }

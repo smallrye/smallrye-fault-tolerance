@@ -48,6 +48,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceExceptio
 import io.smallrye.common.annotation.Identifier;
 import io.smallrye.faulttolerance.api.AlwaysOnException;
 import io.smallrye.faulttolerance.api.BeforeRetryHandler;
+import io.smallrye.faulttolerance.api.CallContext;
 import io.smallrye.faulttolerance.api.ComputedDelayHandler;
 import io.smallrye.faulttolerance.api.CustomBackoffStrategy;
 import io.smallrye.faulttolerance.api.Guard;
@@ -549,10 +550,10 @@ public class FaultToleranceInterceptor {
         if (operation.hasComputedDelay()) {
             ComputedDelayHandler computedDelayHandler = computedDelayHandlerProvider.get(operation);
             if (computedDelayHandler != null) {
-                return ctx -> new ComputedBackOff(cause -> {
-                    ExecutionContext executionContext = new ExecutionContextImpl(
-                            ctx.get(InvocationContext.class), cause);
-                    return computedDelayHandler.getDelay(executionContext);
+                return ctx -> new ComputedBackOff((result, cause) -> {
+                    CallContext callContext = new CallContextImpl(
+                            ctx.get(InvocationContext.class), result, cause);
+                    return computedDelayHandler.getDelay(callContext);
                 }, baseBackoff.apply(ctx), jitter);
             } else {
                 throw new FaultToleranceException("Could not obtain retry delay handler for " + point);
@@ -599,8 +600,8 @@ public class FaultToleranceInterceptor {
             FallbackHandler<T> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
                 fallbackFunction = ctx -> {
-                    ExecutionContext executionContext = new ExecutionContextImpl(
-                            ctx.context.get(InvocationContext.class), ctx.failure);
+                    ExecutionContext executionContext = new CallContextImpl(
+                            ctx.context.get(InvocationContext.class), null, ctx.failure);
                     try {
                         T result = fallbackHandler.handle(executionContext);
                         return asyncSupport == null
@@ -644,8 +645,8 @@ public class FaultToleranceInterceptor {
             BeforeRetryHandler beforeRetryHandler = beforeRetryHandlerProvider.get(operation);
             if (beforeRetryHandler != null) {
                 beforeRetryFunction = ctx -> {
-                    ExecutionContext executionContext = new ExecutionContextImpl(
-                            ctx.context.get(InvocationContext.class), ctx.failure);
+                    ExecutionContext executionContext = new CallContextImpl(
+                            ctx.context.get(InvocationContext.class), null, ctx.failure);
                     beforeRetryHandler.handle(executionContext);
                 };
             } else {

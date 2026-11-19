@@ -272,14 +272,14 @@ It is an error to add a `@RetryWhen` annotation to a program element that doesn'
 
 For more information about `@RetryWhen`, see the javadoc of the annotation.
 
-=== Retry Delay Suggested by the Failure
+=== Retry Delay Suggested by the Result or Failure
 
 include::partial$srye-feature.adoc[]
 
-Sometimes, the failure itself suggests how long to wait before the next attempt.
+Sometimes, the result or the failure themselves suggest how long to wait before the next attempt.
 The typical example is the HTTP `Retry-After` header.
 {smallrye-fault-tolerance} does not parse any such headers; that is another layer's responsibility.
-However, the `@ComputedDelay` annotation allows specifying a handler that extracts the suggested delay from the failure.
+However, the `@ComputedDelay` annotation allows specifying a handler that extracts the suggested delay from the result or the failure.
 
 The `@ComputedDelay` annotation may be present on any program element (method or class) that also has the `@Retry` annotation.
 For example:
@@ -298,9 +298,12 @@ public class MyService {
 
     public static class MyDelayComputation implements ComputedDelayHandler {
         @Override
-        public Duration getDelay(ExecutionContext context) { // <2>
+        public Duration getDelay(CallContext context) { // <2>
             if (context.getFailure() instanceof MyExceptionWithDelay e) {
                 return Duration.ofMillis(e.getDelay());
+            }
+            if (context.getResult() instanceof MyResponseWithDelay r) {
+                return Duration.ofMillis(r.getDelay());
             }
             return null; // <3>
         }
@@ -309,8 +312,10 @@ public class MyService {
 ----
 
 <1> Specifies that the `MyDelayComputation` handler should be used to obtain the retry delay.
-<2> The failure that caused the retry is available from the `ExecutionContext`.
-<3> Returning `null` means that the failure doesn't suggest any delay.
+<2> The result or the failure that caused the retry are available from the `CallContext` using `getResult()` and `getFailure()`.
+If the retry was caused by an exception, `getFailure()` is non-`null`; if it was caused by a result, `getFailure()` is `null`.
+Note that if the retry was caused by a result, the result may be `null`!
+<3> Returning `null` means that the failure or result doesn't suggest any delay.
 
 The handler is called before each retry and the returned value is interpreted as follows:
 
@@ -324,17 +329,28 @@ Note that the retry delay handler must be fast and non-blocking (i.e., it must n
 
 It is an error to add a `@ComputedDelay` annotation to a program element that doesn't have `@Retry` (e.g. add `@Retry` on a class and `@ComputedDelay` on a method).
 
-When using the programmatic API, the `computedDelay(...)` method of the retry builder accepts a `Function<Throwable, Duration>` with the same semantics:
+For asynchronous methods (e.g. those returning `CompletionStage` or `Uni`), the result available from `CallContext.getResult()` is the value that the asynchronous type eventually produces, not a value of the asynchronous type itself.
+For example, for a method that returns `CompletionStage<String>`, `getResult()` returns a `String`.
+
+When using the programmatic API, the `computedDelay(...)` method of the retry builder accepts a `BiFunction<Object, Throwable, Duration>` with the same semantics, including the treatment of asynchronous types:
 
 [source,java]
 ----
 Guard guard = Guard.create()
-        .withRetry().maxRetries(5).computedDelay(failure -> {
+        .withRetry()
+        .maxRetries(5)
+        .whenResult(r -> r instanceof MyResponseWithDelay)
+        .whenException(e -> e instanceof MyExceptionWithDelay)
+        .computedDelay((result, failure) -> {
+            if (result instanceof MyResponseWithDelay r) {
+                return Duration.ofMillis(r.getDelay());
+            }
             if (failure instanceof MyExceptionWithDelay e) {
                 return Duration.ofMillis(e.getDelay());
             }
             return null;
-        }).done()
+        })
+        .done()
         .build();
 ----
 
