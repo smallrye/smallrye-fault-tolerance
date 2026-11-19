@@ -16,7 +16,7 @@ public class ConstantBackOff implements BackOff {
     }
 
     @Override
-    public long getInMillis(Throwable cause) {
+    public long getInMillis(Object result, Throwable cause) {
         return Math.max(0, delayInMillis + jitter.generate());
     }
 }

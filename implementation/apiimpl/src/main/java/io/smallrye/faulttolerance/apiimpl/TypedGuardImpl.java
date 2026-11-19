@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -856,7 +857,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             private Predicate<Throwable> whenExceptionPredicate;
             private Predicate<Object> whenResultPredicate;
             private Consumer<Throwable> beforeRetry;
-            private Function<Throwable, Duration> computedDelay;
+            private BiFunction<Object, Throwable, Duration> computedDelay;
 
             private ExponentialBackoffBuilderImpl<V, T> exponentialBackoffBuilder;
             private FibonacciBackoffBuilderImpl<V, T> fibonacciBackoffBuilder;
@@ -960,7 +961,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             }
 
             @Override
-            public RetryBuilder<T> computedDelay(Function<Throwable, Duration> value) {
+            public RetryBuilder<T> computedDelay(BiFunction<Object, Throwable, Duration> value) {
                 this.computedDelay = checkNotNull(value, "Retry delay must be set");
                 return this;
             }

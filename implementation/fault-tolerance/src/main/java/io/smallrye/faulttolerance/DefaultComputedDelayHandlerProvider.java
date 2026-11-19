@@ -7,8 +7,7 @@ import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.Unmanaged;
 import jakarta.inject.Inject;
 
-import org.eclipse.microprofile.faulttolerance.ExecutionContext;
-
+import io.smallrye.faulttolerance.api.CallContext;
 import io.smallrye.faulttolerance.api.ComputedDelayHandler;
 import io.smallrye.faulttolerance.config.FaultToleranceOperation;
 
@@ -26,7 +25,7 @@ public class DefaultComputedDelayHandlerProvider implements ComputedDelayHandler
             //noinspection Convert2Lambda
             return new ComputedDelayHandler() {
                 @Override
-                public Duration getDelay(ExecutionContext context) {
+                public Duration getDelay(CallContext context) {
                     Unmanaged<ComputedDelayHandler> unmanaged = new Unmanaged<>(beanManager,
                             (Class<ComputedDelayHandler>) operation.getComputedDelay().value());
                     Unmanaged.UnmanagedInstance<ComputedDelayHandler> unmanagedInstance = unmanaged.newInstance();

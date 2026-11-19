@@ -9,10 +9,13 @@ package io.smallrye.faulttolerance.core.retry;
  */
 public interface BackOff {
     /**
-     * @param cause exception causing the retry attempt before which the delay occurs
+     * @param result result causing the retry attempt before which the delay occurs,
+     *        or {@code null} if the retry attempt is caused by an exception
+     * @param cause exception causing the retry attempt before which the delay occurs,
+     *        or {@code null} if the retry attempt is caused by a result
      * @return non-negative number
      */
-    long getInMillis(Throwable cause);
+    long getInMillis(Object result, Throwable cause);
 
-    BackOff ZERO = ignored -> 0;
+    BackOff ZERO = (result, cause) -> 0;
 }

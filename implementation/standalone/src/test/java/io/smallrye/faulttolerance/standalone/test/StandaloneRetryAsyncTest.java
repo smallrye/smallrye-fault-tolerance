@@ -5,6 +5,8 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
@@ -100,7 +102,7 @@ public class StandaloneRetryAsyncTest {
     @Test
     public void asyncRetryWithComputedDelay() {
         Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
-                .withRetry().maxRetries(3).computedDelay(e -> Duration.ofMillis(10)).done()
+                .withRetry().maxRetries(3).computedDelay((r, e) -> Duration.ofMillis(10)).done()
                 .withFallback().applyOn(TestException.class).handler(this::fallback).done()
                 .build()
                 .adaptSupplier(this::actionFail);
@@ -114,7 +116,7 @@ public class StandaloneRetryAsyncTest {
     @Test
     public void asyncRetryWithComputedDelay_untyped() throws Exception {
         Callable<CompletionStage<String>> guarded = Guard.create()
-                .withRetry().maxRetries(5).computedDelay(e -> Duration.ofMillis(10)).done()
+                .withRetry().maxRetries(5).computedDelay((r, e) -> Duration.ofMillis(10)).done()
                 .build()
                 .adaptCallable(() -> {
                     int value = counter.incrementAndGet();
@@ -130,6 +132,82 @@ public class StandaloneRetryAsyncTest {
         assertThat(counter).hasValue(4); // 1 initial invocation, 2 unsuccessful retries, 1 successful retry
     }
 
+    @Test
+    public void asyncRetryWithComputedDelayOnResult() throws Exception {
+        List<Object> seenResults = new ArrayList<>();
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .computedDelay((result, failure) -> {
+                    seenResults.add(result);
+                    return Duration.ofMillis(10);
+                }).done()
+                .build()
+                .adaptSupplier(() -> {
+                    int value = counter.incrementAndGet();
+                    return completedFuture(value < 3 ? "retry-" + value : "success");
+                });
+
+        assertThat(guarded.get())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("success");
+        assertThat(counter).hasValue(3);
+        assertThat(seenResults).containsExactly("retry-1", "retry-2");
+    }
+
+    @Test
+    public void retryWithComputedDelayOnResult_untyped() throws Exception {
+        List<Object> seenResults = new ArrayList<>();
+        Callable<CompletionStage<String>> guarded = Guard.create()
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .computedDelay((result, failure) -> {
+                    seenResults.add(result);
+                    return Duration.ofMillis(10);
+                }).done()
+                .build()
+                .adaptCallable(() -> {
+                    int value = counter.incrementAndGet();
+                    return completedFuture(value < 3 ? "retry-" + value : "success");
+                }, Types.CS_STRING);
+
+        assertThat(guarded.call())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("success");
+        assertThat(counter).hasValue(3);
+        assertThat(seenResults).containsExactly("retry-1", "retry-2");
+    }
+
+    @Test
+    public void retryWithComputedDelayOnResultAndFailure() throws Exception {
+        List<Object> seenFailures = new ArrayList<>();
+        List<Object> seenResults = new ArrayList<>();
+        Callable<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .computedDelay((result, failure) -> {
+                    seenResults.add(result);
+                    seenFailures.add(failure);
+                    return Duration.ofMillis(10);
+                }).done()
+                .build()
+                .adaptCallable(() -> {
+                    int value = counter.incrementAndGet();
+                    if (value == 1) {
+                        return completedFuture("retry");
+                    } else if (value == 2) {
+                        return failedFuture(new TestException());
+                    }
+                    return completedFuture("success");
+                });
+
+        assertThat(guarded.call())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("success");
+        assertThat(counter).hasValue(3);
+        assertThat(seenResults).containsExactly("retry", null);
+        assertThat(seenFailures).hasSize(2);
+        assertThat(seenFailures.get(0)).isNull();
+        assertThat(seenFailures.get(1)).isInstanceOf(TestException.class);
+    }
+
     public CompletionStage<String> actionFail() {
         counter.incrementAndGet();
         return failedFuture(new TestException());
@@ -142,5 +220,13 @@ public class StandaloneRetryAsyncTest {
 
     public CompletionStage<String> fallback() {
         return completedFuture("fallback");
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T resultOf(Object future) {
+        if (future instanceof CompletionStage<?> cs && cs.toCompletableFuture().isDone()) {
+            return (T) cs.toCompletableFuture().join();
+        }
+        throw new IllegalArgumentException("Not a future or not complete: " + future);
     }
 }

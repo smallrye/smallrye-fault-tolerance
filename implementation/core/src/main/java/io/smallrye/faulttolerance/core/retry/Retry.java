@@ -93,7 +93,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 Completer<State<V>> result = Completer.create();
 
                 try {
-                    delay.after(state.lastFailure, () -> {
+                    delay.after(state.lastResult, state.lastFailure, () -> {
                         retryLoopIteration(ctx, stopwatch, state).thenComplete(result);
                     }, ctx.get(Executor.class));
                 } catch (Exception e) {
@@ -164,14 +164,14 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                         ctx.fireEvent(RetryEvents.Finished.VALUE_RETURNED);
                         result.complete(State.done(value));
                     } else {
-                        result.complete(state.retry(error));
+                        result.complete(state.retry(value, null));
                     }
                 } else {
                     if (exceptionDecision.isConsideredExpected(error)) {
                         ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                         result.completeWithError(error);
                     } else {
-                        result.complete(state.retry(error));
+                        result.complete(state.retry(null, error));
                     }
                 }
             });
@@ -180,7 +180,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
                 ctx.fireEvent(RetryEvents.Finished.EXCEPTION_NOT_RETRYABLE);
                 result.completeWithError(e);
             } else {
-                result.complete(state.retry(e));
+                result.complete(state.retry(null, e));
             }
         }
         return result.future();
@@ -191,21 +191,23 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
         private final V value;
 
         private final int attempt;
+        private final V lastResult;
         private final Throwable lastFailure;
 
         static <V> State<V> initial() {
-            return new State<>(true, null, 0, null);
+            return new State<>(true, null, 0, null, null);
         }
 
         static <V> State<V> done(V value) {
-            return new State<>(false, value, -1, null);
+            return new State<>(false, value, -1, null, null);
         }
 
-        private State(boolean shouldContinue, V value, int attempt, Throwable lastFailure) {
+        private State(boolean shouldContinue, V value, int attempt, V lastResult, Throwable lastFailure) {
             this.shouldContinue = shouldContinue;
             this.value = value;
 
             this.attempt = attempt;
+            this.lastResult = lastResult;
             this.lastFailure = lastFailure;
         }
 
@@ -213,8 +215,8 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
             return shouldContinue;
         }
 
-        public State<V> retry(Throwable failure) {
-            return new State<>(true, null, attempt + 1, failure);
+        public State<V> retry(V result, Throwable failure) {
+            return new State<>(true, null, attempt + 1, result, failure);
         }
     }
 }

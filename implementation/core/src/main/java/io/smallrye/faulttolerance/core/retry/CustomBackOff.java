@@ -12,7 +12,7 @@ public class CustomBackOff implements BackOff {
     }
 
     @Override
-    public long getInMillis(Throwable cause) {
+    public long getInMillis(Object result, Throwable cause) {
         return strategy.applyAsLong(cause);
     }
 }

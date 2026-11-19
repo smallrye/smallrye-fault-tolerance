@@ -19,14 +19,16 @@ import java.lang.reflect.Method;
 
 import jakarta.interceptor.InvocationContext;
 
-import org.eclipse.microprofile.faulttolerance.ExecutionContext;
+import io.smallrye.faulttolerance.api.CallContext;
 
-final class ExecutionContextImpl implements ExecutionContext {
+final class CallContextImpl implements CallContext {
     private final InvocationContext invocationContext;
+    private final Object result;
     private final Throwable failure;
 
-    ExecutionContextImpl(InvocationContext invocationContext, Throwable failure) {
+    CallContextImpl(InvocationContext invocationContext, Object result, Throwable failure) {
         this.invocationContext = invocationContext;
+        this.result = result;
         this.failure = failure;
     }
 
@@ -38,6 +40,11 @@ final class ExecutionContextImpl implements ExecutionContext {
     @Override
     public Object[] getParameters() {
         return invocationContext.getParameters();
+    }
+
+    @Override
+    public Object getResult() {
+        return result;
     }
 
     @Override

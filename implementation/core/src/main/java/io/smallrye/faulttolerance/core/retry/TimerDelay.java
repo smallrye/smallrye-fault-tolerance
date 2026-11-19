@@ -19,8 +19,8 @@ public class TimerDelay implements AsyncDelay {
     }
 
     @Override
-    public void after(Throwable cause, Runnable task, Executor executor) {
-        long delay = backOff.getInMillis(cause);
+    public void after(Object result, Throwable cause, Runnable task, Executor executor) {
+        long delay = backOff.getInMillis(result, cause);
         if (delay > 0) {
             timer.schedule(delay, task, executor);
         } else {

@@ -30,7 +30,7 @@ public class ExponentialBackOff implements BackOff {
     }
 
     @Override
-    public synchronized long getInMillis(Throwable cause) {
+    public synchronized long getInMillis(Object result, Throwable cause) {
         if (lastDelay == 0) {
             lastDelay = initialDelayInMillis;
             return lastDelay + jitter.generate();
