@@ -4,7 +4,7 @@ import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 
 /**
  * For each retry attempt, a new instance of the handler is created by the CDI container.
- * The instance is created before the {@link #handle(ExecutionContext)} method is called,
+ * The instance is created before the {@link #handle(CallContext)} method is called,
  * and after it finishes, the instance is destroyed. The implementation class can declare
  * injection points, lifecycle callbacks and so on.
  *
@@ -27,7 +27,7 @@ import org.eclipse.microprofile.faulttolerance.ExecutionContext;
  *     &#064;Inject
  *     OtherService otherService;
  *
- *     void handle(ExecutionContext context) {
+ *     void handle(CallContext context) {
  *         otherService.reset();
  *     }
  * }
@@ -38,6 +38,20 @@ public interface BeforeRetryHandler {
      * Do what is necessary before the next retry attempt.
      *
      * @param context the execution context
+     * @deprecated implement {@link #handle(CallContext)}
      */
-    void handle(ExecutionContext context);
+    @Deprecated(forRemoval = true, since = "7.2.0")
+    default void handle(ExecutionContext context) {
+        throw new IllegalStateException(getClass().getName()
+                + " must implement either handle(ExecutionContext) or handle(CallContext)");
+    }
+
+    /**
+     * Do what is necessary before the next retry attempt.
+     *
+     * @param context the call context
+     */
+    default void handle(CallContext context) {
+        handle((ExecutionContext) context);
+    }
 }

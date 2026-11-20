@@ -72,7 +72,7 @@ public class Fallback<V> implements FaultToleranceStrategy<V> {
                 try {
                     LOG.debugf("%s invocation failed, invoking fallback", description);
                     ctx.fireEvent(FallbackEvents.Applied.INSTANCE);
-                    fallback.apply(new FailureContext(error, ctx)).thenComplete(result);
+                    fallback.apply(new FailureContext(null, error, ctx)).thenComplete(result);
                 } catch (Exception e) {
                     result.completeWithError(e);
                 }

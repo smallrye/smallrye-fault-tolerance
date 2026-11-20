@@ -41,7 +41,6 @@ import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.Interceptor;
 import jakarta.interceptor.InvocationContext;
 
-import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 import org.eclipse.microprofile.faulttolerance.FallbackHandler;
 import org.eclipse.microprofile.faulttolerance.exceptions.FaultToleranceException;
 
@@ -600,10 +599,10 @@ public class FaultToleranceInterceptor {
             FallbackHandler<T> fallbackHandler = fallbackHandlerProvider.get(operation);
             if (fallbackHandler != null) {
                 fallbackFunction = ctx -> {
-                    ExecutionContext executionContext = new CallContextImpl(
+                    CallContext callContext = new CallContextImpl(
                             ctx.context.get(InvocationContext.class), null, ctx.failure);
                     try {
-                        T result = fallbackHandler.handle(executionContext);
+                        T result = fallbackHandler.handle(callContext);
                         return asyncSupport == null
                                 ? Future.of((V) result)
                                 : asyncSupport.toFuture(ConstantInvoker.of(result));
@@ -645,9 +644,9 @@ public class FaultToleranceInterceptor {
             BeforeRetryHandler beforeRetryHandler = beforeRetryHandlerProvider.get(operation);
             if (beforeRetryHandler != null) {
                 beforeRetryFunction = ctx -> {
-                    ExecutionContext executionContext = new CallContextImpl(
-                            ctx.context.get(InvocationContext.class), null, ctx.failure);
-                    beforeRetryHandler.handle(executionContext);
+                    CallContext callContext = new CallContextImpl(
+                            ctx.context.get(InvocationContext.class), ctx.result, ctx.failure);
+                    beforeRetryHandler.handle(callContext);
                 };
             } else {
                 throw new FaultToleranceException("Could not obtain before retry handler for " + point);

@@ -6,11 +6,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 
-import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.BeforeRetryHandler;
+import io.smallrye.faulttolerance.api.CallContext;
 
 @Dependent
 public class BeforeRetryHandlerService {
@@ -27,7 +27,7 @@ public class BeforeRetryHandlerService {
         MyDependency dep;
 
         @Override
-        public void handle(ExecutionContext context) {
+        public void handle(CallContext context) {
             ids.add(dep.id);
         }
     }

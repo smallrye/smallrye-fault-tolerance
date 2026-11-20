@@ -5,6 +5,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -677,6 +678,10 @@ public interface Guard {
              * Sets a predicate to determine when a result should be considered failure and retry
              * should be attempted. All results that do not match this predicate are implicitly
              * considered success.
+             * <p>
+             * For asynchronous actions, the predicate's argument is the value that the asynchronous type eventually
+             * produces, not a value of the asynchronous type itself. For example, it is a {@code String} when
+             * guarding an action that produces {@code CompletionStage<String>}.
              *
              * @param value the predicate, must not be {@code null}
              * @return this retry builder
@@ -708,11 +713,35 @@ public interface Guard {
 
             /**
              * Sets a before retry handler, which is called before each retry, but not before the original attempt.
+             * <p>
+             * The handler accepts the failure of previous invocation, or {@code null} if the retry was triggered
+             * by a result. Use {@link #beforeRetry(BiConsumer)} instead.
              *
              * @param value the before retry handler, must not be {@code null}
              * @return this retry builder
+             * @see BeforeRetry @BeforeRetry
+             * @deprecated use {@link #beforeRetry(BiConsumer)}
              */
+            @Deprecated(forRemoval = true, since = "7.2.0")
             RetryBuilder beforeRetry(Consumer<Throwable> value);
+
+            /**
+             * Sets a before retry handler, which is called before each retry, but not before the original attempt.
+             * <p>
+             * The first argument to the handler is the result of the previous invocation, or {@code null}
+             * if the invocation failed. The second argument is the failure of the previous invocation,
+             * or {@code null} if the invocation returned a result. Note that {@code null} is a valid result,
+             * so to check if the invocation failed or not, use {@code failure == null}.
+             * <p>
+             * For asynchronous actions, the first argument is the value that the asynchronous type eventually
+             * produces, not a value of the asynchronous type itself. For example, it is a {@code String} when
+             * guarding an action that produces {@code CompletionStage<String>}.
+             *
+             * @param value the before retry handler, must not be {@code null}
+             * @return this retry builder
+             * @see BeforeRetry @BeforeRetry
+             */
+            RetryBuilder beforeRetry(BiConsumer<Object, Throwable> value);
 
             /**
              * Sets a computed delay handler, which is called before each retry to determine the delay based on
