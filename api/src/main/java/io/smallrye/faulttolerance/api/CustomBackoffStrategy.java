@@ -11,7 +11,7 @@ import io.smallrye.common.annotation.Experimental;
  * multiple threads, so they must be thread safe.
  *
  * @see #init(long)
- * @see #nextDelayInMillis(Throwable)
+ * @see #nextDelayInMillis(Object, Throwable)
  * @see CustomBackoff
  */
 @Experimental("first attempt at providing additional retry backoff strategies")
@@ -32,8 +32,29 @@ public interface CustomBackoffStrategy {
      * Implementations must be fast and non-blocking (i.e., they must not do any IO or
      * long-running computations).
      *
-     * @param exception exception that caused the retry attempt
+     * @param exception exception that caused the retry attempt, or {@code null} if the retry attempt
+     *        was caused by a result
+     * @return delay in milliseconds; must be {@code >= 0}
+     * @deprecated use {@link #nextDelayInMillis(Object, Throwable)}
+     */
+    @Deprecated(forRemoval = true, since = "7.2.0")
+    default long nextDelayInMillis(Throwable exception) {
+        throw new IllegalStateException(getClass().getName()
+                + " must implement either nextDelayInMillis(Throwable) or nextDelayInMillis(Object, Throwable)");
+    }
+
+    /**
+     * Called to compute a delay before each retry attempt, including before the first retry.
+     * Implementations must be fast and non-blocking (i.e., they must not do any IO or
+     * long-running computations).
+     *
+     * @param result the result that caused the retry attempt, or {@code null} if the retry attempt
+     *        was caused by a failure
+     * @param exception exception that caused the retry attempt, or {@code null} if the retry attempt
+     *        was caused by a result
      * @return delay in milliseconds; must be {@code >= 0}
      */
-    long nextDelayInMillis(Throwable exception);
+    default long nextDelayInMillis(Object result, Throwable exception) {
+        return nextDelayInMillis(exception);
+    }
 }
