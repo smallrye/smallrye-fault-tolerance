@@ -2,17 +2,17 @@ package io.smallrye.faulttolerance.core.retry;
 
 import static io.smallrye.faulttolerance.core.util.Preconditions.checkNotNull;
 
-import java.util.function.ToLongFunction;
+import java.util.function.ToLongBiFunction;
 
 public class CustomBackOff implements BackOff {
-    private final ToLongFunction<Throwable> strategy;
+    private final ToLongBiFunction<Object, Throwable> strategy;
 
-    public CustomBackOff(ToLongFunction<Throwable> strategy) {
+    public CustomBackOff(ToLongBiFunction<Object, Throwable> strategy) {
         this.strategy = checkNotNull(strategy, "Custom backoff strategy must be set");
     }
 
     @Override
     public long getInMillis(Object result, Throwable cause) {
-        return strategy.applyAsLong(cause);
+        return strategy.applyAsLong(result, cause);
     }
 }
