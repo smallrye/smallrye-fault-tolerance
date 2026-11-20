@@ -208,6 +208,54 @@ public class StandaloneRetryAsyncTest {
         assertThat(seenFailures.get(1)).isInstanceOf(TestException.class);
     }
 
+    @Test
+    public void asyncRetryWithBeforeRetry() {
+        List<Object> seenResults = new ArrayList<>();
+        List<Object> seenFailures = new ArrayList<>();
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
+                .withRetry().maxRetries(3)
+                .beforeRetry((result, failure) -> {
+                    seenResults.add(result);
+                    seenFailures.add(failure);
+                }).done()
+                .withFallback().handler(this::fallback).applyOn(TestException.class).done()
+                .build()
+                .adaptSupplier(this::actionFail);
+
+        assertThat(guarded.get())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("fallback");
+        assertThat(counter).hasValue(4); // 1 initial invocation + 3 retries
+        assertThat(seenResults).containsExactly(null, null, null);
+        assertThat(seenFailures).hasSize(3)
+                .allMatch(failure -> failure instanceof TestException);
+    }
+
+    @Test
+    public void asyncRetryWithBeforeRetryOnResult() throws Exception {
+        List<Object> seenResults = new ArrayList<>();
+        List<Object> seenFailures = new ArrayList<>();
+        Supplier<CompletionStage<String>> guarded = TypedGuard.create(Types.CS_STRING)
+                .withRetry().maxRetries(3).whenResult(r -> !"success".equals(r))
+                .beforeRetry((result, failure) -> {
+                    seenResults.add(result);
+                    seenFailures.add(failure);
+                }).done()
+                .build()
+                .adaptSupplier(() -> {
+                    int value = counter.incrementAndGet();
+                    return completedFuture(value < 3 ? "retry-" + value : "success");
+                });
+
+        assertThat(guarded.get())
+                .succeedsWithin(10, TimeUnit.SECONDS)
+                .isEqualTo("success");
+        assertThat(counter).hasValue(3);
+        // the handler must see the value the CompletionStage produced, not the CompletionStage itself
+        assertThat(seenResults).containsExactly("retry-1", "retry-2");
+        assertThat(seenFailures).containsExactly(null, null);
+    }
+
     public CompletionStage<String> actionFail() {
         counter.incrementAndGet();
         return failedFuture(new TestException());

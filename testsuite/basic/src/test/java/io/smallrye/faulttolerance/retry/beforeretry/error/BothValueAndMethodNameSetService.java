@@ -2,11 +2,11 @@ package io.smallrye.faulttolerance.retry.beforeretry.error;
 
 import jakarta.enterprise.context.Dependent;
 
-import org.eclipse.microprofile.faulttolerance.ExecutionContext;
 import org.eclipse.microprofile.faulttolerance.Retry;
 
 import io.smallrye.faulttolerance.api.BeforeRetry;
 import io.smallrye.faulttolerance.api.BeforeRetryHandler;
+import io.smallrye.faulttolerance.api.CallContext;
 
 @Dependent
 public class BothValueAndMethodNameSetService {
@@ -21,7 +21,7 @@ public class BothValueAndMethodNameSetService {
 
     static class MyHandler implements BeforeRetryHandler {
         @Override
-        public void handle(ExecutionContext context) {
+        public void handle(CallContext context) {
         }
     }
 }

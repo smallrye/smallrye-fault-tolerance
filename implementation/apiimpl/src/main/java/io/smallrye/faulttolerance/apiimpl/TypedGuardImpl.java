@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -289,7 +290,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
 
             if (lazyDependencies.ftEnabled() && op.hasRetry()) {
                 Supplier<BackOff> backoff = prepareRetryBackoff(op, retryBuilder);
-                Consumer<Throwable> beforeRetryAction = retryBuilder.beforeRetry;
+                BiConsumer<Object, Throwable> beforeRetryAction = retryBuilder.beforeRetry;
 
                 result = new Retry<>(result, description,
                         createResultDecision(retryBuilder.whenResultPredicate),
@@ -300,7 +301,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
                         () -> new ThreadSleepDelay(backoff.get()),
                         () -> new TimerDelay(backoff.get(), lazyDependencies.timer()),
                         SystemStopwatch.INSTANCE,
-                        beforeRetryAction != null ? ctx -> beforeRetryAction.accept(ctx.failure) : null);
+                        beforeRetryAction != null ? ctx -> beforeRetryAction.accept(ctx.result, ctx.failure) : null);
             }
 
             // fallback is always enabled
@@ -856,7 +857,7 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             private boolean setBasedExceptionDecisionDefined = false;
             private Predicate<Throwable> whenExceptionPredicate;
             private Predicate<Object> whenResultPredicate;
-            private Consumer<Throwable> beforeRetry;
+            private BiConsumer<Object, Throwable> beforeRetry;
             private BiFunction<Object, Throwable, Duration> computedDelay;
 
             private ExponentialBackoffBuilderImpl<V, T> exponentialBackoffBuilder;
@@ -950,12 +951,19 @@ public final class TypedGuardImpl<V, T> implements TypedGuard<T> {
             @Override
             public RetryBuilder<T> beforeRetry(Runnable value) {
                 checkNotNull(value, "Before retry handler must be set");
-                this.beforeRetry = ignored -> value.run();
+                this.beforeRetry = (result, failure) -> value.run();
                 return this;
             }
 
             @Override
             public RetryBuilder<T> beforeRetry(Consumer<Throwable> value) {
+                checkNotNull(value, "Before retry handler must be set");
+                this.beforeRetry = (result, failure) -> value.accept(failure);
+                return this;
+            }
+
+            @Override
+            public RetryBuilder<T> beforeRetry(BiConsumer<Object, Throwable> value) {
                 this.beforeRetry = checkNotNull(value, "Before retry handler must be set");
                 return this;
             }

@@ -402,7 +402,7 @@ public class MyService {
     }
 
     public static class MyBeforeRetry implements BeforeRetryHandler {
-        public void handle(ExecutionContext context) {
+        public void handle(CallContext context) { // <2>
             ...
         }
     }
@@ -410,10 +410,40 @@ public class MyService {
 ----
 
 <1> Specifies that the `MyBeforeRetry` handler should be called before retrying.
+<2> The `CallContext` exposes the result or failure of the previous method call, which is about to be retried.
+If the previous invocation failed, `getFailure()` returns non-`null` and `getResult()` returns `null`.
+If the previous invocation returned a result that is considered a failure, `getResult()` returns that result and `getFailure()` returns `null`.
+Note that the rejected result may be `null`, so the only way to tell the two situations apart is `getFailure() == null`.
 
 It is only possible to specify one option; specifying both `value` and `methodName` leads to a deployment problem.
 
-Note that the before retry action must fast and non-blocking (i.e., it must not do any IO or long-running computations) and must not throw an exception.
+Note that the before retry action must be fast and non-blocking (i.e., it must not do any IO or long-running computations) and must not throw an exception.
+
+For asynchronous methods (e.g. those returning `CompletionStage` or `Uni`), the result available from `CallContext.getResult()` is the value that the asynchronous type eventually produces, not a value of the asynchronous type itself.
+For example, for a method that returns `CompletionStage<String>`, `getResult()` returns a `String`.
+
+When using the programmatic API, the `beforeRetry(...)` method of the retry builder accepts a `BiConsumer<Object, Throwable>` with the same semantics, including the treatment of asynchronous types.
+`beforeRetry(Runnable)` is available for actions that don't need the previous result or failure:
+
+[source,java]
+----
+Guard guard = Guard.create()
+        .withRetry()
+        .maxRetries(5)
+        .whenResult(r -> r == null)
+        .whenException(e -> e instanceof RuntimeException)
+        .beforeRetry((result, failure) -> {
+            if (failure == null) {
+                log.info("retrying after null result");
+            } else {
+                log.info("retrying after RuntimeException {}", failure);
+            }
+        })
+        .done()
+        .build();
+----
+
+For more information about `@BeforeRetry`, see the javadoc of the annotation.
 
 [[inspecting-exception-cause-chains]]
 === Inspecting Exception Cause Chains

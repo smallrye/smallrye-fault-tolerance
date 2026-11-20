@@ -138,7 +138,7 @@ public class Retry<V> implements FaultToleranceStrategy<V> {
 
         if (beforeRetry != null && state.attempt > 0) {
             try {
-                beforeRetry.accept(new FailureContext(state.lastFailure, ctx));
+                beforeRetry.accept(new FailureContext(state.lastResult, state.lastFailure, ctx));
             } catch (Exception e) {
                 LOG.warn("Before retry action has thrown an exception", e);
             }

@@ -9,8 +9,6 @@ import java.lang.annotation.Target;
 
 import jakarta.enterprise.util.Nonbinding;
 
-import org.eclipse.microprofile.faulttolerance.ExecutionContext;
-
 import io.smallrye.common.annotation.Experimental;
 
 /**
@@ -34,7 +32,7 @@ import io.smallrye.common.annotation.Experimental;
 public @interface BeforeRetry {
     class DEFAULT implements BeforeRetryHandler {
         @Override
-        public void handle(ExecutionContext context) {
+        public void handle(CallContext context) {
         }
     }
 
